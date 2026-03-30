@@ -3298,9 +3298,10 @@ async def jarvis_chat(request: Request):
             result = {"text": raw[:200], "action": {"type": "speak_only"}}
 
     except Exception as e:
-        print(f"[JARVIS] Gemini error: {e}")
+        error_msg = f"DEBUG: {str(e)}"
+        print(f"[JARVIS] Gemini error: {error_msg}")
         result = {
-            "text": "Ho difficoltà a connettermi ai miei sistemi. Riprova tra poco.",
+            "text": error_msg,
             "action": {"type": "speak_only"}
         }
 
