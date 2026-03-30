@@ -122,3 +122,8 @@ export const analyzeRun = (runId: string) =>
 export const getRunnerDna = () => api.get<any>('/api/runner-dna');
 export const clearRunnerDnaCache = () => api.delete<{ ok: boolean }>('/api/runner-dna/cache');
 
+// ─── JARVIS ──────────────────────────────────────────────────────────────────
+import type { JarvisResponse } from '../types/jarvis';
+export const jarvisChat = (transcript: string) =>
+  api.post<JarvisResponse>('/api/jarvis/chat', { transcript });
+

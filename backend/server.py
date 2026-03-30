@@ -3,7 +3,7 @@ Altrove Backend – FastAPI server for running training dashboard.
 Handles Strava OAuth, run sync, profile, training plan, analytics, etc.
 """
 
-import os, math, hashlib, datetime as dt
+import os, math, hashlib, datetime as dt, asyncio, re
 from typing import Optional
 from contextlib import asynccontextmanager
 
@@ -3165,3 +3165,136 @@ async def garmin_sync_all():
     Can take several minutes — runs are matched by date+distance to existing Strava runs.
     """
     return await garmin_sync(limit=1000)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  JARVIS — AI Voice Assistant
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_JARVIS_SYSTEM_PROMPT = """You are JARVIS, the AI assistant built into METIC LAB, a professional running training dashboard.
+You speak like the Marvel JARVIS — calm, concise, slightly formal but warm. No emojis. Max 2 sentences in the text field.
+
+You MUST respond ONLY with a single valid JSON object. No markdown, no explanation outside the JSON.
+
+Schema:
+{
+  "text": "<spoken response — max 2 sentences, 30 words max>",
+  "action": {
+    "type": "<one of: navigate | speak_only | show_data | sync_strava | sync_garmin | regenerate_dna>",
+    "route": "<only for navigate: one of /, /training, /activities, /statistics, /runner-dna, /profile>",
+    "data_key": "<only for show_data: one of fitness_freshness, best_efforts, training_plan, vdot, last_run>"
+  }
+}
+
+NAVIGATION INTENT RULES (use action.type = "navigate"):
+- "open dashboard" / "go home" / "home" → route: "/"
+- "open training" / "training plan" / "my plan" → route: "/training"
+- "open activities" / "my runs" / "activities" → route: "/activities"
+- "open statistics" / "stats" / "statistics" → route: "/statistics"
+- "runner dna" / "my DNA" / "dna" → route: "/runner-dna"
+- "open profile" / "my profile" / "profile" → route: "/profile"
+
+DATA QUERY RULES (use action.type = "speak_only" and answer from context):
+- "VO2max" / "VDOT" / "fitness level" → speak the VDOT value
+- "how am I feeling" / "TSB" / "form" / "fatigue" → speak TSB and label
+- "last run" / "latest run" → speak date, distance, pace
+- "this week" / "weekly km" / "how many km" → speak weekly km
+- "fastest 10k" / "best 10k" / "10k time" → speak best 10K time
+- "am I ready for race" / "race ready" / "ready to race" → assess from TSB honestly
+- "fitness freshness" → action: show_data, data_key: fitness_freshness, also navigate to /statistics
+- "best efforts" / "personal records" / "PB" → action: show_data, data_key: best_efforts
+- "training plan" → action: show_data, data_key: training_plan
+
+ACTION RULES:
+- "sync strava" / "update strava" → action: sync_strava
+- "sync garmin" / "update garmin" → action: sync_garmin
+- "regenerate DNA" / "redo DNA" / "new DNA analysis" → action: regenerate_dna
+
+FALLBACK: If intent is unclear, respond with speak_only and ask the user to rephrase.
+
+The athlete context will be provided before the user's message. Use it to answer data questions accurately.
+Keep responses extremely concise — this is voice output."""
+
+
+@app.post("/api/jarvis/chat")
+async def jarvis_chat(request: Request):
+    """JARVIS AI voice assistant — processes transcript and returns spoken response + action."""
+    body = await request.json()
+    transcript = body.get("transcript", "").strip()
+
+    if not transcript:
+        return JSONResponse({"error": "empty_transcript"}, status_code=400)
+
+    athlete_id = await _get_athlete_id()
+    q = {"athlete_id": athlete_id} if athlete_id else {}
+
+    # Fetch minimal athlete context in parallel
+    profile_doc, ff_latest, last_run_doc, recent_runs_docs = await asyncio.gather(
+        db.profile.find_one(q),
+        db.fitness_freshness.find_one(q, sort=[("date", -1)]),
+        db.runs.find_one(q, sort=[("date", -1)]),
+        db.runs.find(q, {"date": 1, "distance_km": 1, "duration_minutes": 1, "avg_hr": 1, "avg_pace": 1})
+            .sort("date", -1).to_list(100),
+    )
+
+    profile = profile_doc or {}
+    ff = ff_latest or {}
+    last_run = last_run_doc or {}
+
+    # Compute VDOT
+    max_hr = int(profile.get("max_hr", 190))
+    vdot = _calc_vdot(recent_runs_docs, max_hr)
+
+    # Weekly km
+    week_start = (dt.date.today() - dt.timedelta(days=dt.date.today().weekday())).isoformat()
+    weekly_km = round(sum(r.get("distance_km", 0) for r in recent_runs_docs if r.get("date", "") >= week_start), 1)
+
+    # Best 10K from best_efforts collection
+    be_doc = await db.best_efforts.find_one(q) or {}
+    best_10k = next((e.get("time") for e in be_doc.get("efforts", []) if e.get("distance") == "10 km"), None)
+
+    ctl  = round(ff.get("ctl", 0), 1)
+    atl  = round(ff.get("atl", 0), 1)
+    tsb  = round(ff.get("tsb", 0), 1)
+    tsb_label = "Fresh" if tsb > 10 else "Tired" if tsb < -10 else "Neutral"
+
+    context_block = f"""ATHLETE CONTEXT (today: {dt.date.today().isoformat()}):
+- Name: {profile.get("name", "Athlete")}
+- VDOT (VO2max estimate): {vdot if vdot else "Not enough data"}
+- CTL (Fitness): {ctl} | ATL (Fatigue): {atl} | TSB (Form): {tsb} ({tsb_label})
+- Last run: {last_run.get("date", "N/A")}, {round(last_run.get("distance_km", 0), 1)} km @ {last_run.get("avg_pace", "N/A")}/km
+- This week km: {weekly_km} km
+- Best 10K: {best_10k if best_10k else "N/A"}
+- Race goal: {profile.get("race_goal", "N/A")} on {profile.get("race_date", "N/A")}"""
+
+    if not ANTHROPIC_API_KEY:
+        return JSONResponse({"error": "no_api_key"}, status_code=500)
+
+    try:
+        ai_client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+        resp = await ai_client.messages.create(
+            model="claude-sonnet-4-6-20251001",
+            max_tokens=300,
+            temperature=0.4,
+            system=_JARVIS_SYSTEM_PROMPT,
+            messages=[{
+                "role": "user",
+                "content": f"{context_block}\n\nUSER SAID: \"{transcript}\""
+            }],
+        )
+        raw = resp.content[0].text.strip()
+
+        json_match = re.search(r'\{.*\}', raw, re.DOTALL)
+        if json_match:
+            result = json.loads(json_match.group())
+        else:
+            result = {"text": raw[:200], "action": {"type": "speak_only"}}
+
+    except Exception as e:
+        print(f"[JARVIS] Claude error: {e}")
+        result = {
+            "text": "I'm having trouble connecting. Please try again.",
+            "action": {"type": "speak_only"}
+        }
+
+    return result

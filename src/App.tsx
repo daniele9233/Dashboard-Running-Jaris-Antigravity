@@ -5,6 +5,7 @@
 
 import { useEffect } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { JarvisOverlay } from "./components/JarvisOverlay";
 import { Sidebar } from "./components/Sidebar";
 import { DashboardView } from "./components/DashboardView";
 import { TrainingView } from "./components/TrainingView";
@@ -68,6 +69,8 @@ export default function App() {
   };
 
   return (
+    <>
+    <JarvisOverlay />
     <div className="w-full h-screen bg-[#050505] flex overflow-hidden text-white font-sans">
       <Sidebar activeView={activeSegment} onViewChange={(id) => navigate(id === "dashboard" ? "/" : `/${id}`)} />
 
@@ -135,5 +138,6 @@ export default function App() {
         </div>
       </div>
     </div>
+    </>
   );
 }
