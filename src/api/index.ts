@@ -115,4 +115,5 @@ export const analyzeRun = (runId: string) =>
   api.post<{ analysis: string }>('/api/ai/analyze-run', { run_id: runId });
 
 export const getRunnerDna = () => api.get<any>('/api/runner-dna');
+export const clearRunnerDnaCache = () => api.delete<{ ok: boolean }>('/api/runner-dna/cache');
 

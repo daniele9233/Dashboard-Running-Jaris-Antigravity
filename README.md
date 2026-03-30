@@ -116,6 +116,26 @@ Basata sulla logica scientifica dell'app [CORRALEJO 2026](https://github.com/dan
 - [ ] Decoupling Cardiaco — Pa:Hr trend, efficienza aerobica settimanale
 - [ ] Cadence history — trend cadenza, obiettivo 180 spm
 
+#### Runner DNA — Identità Atletica AI (COMPLETATO)
+- [x] Endpoint `/api/runner-dna` riscritto — Claude Sonnet 4.6 (modello corretto)
+- [x] Prompt olimpico esteso: età, sesso, best efforts, VDOT delta 6 mesi, polarizzazione 80/20
+- [x] Schema AI a 14 campi: archetype_description, coach_verdict, strengths[3], gaps[3], unlock_message
+- [x] 4 DNA dimension scores algoritmici: aerobic_engine, biomechanics, consistency, load_capacity
+- [x] ATL + current_predictions + potential_pct nel payload
+- [x] Frontend completamente riscritto — layout epico multi-sezione:
+  - DNA double helix SVG animato con glow
+  - VDOT circular gauge animato (current vs ceiling)
+  - Badge livello + archetipo + trend colorati
+  - 4 strand bars animati con gradiente
+  - 6 core metrics (passo, FC, cadenza, CTL, ATL, TSB colorato)
+  - Zone distribution stacked bar + insight polarizzazione 80/20
+  - Coach Verdict card con citazione AI
+  - Strengths vs Gaps a due colonne
+  - Race prediction table: Attuale vs Potenziale vs Delta
+  - Pulsante "Rigenera DNA" con endpoint DELETE cache
+- [x] `api.delete` aggiunto al client HTTP
+- [x] `clearRunnerDnaCache()` esposta in api/index.ts
+
 #### FASE 3 — Gamification & Reports
 - [ ] Medaglie 6 livelli per distanza (5K, 10K, 15K, 21K): Warm-up → Bronzo → Argento → Oro → Platino → Elite
 - [ ] Badge 100+ in 8 categorie (milestone, costanza, miglioramenti, allenamento, mezza, scienza, velocità, fun)
