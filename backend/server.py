@@ -29,6 +29,8 @@ STRAVA_CLIENT_SECRET = os.environ.get("STRAVA_CLIENT_SECRET", "")
 FRONTEND_URL       = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 ANTHROPIC_API_KEY  = os.environ.get("ANTHROPIC_API_KEY", "")
 GEMINI_API_KEY     = os.environ.get("GEMINI_API_KEY", "")
+GARMIN_EMAIL       = os.environ.get("GARMIN_EMAIL", "")
+GARMIN_PASSWORD    = os.environ.get("GARMIN_PASSWORD", "")
 
 # Build the callback URL from the current host (set via Render env or default)
 BACKEND_URL        = os.environ.get("BACKEND_URL", "https://dani-backend-ea0s.onrender.com")
@@ -2914,8 +2916,181 @@ async def backfill_dynamics(limit: int = 20):
                 errors.append(f"ID {strava_id}: {str(e)}")
                 
     return {
-        "ok": True, 
-        "updated": updated, 
+        "ok": True,
+        "updated": updated,
         "total_attempted": len(runs_to_fix),
         "errors": errors
     }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  GARMIN CONNECT — Running Dynamics via FIT download
+# ═══════════════════════════════════════════════════════════════════════════════
+
+async def _garmin_login():
+    """Login to Garmin Connect and return a Garmin client instance.
+
+    Tries to reuse saved OAuth tokens (via garth.Client.loads) from MongoDB.
+    Falls back to username/password login if tokens are missing or expired.
+    """
+    from garminconnect import Garmin
+    import garth
+
+    if not GARMIN_EMAIL or not GARMIN_PASSWORD:
+        raise ValueError("GARMIN_EMAIL / GARMIN_PASSWORD not set in environment")
+
+    # Try to restore from saved garth token dump
+    saved = await db.garmin_tokens.find_one({"email": GARMIN_EMAIL})
+    if saved and saved.get("token_dump"):
+        try:
+            garth_client = garth.Client()
+            garth_client.loads(saved["token_dump"])
+            client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
+            client.garth = garth_client
+            # Quick smoke test — if expired garth will raise
+            client.get_activities(0, 1)
+            return client
+        except Exception:
+            pass  # expired / corrupt → full login below
+
+    # Fresh login
+    client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
+    client.login()
+
+    # Persist garth token dump to DB for reuse
+    try:
+        token_dump = client.garth.dumps()
+        await db.garmin_tokens.update_one(
+            {"email": GARMIN_EMAIL},
+            {"$set": {"email": GARMIN_EMAIL, "token_dump": token_dump}},
+            upsert=True,
+        )
+    except Exception:
+        pass  # best-effort
+
+    return client
+
+
+@app.get("/api/garmin/status")
+async def garmin_status():
+    """Return whether Garmin credentials are configured."""
+    return {
+        "configured": bool(GARMIN_EMAIL and GARMIN_PASSWORD),
+        "email": GARMIN_EMAIL if GARMIN_EMAIL else None,
+    }
+
+
+@app.post("/api/garmin/sync")
+async def garmin_sync(limit: int = Query(50, ge=1, le=200)):
+    """Download FIT files from Garmin Connect and enrich runs with Running Dynamics.
+
+    Flow:
+    1. Login to Garmin Connect
+    2. Fetch up to `limit` most recent running activities
+    3. For each activity, find the matching run in DB by date (same day, similar distance)
+    4. Download the original FIT file
+    5. Parse running dynamics (VO, GCT, stride length, vertical ratio)
+    6. Update the run document in MongoDB
+    """
+    if not GARMIN_EMAIL or not GARMIN_PASSWORD:
+        return JSONResponse({"error": "garmin_not_configured"}, status_code=400)
+
+    try:
+        client = await _garmin_login()
+    except Exception as e:
+        return JSONResponse({"error": "garmin_login_failed", "detail": str(e)}, status_code=400)
+
+    athlete_id = await _get_athlete_id()
+
+    # Fetch Garmin running activities (start index 0, count = limit)
+    try:
+        activities = client.get_activities(0, limit)
+    except Exception as e:
+        return JSONResponse({"error": "garmin_fetch_failed", "detail": str(e)}, status_code=500)
+
+    # Filter only running activities
+    running = [
+        a for a in activities
+        if (a.get("activityType", {}).get("typeKey", "") in ("running", "trail_running", "treadmill_running"))
+    ]
+
+    updated = 0
+    skipped = 0
+    errors = []
+
+    for act in running:
+        garmin_id = act.get("activityId")
+        if not garmin_id:
+            continue
+
+        # Parse date and distance from Garmin
+        start_time = act.get("startTimeLocal", "")  # "2024-03-15 08:30:00"
+        date_str = start_time[:10] if start_time else ""
+        garmin_dist_km = round((act.get("distance") or 0) / 1000, 2)
+
+        if not date_str or garmin_dist_km < 1:
+            continue
+
+        # Find matching run in our DB — same date, distance within 10%
+        q = {"date": date_str}
+        if athlete_id:
+            q["athlete_id"] = athlete_id
+
+        candidates = await db.runs.find(q).to_list(10)
+        matched_run = None
+        for run in candidates:
+            db_dist = run.get("distance_km", 0) or 0
+            if garmin_dist_km > 0 and abs(db_dist - garmin_dist_km) / garmin_dist_km < 0.10:
+                matched_run = run
+                break
+
+        if not matched_run:
+            skipped += 1
+            continue
+
+        # Skip if we already have dynamics data
+        if matched_run.get("avg_vertical_oscillation") is not None:
+            skipped += 1
+            continue
+
+        # Download original FIT file
+        try:
+            fit_bytes = client.download_activity(
+                garmin_id,
+                dl_fmt=client.ActivityDownloadFormat.ORIGINAL
+            )
+        except Exception as e:
+            errors.append(f"Garmin ID {garmin_id}: download failed — {e}")
+            continue
+
+        # Parse dynamics
+        dynamics = _extract_fit_dynamics(fit_bytes)
+        if not dynamics:
+            errors.append(f"Garmin ID {garmin_id} ({date_str}): no dynamics in FIT")
+            continue
+
+        # Update run in DB
+        update_fields = {**dynamics, "garmin_activity_id": garmin_id}
+        await db.runs.update_one(
+            {"_id": matched_run["_id"]},
+            {"$set": update_fields}
+        )
+        updated += 1
+
+    return {
+        "ok": True,
+        "updated": updated,
+        "skipped": skipped,
+        "total_garmin_runs": len(running),
+        "errors": errors,
+    }
+
+
+@app.post("/api/garmin/sync-all")
+async def garmin_sync_all():
+    """Sync ALL historical Garmin running activities (downloads up to 1000).
+
+    Same as /api/garmin/sync but fetches the full history.
+    Can take several minutes — runs are matched by date+distance to existing Strava runs.
+    """
+    return await garmin_sync(limit=1000)

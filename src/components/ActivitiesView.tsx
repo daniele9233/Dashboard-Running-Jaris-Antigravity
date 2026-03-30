@@ -6,12 +6,16 @@ import {
   TrendingUp,
   Zap,
   Heart,
+  Watch,
+  Loader2,
+  CheckCircle2,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
 import { useApi } from '../hooks/useApi';
-import { getRuns } from '../api';
+import { getRuns, syncGarminAll } from '../api';
 import type { Run, RunsResponse } from '../types/api';
+import { useState } from 'react';
 
 type RunType = 'Easy' | 'Tempo' | 'Intervals' | 'Long' | 'Recovery' | string;
 
@@ -85,8 +89,23 @@ interface ActivitiesViewProps {
 
 export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
   const { data, loading, error } = useApi<RunsResponse>(getRuns);
+  const [garminState, setGarminState] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle');
+  const [garminResult, setGarminResult] = useState<{ updated: number; errors: string[] } | null>(null);
 
   const runs: Run[] = data?.runs ?? [];
+
+  async function handleGarminSync() {
+    setGarminState('syncing');
+    setGarminResult(null);
+    try {
+      const res = await syncGarminAll();
+      setGarminResult({ updated: res.updated, errors: res.errors });
+      setGarminState('done');
+    } catch (e: any) {
+      setGarminResult({ updated: 0, errors: [e?.message ?? 'Unknown error'] });
+      setGarminState('error');
+    }
+  }
 
   return (
     <div className="flex-1 flex flex-col bg-[#050505] overflow-hidden">
@@ -101,6 +120,32 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                 {loading ? '...' : `${runs.length} corse`}
               </span>
             </div>
+
+            {/* Garmin Sync Button */}
+            <button
+              onClick={handleGarminSync}
+              disabled={garminState === 'syncing'}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all",
+                garminState === 'done'
+                  ? "bg-[#00FFAA]/10 border-[#00FFAA]/30 text-[#00FFAA]"
+                  : garminState === 'error'
+                  ? "bg-rose-500/10 border-rose-500/30 text-rose-400"
+                  : "bg-[#0A0A0A] border-white/10 text-gray-400 hover:border-[#00FFAA]/30 hover:text-[#00FFAA]"
+              )}
+            >
+              {garminState === 'syncing' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : garminState === 'done' ? (
+                <CheckCircle2 className="w-4 h-4" />
+              ) : (
+                <Watch className="w-4 h-4" />
+              )}
+              {garminState === 'syncing' ? 'Garmin...' : garminState === 'done' ? `+${garminResult?.updated} dynamics` : 'Garmin Sync'}
+            </button>
+            {garminState === 'done' && garminResult && garminResult.errors.length > 0 && (
+              <span className="text-[10px] text-rose-400 font-medium">{garminResult.errors.length} errori</span>
+            )}
           </div>
         </div>
         <p className="text-gray-500 text-sm font-medium">

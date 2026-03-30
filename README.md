@@ -135,6 +135,16 @@ Basata sulla logica scientifica dell'app [CORRALEJO 2026](https://github.com/dan
   - Pulsante "Rigenera DNA" con endpoint DELETE cache
 - [x] `api.delete` aggiunto al client HTTP
 - [x] `clearRunnerDnaCache()` esposta in api/index.ts
+- [x] Sezione **Running Dynamics** nel DNA — oscillazione verticale, rapporto verticale, contatto suolo, lunghezza falcata (colori elite/good/poor)
+
+#### Garmin Connect — Running Dynamics (COMPLETATO)
+- [x] `garminconnect` + `garth` aggiunti a `requirements.txt`
+- [x] `_garmin_login()` — autenticazione con salvataggio token OAuth su MongoDB (no re-login)
+- [x] `GET /api/garmin/status` — verifica se le credenziali sono configurate
+- [x] `POST /api/garmin/sync?limit=N` — scarica FIT da Garmin, incrocia con corse Strava per data+distanza (±10%), estrae biomeccanica con `_extract_fit_dynamics`, aggiorna MongoDB
+- [x] `POST /api/garmin/sync-all` — stessa cosa, storico completo (limit=1000)
+- [x] Pulsante **Garmin Sync** in Activities — stato idle/loading/done/error, mostra `+N dynamics` al completamento
+- [x] `syncGarmin()` e `syncGarminAll()` aggiunte a `api/index.ts`
 
 #### FASE 3 — Gamification & Reports
 - [ ] Medaglie 6 livelli per distanza (5K, 10K, 15K, 21K): Warm-up → Bronzo → Argento → Oro → Platino → Elite
@@ -310,6 +320,11 @@ Base URL: `https://dani-backend-ea0s.onrender.com/api`
 | POST | `/strava/exchange-code` | Scambia codice auth |
 | POST | `/strava/sync` | Sync corse + auto-adapt piano |
 | POST | `/ai/analyze-run` | Analisi AI corsa (Claude) |
+| GET | `/garmin/status` | Verifica credenziali Garmin configurate |
+| POST | `/garmin/sync` | Sync FIT Garmin → running dynamics (limit=N) |
+| POST | `/garmin/sync-all` | Sync storico completo Garmin (limit=1000) |
+| GET | `/runner-dna` | Identità atletica AI + biomeccanica |
+| DELETE | `/runner-dna/cache` | Forza re-analisi AI DNA |
 
 ---
 
@@ -339,6 +354,9 @@ Ogni documento MongoDB contiene `athlete_id` (da Strava). Tutte le query filtran
 | `STRAVA_CLIENT_ID` | Client ID app Strava |
 | `STRAVA_CLIENT_SECRET` | Client Secret app Strava |
 | `ANTHROPIC_API_KEY` | API key Claude Sonnet 4.6 |
+| `GEMINI_API_KEY` | API key Gemini (fallback AI) |
+| `GARMIN_EMAIL` | Email account Garmin Connect |
+| `GARMIN_PASSWORD` | Password account Garmin Connect |
 | `BACKEND_URL` | URL pubblico del backend (es. `https://dani-backend-ea0s.onrender.com`) |
 
 ---
@@ -361,6 +379,11 @@ uvicorn server:app --reload --port 8000
 ---
 
 ## Changelog
+
+### v1.1.0 — Marzo 2026
+- **Garmin Connect**: sync FIT files per running dynamics (oscillazione verticale, GCT, lunghezza falcata, rapporto verticale)
+- **Runner DNA Biomeccanica**: sezione dedicata nel DNA con metriche colorate elite/good/poor
+- **Pulsante Garmin Sync** in Activities con feedback visivo live
 
 ### v1.0.0 — Marzo 2026
 - **Training Plan Goal-Driven**: piano costruito sul gap VDOT tra forma attuale e tempo obiettivo

@@ -110,6 +110,11 @@ export const getBestEfforts = () => api.get<BestEffortsResponse>('/api/best-effo
 // ─── HEATMAP ─────────────────────────────────────────────────────────────────
 export const getHeatmap = () => api.get<HeatmapResponse>('/api/heatmap');
 
+// ─── GARMIN ──────────────────────────────────────────────────────────────────
+export const getGarminStatus = () => api.get<{ configured: boolean; email: string | null }>('/api/garmin/status');
+export const syncGarmin = (limit = 50) => api.post<{ ok: boolean; updated: number; skipped: number; total_garmin_runs: number; errors: string[] }>(`/api/garmin/sync?limit=${limit}`);
+export const syncGarminAll = () => api.post<{ ok: boolean; updated: number; skipped: number; total_garmin_runs: number; errors: string[] }>('/api/garmin/sync-all');
+
 // ─── AI ──────────────────────────────────────────────────────────────────────
 export const analyzeRun = (runId: string) =>
   api.post<{ analysis: string }>('/api/ai/analyze-run', { run_id: runId });
