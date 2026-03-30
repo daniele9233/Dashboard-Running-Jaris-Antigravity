@@ -155,7 +155,12 @@ export function useJarvis({
     };
 
     recognition.onerror = (e: any) => {
-      if (e.error !== 'no-speech' && e.error !== 'aborted') {
+      if (e.error === 'not-allowed') {
+        // Mic permission denied — stop trying, update state
+        console.warn('[JARVIS] Microfono non autorizzato. Vai nelle impostazioni del browser e consenti il microfono.');
+        isListeningRef.current = false;
+        updateOrbState('idle');
+      } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
         console.warn('[JARVIS] SpeechRecognition error:', e.error);
       }
     };
