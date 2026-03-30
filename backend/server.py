@@ -13,6 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, JSONResponse
 
 import httpx
+import json
+from anthropic import AsyncAnthropic
 import motor.motor_asyncio as motor
 
 load_dotenv()
@@ -23,6 +25,7 @@ DB_NAME            = os.environ.get("DB_NAME", "DANIDB")
 STRAVA_CLIENT_ID   = os.environ.get("STRAVA_CLIENT_ID", "")
 STRAVA_CLIENT_SECRET = os.environ.get("STRAVA_CLIENT_SECRET", "")
 FRONTEND_URL       = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+ANTHROPIC_API_KEY  = os.environ.get("ANTHROPIC_API_KEY", "")
 
 # Build the callback URL from the current host (set via Render env or default)
 BACKEND_URL        = os.environ.get("BACKEND_URL", "https://dani-backend-ea0s.onrender.com")
@@ -2265,6 +2268,12 @@ async def get_runner_dna():
     if len(runs) < 5:
         return JSONResponse({"error": "not_enough_data"}, status_code=400)
 
+    # Cache mechanism
+    last_run_date = runs[-1].get("date")
+    cached_dna = await db.runner_dna_cache.find_one({"athlete_id": athlete_id})
+    if cached_dna and cached_dna.get("last_run_date") == last_run_date:
+        return {"dna": cached_dna.get("dna_data")}
+
     # Base Metrics
     total_runs = len(runs)
     total_km = sum(r.get("distance_km", 0) for r in runs)
@@ -2278,7 +2287,6 @@ async def get_runner_dna():
     avg_hr_all = sum(r["avg_hr"] for r in hr_runs) / len(hr_runs) if hr_runs else 0
     avg_cad_all = (sum(r["avg_cadence"] for r in cad_runs) / len(cad_runs)) * 2 if cad_runs else 0
     
-    # Calcola il passo medio in sec/km
     total_sec = sum(r.get("duration_minutes", 0) * 60 for r in runs)
     avg_pace_s = total_sec / total_km if total_km > 0 else 0
     
@@ -2296,25 +2304,9 @@ async def get_runner_dna():
     tot_z_dur = sum(zones.values()) or 1
     zone_dist = {k: round(v / tot_z_dur * 100) for k, v in zones.items()}
     
-    # 2. Profilazione Runner
+    # Valori Correnti Empirici
     vdot_current = _calc_vdot(runs, max_hr, weeks_window=8) or 30.0
     
-    # Livello
-    if vdot_current < 38: level = "Principiante"
-    elif vdot_current < 48: level = "Intermedio"
-    elif vdot_current < 55: level = "Avanzato"
-    else: level = "Elite"
-    
-    # Tipo (Endurance vs Speed)
-    # Contiamo quante corse lunghe (>15km) vs ripetute (passo molto più veloce della media)
-    long_runs = sum(1 for r in runs if r.get("distance_km", 0) >= 15)
-    speed_runs = sum(1 for r in runs if r.get("run_type") == "intervals")
-    
-    if long_runs > speed_runs * 1.5: r_type = "Endurance Specialist"
-    elif speed_runs > long_runs * 1.5: r_type = "Speed/Power Runner"
-    else: r_type = "Balanced Runner"
-    
-    # 3. Consistenza
     from datetime import date
     try:
         first_run = date.fromisoformat(runs[0]["date"][:10])
@@ -2325,58 +2317,86 @@ async def get_runner_dna():
         freq = 0
         
     consistency_score = min(100, (freq / 4) * 100) # 4 runs/week = 100%
-    if consistency_score > 80: cons_label = "Altamente Costante (Ottima disciplina)"
-    elif consistency_score > 50: cons_label = "Regolare (Buon ritmo, ma con margini)"
-    else: cons_label = "Incostante (Rischio de-training)"
     
-    # 4. Performance Trend (ultime 12 vs prime 12 se disponibili)
-    perf_trend = "Stabile"
-    if len(runs) >= 20:
-        early_vdot = _calc_vdot(runs[:10], max_hr, weeks_window=999) or vdot_current
-        recent_vdot = _calc_vdot(runs[-10:], max_hr, weeks_window=999) or vdot_current
-        diff = recent_vdot - early_vdot
-        if diff > 1.0: perf_trend = f"In Forte Crescita (+{round(diff,1)} VDOT)"
-        elif diff > 0.2: perf_trend = "Lieve Progressione"
-        elif diff < -1.0: perf_trend = "In Regressione (Possibile overtraining o stop)"
-    
-    # 5. Efficienza (Pace vs HR)
     eff_score = 0
     if avg_hr_all > 0 and avg_pace_s > 0:
-        # Metrica empirica: m/min per battito. Esempio 5:00/km (200m/min) a 150 bpm = 1.33 
         speed_mpm = 60000 / avg_pace_s
         eff_index = speed_mpm / avg_hr_all
         if eff_index > 1.6: eff_score = 95
         elif eff_index > 1.3: eff_score = 80
         elif eff_index > 1.0: eff_score = 60
         else: eff_score = 40
-        
-    # 6. Stato Attuale (da Fitness/Freshness se disponibile)
-    current_form = "Neutro"
-    ctl = 0
-    if ff_docs:
-        tsb = ff_docs[0].get("tsb", 0)
-        ctl = ff_docs[0].get("ctl", 0)
-        if tsb > 10: current_form = "Picco di Forma (Pronto per la gara)"
-        elif tsb > -5: current_form = "Fase di Costruzione Produttiva"
-        elif tsb > -15: current_form = "Affaticamento Funzionale (Heavy Block)"
-        else: current_form = "Rischio Sovrallenamento (Necessario Scarico)"
+
+    ctl = ff_docs[0].get("ctl", 0) if ff_docs else 0
+    tsb = ff_docs[0].get("tsb", 0) if ff_docs else 0
+
+    import json
+    from anthropic import AsyncAnthropic
+
+    # AI COACH PROMPT
+    prompt = f"""
+    Sei un "Elite Olympic Running Coach and Data Scientist" di fama mondiale. 
+    Analizza i dati storici e fisiologici di questo atleta in italiano e comportati in modo estremamente professionale, tecnico, asciutto e scientifico.
+    Non ripetere i numeri crudi (come i battiti), ma estrai insight sul *significato* di questi numeri.
     
-    # 7. Potenziale
-    # Stimiamo il VDOT massimale biologico basato su età (se presente) e VDOT attuale
-    age = profile.get("age", 30) or 30
-    age_factor = max(0, (age - 35) * 0.5) # VDOT scende leggermente dopo i 35
-    potential_vdot = min(65.0, vdot_current + (100 - consistency_score)/10 * 0.5 + (100 - eff_score)/10 * 0.3)
-    potential_vdot = round(potential_vdot - age_factor/10, 1)
+    Atleta:
+    - Corse Analizzate: {total_runs}
+    - Distanza Totale Macinata: {total_km:.1f} km
+    - Frequenza Media: {freq:.1f} run/settimana (Consistency Score: {consistency_score:.1f}/100)
+    - VDOT Attuale misurato: {vdot_current:.1f}
+    - Passo Medio Globale: {_format_pace(1000 / max(1, avg_pace_s))}/km
+    - Efficienza Meccanico-Cardiaca: {eff_score}/100 (dove 100 è eccellente efficienza aerobica)
+    - CTL (Carico Cronico): {ctl:.1f}
+    - TSB (Bilancio Forma/Stanchezza): {tsb:.1f}
+    - Distribuzione Zone: {json.dumps(zone_dist)} %
     
-    race_preds = _predict_race(potential_vdot)
-    ideal_distance = "Mezza Maratona" if r_type == "Endurance Specialist" else "5K/10K"
-    if r_type == "Balanced Runner" and total_km > 1000: ideal_distance = "Maratona"
-    
-    # Output Dictionary
+    Rispondi unicamente con un file JSON di puro testo, senza includere blocchi markdown ```json o altro, mantenendo questo schema rigido:
+    {{
+      "profile_level": "<breve etichetta sul livello tecnico, es. Amatore Avanzato, Principiante Evoluto, Sub-Elite, Elite>",
+      "profile_type": "<breve etichetta tipologia dedotta, es. Endurance Specialist, Speed/Power Runner, Balanced Runner, Ossidativo Puro>",
+      "trend_status": "<stima discorsiva, es. 'In Forte Crescita' o 'In Regressione', con una singola breve frase pungente ad effetto coach.>",
+      "consistency_label": "<breve insight tecnico sulla costanza>",
+      "efficiency_label": "<diagnosi di biomeccanica/cuore (es. Motore aerobico iperefficiente in base al rapporto battito/passo)>",
+      "form_label": "<diagnosi sullo stato TSB/CTL. Es. Picco di Forma Ottimale (ready to race) oppure Sovraffaticamento Funzionale>",
+      "vdot_ceiling": <numero decimale, stima teorica massima raggiungibile con allenamento perfetto (dovrebbe essere sempre uguale o superiore al VDOT corrente {vdot_current:.1f} ma realistico in base allo score di costanza ed età)>,
+      "ideal_distance": "<breve stringa, es. Maratona, Mezza Maratona, 5K/10K in base alla distribuzione della fatica>"
+    }}
+    """
+
+    try:
+        client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+        response = await client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=600,
+            temperature=0.7,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        ai_text = response.content[0].text.strip()
+        # Clean potential markdown
+        if ai_text.startswith("```"):
+            ai_text = ai_text.split("```")[1]
+            if ai_text.lower().startswith("json"):
+                ai_text = ai_text[4:]
+            ai_text = ai_text.strip()
+        ai_data = json.loads(ai_text)
+    except Exception as e:
+        print("Runner DNA AI Error:", e)
+        # Fallback sicuro in caso di errore AI (Offline o Key sbagliata)
+        ai_data = {
+            "profile_level": "Analisi AI Non Disponibile",
+            "profile_type": "Dati in elaborazione",
+            "trend_status": "Verifica configurazione API",
+            "consistency_label": "In attesa",
+            "efficiency_label": "In attesa",
+            "form_label": "In attesa",
+            "vdot_ceiling": round(vdot_current + 2, 1),
+            "ideal_distance": "Da definire"
+        }
+
     dna = {
         "profile": {
-            "level": level,
-            "type": r_type,
+            "level": ai_data.get("profile_level", ""),
+            "type": ai_data.get("profile_type", ""),
             "vdot_current": round(vdot_current, 1)
         },
         "stats": {
@@ -2386,27 +2406,35 @@ async def get_runner_dna():
             "zone_distribution": zone_dist
         },
         "performance": {
-            "trend_status": perf_trend,
+            "trend_status": ai_data.get("trend_status", ""),
             "total_km": round(total_km, 1)
         },
         "consistency": {
             "score_pct": int(consistency_score),
-            "label": cons_label,
+            "label": ai_data.get("consistency_label", ""),
             "runs_per_week": round(freq, 1)
         },
         "efficiency": {
             "score_pct": int(eff_score),
-            "label": "Eccellente" if eff_score > 85 else "Buona" if eff_score > 70 else "Migliorabile"
+            "label": ai_data.get("efficiency_label", "")
         },
         "current_state": {
-            "form_label": current_form,
+            "form_label": ai_data.get("form_label", ""),
             "fitness_ctl": round(ctl, 1)
         },
         "potential": {
-            "vdot_ceiling": potential_vdot,
-            "ideal_distance": ideal_distance,
-            "predictions": race_preds
+            "vdot_ceiling": round(float(ai_data.get("vdot_ceiling", vdot_current)), 1),
+            "ideal_distance": ai_data.get("ideal_distance", ""),
+            "predictions": _predict_race(float(ai_data.get("vdot_ceiling", vdot_current)))
         }
     }
     
+    # Save to MongoDB cache
+    await db.runner_dna_cache.update_one(
+        {"athlete_id": athlete_id},
+        {"$set": {"last_run_date": last_run_date, "dna_data": dna}},
+        upsert=True
+    )
+    
     return {"dna": dna}
+
