@@ -128,7 +128,7 @@ export function JarvisOverlay() {
     dispatch({ type: 'WAKE_WORD' });
   }, []);
 
-  const { transcript, response, orbState, browserSupported, startListening } = useJarvis({
+  const { transcript, response, orbState, browserSupported, startListening, analyser } = useJarvis({
     onAction: handleAction,
     onOrbStateChange: handleOrbStateChange,
     onWakeWord: handleWakeWord,
@@ -168,7 +168,7 @@ export function JarvisOverlay() {
 
             {/* Orb — fills the screen, click = riavvia microfono */}
             <div className="flex-1 relative cursor-pointer" onClick={startListening}>
-              <JarvisOrb state={orbState} analyser={null} />
+              <JarvisOrb state={orbState} analyser={analyser} />
 
               {/* JARVIS label */}
               <div className="absolute bottom-24 left-1/2 -translate-x-1/2 text-center pointer-events-none">

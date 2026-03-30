@@ -20,9 +20,10 @@ interface UseJarvisReturn {
   browserSupported: boolean;
   startListening: () => void;
   stopListening: () => void;
+  analyser: AnalyserNode | null;
 }
 
-const WAKE_WORD_RE = /\bjarvis\b/i;
+const WAKE_WORD_RE = /\b(jarvis|giarvis|gervis|hi jarvis|ehi jarvis|hey jarvis)\b/i;
 const MIN_COMMAND_WORDS = 1;
 
 export function useJarvis({
@@ -41,6 +42,9 @@ export function useJarvis({
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingCommandRef = useRef('');
   const synthRef = useRef(window.speechSynthesis);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
 
   const browserSupported =
     typeof window !== 'undefined' &&
@@ -126,9 +130,9 @@ export function useJarvis({
       const lower = full.toLowerCase();
 
       if (WAKE_WORD_RE.test(lower)) {
-        // Extract command after "jarvis"
-        const match = lower.match(/\bjarvis\b(.*)/i);
-        const afterWake = (match?.[1] ?? '').trim();
+        // Correctly extract command after any variant in the regex
+        const match = lower.match(new RegExp(`${WAKE_WORD_RE.source}(.*)`, 'i'));
+        const afterWake = (match?.[match.length - 1] ?? '').trim();
         pendingCommandRef.current = afterWake;
 
         updateOrbState('listening');
@@ -141,6 +145,8 @@ export function useJarvis({
           const cmd = pendingCommandRef.current.trim();
           pendingCommandRef.current = '';
           if (cmd.split(' ').length >= MIN_COMMAND_WORDS) {
+            // Immediate UI feedback
+            updateOrbState('thinking');
             sendCommand(cmd);
           }
         }, 1500);
@@ -150,7 +156,12 @@ export function useJarvis({
     recognition.onend = () => {
       // Chrome auto-stops after silence — restart if still supposed to listen
       if (isListeningRef.current && orbStateRef.current !== 'thinking' && orbStateRef.current !== 'speaking') {
-        try { recognition.start(); } catch { /* already started */ }
+        // Add a tiny delay to avoid rapid-fire restarts
+        setTimeout(() => {
+          if (isListeningRef.current) {
+            try { recognition.start(); } catch { /* already started */ }
+          }
+        }, 300);
       }
     };
 
@@ -160,8 +171,29 @@ export function useJarvis({
       }
     };
 
-    try { recognition.start(); } catch { /* already running */ }
+    try {
+      recognition.start();
+      // Setup audio ONLY if listener starts correctly
+      setupAudio();
+    } catch { /* already running */ }
   }, [browserSupported, updateOrbState, onWakeWord, sendCommand]);
+
+  const setupAudio = async () => {
+    if (analyserRef.current) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const ana = ctx.createAnalyser();
+      ana.fftSize = 64; // Low res for light visualization
+      const source = ctx.createMediaStreamSource(stream);
+      source.connect(ana);
+      audioContextRef.current = ctx;
+      analyserRef.current = ana;
+      setAnalyser(ana);
+    } catch (err) {
+      console.warn('[JARVIS] Audio setup failed:', err);
+    }
+  };
 
   const stopListening = useCallback(() => {
     isListeningRef.current = false;
@@ -169,6 +201,12 @@ export function useJarvis({
     recognitionRef.current?.stop();
     updateOrbState('idle');
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(console.error);
+      audioContextRef.current = null;
+      analyserRef.current = null;
+      setAnalyser(null);
+    }
   }, [updateOrbState]);
 
   // Start on mount when enabled
@@ -180,7 +218,6 @@ export function useJarvis({
       stopListening();
     };
   }, [enabled]); // eslint-disable-line react-hooks/exhaustive-deps
-
   return {
     transcript,
     response,
@@ -188,5 +225,6 @@ export function useJarvis({
     browserSupported,
     startListening,
     stopListening,
+    analyser,
   };
 }

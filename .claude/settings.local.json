@@ -21,7 +21,9 @@
       "Bash(git -C d:/webapp-antiG status)",
       "Bash(git -C d:/webapp-antiG log --oneline -3)",
       "Bash(git -C d:/webapp-antiG diff --stat HEAD)",
-      "Bash(git -C d:/webapp-antiG push origin main)"
+      "Bash(git -C d:/webapp-antiG push origin main)",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''server.py''\\); print\\(''OK''\\)\")",
+      "Bash(pip show:*)"
     ]
   }
 }

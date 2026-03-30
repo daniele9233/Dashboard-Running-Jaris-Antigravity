@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s https://raw.githubusercontent.com/daniele9233/jarvis/main/src/App.jsx)",
+      "Bash(curl -s https://raw.githubusercontent.com/daniele9233/jarvis/main/src/main.tsx)",
+      "Bash(curl -s https://raw.githubusercontent.com/daniele9233/jarvis/main/index.html)",
+      "Bash(curl -s https://raw.githubusercontent.com/daniele9233/jarvis/main/server.ts)",
+      "Bash(curl -s https://raw.githubusercontent.com/daniele9233/jarvis/main/orb.ts)",
+      "Bash(curl -s https://raw.githubusercontent.com/daniele9233/jarvis/main/fetch.ts)",
+      "Bash(curl -s https://raw.githubusercontent.com/daniele9233/jarvis/main/vite.config.ts)",
+      "Bash(curl -s https://raw.githubusercontent.com/daniele9233/jarvis/main/.env.example)",
+      "Bash(curl -s https://raw.githubusercontent.com/daniele9233/jarvis/main/orb.ts.txt)",
+      "Bash(curl -s https://raw.githubusercontent.com/daniele9233/jarvis/main/main.ts.txt)",
+      "Bash(curl -s https://raw.githubusercontent.com/daniele9233/jarvis/main/style.css.txt)",
+      "Bash(curl -s https://raw.githubusercontent.com/daniele9233/jarvis/main/tsconfig.json)",
+      "Bash(curl -s https://raw.githubusercontent.com/daniele9233/jarvis/main/src/index.ts)",
+      "Bash(curl -s https://api.github.com/repos/daniele9233/jarvis/contents/src/lib -H 'Accept: application/vnd.github.v3+json')",
+      "Bash(curl -s https://raw.githubusercontent.com/daniele9233/jarvis/main/src/lib/voice.ts)",
+      "Bash(curl -s https://raw.githubusercontent.com/daniele9233/jarvis/main/src/lib/ws.ts)",
+      "Bash(curl -s https://raw.githubusercontent.com/daniele9233/jarvis/main/src/lib/settings.ts)",
+      "Bash(curl -s https://raw.githubusercontent.com/daniele9233/jarvis/main/src/lib/utils.ts)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://raw.githubusercontent.com/daniele9233/jarvis/main/package.json\")",
+      "Bash(npm install:*)",
+      "Bash(node -e \"require\\(''three''\\); console.log\\(''three ok''\\)\")",
+      "Bash(curl -s -X POST http://localhost:8000/api/jarvis/chat -H \"Content-Type: application/json\" -d '{\"\"transcript\"\": \"\"Jarvis apri training\"\"}')",
+      "Bash(python -c \":*)"
+    ]
+  }
+}

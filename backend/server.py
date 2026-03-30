@@ -3269,28 +3269,38 @@ async def jarvis_chat(request: Request):
 - Race goal: {profile.get("race_goal", "N/A")} on {profile.get("race_date", "N/A")}"""
 
     if not JARVIS_GEMINI_KEY:
-        return JSONResponse({"error": "no_api_key"}, status_code=500)
+        print("[JARVIS] Warning: No Gemini API Key found.")
+        return JSONResponse({
+            "text": "Scusa, la mia chiave AI non è configurata. Chiedi all'amministratore.",
+            "action": {"type": "speak_only"}
+        }, status_code=200)
 
     try:
         from google import genai as ggenai
         gclient = ggenai.Client(api_key=JARVIS_GEMINI_KEY)
         full_prompt = f"{_JARVIS_SYSTEM_PROMPT}\n\n{context_block}\n\nUSER SAID: \"{transcript}\""
         gresp = await gclient.aio.models.generate_content(
-            model="gemini-2.5-flash-lite",
+            model="gemini-1.5-flash",
             contents=full_prompt,
         )
         raw = gresp.text.strip()
 
+        # Robust JSON extraction
         json_match = re.search(r'\{.*\}', raw, re.DOTALL)
         if json_match:
-            result = json.loads(json_match.group())
+            try:
+                result = json.loads(json_match.group())
+            except json.JSONDecodeError:
+                print(f"[JARVIS] JSON Decode Error. Raw: {raw}")
+                result = {"text": "Ho avuto un problema nel formattare la risposta. Riprova.", "action": {"type": "speak_only"}}
         else:
+            print(f"[JARVIS] No JSON found in response. Raw: {raw}")
             result = {"text": raw[:200], "action": {"type": "speak_only"}}
 
     except Exception as e:
         print(f"[JARVIS] Gemini error: {e}")
         result = {
-            "text": "I'm having trouble connecting. Please try again.",
+            "text": "Ho difficoltà a connettermi ai miei sistemi. Riprova tra poco.",
             "action": {"type": "speak_only"}
         }
 
