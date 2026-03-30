@@ -149,9 +149,13 @@ export function useJarvis({
     };
 
     recognition.onend = () => {
-      // Chrome auto-stops after silence — restart if still supposed to listen
+      // Chrome auto-stops after silence — restart after brief delay to avoid abort loop
       if (isListeningRef.current && orbStateRef.current !== 'thinking' && orbStateRef.current !== 'speaking') {
-        try { recognition.start(); } catch { /* already started */ }
+        setTimeout(() => {
+          if (isListeningRef.current) {
+            try { recognition.start(); } catch { /* already started */ }
+          }
+        }, 300);
       }
     };
 
