@@ -143,8 +143,23 @@ Basata sulla logica scientifica dell'app [CORRALEJO 2026](https://github.com/dan
 - [x] `GET /api/garmin/status` — verifica se le credenziali sono configurate
 - [x] `POST /api/garmin/sync?limit=N` — scarica FIT da Garmin, incrocia con corse Strava per data+distanza (±10%), estrae biomeccanica con `_extract_fit_dynamics`, aggiorna MongoDB
 - [x] `POST /api/garmin/sync-all` — stessa cosa, storico completo (limit=1000)
+- [x] FIT parser two-pass: `session` frame per FR265 averages (vertical oscillation, GCT, stride, ratio)
 - [x] Pulsante **Garmin Sync** in Activities — stato idle/loading/done/error, mostra `+N dynamics` al completamento
 - [x] `syncGarmin()` e `syncGarminAll()` aggiunte a `api/index.ts`
+- [x] `garth_generate_token.py` — script one-shot per sblocco Garmin 429 (via hotspot diverso IP)
+- [x] `POST /api/garmin/save-token` — salva token garth manualmente su MongoDB
+
+#### JARVIS — Voice Assistant AI (COMPLETATO)
+- [x] Three.js particle orb fullscreen: 2000 particelle, connection lines, AdditiveBlending
+- [x] Colori: lime `#C0FF00` (idle/listening) · teal `#00FFAA` (thinking/speaking)
+- [x] Web Speech API: riconoscimento vocale `it-IT` continuo, wake word `"Jarvis"`
+- [x] 18 comandi vocali in italiano (6 nav · 9 dati · 3 azioni) mostrati bottom-left
+- [x] Silence timer 1.5s — invia comando dopo pausa naturale
+- [x] Backend `POST /api/jarvis/chat`: contesto atleta (VDOT, TSB, last run, weekly km) + Gemini 2.5 Flash Lite
+- [x] State machine: fullscreen intro → mini bubble dopo navigazione → fullscreen su wake word/click
+- [x] Azioni: navigate, show_data, sync_strava, sync_garmin, regenerate_dna
+- [x] `JARVIS_GEMINI_KEY` env var separata da `GEMINI_API_KEY`
+- [x] Fix: rimosso `getUserMedia` doppio (conflitto microfono), delay 300ms riavvio recognition
 
 #### FASE 3 — Gamification & Reports
 - [ ] Medaglie 6 livelli per distanza (5K, 10K, 15K, 21K): Warm-up → Bronzo → Argento → Oro → Platino → Elite
@@ -175,6 +190,7 @@ Basata sulla logica scientifica dell'app [CORRALEJO 2026](https://github.com/dan
 | Tailwind CSS | Utility-first styling |
 | MapLibre GL | Mappe (hero map, heatmap) |
 | Recharts | Grafici bar/line |
+| Three.js | Particle orb JARVIS (2000 particelle) |
 | Lucide React | Icone |
 | SVG custom | Grafici interattivi (pace, fitness & freshness) |
 
@@ -186,7 +202,9 @@ Basata sulla logica scientifica dell'app [CORRALEJO 2026](https://github.com/dan
 | Uvicorn | ASGI server |
 | Motor 3.x | MongoDB async driver |
 | httpx | HTTP client (Strava API) |
-| Claude Sonnet 4.6 | AI Coach primario (Anthropic) |
+| google-genai | JARVIS AI — Gemini 2.5 Flash Lite |
+| garminconnect + garth | Garmin Connect sync + OAuth token |
+| fitdecode | Parser FIT files (running dynamics FR265) |
 | python-dotenv | Env variables |
 
 ### Database & Hosting
@@ -325,6 +343,8 @@ Base URL: `https://dani-backend-ea0s.onrender.com/api`
 | POST | `/garmin/sync-all` | Sync storico completo Garmin (limit=1000) |
 | GET | `/runner-dna` | Identità atletica AI + biomeccanica |
 | DELETE | `/runner-dna/cache` | Forza re-analisi AI DNA |
+| POST | `/jarvis/chat` | JARVIS AI — processa trascrizione vocale, restituisce risposta + azione |
+| POST | `/garmin/save-token` | Salva token garth manualmente (sblocco 429) |
 
 ---
 
@@ -354,7 +374,8 @@ Ogni documento MongoDB contiene `athlete_id` (da Strava). Tutte le query filtran
 | `STRAVA_CLIENT_ID` | Client ID app Strava |
 | `STRAVA_CLIENT_SECRET` | Client Secret app Strava |
 | `ANTHROPIC_API_KEY` | API key Claude Sonnet 4.6 |
-| `GEMINI_API_KEY` | API key Gemini (fallback AI) |
+| `GEMINI_API_KEY` | API key Gemini (fallback AI generico) |
+| `JARVIS_GEMINI_KEY` | API key Gemini dedicata a JARVIS (Gemini 2.5 Flash Lite) |
 | `GARMIN_EMAIL` | Email account Garmin Connect |
 | `GARMIN_PASSWORD` | Password account Garmin Connect |
 | `BACKEND_URL` | URL pubblico del backend (es. `https://dani-backend-ea0s.onrender.com`) |
@@ -380,10 +401,18 @@ uvicorn server:app --reload --port 8000
 
 ## Changelog
 
+### v1.2.0 — Marzo 2026
+- **JARVIS Voice Assistant**: orb Three.js fullscreen, 18 comandi vocali in italiano, Gemini 2.5 Flash Lite
+- **Fix microfono**: rimosso doppio getUserMedia, delay 300ms riavvio SpeechRecognition
+- **System prompt italiano**: JARVIS risponde in italiano con contesto atleta completo
+- **google-genai**: migrazione da `google-generativeai` (deprecato) al nuovo SDK
+
 ### v1.1.0 — Marzo 2026
 - **Garmin Connect**: sync FIT files per running dynamics (oscillazione verticale, GCT, lunghezza falcata, rapporto verticale)
+- **FIT parser FR265**: two-pass strategy — session frame per dynamics, record frame per HR-Pro
 - **Runner DNA Biomeccanica**: sezione dedicata nel DNA con metriche colorate elite/good/poor
 - **Pulsante Garmin Sync** in Activities con feedback visivo live
+- **garth token persistence**: OAuth token su MongoDB, nessun re-login
 
 ### v1.0.0 — Marzo 2026
 - **Training Plan Goal-Driven**: piano costruito sul gap VDOT tra forma attuale e tempo obiettivo
