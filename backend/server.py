@@ -3010,11 +3010,45 @@ async def _garmin_login():
 
 @app.get("/api/garmin/status")
 async def garmin_status():
-    """Return whether Garmin credentials are configured."""
+    """Return whether Garmin credentials are configured and if tokens are cached."""
+    saved = await db.garmin_tokens.find_one({"email": GARMIN_EMAIL}) if GARMIN_EMAIL else None
     return {
         "configured": bool(GARMIN_EMAIL and GARMIN_PASSWORD),
         "email": GARMIN_EMAIL if GARMIN_EMAIL else None,
+        "token_cached": bool(saved and saved.get("token_dump")),
     }
+
+
+@app.post("/api/garmin/save-token")
+async def garmin_save_token(request: Request):
+    """Save a garth token dump manually — use when Garmin rate-limits fresh logins.
+
+    Body: { "token_dump": "<output of garth_generate_token.py>" }
+    Once saved, all subsequent syncs reuse this token (auto-refreshed by garth).
+    """
+    body = await request.json()
+    token_dump = body.get("token_dump", "").strip()
+    if not token_dump:
+        return JSONResponse({"error": "missing token_dump"}, status_code=400)
+
+    # Validate the token works before saving
+    try:
+        import garth
+        from garminconnect import Garmin
+        garth_client = garth.Client()
+        garth_client.loads(token_dump)
+        client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
+        client.garth = garth_client
+        client.get_activities(0, 1)  # smoke test
+    except Exception as e:
+        return JSONResponse({"error": "invalid_token", "detail": str(e)}, status_code=400)
+
+    await db.garmin_tokens.update_one(
+        {"email": GARMIN_EMAIL},
+        {"$set": {"email": GARMIN_EMAIL, "token_dump": token_dump}},
+        upsert=True,
+    )
+    return {"ok": True, "message": "Token salvato — Garmin Sync ora funzionerà senza login."}
 
 
 @app.post("/api/garmin/sync")
