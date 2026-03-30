@@ -3,6 +3,7 @@ import { getRunnerDna, clearRunnerDnaCache } from "../api";
 import {
   Dna, BrainCircuit, Trophy, Zap, Target, TrendingUp,
   RefreshCcw, Activity, Heart, Timer, Gauge, Flame,
+  ArrowUp, ArrowDown, Minus, BarChart2, Footprints,
 } from "lucide-react";
 
 // ─── DNA HELIX SVG ────────────────────────────────────────────────────────────
@@ -183,6 +184,94 @@ function formatDelta(from: string, to: string): string {
   return `-${m}:${s.toString().padStart(2, "0")}`;
 }
 
+// ─── PACE STR → SECONDS ───────────────────────────────────────────────────────
+function paceStrToSec(pace: string | null | undefined): number | null {
+  if (!pace) return null;
+  const clean = pace.replace(/\/km$/, "").trim();
+  const parts = clean.split(":");
+  if (parts.length < 2) return null;
+  const m = parseInt(parts[0]), s = parseInt(parts[1]);
+  return isNaN(m) || isNaN(s) ? null : m * 60 + s;
+}
+
+// ─── COMPARISON BAR ROWS ──────────────────────────────────────────────────────
+function ComparisonRow({
+  label, entries, higherBetter, min, max, format,
+}: {
+  label: string;
+  entries: { name: string; value: number | null; color: string }[];
+  higherBetter: boolean;
+  min: number;
+  max: number;
+  format: (v: number) => string;
+}) {
+  const [filled, setFilled] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setFilled(true), 300); return () => clearTimeout(t); }, []);
+
+  return (
+    <div className="space-y-2">
+      <div className="text-[9px] font-black tracking-[0.25em] text-gray-500 uppercase">{label}</div>
+      {entries.map(({ name, value, color }) => {
+        const range = max - min || 1;
+        const normalized = value != null
+          ? higherBetter
+            ? (value - min) / range
+            : 1 - (value - min) / range
+          : 0;
+        const pct = Math.min(100, Math.max(2, normalized * 100));
+        return (
+          <div key={name} className="flex items-center gap-3">
+            <div className="w-24 text-[10px] font-black text-gray-600 shrink-0 text-right">{name}</div>
+            <div className="flex-1 h-2.5 bg-[#111] rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-1000 ease-out"
+                style={{
+                  width: filled ? `${pct}%` : "0%",
+                  backgroundColor: color,
+                  boxShadow: `0 0 10px ${color}50`,
+                }}
+              />
+            </div>
+            <div className="w-20 text-[11px] font-black shrink-0" style={{ color }}>
+              {value != null ? format(value) : "—"}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── RUNNING DYNAMICS GAUGE ───────────────────────────────────────────────────
+function DynMetric({
+  label, value, unit, optimal, good, lowerBetter,
+}: {
+  label: string; value: number | null; unit: string;
+  optimal: number; good: number; lowerBetter: boolean;
+}) {
+  if (value == null) return null;
+  const isOptimal = lowerBetter ? value <= optimal : value >= optimal;
+  const isGood    = lowerBetter ? value <= good   : value >= good;
+  const color     = isOptimal ? "#C0FF00" : isGood ? "#FCD34D" : "#EF4444";
+  const label2    = isOptimal ? "Elite"   : isGood ? "Buono"   : "Da migliorare";
+
+  return (
+    <div className="bg-[#0A0A0A] border border-white/[0.05] rounded-2xl p-5 flex flex-col gap-3 hover:border-white/10 transition-colors">
+      <div className="text-[9px] font-black tracking-[0.2em] text-gray-600 uppercase">{label}</div>
+      <div className="flex items-end gap-1.5">
+        <span className="text-3xl font-black leading-none" style={{ color }}>{value}</span>
+        <span className="text-sm text-gray-500 pb-0.5">{unit}</span>
+      </div>
+      <div
+        className="text-[10px] font-black tracking-wider px-2 py-1 rounded-lg self-start"
+        style={{ color, backgroundColor: `${color}12`, border: `1px solid ${color}25` }}
+      >
+        {label2}
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export function RunnerDnaView() {
   const [data, setData] = useState<any>(null);
@@ -223,6 +312,7 @@ export function RunnerDnaView() {
   const {
     profile, stats, performance, consistency, efficiency,
     current_state, potential, ai_coach, dna_scores,
+    running_dynamics, comparison,
   } = data;
 
   const potentialGap = (potential.vdot_ceiling - profile.vdot_current).toFixed(1);
@@ -441,6 +531,62 @@ export function RunnerDnaView() {
           })()}
         </section>
 
+        {/* ══ RUNNING DYNAMICS ═════════════════════════════════════════════ */}
+        {running_dynamics && (
+          running_dynamics.vertical_oscillation_cm != null ||
+          running_dynamics.vertical_ratio_pct != null ||
+          running_dynamics.ground_contact_ms != null ||
+          running_dynamics.stride_length_m != null
+        ) ? (
+          <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-8">
+            <div className="flex items-center gap-2 mb-6">
+              <Footprints className="w-4 h-4 text-indigo-400" />
+              <span className="text-[9px] font-black tracking-[0.35em] text-gray-500 uppercase">
+                Running Dynamics — Biomeccanica Avanzata
+              </span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <DynMetric
+                label="Oscillazione Verticale"
+                value={running_dynamics.vertical_oscillation_cm}
+                unit="cm"
+                optimal={6} good={9} lowerBetter={true}
+              />
+              <DynMetric
+                label="Rapporto Verticale"
+                value={running_dynamics.vertical_ratio_pct}
+                unit="%"
+                optimal={6} good={9} lowerBetter={true}
+              />
+              <DynMetric
+                label="Contatto Suolo"
+                value={running_dynamics.ground_contact_ms}
+                unit="ms"
+                optimal={200} good={250} lowerBetter={true}
+              />
+              <DynMetric
+                label="Lunghezza Falcata"
+                value={running_dynamics.stride_length_m}
+                unit="m"
+                optimal={1.2} good={1.0} lowerBetter={false}
+              />
+            </div>
+            <p className="mt-4 text-[10px] text-gray-700 leading-relaxed">
+              Oscillazione verticale: target &lt;6cm (elite) · Rapporto verticale: target &lt;6% · Contatto suolo: target &lt;200ms · Richiede orologio con Running Dynamics (Garmin HRM-Pro, Coros, Polar Vantage)
+            </p>
+          </section>
+        ) : (
+          <section className="bg-[#080808] border border-white/[0.05] border-dashed rounded-3xl p-6 flex items-center gap-4">
+            <Footprints className="w-8 h-8 text-gray-700 shrink-0" />
+            <div>
+              <div className="text-[9px] font-black tracking-[0.25em] text-gray-600 uppercase mb-1">Running Dynamics Non Disponibili</div>
+              <p className="text-xs text-gray-600">
+                Oscillazione verticale, rapporto verticale e contatto suolo richiedono un orologio compatibile (Garmin HRM-Pro, Coros, Polar Vantage). Fai un sync dopo la prossima corsa con il sensore.
+              </p>
+            </div>
+          </section>
+        )}
+
         {/* ══ COACH VERDICT ════════════════════════════════════════════════ */}
         <section className="relative bg-gradient-to-br from-[#0C0C0C] to-[#060606] border border-[#C0FF00]/15 rounded-3xl p-10 overflow-hidden">
           <div
@@ -600,6 +746,135 @@ export function RunnerDnaView() {
             </table>
           </div>
         </section>
+
+        {/* ══ CONFRONTO ════════════════════════════════════════════════════ */}
+        {comparison && (
+          <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-8">
+            <div className="flex items-center gap-2 mb-8">
+              <BarChart2 className="w-4 h-4 text-indigo-400" />
+              <span className="text-[9px] font-black tracking-[0.35em] text-gray-500 uppercase">
+                Confronto — Te Stesso · Media Runner · Target
+              </span>
+            </div>
+
+            {/* Legend */}
+            <div className="flex gap-6 mb-8">
+              {[
+                { color: "#6B7280", label: "Mese Scorso" },
+                { color: "#C0FF00", label: "Adesso" },
+                { color: "#6366F1", label: "Target Livello" },
+              ].map(({ color, label }) => (
+                <div key={label} className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+                  <span className="text-[10px] font-black text-gray-500">{label}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-8">
+              {/* VDOT */}
+              <ComparisonRow
+                label="VDOT — Capacità Aerobica"
+                entries={[
+                  { name: "Mese Scorso", value: comparison.last_month?.vdot ?? null,   color: "#6B7280" },
+                  { name: "Adesso",      value: profile.vdot_current,                  color: "#C0FF00" },
+                  { name: "Target",      value: comparison.target?.vdot ?? null,        color: "#6366F1" },
+                ]}
+                higherBetter={true}
+                min={25} max={58}
+                format={(v) => v.toFixed(1)}
+              />
+
+              {/* PASSO */}
+              <ComparisonRow
+                label="PASSO MEDIO — Velocità (più basso = meglio)"
+                entries={[
+                  { name: "Mese Scorso", value: paceStrToSec(comparison.last_month?.pace_str), color: "#6B7280" },
+                  { name: "Adesso",      value: paceStrToSec(stats.avg_pace),                  color: "#C0FF00" },
+                  { name: "Target",      value: comparison.target?.pace_sec ?? null,            color: "#6366F1" },
+                ]}
+                higherBetter={false}
+                min={230} max={600}
+                format={(v) => `${Math.floor(v / 60)}:${String(v % 60).padStart(2, "0")}/km`}
+              />
+
+              {/* FC MEDIA */}
+              {stats.avg_hr > 0 && (
+                <ComparisonRow
+                  label="FC MEDIA — Efficienza Cardiaca (più bassa = meglio)"
+                  entries={[
+                    { name: "Mese Scorso", value: comparison.last_month?.avg_hr ?? null, color: "#6B7280" },
+                    { name: "Adesso",      value: stats.avg_hr,                          color: "#C0FF00" },
+                    { name: "Target",      value: comparison.target?.avg_hr ?? null,     color: "#6366F1" },
+                  ]}
+                  higherBetter={false}
+                  min={130} max={175}
+                  format={(v) => `${Math.round(v)} bpm`}
+                />
+              )}
+
+              {/* RUN/WEEK */}
+              <ComparisonRow
+                label="ALLENAMENTI / SETTIMANA"
+                entries={[
+                  { name: "Mese Scorso", value: comparison.last_month?.runs_per_week ?? null, color: "#6B7280" },
+                  { name: "Adesso",      value: consistency.runs_per_week,                    color: "#C0FF00" },
+                  { name: "Target",      value: comparison.target?.runs_per_week ?? null,     color: "#6366F1" },
+                ]}
+                higherBetter={true}
+                min={0} max={7}
+                format={(v) => `${v.toFixed(1)}×`}
+              />
+            </div>
+
+            {/* Delta summary */}
+            {comparison.last_month?.vdot && (
+              <div className="mt-8 pt-6 border-t border-white/[0.04] grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  {
+                    label: "VDOT",
+                    delta: profile.vdot_current - (comparison.last_month.vdot ?? profile.vdot_current),
+                    fmt: (d: number) => `${d >= 0 ? "+" : ""}${d.toFixed(1)}`,
+                    higherBetter: true,
+                  },
+                  {
+                    label: "PASSO",
+                    delta: (paceStrToSec(comparison.last_month.pace_str) ?? 0) - (paceStrToSec(stats.avg_pace) ?? 0),
+                    fmt: (d: number) => `${d >= 0 ? "-" : "+"}${Math.abs(Math.floor(d / 60))}:${String(Math.abs(d % 60)).padStart(2, "0")}/km`,
+                    higherBetter: true, // positive delta = faster
+                  },
+                  {
+                    label: "FC MEDIA",
+                    delta: (comparison.last_month.avg_hr ?? stats.avg_hr) - stats.avg_hr,
+                    fmt: (d: number) => `${d >= 0 ? "-" : "+"}${Math.abs(Math.round(d))} bpm`,
+                    higherBetter: true, // lower HR = better
+                  },
+                  {
+                    label: "RUN/WEEK",
+                    delta: consistency.runs_per_week - (comparison.last_month.runs_per_week ?? consistency.runs_per_week),
+                    fmt: (d: number) => `${d >= 0 ? "+" : ""}${d.toFixed(1)}×`,
+                    higherBetter: true,
+                  },
+                ].map(({ label, delta, fmt, higherBetter }) => {
+                  const positive = higherBetter ? delta > 0 : delta < 0;
+                  const neutral = Math.abs(delta) < 0.1;
+                  const color = neutral ? "#6B7280" : positive ? "#C0FF00" : "#EF4444";
+                  const Icon = neutral ? Minus : positive ? ArrowUp : ArrowDown;
+                  return (
+                    <div key={label} className="text-center p-3 bg-black/30 rounded-2xl border border-white/[0.04]">
+                      <div className="text-[8px] font-black tracking-[0.2em] text-gray-600 mb-2">{label}</div>
+                      <div className="flex items-center justify-center gap-1" style={{ color }}>
+                        <Icon className="w-3 h-3" />
+                        <span className="text-sm font-black">{fmt(delta)}</span>
+                      </div>
+                      <div className="text-[9px] text-gray-600 mt-1">vs mese scorso</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
 
         {/* ══ UNLOCK + REGENERATE ══════════════════════════════════════════ */}
         <section className="relative bg-gradient-to-r from-[#C0FF00]/[0.04] via-transparent to-transparent border border-[#C0FF00]/15 rounded-3xl p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">

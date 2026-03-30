@@ -362,6 +362,7 @@ async def strava_sync():
             splits = []
             full_polyline = ""
             streams_data = None  # per-point streams for detailed chart
+            detail: dict = {}  # populated below if detail fetch succeeds
 
             try:
                 detail_resp = await http.get(
@@ -453,6 +454,11 @@ async def strava_sync():
                 "polyline": full_polyline or summary_polyline,
                 "start_latlng": start_latlng,
                 "plan_feedback": None,
+                # Running dynamics (Garmin HRM-Pro / compatible watches)
+                "avg_vertical_oscillation": detail.get("average_vertical_oscillation"),
+                "avg_vertical_ratio":       detail.get("average_vertical_ratio"),
+                "avg_ground_contact_time":  detail.get("average_ground_contact_time"),
+                "avg_stride_length":        detail.get("average_stride_length"),
             }
 
             await db.runs.update_one(
@@ -1737,6 +1743,42 @@ def _predict_race(vdot: float) -> dict:
     return result
 
 
+def _vdot_from_best_efforts(efforts: list) -> Optional[float]:
+    """Calculate VDOT from stored best efforts (more reliable than HR-filtered runs).
+
+    Best efforts represent actual race-pace performance with no HR threshold filter.
+    Only considers efforts >= 4km for reliable VO2max estimation.
+    """
+    dist_km_map = {
+        "4K": 4.0, "5K": 5.0, "10K": 10.0,
+        "15K": 15.0, "21K": 21.0975, "42K": 42.195,
+    }
+    best: Optional[float] = None
+    for e in efforts:
+        dist_km = dist_km_map.get(e.get("distance", ""))
+        if not dist_km:
+            continue
+        time_str = e.get("time", "")
+        if not time_str or ":" not in time_str:
+            continue
+        parts = time_str.split(":")
+        try:
+            total_s = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2]) if len(parts) == 3 else int(parts[0]) * 60 + int(parts[1])
+        except (ValueError, IndexError):
+            continue
+        total_min = total_s / 60
+        if total_min < 14:  # too short for reliable VDOT
+            continue
+        speed_mpm = (dist_km * 1000) / total_min
+        vo2 = -4.60 + 0.182258 * speed_mpm + 0.000104 * speed_mpm ** 2
+        pct_max = 0.8 + 0.1894393 * math.exp(-0.012778 * total_min) + 0.2989558 * math.exp(-0.1932605 * total_min)
+        if pct_max > 0 and vo2 > 0:
+            vdot = round(min(vo2 / pct_max, 55.0), 1)
+            if best is None or vdot > best:
+                best = vdot
+    return best
+
+
 @app.get("/api/analytics")
 async def get_analytics():
     athlete_id = await _get_athlete_id()
@@ -2256,7 +2298,7 @@ async def analyze_run(request: Request):
 
 @app.get("/api/runner-dna")
 async def get_runner_dna():
-    """Full physiological identity profile — powered by Claude Sonnet 4.6."""
+    """Full physiological identity profile — powered by Claude Haiku 4.5."""
     import json
     from datetime import date, timedelta
     from anthropic import AsyncAnthropic
@@ -2293,8 +2335,8 @@ async def get_runner_dna():
     avg_hr_all  = sum(r["avg_hr"] for r in hr_runs) / len(hr_runs) if hr_runs else 0
     avg_cad_all = (sum(r["avg_cadence"] for r in cad_runs) / len(cad_runs)) * 2 if cad_runs else 0
 
-    total_sec         = sum(r.get("duration_minutes", 0) * 60 for r in runs)
-    avg_pace_sec_km   = total_sec / total_km if total_km > 0 else 0  # sec/km
+    total_sec        = sum(r.get("duration_minutes", 0) * 60 for r in runs)
+    avg_pace_sec_km  = total_sec / total_km if total_km > 0 else 0  # sec/km
 
     # Zone distribution (time-based)
     zones = {"z1": 0.0, "z2": 0.0, "z3": 0.0, "z4": 0.0, "z5": 0.0}
@@ -2309,8 +2351,12 @@ async def get_runner_dna():
     tot_z = sum(zones.values()) or 1
     zone_dist = {k: round(v / tot_z * 100) for k, v in zones.items()}
 
-    # VDOT current + trend
-    vdot_current = _calc_vdot(runs, max_hr, weeks_window=8) or 30.0
+    # ── VDOT — use best of: window-based (current form) vs best-efforts (true peak) ──
+    be_efforts = be_doc.get("efforts", [])
+    vdot_from_runs   = _calc_vdot(runs, max_hr, weeks_window=8)
+    vdot_from_be     = _vdot_from_best_efforts(be_efforts)
+    vdot_current     = max(vdot_from_runs or 28.0, vdot_from_be or 28.0)
+
     cutoff_old   = (date.today() - timedelta(weeks=24)).isoformat()
     older_runs   = [r for r in runs if r.get("date", "") < cutoff_old]
     older_vdot   = _calc_vdot(older_runs, max_hr, weeks_window=16) if len(older_runs) >= 3 else None
@@ -2331,7 +2377,7 @@ async def get_runner_dna():
     eff_score    = 0
     eff_index_val = 0.0
     if avg_hr_all > 0 and avg_pace_sec_km > 0:
-        speed_mpm     = 1000 / avg_pace_sec_km * 60          # m/min
+        speed_mpm     = 1000 / avg_pace_sec_km * 60
         eff_index_val = speed_mpm / avg_hr_all
         if   eff_index_val > 1.6: eff_score = 90
         elif eff_index_val > 1.3: eff_score = 75
@@ -2342,20 +2388,49 @@ async def get_runner_dna():
     atl = ff_docs[0].get("atl", 0.0) if ff_docs else 0.0
     tsb = ff_docs[0].get("tsb", 0.0) if ff_docs else 0.0
 
-    # Cadence score (170-185 spm = elite range)
     cadence_score = 0
     if avg_cad_all > 0:
         cadence_score = min(100, max(0, round((avg_cad_all - 148) / (186 - 148) * 100)))
 
-    # ── 4 DNA dimension scores (0–100) ────────────────────────────────────────
-    aerobic_score  = min(100, max(0, round((vdot_current - 28) / (55 - 28) * 100)))
-    biomech_score  = round(eff_score * 0.6 + cadence_score * 0.4)
-    load_score     = min(100, round(ctl / 80 * 100))
-    # consistency_score already computed above
+    # ── 4 DNA scores (0–100) ──────────────────────────────────────────────────
+    aerobic_score = min(100, max(0, round((vdot_current - 28) / (55 - 28) * 100)))
+    biomech_score = round(eff_score * 0.6 + cadence_score * 0.4)
+    load_score    = min(100, round(ctl / 80 * 100))
 
-    # Best efforts summary for AI context
-    be_efforts = be_doc.get("efforts", [])
-    be_summary = {e["distance"]: e["time"] for e in be_efforts[:6]} if be_efforts else {}
+    # ── Running dynamics (Garmin) ─────────────────────────────────────────────
+    dyn_runs = [r for r in runs if r.get("avg_vertical_oscillation")]
+    avg_vert_osc   = round(sum(r["avg_vertical_oscillation"] for r in dyn_runs) / len(dyn_runs), 1) if dyn_runs else None
+    dyn_runs_r     = [r for r in runs if r.get("avg_vertical_ratio")]
+    avg_vert_ratio = round(sum(r["avg_vertical_ratio"] for r in dyn_runs_r) / len(dyn_runs_r), 1) if dyn_runs_r else None
+    dyn_runs_g     = [r for r in runs if r.get("avg_ground_contact_time")]
+    avg_gct        = round(sum(r["avg_ground_contact_time"] for r in dyn_runs_g) / len(dyn_runs_g)) if dyn_runs_g else None
+    dyn_runs_s     = [r for r in runs if r.get("avg_stride_length")]
+    avg_stride     = round(sum(r["avg_stride_length"] for r in dyn_runs_s) / len(dyn_runs_s), 2) if dyn_runs_s else None
+
+    # ── Comparison data ───────────────────────────────────────────────────────
+    today = date.today()
+    lm_start = (today - timedelta(days=60)).isoformat()
+    lm_end   = (today - timedelta(days=30)).isoformat()
+    lm_runs  = [r for r in runs if lm_start <= r.get("date", "") <= lm_end]
+    lm_km    = sum(r.get("distance_km", 0) for r in lm_runs)
+    lm_sec   = sum(r.get("duration_minutes", 0) * 60 for r in lm_runs)
+    lm_pace_sec = lm_sec / lm_km if lm_km > 0 else 0
+    lm_pace_str = f"{int(lm_pace_sec // 60)}:{int(lm_pace_sec % 60):02d}" if lm_pace_sec > 0 else None
+    lm_hr_runs  = [r for r in lm_runs if (r.get("avg_hr") or 0) > 0]
+    lm_avg_hr   = round(sum(r["avg_hr"] for r in lm_hr_runs) / len(lm_hr_runs)) if lm_hr_runs else None
+    lm_vdot     = _calc_vdot(lm_runs, max_hr, weeks_window=4) if len(lm_runs) >= 2 else None
+    lm_freq     = round(len(lm_runs) / 4, 1)  # runs per week over ~4 weeks
+
+    # Level benchmarks (avg runner at same level and next level)
+    _BENCHMARKS = {
+        "Principiante":     {"vdot": 30, "pace_sec": 450, "hr": 160, "freq": 2.0},
+        "Amatore Base":     {"vdot": 35, "pace_sec": 390, "hr": 156, "freq": 2.5},
+        "Amatore Evoluto":  {"vdot": 40, "pace_sec": 345, "hr": 152, "freq": 3.0},
+        "Amatore Avanzato": {"vdot": 45, "pace_sec": 310, "hr": 150, "freq": 3.5},
+        "Sub-Elite":        {"vdot": 50, "pace_sec": 280, "hr": 147, "freq": 4.5},
+        "Elite":            {"vdot": 55, "pace_sec": 250, "hr": 144, "freq": 6.0},
+    }
+    _LEVELS = list(_BENCHMARKS.keys())
 
     # Weeks to race
     weeks_to_race = None
@@ -2363,7 +2438,7 @@ async def get_runner_dna():
     if race_date_str:
         try:
             race_d        = date.fromisoformat(race_date_str[:10])
-            weeks_to_race = max(0, (race_d - date.today()).days // 7)
+            weeks_to_race = max(0, (race_d - today).days // 7)
         except Exception:
             pass
 
@@ -2377,49 +2452,49 @@ async def get_runner_dna():
         else "N/D"
     )
     polarization_ok = zone_dist.get("z1", 0) + zone_dist.get("z2", 0) >= 75
+    be_summary = {e["distance"]: e["time"] for e in be_efforts[:6]} if be_efforts else {}
 
-    # ── AI Prompt ─────────────────────────────────────────────────────────────
-    prompt = f"""Sei l'Head Coach dell'Accademia Olimpica di Atletica. Hai 30 anni di esperienza nel fisiologia dello sport e hai allenato atleti fino alle Olimpiadi. Analizza i dati biometrici di questo atleta in modo brutalmente onesto, tecnico, appassionato. Parla come se guardassi negli occhi l'atleta — non lodarlo a caso, digli la verità.
+    # ── AI Prompt (Haiku 4.5 — cost-effective) ────────────────────────────────
+    prompt = f"""Sei l'Head Coach dell'Accademia Olimpica di Atletica. Analizza i dati di questo atleta in modo brutalmente onesto, tecnico, appassionato — come un vero coach olimpico che guarda l'atleta negli occhi.
 
-SCHEDA FISIOLOGICA COMPLETA:
+SCHEDA FISIOLOGICA:
 • Età: {age} anni | Sesso: {sex}
-• Storico attivo: {round(weeks_active)} settimane | {total_runs} corse | {total_km:.1f} km totali
-• VDOT: {vdot_current:.1f} (variazione vs 6 mesi fa: {delta_str})
-• Frequenza allenamento: {freq:.1f} run/settimana
-• Passo medio globale: {pace_str}
-• FC media: {round(avg_hr_all) if avg_hr_all else 'N/D'} bpm | FC max registrata: {max_hr} bpm
+• Storico: {round(weeks_active)} settimane | {total_runs} corse | {total_km:.1f} km
+• VDOT: {vdot_current:.1f} (trend 6 mesi: {delta_str})
+• Frequenza: {freq:.1f} run/week | Passo medio: {pace_str}
+• FC media: {round(avg_hr_all) if avg_hr_all else 'N/D'} bpm | FCmax: {max_hr} bpm
 • Cadenza: {round(avg_cad_all) if avg_cad_all else 'N/D'} spm
-• Indice efficienza aero (m/min÷bpm): {round(eff_index_val, 3) if eff_index_val else 'N/D'}
-• CTL: {ctl:.1f} | ATL: {atl:.1f} | TSB: {tsb:.1f}
-• Zone cardiache: Z1={zone_dist['z1']}% Z2={zone_dist['z2']}% Z3={zone_dist['z3']}% Z4={zone_dist['z4']}% Z5={zone_dist['z5']}%
-• Polarizzazione 80/20 rispettata: {'Sì' if polarization_ok else 'No — troppo lavoro in zona media'}
-• Personal Bests: {json.dumps(be_summary) if be_summary else 'Non disponibili'}
-• Obiettivo: {profile.get('race_goal', 'Non definito')} | Settimane alla gara: {weeks_to_race if weeks_to_race is not None else 'N/D'}
+• Efficienza aero: {round(eff_index_val, 3) if eff_index_val else 'N/D'} m/min÷bpm
+• CTL:{ctl:.1f} ATL:{atl:.1f} TSB:{tsb:.1f}
+• Zone: Z1={zone_dist['z1']}% Z2={zone_dist['z2']}% Z3={zone_dist['z3']}% Z4={zone_dist['z4']}% Z5={zone_dist['z5']}%
+• 80/20: {'OK' if polarization_ok else 'NON rispettata'}
+• PB: {json.dumps(be_summary) if be_summary else 'N/D'}
+• Goal: {profile.get('race_goal','N/D')} | Settimane gara: {weeks_to_race if weeks_to_race is not None else 'N/D'}
 
-ISTRUZIONI: Rispondi SOLO con JSON puro (zero markdown, zero backtick, zero testo extra), schema ESATTO:
+Rispondi SOLO JSON puro (no markdown):
 {{
-  "profile_level": "<una di: Principiante | Amatore Base | Amatore Evoluto | Amatore Avanzato | Sub-Elite | Elite>",
-  "profile_type": "<archetipo fisiologico: Endurance Puro | Speed-Power | Aerobico Versatile | Threshold Specialist | Ultra Endurance | Velocista Distanza>",
-  "archetype_description": "<2-3 frasi scientifiche che descrivono il fenotipo fisiologico di questo runner — cosa lo caratterizza geneticamente e metabolicamente>",
-  "trend_status": "<una di: In Forte Crescita | In Crescita | Stabile | In Calo | In Forte Regressione>",
-  "trend_detail": "<1 frase incisiva coach — causa reale del trend, non generica>",
-  "consistency_label": "<diagnosi tecnica della costanza in 6-10 parole>",
-  "efficiency_label": "<diagnosi biomeccanica del rapporto passo-cardiaco in 6-10 parole>",
-  "form_label": "<stato forma CTL/TSB in 4-6 parole, es. Picco di Forma Ottimale>",
-  "vdot_ceiling": <float: VDOT massimo teorico raggiungibile con allenamento ottimale per età {age}, realistico — sempre >= {vdot_current:.1f}>,
-  "ideal_distance": "<una di: 5K | 10K | Mezza Maratona | Maratona | Ultra>",
-  "coach_verdict": "<2-3 frasi brutalmente oneste e motivanti del coach — il vero giudizio sull'atleta, senza piaggeria>",
-  "strengths": ["<punto forza fisiologico 1, specifico>", "<punto forza 2>", "<punto forza 3>"],
-  "gaps": ["<lacuna critica 1, specifica e tecnica>", "<lacuna 2>", "<lacuna 3>"],
-  "unlock_message": "<1-2 frasi: le 2-3 azioni concrete che in 6 mesi porterebbero al VDOT ceiling>"
+  "profile_level": "<Principiante|Amatore Base|Amatore Evoluto|Amatore Avanzato|Sub-Elite|Elite>",
+  "profile_type": "<Endurance Puro|Speed-Power|Aerobico Versatile|Threshold Specialist|Ultra Endurance|Velocista Distanza>",
+  "archetype_description": "<2-3 frasi fenotipo fisiologico>",
+  "trend_status": "<In Forte Crescita|In Crescita|Stabile|In Calo|In Forte Regressione>",
+  "trend_detail": "<1 frase causa trend>",
+  "consistency_label": "<diagnosi costanza 6-10 parole>",
+  "efficiency_label": "<diagnosi biomeccanica 6-10 parole>",
+  "form_label": "<stato CTL/TSB 4-6 parole>",
+  "vdot_ceiling": <float >= {vdot_current:.1f}, realistico per età {age}>,
+  "ideal_distance": "<5K|10K|Mezza Maratona|Maratona|Ultra>",
+  "coach_verdict": "<2-3 frasi oneste e motivanti>",
+  "strengths": ["<forza 1>","<forza 2>","<forza 3>"],
+  "gaps": ["<lacuna 1>","<lacuna 2>","<lacuna 3>"],
+  "unlock_message": "<1-2 frasi azioni concrete per raggiungere il ceiling>"
 }}"""
 
     try:
         ai_client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
         response  = await ai_client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=1100,
-            temperature=0.85,
+            model="claude-haiku-4-5-20251001",
+            max_tokens=900,
+            temperature=0.8,
             messages=[{"role": "user", "content": prompt}]
         )
         ai_text = response.content[0].text.strip()
@@ -2434,22 +2509,37 @@ ISTRUZIONI: Rispondi SOLO con JSON puro (zero markdown, zero backtick, zero test
         ai_data = {
             "profile_level":         "Analisi AI Non Disponibile",
             "profile_type":          "Dati in elaborazione",
-            "archetype_description": "Configura la chiave API Anthropic per sbloccare l'analisi completa del tuo DNA atletico.",
+            "archetype_description": "Configura la chiave API Anthropic per sbloccare l'analisi completa.",
             "trend_status":          "Stabile",
             "trend_detail":          "Verifica configurazione API",
             "consistency_label":     "In attesa di analisi",
             "efficiency_label":      "In attesa di analisi",
             "form_label":            "In attesa",
-            "vdot_ceiling":          round(vdot_current + 3, 1),
+            "vdot_ceiling":          round(vdot_current + 5, 1),
             "ideal_distance":        "Da definire",
             "coach_verdict":         "Analisi AI non disponibile. Verifica la configurazione della chiave API Anthropic.",
             "strengths":             ["Configura API key", "Riprova tra poco", "I dati sono pronti"],
             "gaps":                  ["Analisi AI offline", "—", "—"],
-            "unlock_message":        "Connetti l'AI per sbloccare l'analisi completa del tuo potenziale atletico.",
+            "unlock_message":        "Connetti l'AI per sbloccare l'analisi completa del tuo potenziale.",
         }
 
-    vdot_ceiling  = round(float(ai_data.get("vdot_ceiling", vdot_current + 3)), 1)
-    potential_pct = min(100, round((vdot_current / max(vdot_ceiling, vdot_current + 0.1)) * 100))
+    vdot_ceiling  = round(float(ai_data.get("vdot_ceiling", vdot_current + 5)), 1)
+    # Ensure ceiling is always > current
+    if vdot_ceiling <= vdot_current:
+        vdot_ceiling = round(vdot_current + 3, 1)
+    potential_pct = min(99, round((vdot_current / vdot_ceiling) * 100))
+
+    # Resolve level for comparison benchmarks
+    detected_level = ai_data.get("profile_level", "Amatore Evoluto")
+    level_idx = next(
+        (i for i, l in enumerate(_LEVELS) if l in detected_level),
+        2  # default Amatore Evoluto
+    )
+    bench_avg    = _BENCHMARKS[_LEVELS[level_idx]]
+    bench_target = _BENCHMARKS[_LEVELS[min(len(_LEVELS) - 1, level_idx + 1)]]
+
+    def _pace_sec_to_str(s: float) -> str:
+        return f"{int(s//60)}:{int(s%60):02d}" if s > 0 else "N/D"
 
     dna = {
         "profile": {
@@ -2460,13 +2550,13 @@ ISTRUZIONI: Rispondi SOLO con JSON puro (zero markdown, zero backtick, zero test
             "vdot_delta":            vdot_delta,
         },
         "stats": {
-            "avg_pace":         pace_str,
-            "avg_hr":           round(avg_hr_all) if avg_hr_all else 0,
-            "avg_cadence":      round(avg_cad_all) if avg_cad_all else 0,
+            "avg_pace":          pace_str,
+            "avg_hr":            round(avg_hr_all) if avg_hr_all else 0,
+            "avg_cadence":       round(avg_cad_all) if avg_cad_all else 0,
             "zone_distribution": zone_dist,
-            "total_runs":       total_runs,
-            "total_km":         round(total_km, 1),
-            "weeks_active":     round(weeks_active),
+            "total_runs":        total_runs,
+            "total_km":          round(total_km, 1),
+            "weeks_active":      round(weeks_active),
         },
         "performance": {
             "trend_status": ai_data.get("trend_status", ""),
@@ -2474,8 +2564,8 @@ ISTRUZIONI: Rispondi SOLO con JSON puro (zero markdown, zero backtick, zero test
             "total_km":     round(total_km, 1),
         },
         "consistency": {
-            "score_pct":   int(consistency_score),
-            "label":       ai_data.get("consistency_label", ""),
+            "score_pct":     int(consistency_score),
+            "label":         ai_data.get("consistency_label", ""),
             "runs_per_week": round(freq, 1),
         },
         "efficiency": {
@@ -2507,6 +2597,34 @@ ISTRUZIONI: Rispondi SOLO con JSON puro (zero markdown, zero backtick, zero test
             "biomechanics":   biomech_score,
             "consistency":    int(consistency_score),
             "load_capacity":  load_score,
+        },
+        # Running dynamics (Garmin watches only — null if not available)
+        "running_dynamics": {
+            "vertical_oscillation_cm": avg_vert_osc,
+            "vertical_ratio_pct":      avg_vert_ratio,
+            "ground_contact_ms":       avg_gct,
+            "stride_length_m":         avg_stride,
+        },
+        # Comparison benchmarks
+        "comparison": {
+            "last_month": {
+                "vdot":         round(lm_vdot, 1) if lm_vdot else None,
+                "pace_str":     lm_pace_str,
+                "avg_hr":       lm_avg_hr,
+                "runs_per_week": lm_freq,
+            },
+            "avg_runner": {
+                "vdot":         bench_avg["vdot"],
+                "pace_str":     _pace_sec_to_str(bench_avg["pace_sec"]),
+                "avg_hr":       bench_avg["hr"],
+                "runs_per_week": bench_avg["freq"],
+            },
+            "target": {
+                "vdot":         bench_target["vdot"],
+                "pace_str":     _pace_sec_to_str(bench_target["pace_sec"]),
+                "avg_hr":       bench_target["hr"],
+                "runs_per_week": bench_target["freq"],
+            },
         },
     }
 
