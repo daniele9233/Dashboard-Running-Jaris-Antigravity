@@ -24,7 +24,7 @@ interface UseJarvisReturn {
 }
 
 const WAKE_WORD_RE = /\bjarvis\b/i;
-const MIN_COMMAND_WORDS = 2;
+const MIN_COMMAND_WORDS = 1;
 
 export function useJarvis({
   onAction,
@@ -76,7 +76,7 @@ export function useJarvis({
   const speak = useCallback((text: string, onEnd?: () => void) => {
     synthRef.current.cancel();
     const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = 'en-US';
+    utt.lang = 'it-IT';
     utt.rate = 1.05;
     utt.pitch = 0.95;
     utt.onstart = () => updateOrbState('speaking');
@@ -132,7 +132,7 @@ export function useJarvis({
     if (!SpeechRecognitionAPI) return;
 
     const recognition: AnySpeechRecognition = new SpeechRecognitionAPI();
-    recognition.lang = 'en-US';
+    recognition.lang = 'it-IT';
     recognition.continuous = true;
     recognition.interimResults = true;
     recognitionRef.current = recognition;

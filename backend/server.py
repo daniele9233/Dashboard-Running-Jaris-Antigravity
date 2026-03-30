@@ -3267,22 +3267,18 @@ async def jarvis_chat(request: Request):
 - Best 10K: {best_10k if best_10k else "N/A"}
 - Race goal: {profile.get("race_goal", "N/A")} on {profile.get("race_date", "N/A")}"""
 
-    if not ANTHROPIC_API_KEY:
+    if not GEMINI_API_KEY:
         return JSONResponse({"error": "no_api_key"}, status_code=500)
 
     try:
-        ai_client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
-        resp = await ai_client.messages.create(
-            model="claude-sonnet-4-6-20251001",
-            max_tokens=300,
-            temperature=0.4,
-            system=_JARVIS_SYSTEM_PROMPT,
-            messages=[{
-                "role": "user",
-                "content": f"{context_block}\n\nUSER SAID: \"{transcript}\""
-            }],
+        from google import genai as ggenai
+        gclient = ggenai.Client(api_key=GEMINI_API_KEY)
+        full_prompt = f"{_JARVIS_SYSTEM_PROMPT}\n\n{context_block}\n\nUSER SAID: \"{transcript}\""
+        gresp = await gclient.aio.models.generate_content(
+            model="gemini-2.5-flash-lite",
+            contents=full_prompt,
         )
-        raw = resp.content[0].text.strip()
+        raw = gresp.text.strip()
 
         json_match = re.search(r'\{.*\}', raw, re.DOTALL)
         if json_match:
@@ -3291,7 +3287,7 @@ async def jarvis_chat(request: Request):
             result = {"text": raw[:200], "action": {"type": "speak_only"}}
 
     except Exception as e:
-        print(f"[JARVIS] Claude error: {e}")
+        print(f"[JARVIS] Gemini error: {e}")
         result = {
             "text": "I'm having trouble connecting. Please try again.",
             "action": {"type": "speak_only"}
