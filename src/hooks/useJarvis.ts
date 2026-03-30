@@ -101,19 +101,27 @@ export function useJarvis({
     });
   }, [onAction, speak, updateOrbState]);
 
-  const startListening = useCallback(() => {
-    if (!browserSupported) return;
-    isListeningRef.current = true;
-    updateOrbState('listening');
+  const SpeechRecognitionAPI =
+    typeof window !== 'undefined'
+      ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      : null;
 
-    const SpeechRecognitionAPI =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognitionAPI) return;
+  // Crea sempre una nuova istanza — Chrome non gestisce bene il riuso della stessa
+  const createRecognition = useCallback(() => {
+    if (!SpeechRecognitionAPI) return null;
+    const r: AnySpeechRecognition = new SpeechRecognitionAPI();
+    r.lang = 'it-IT';
+    r.continuous = false; // false = più stabile, ricreiamo dopo ogni frase
+    r.interimResults = true;
+    return r;
+  }, [SpeechRecognitionAPI]);
 
-    const recognition: AnySpeechRecognition = new SpeechRecognitionAPI();
-    recognition.lang = 'it-IT';
-    recognition.continuous = true;
-    recognition.interimResults = true;
+  const startRecognitionInstance = useCallback(() => {
+    if (!isListeningRef.current) return;
+    if (orbStateRef.current === 'thinking' || orbStateRef.current === 'speaking') return;
+
+    const recognition: AnySpeechRecognition = createRecognition();
+    if (!recognition) return;
     recognitionRef.current = recognition;
 
     recognition.onresult = (event: any) => {
@@ -123,11 +131,10 @@ export function useJarvis({
       for (let i = 0; i < event.results.length; i++) {
         full += event.results[i][0].transcript;
       }
-      console.log('[JARVIS] Sentito:', full); // debug — rimuovere dopo test
+      console.log('[JARVIS] Sentito:', full);
       const lower = full.toLowerCase();
 
       if (WAKE_WORD_RE.test(lower)) {
-        // Extract command after "jarvis"
         const match = lower.match(/\bjarvis\b(.*)/i);
         const afterWake = (match?.[1] ?? '').trim();
         pendingCommandRef.current = afterWake;
@@ -136,7 +143,6 @@ export function useJarvis({
         onWakeWord();
         setTranscript(afterWake || '...');
 
-        // Reset silence timer — send after 1.5s of no new words
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = setTimeout(() => {
           const cmd = pendingCommandRef.current.trim();
@@ -149,31 +155,28 @@ export function useJarvis({
     };
 
     recognition.onend = () => {
-      // Chrome auto-stops after silence — restart after brief delay to avoid abort loop
-      if (isListeningRef.current && orbStateRef.current !== 'thinking' && orbStateRef.current !== 'speaking') {
-        setTimeout(() => {
-          if (isListeningRef.current) {
-            try { recognition.start(); } catch { /* already started */ }
-          }
-        }, 300);
-      }
+      // Ricrea una nuova istanza dopo 400ms
+      setTimeout(() => startRecognitionInstance(), 400);
     };
 
     recognition.onerror = (e: any) => {
-      console.warn('[JARVIS] SpeechRecognition error:', e.error);
       if (e.error === 'not-allowed') {
+        console.warn('[JARVIS] Microfono non autorizzato');
         isListeningRef.current = false;
         updateOrbState('idle');
-      } else if (e.error === 'language-not-supported' || e.error === 'service-not-allowed') {
-        // Fallback a en-US se it-IT non è supportato
-        console.warn('[JARVIS] it-IT non supportato, fallback en-US');
-        recognition.lang = 'en-US';
-        try { recognition.start(); } catch { /* */ }
       }
+      // aborted, no-speech, network: ignorati — onend si occupa del restart
     };
 
-    try { recognition.start(); } catch { /* already running */ }
-  }, [browserSupported, updateOrbState, onWakeWord, sendCommand]);
+    try { recognition.start(); } catch { /* già avviato */ }
+  }, [createRecognition, updateOrbState, onWakeWord, sendCommand]);
+
+  const startListening = useCallback(() => {
+    if (!browserSupported) return;
+    isListeningRef.current = true;
+    updateOrbState('listening');
+    startRecognitionInstance();
+  }, [browserSupported, updateOrbState, startRecognitionInstance]);
 
   const stopListening = useCallback(() => {
     isListeningRef.current = false;
