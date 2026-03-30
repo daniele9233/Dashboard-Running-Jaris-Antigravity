@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import type { OrbState, JarvisAction, JarvisResponse } from '../types/jarvis';
 import { jarvisChat } from '../api';
 
+// Web Speech API — available in Chrome/Edge but not always typed
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnySpeechRecognition = any;
 
@@ -22,6 +23,7 @@ interface UseJarvisReturn {
 }
 
 const WAKE_WORD_RE = /\bjarvis\b/i;
+const MIN_COMMAND_WORDS = 1;
 
 export function useJarvis({
   onAction,
@@ -33,20 +35,12 @@ export function useJarvis({
   const [response, setResponse] = useState('');
   const [orbState, setOrbState] = useState<OrbState>('idle');
 
-  const isListeningRef   = useRef(false);
-  const orbStateRef      = useRef<OrbState>('idle');
-  const silenceTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingCmdRef    = useRef('');
-  const restartTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const synthRef         = useRef(window.speechSynthesis);
-
-  // Callback refs — evitano closure stale senza dipendenze instabili
-  const onActionRef     = useRef(onAction);
-  const onWakeWordRef   = useRef(onWakeWord);
-  const onOrbChangeRef  = useRef(onOrbStateChange);
-  useEffect(() => { onActionRef.current = onAction; }, [onAction]);
-  useEffect(() => { onWakeWordRef.current = onWakeWord; }, [onWakeWord]);
-  useEffect(() => { onOrbChangeRef.current = onOrbStateChange; }, [onOrbStateChange]);
+  const recognitionRef = useRef<AnySpeechRecognition | null>(null);
+  const isListeningRef = useRef(false);
+  const orbStateRef = useRef<OrbState>('idle');
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingCommandRef = useRef('');
+  const synthRef = useRef(window.speechSynthesis);
 
   const browserSupported =
     typeof window !== 'undefined' &&
@@ -55,8 +49,9 @@ export function useJarvis({
   const updateOrbState = useCallback((s: OrbState) => {
     orbStateRef.current = s;
     setOrbState(s);
-    onOrbChangeRef.current(s);
-  }, []);
+    onOrbStateChange(s);
+  }, [onOrbStateChange]);
+
 
   const speak = useCallback((text: string, onEnd?: () => void) => {
     synthRef.current.cancel();
@@ -65,103 +60,133 @@ export function useJarvis({
     utt.rate = 1.05;
     utt.pitch = 0.95;
     utt.onstart = () => updateOrbState('speaking');
-    utt.onend   = () => { updateOrbState('idle'); onEnd?.(); };
-    utt.onerror = () => { updateOrbState('idle'); onEnd?.(); };
+    utt.onend = () => {
+      updateOrbState('idle');
+      onEnd?.();
+    };
+    utt.onerror = () => {
+      updateOrbState('idle');
+      onEnd?.();
+    };
     synthRef.current.speak(utt);
   }, [updateOrbState]);
 
   const sendCommand = useCallback(async (command: string) => {
+    if (!command.trim() || command.trim().split(' ').length < MIN_COMMAND_WORDS) {
+      updateOrbState('listening');
+      return;
+    }
+
     updateOrbState('thinking');
     setTranscript(command);
+
     let result: JarvisResponse;
     try {
       result = await jarvisChat(command);
     } catch {
-      result = { text: 'Problemi di connessione. Riprova.', action: { type: 'speak_only' } };
+      result = {
+        text: 'I had trouble connecting. Please try again.',
+        action: { type: 'speak_only' },
+      };
     }
+
     setResponse(result.text);
-    onActionRef.current(result.action);
+    onAction(result.action);
+
     speak(result.text, () => {
-      if (result.action.type === 'speak_only') updateOrbState('listening');
+      // After speaking, resume listening only for speak_only (no nav)
+      if (result.action.type === 'speak_only') {
+        updateOrbState('listening');
+      }
     });
-  }, [speak, updateOrbState]);
-
-  // Usa un ref per la funzione di avvio — evita closure stale in onend
-  const startInstanceRef = useRef<() => void>(() => {});
-
-  startInstanceRef.current = () => {
-    if (!isListeningRef.current) return;
-    if (orbStateRef.current === 'thinking' || orbStateRef.current === 'speaking') return;
-
-    const API = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!API) return;
-
-    const rec: AnySpeechRecognition = new API();
-    rec.lang = 'it-IT';
-    rec.continuous = true;
-    rec.interimResults = true;
-
-    rec.onresult = (event: any) => {
-      if (orbStateRef.current === 'thinking' || orbStateRef.current === 'speaking') return;
-      let full = '';
-      for (let i = 0; i < event.results.length; i++) {
-        full += event.results[i][0].transcript;
-      }
-      console.log('[JARVIS] Sentito:', full);
-      const lower = full.toLowerCase();
-      if (!WAKE_WORD_RE.test(lower)) return;
-
-      const afterWake = (lower.match(/\bjarvis\b(.*)/i)?.[1] ?? '').trim();
-      pendingCmdRef.current = afterWake;
-      updateOrbState('listening');
-      onWakeWordRef.current();
-      setTranscript(afterWake || '...');
-
-      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = setTimeout(() => {
-        const cmd = pendingCmdRef.current.trim();
-        pendingCmdRef.current = '';
-        if (cmd.length > 0) sendCommand(cmd);
-      }, 1500);
-    };
-
-    rec.onend = () => {
-      if (!isListeningRef.current) return;
-      if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
-      restartTimerRef.current = setTimeout(() => startInstanceRef.current(), 400);
-    };
-
-    rec.onerror = (e: any) => {
-      if (e.error === 'not-allowed') {
-        console.warn('[JARVIS] Microfono non autorizzato');
-        isListeningRef.current = false;
-        updateOrbState('idle');
-      }
-      // aborted / no-speech / network → onend gestisce il restart
-    };
-
-    try { rec.start(); } catch { /* già avviato */ }
-  };
+  }, [onAction, speak, updateOrbState]);
 
   const startListening = useCallback(() => {
     if (!browserSupported) return;
     isListeningRef.current = true;
     updateOrbState('listening');
-    startInstanceRef.current();
-  }, [browserSupported, updateOrbState]);
+
+    const SpeechRecognitionAPI =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) return;
+
+    const recognition: AnySpeechRecognition = new SpeechRecognitionAPI();
+    recognition.lang = 'it-IT';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognitionRef.current = recognition;
+
+    recognition.onresult = (event: any) => {
+      if (orbStateRef.current === 'thinking' || orbStateRef.current === 'speaking') return;
+
+      let full = '';
+      for (let i = 0; i < event.results.length; i++) {
+        full += event.results[i][0].transcript;
+      }
+      const lower = full.toLowerCase();
+
+      if (WAKE_WORD_RE.test(lower)) {
+        // Extract command after "jarvis"
+        const match = lower.match(/\bjarvis\b(.*)/i);
+        const afterWake = (match?.[1] ?? '').trim();
+        pendingCommandRef.current = afterWake;
+
+        updateOrbState('listening');
+        onWakeWord();
+        setTranscript(afterWake || '...');
+
+        // Reset silence timer — send after 1.5s of no new words
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = setTimeout(() => {
+          const cmd = pendingCommandRef.current.trim();
+          pendingCommandRef.current = '';
+          if (cmd.split(' ').length >= MIN_COMMAND_WORDS) {
+            sendCommand(cmd);
+          }
+        }, 1500);
+      }
+    };
+
+    recognition.onend = () => {
+      // Chrome auto-stops after silence — restart if still supposed to listen
+      if (isListeningRef.current && orbStateRef.current !== 'thinking' && orbStateRef.current !== 'speaking') {
+        try { recognition.start(); } catch { /* already started */ }
+      }
+    };
+
+    recognition.onerror = (e: any) => {
+      if (e.error !== 'no-speech' && e.error !== 'aborted') {
+        console.warn('[JARVIS] SpeechRecognition error:', e.error);
+      }
+    };
+
+    try { recognition.start(); } catch { /* already running */ }
+  }, [browserSupported, updateOrbState, onWakeWord, sendCommand]);
 
   const stopListening = useCallback(() => {
     isListeningRef.current = false;
-    if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
-    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     synthRef.current.cancel();
+    recognitionRef.current?.stop();
     updateOrbState('idle');
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
   }, [updateOrbState]);
 
+  // Start on mount when enabled
   useEffect(() => {
-    if (enabled && browserSupported) startListening();
-    return () => stopListening();
+    if (enabled && browserSupported) {
+      startListening();
+    }
+    return () => {
+      stopListening();
+    };
   }, [enabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { transcript, response, orbState, browserSupported, startListening, stopListening };
+  return {
+    transcript,
+    response,
+    orbState,
+    browserSupported,
+    startListening,
+    stopListening,
+  };
 }
