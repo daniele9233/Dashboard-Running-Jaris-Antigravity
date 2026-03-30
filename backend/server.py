@@ -29,6 +29,7 @@ STRAVA_CLIENT_SECRET = os.environ.get("STRAVA_CLIENT_SECRET", "")
 FRONTEND_URL       = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 ANTHROPIC_API_KEY  = os.environ.get("ANTHROPIC_API_KEY", "")
 GEMINI_API_KEY     = os.environ.get("GEMINI_API_KEY", "")
+JARVIS_GEMINI_KEY  = os.environ.get("JARVIS_GEMINI_KEY", "") or GEMINI_API_KEY
 GARMIN_EMAIL       = os.environ.get("GARMIN_EMAIL", "")
 GARMIN_PASSWORD    = os.environ.get("GARMIN_PASSWORD", "")
 
@@ -3267,12 +3268,12 @@ async def jarvis_chat(request: Request):
 - Best 10K: {best_10k if best_10k else "N/A"}
 - Race goal: {profile.get("race_goal", "N/A")} on {profile.get("race_date", "N/A")}"""
 
-    if not GEMINI_API_KEY:
+    if not JARVIS_GEMINI_KEY:
         return JSONResponse({"error": "no_api_key"}, status_code=500)
 
     try:
         from google import genai as ggenai
-        gclient = ggenai.Client(api_key=GEMINI_API_KEY)
+        gclient = ggenai.Client(api_key=JARVIS_GEMINI_KEY)
         full_prompt = f"{_JARVIS_SYSTEM_PROMPT}\n\n{context_block}\n\nUSER SAID: \"{transcript}\""
         gresp = await gclient.aio.models.generate_content(
             model="gemini-2.5-flash-lite",
