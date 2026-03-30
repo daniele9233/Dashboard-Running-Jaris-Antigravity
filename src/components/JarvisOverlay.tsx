@@ -158,15 +158,13 @@ export function JarvisOverlay() {
             transition={{ duration: 0.4 }}
             className="fixed inset-0 bg-black z-[9999] flex flex-col overflow-hidden"
           >
-            {/* Dismiss button */}
-            {state.hasNavigated && (
-              <button
-                onClick={() => dispatch({ type: 'DISMISS' })}
-                className="absolute top-5 right-6 z-10 text-white/30 hover:text-white/70 text-xs font-black tracking-[0.3em] uppercase transition-colors"
-              >
-                ESC
-              </button>
-            )}
+            {/* Skip / Dismiss button — sempre visibile */}
+            <button
+              onClick={() => dispatch({ type: 'DISMISS' })}
+              className="absolute top-5 right-6 z-10 text-white/25 hover:text-white/70 text-xs font-black tracking-[0.3em] uppercase transition-colors"
+            >
+              {state.hasNavigated ? 'ESC' : 'ENTRA →'}
+            </button>
 
             {/* Orb — fills the screen */}
             <div className="flex-1 relative">
