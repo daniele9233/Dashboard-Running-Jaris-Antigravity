@@ -2505,22 +2505,26 @@ Rispondi SOLO JSON puro (no markdown):
             ai_text = ai_text.strip()
         ai_data = json.loads(ai_text)
     except Exception as e:
-        print("Runner DNA AI Error:", e)
+        import traceback
+        err_msg = str(e)
+        err_type = type(e).__name__
+        print(f"Runner DNA AI Error [{err_type}]: {err_msg}")
+        traceback.print_exc()
         ai_data = {
             "profile_level":         "Analisi AI Non Disponibile",
-            "profile_type":          "Dati in elaborazione",
-            "archetype_description": "Configura la chiave API Anthropic per sbloccare l'analisi completa.",
+            "profile_type":          "Errore connessione AI",
+            "archetype_description": f"Errore AI ({err_type}): {err_msg[:120]}. Verifica la variabile ANTHROPIC_API_KEY su Render → Environment.",
             "trend_status":          "Stabile",
-            "trend_detail":          "Verifica configurazione API",
+            "trend_detail":          f"[{err_type}] {err_msg[:80]}",
             "consistency_label":     "In attesa di analisi",
             "efficiency_label":      "In attesa di analisi",
             "form_label":            "In attesa",
             "vdot_ceiling":          round(vdot_current + 5, 1),
             "ideal_distance":        "Da definire",
-            "coach_verdict":         "Analisi AI non disponibile. Verifica la configurazione della chiave API Anthropic.",
-            "strengths":             ["Configura API key", "Riprova tra poco", "I dati sono pronti"],
-            "gaps":                  ["Analisi AI offline", "—", "—"],
-            "unlock_message":        "Connetti l'AI per sbloccare l'analisi completa del tuo potenziale.",
+            "coach_verdict":         f"Errore AI: {err_msg[:200]}",
+            "strengths":             [f"Tipo errore: {err_type}", "Vai su Render → Environment", "Verifica ANTHROPIC_API_KEY"],
+            "gaps":                  [err_msg[:80], "—", "—"],
+            "unlock_message":        "Imposta ANTHROPIC_API_KEY nelle variabili d'ambiente di Render per sbloccare l'AI.",
         }
 
     vdot_ceiling  = round(float(ai_data.get("vdot_ceiling", vdot_current + 5)), 1)
@@ -2646,3 +2650,27 @@ async def clear_runner_dna_cache():
     q = {"athlete_id": athlete_id} if athlete_id else {}
     await db.runner_dna_cache.delete_many(q)
     return {"ok": True, "message": "Cache cleared — next request will re-analyse."}
+
+
+@app.get("/api/test-ai")
+async def test_ai_connection():
+    """Diagnostic endpoint — tests Anthropic API connectivity and key validity."""
+    from anthropic import AsyncAnthropic
+    key = ANTHROPIC_API_KEY
+    if not key:
+        return {"ok": False, "error": "ANTHROPIC_API_KEY non impostata nelle env vars di Render"}
+    try:
+        client = AsyncAnthropic(api_key=key)
+        response = await client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=20,
+            messages=[{"role": "user", "content": "Rispondi solo: OK"}],
+        )
+        return {
+            "ok": True,
+            "model": "claude-haiku-4-5-20251001",
+            "reply": response.content[0].text.strip(),
+            "key_prefix": key[:8] + "...",
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e), "error_type": type(e).__name__}
