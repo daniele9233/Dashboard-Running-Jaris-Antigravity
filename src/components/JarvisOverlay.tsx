@@ -9,27 +9,27 @@ import type { JarvisAction, JarvisDisplayMode, OrbState } from '../types/jarvis'
 
 // ── Voice commands list ────────────────────────────────────────────────────
 const COMMANDS = [
-  // Navigation
-  { text: '"Jarvis, open dashboard"',          cat: 'nav'    },
-  { text: '"Jarvis, open training"',            cat: 'nav'    },
-  { text: '"Jarvis, open activities"',          cat: 'nav'    },
-  { text: '"Jarvis, open statistics"',          cat: 'nav'    },
-  { text: '"Jarvis, open runner DNA"',          cat: 'nav'    },
-  { text: '"Jarvis, open profile"',             cat: 'nav'    },
-  // Data queries
-  { text: '"Jarvis, what\'s my VO2max?"',       cat: 'data'   },
-  { text: '"Jarvis, how am I feeling?"',        cat: 'data'   },
-  { text: '"Jarvis, show my last run"',         cat: 'data'   },
-  { text: '"Jarvis, fastest 10K?"',             cat: 'data'   },
-  { text: '"Jarvis, this week\'s km?"',         cat: 'data'   },
-  { text: '"Jarvis, am I ready for race?"',     cat: 'data'   },
-  { text: '"Jarvis, show best efforts"',        cat: 'data'   },
-  { text: '"Jarvis, show fitness freshness"',   cat: 'data'   },
-  { text: '"Jarvis, current training plan"',    cat: 'data'   },
-  // Actions
-  { text: '"Jarvis, sync Strava"',              cat: 'action' },
-  { text: '"Jarvis, sync Garmin"',              cat: 'action' },
-  { text: '"Jarvis, regenerate my DNA"',        cat: 'action' },
+  // Navigazione
+  { text: '"Jarvis, apri dashboard"',           cat: 'nav'    },
+  { text: '"Jarvis, apri allenamento"',         cat: 'nav'    },
+  { text: '"Jarvis, apri attività"',            cat: 'nav'    },
+  { text: '"Jarvis, apri statistiche"',         cat: 'nav'    },
+  { text: '"Jarvis, apri runner DNA"',          cat: 'nav'    },
+  { text: '"Jarvis, apri profilo"',             cat: 'nav'    },
+  // Dati
+  { text: '"Jarvis, qual è il mio VO2max?"',    cat: 'data'   },
+  { text: '"Jarvis, come mi sento?"',           cat: 'data'   },
+  { text: '"Jarvis, ultima corsa"',             cat: 'data'   },
+  { text: '"Jarvis, migliore 10K?"',            cat: 'data'   },
+  { text: '"Jarvis, quanti km questa settimana?"', cat: 'data' },
+  { text: '"Jarvis, sono pronto per la gara?"', cat: 'data'   },
+  { text: '"Jarvis, migliori performance"',     cat: 'data'   },
+  { text: '"Jarvis, mostra fitness freshness"', cat: 'data'   },
+  { text: '"Jarvis, piano di allenamento"',     cat: 'data'   },
+  // Azioni
+  { text: '"Jarvis, sincronizza Strava"',       cat: 'action' },
+  { text: '"Jarvis, sincronizza Garmin"',       cat: 'action' },
+  { text: '"Jarvis, rigenera il mio DNA"',      cat: 'action' },
 ];
 
 const CAT_STYLE: Record<string, string> = {
