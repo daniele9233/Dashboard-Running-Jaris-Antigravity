@@ -579,9 +579,9 @@ export function RunnerDnaView() {
           <section className="bg-[#080808] border border-white/[0.05] border-dashed rounded-3xl p-6 flex items-center gap-4">
             <Footprints className="w-8 h-8 text-gray-700 shrink-0" />
             <div>
-              <div className="text-[9px] font-black tracking-[0.25em] text-gray-600 uppercase mb-1">Running Dynamics Non Disponibili</div>
+              <div className="text-[9px] font-black tracking-[0.25em] text-gray-600 uppercase mb-1">Running Dynamics Non Ancora Sincronizzate</div>
               <p className="text-xs text-gray-600">
-                Oscillazione verticale, rapporto verticale e contatto suolo richiedono un orologio compatibile (Garmin HRM-Pro, Coros, Polar Vantage). Fai un sync dopo la prossima corsa con il sensore.
+                Il tuo Garmin Forerunner 265 registra oscillazione verticale, rapporto verticale e contatto suolo nei file FIT. Premi <strong className="text-gray-400">Garmin Sync</strong> in Attività per importarle.
               </p>
             </div>
           </section>
