@@ -26,6 +26,7 @@ STRAVA_CLIENT_ID   = os.environ.get("STRAVA_CLIENT_ID", "")
 STRAVA_CLIENT_SECRET = os.environ.get("STRAVA_CLIENT_SECRET", "")
 FRONTEND_URL       = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 ANTHROPIC_API_KEY  = os.environ.get("ANTHROPIC_API_KEY", "")
+GEMINI_API_KEY     = os.environ.get("GEMINI_API_KEY", "")
 
 # Build the callback URL from the current host (set via Render env or default)
 BACKEND_URL        = os.environ.get("BACKEND_URL", "https://dani-backend-ea0s.onrender.com")
@@ -2293,15 +2294,147 @@ async def analyze_run(request: Request):
     return {"analysis": "\n\n".join(lines)}
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  AI HELPERS — 3-level fallback: Claude Haiku → Gemini Flash → Algorithmic
+# ═══════════════════════════════════════════════════════════════════════════════
+
+async def _call_ai_async(prompt: str, max_tokens: int = 900) -> str:
+    """Try Claude Haiku 4.5, then Gemini 2.0 Flash, then raise."""
+    # Level 1: Claude Haiku
+    if ANTHROPIC_API_KEY:
+        try:
+            from anthropic import AsyncAnthropic
+            client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+            resp = await client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=max_tokens,
+                temperature=0.8,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return resp.content[0].text.strip()
+        except Exception as e:
+            print(f"[AI-L1] Claude failed: {type(e).__name__}: {e}")
+
+    # Level 2: Gemini 2.0 Flash (free tier)
+    if GEMINI_API_KEY:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=GEMINI_API_KEY)
+            model = genai.GenerativeModel("gemini-2.0-flash")
+            resp = await model.generate_content_async(prompt)
+            return resp.text.strip()
+        except Exception as e:
+            print(f"[AI-L2] Gemini failed: {type(e).__name__}: {e}")
+
+    raise RuntimeError("All AI providers unavailable")
+
+
+def _algorithmic_dna(
+    vdot: float, consistency_score: float, eff_score: int,
+    ctl: float, tsb: float, zone_dist: dict, freq: float, age: int,
+) -> dict:
+    """Level-3 fallback: generate all DNA fields algorithmically from raw metrics."""
+    # Profile level
+    if vdot >= 52:   level = "Sub-Elite"
+    elif vdot >= 47: level = "Amatore Avanzato"
+    elif vdot >= 42: level = "Amatore Evoluto"
+    elif vdot >= 37: level = "Amatore Base"
+    else:            level = "Principiante"
+
+    # Profile type from zones
+    z1z2 = zone_dist.get("z1", 0) + zone_dist.get("z2", 0)
+    z4   = zone_dist.get("z4", 0)
+    z5   = zone_dist.get("z5", 0)
+    if z5 > 15:       ptype = "Speed-Power"
+    elif z4 > 25:     ptype = "Threshold Specialist"
+    elif z1z2 >= 80:  ptype = "Endurance Puro"
+    else:             ptype = "Aerobico Versatile"
+
+    # Trend
+    if consistency_score > 75 and ctl > 40: trend = "In Crescita"
+    elif consistency_score < 35 or ctl < 15: trend = "In Calo"
+    else:                                    trend = "Stabile"
+
+    # Form
+    if   tsb > 10:  form = "Picco di Forma"
+    elif tsb > 0:   form = "Forma Ottimale"
+    elif tsb > -10: form = "Leggero Affaticamento"
+    else:           form = "Sovraccarico Funzionale"
+
+    # Ideal distance
+    if z1z2 >= 80:  ideal = "Maratona"
+    elif z1z2 >= 65: ideal = "Mezza Maratona"
+    elif z5 > 15:   ideal = "5K"
+    else:           ideal = "10K"
+
+    pol_ok = z1z2 >= 75
+    arch = (
+        f"Runner classificato {level} con VDOT {vdot:.1f}. "
+        + ("Distribuzione delle zone coerente con un approccio polarizzato 80/20 — segnale di disciplina aerobica. " if pol_ok
+           else "Distribuzione delle zone sbilanciata verso le intensità medie — fenomeno del 'grey zone' tipico di chi non rallenta abbastanza nelle uscite facili. ")
+        + f"Il profilo biomeccanico-metabolico indica un archetipo {ptype}."
+    )
+
+    verdict = (
+        f"VDOT {vdot:.1f}: " +
+        ("capacità aerobica ben costruita. " if vdot >= 42 else "ancora margine significativo da esprimere. ") +
+        ("La frequenza di allenamento è il tuo punto di forza. " if consistency_score >= 70
+         else "La costanza è il limite principale: senza regolarità non si costruisce base aerobica. ") +
+        ("Forma attuale ottimale." if tsb > 0 else "Attenzione: carico accumulato elevato, valuta una settimana di recupero.")
+    )
+
+    strengths: list = []
+    if vdot >= 42:            strengths.append(f"VDOT {vdot:.1f} — solida capacità aerobica di base")
+    if consistency_score >= 70: strengths.append(f"Costanza: {freq:.1f} run/settimana mantenute regolarmente")
+    if pol_ok:                strengths.append("Polarizzazione 80/20 rispettata — metodo di allenamento corretto")
+    if eff_score >= 70:       strengths.append("Efficienza aerobica elevata — ottimo rapporto passo/FC")
+    if ctl >= 40:             strengths.append(f"CTL {ctl:.0f} — buon carico cronico adattativo")
+    while len(strengths) < 3: strengths.append("Continua a costruire sulla base aerobica attuale")
+
+    gaps: list = []
+    if consistency_score < 60: gaps.append(f"Costanza insufficiente ({freq:.1f} run/w) — target minimo 3-4 uscite/settimana")
+    if not pol_ok:             gaps.append(f"Solo {z1z2}% del tempo in Z1/Z2 — rallenta le corse facili")
+    if eff_score < 60:         gaps.append("Efficienza biomeccanica da migliorare — lavora su cadenza e tecnica")
+    if ctl < 25:               gaps.append("Volume cronico troppo basso — stimolo adattativo insufficiente")
+    if vdot < 40:              gaps.append("Base aerobica in costruzione — priorità assoluta alle corse lente")
+    while len(gaps) < 3:      gaps.append("Aumenta progressivamente il volume (+8% a settimana)")
+
+    age_penalty = max(0.0, (age - 35) * 0.15)  # -0.15 VDOT per year over 35
+    ceiling = round(min(55.0, vdot + max(3.0, (80 - consistency_score) / 15 + (50 - min(50, ctl)) / 15) - age_penalty), 1)
+
+    actions = []
+    if consistency_score < 75: actions.append("portare la frequenza a 4 run/settimana")
+    if not pol_ok:             actions.append("rallentare le corse facili sotto il 75% FCmax")
+    if ctl < 40:               actions.append("aumentare il volume del 8% a settimana")
+    if not actions:            actions = ["mantenere la costanza e aggiungere una sessione di qualità a settimana"]
+    unlock = "Per raggiungere il tuo ceiling: " + ", ".join(actions[:2]) + "."
+
+    return {
+        "profile_level":         level,
+        "profile_type":          ptype,
+        "archetype_description": arch,
+        "trend_status":          trend,
+        "trend_detail":          "Analisi algoritmica — connetti un provider AI per insight personalizzati.",
+        "consistency_label":     f"{'Solida' if consistency_score >= 70 else 'Da migliorare'} — {freq:.1f} run/settimana",
+        "efficiency_label":      f"{'Elevata' if eff_score >= 70 else 'Migliorabile'} — score {eff_score}/100",
+        "form_label":            form,
+        "vdot_ceiling":          ceiling,
+        "ideal_distance":        ideal,
+        "coach_verdict":         verdict,
+        "strengths":             strengths[:3],
+        "gaps":                  gaps[:3],
+        "unlock_message":        unlock,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  RUNNER DNA — OLYMPIC COACH AI IDENTITY ENGINE
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @app.get("/api/runner-dna")
 async def get_runner_dna():
-    """Full physiological identity profile — powered by Claude Haiku 4.5."""
+    """Full physiological identity profile — Claude Haiku → Gemini → Algorithmic."""
     import json
     from datetime import date, timedelta
-    from anthropic import AsyncAnthropic
 
     athlete_id = await _get_athlete_id()
     q = {"athlete_id": athlete_id} if athlete_id else {}
@@ -2489,43 +2622,25 @@ Rispondi SOLO JSON puro (no markdown):
   "unlock_message": "<1-2 frasi azioni concrete per raggiungere il ceiling>"
 }}"""
 
+    ai_data = None
     try:
-        ai_client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
-        response  = await ai_client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=900,
-            temperature=0.8,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        ai_text = response.content[0].text.strip()
+        ai_text = await _call_ai_async(prompt, max_tokens=900)
         if ai_text.startswith("```"):
             ai_text = ai_text.split("```")[1]
             if ai_text.lower().startswith("json"):
                 ai_text = ai_text[4:]
             ai_text = ai_text.strip()
         ai_data = json.loads(ai_text)
+        print("[DNA] AI analysis OK")
     except Exception as e:
-        import traceback
-        err_msg = str(e)
-        err_type = type(e).__name__
-        print(f"Runner DNA AI Error [{err_type}]: {err_msg}")
-        traceback.print_exc()
-        ai_data = {
-            "profile_level":         "Analisi AI Non Disponibile",
-            "profile_type":          "Errore connessione AI",
-            "archetype_description": f"Errore AI ({err_type}): {err_msg[:120]}. Verifica la variabile ANTHROPIC_API_KEY su Render → Environment.",
-            "trend_status":          "Stabile",
-            "trend_detail":          f"[{err_type}] {err_msg[:80]}",
-            "consistency_label":     "In attesa di analisi",
-            "efficiency_label":      "In attesa di analisi",
-            "form_label":            "In attesa",
-            "vdot_ceiling":          round(vdot_current + 5, 1),
-            "ideal_distance":        "Da definire",
-            "coach_verdict":         f"Errore AI: {err_msg[:200]}",
-            "strengths":             [f"Tipo errore: {err_type}", "Vai su Render → Environment", "Verifica ANTHROPIC_API_KEY"],
-            "gaps":                  [err_msg[:80], "—", "—"],
-            "unlock_message":        "Imposta ANTHROPIC_API_KEY nelle variabili d'ambiente di Render per sbloccare l'AI.",
-        }
+        print(f"[DNA] All AI providers failed: {e} — using algorithmic fallback")
+
+    if ai_data is None:
+        ai_data = _algorithmic_dna(
+            vdot=vdot_current, consistency_score=consistency_score,
+            eff_score=eff_score, ctl=ctl, tsb=tsb, zone_dist=zone_dist,
+            freq=freq, age=age,
+        )
 
     vdot_ceiling  = round(float(ai_data.get("vdot_ceiling", vdot_current + 5)), 1)
     # Ensure ceiling is always > current
@@ -2654,23 +2769,36 @@ async def clear_runner_dna_cache():
 
 @app.get("/api/test-ai")
 async def test_ai_connection():
-    """Diagnostic endpoint — tests Anthropic API connectivity and key validity."""
-    from anthropic import AsyncAnthropic
-    key = ANTHROPIC_API_KEY
-    if not key:
-        return {"ok": False, "error": "ANTHROPIC_API_KEY non impostata nelle env vars di Render"}
-    try:
-        client = AsyncAnthropic(api_key=key)
-        response = await client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=20,
-            messages=[{"role": "user", "content": "Rispondi solo: OK"}],
-        )
-        return {
-            "ok": True,
-            "model": "claude-haiku-4-5-20251001",
-            "reply": response.content[0].text.strip(),
-            "key_prefix": key[:8] + "...",
-        }
-    except Exception as e:
-        return {"ok": False, "error": str(e), "error_type": type(e).__name__}
+    """Diagnostic: test Claude + Gemini connectivity."""
+    results = {}
+
+    # Test Claude
+    if ANTHROPIC_API_KEY:
+        try:
+            from anthropic import AsyncAnthropic
+            c = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+            r = await c.messages.create(
+                model="claude-haiku-4-5-20251001", max_tokens=10,
+                messages=[{"role": "user", "content": "Reply: OK"}],
+            )
+            results["claude"] = {"ok": True, "reply": r.content[0].text.strip()}
+        except Exception as e:
+            results["claude"] = {"ok": False, "error": str(e), "type": type(e).__name__}
+    else:
+        results["claude"] = {"ok": False, "error": "ANTHROPIC_API_KEY non impostata"}
+
+    # Test Gemini
+    if GEMINI_API_KEY:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=GEMINI_API_KEY)
+            m = genai.GenerativeModel("gemini-2.0-flash")
+            r2 = await m.generate_content_async("Reply: OK")
+            results["gemini"] = {"ok": True, "reply": r2.text.strip()}
+        except Exception as e:
+            results["gemini"] = {"ok": False, "error": str(e), "type": type(e).__name__}
+    else:
+        results["gemini"] = {"ok": False, "error": "GEMINI_API_KEY non impostata"}
+
+    active = [k for k, v in results.items() if v.get("ok")]
+    return {"providers": results, "active": active, "will_use": active[0] if active else "algorithmic"}
