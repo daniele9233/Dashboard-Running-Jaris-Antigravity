@@ -1763,47 +1763,84 @@ def _predict_race(vdot: float) -> dict:
 
 def _extract_fit_dynamics(binary_content: bytes) -> dict:
     """Extract Running Dynamics from FIT binary data using fitdecode.
-    
-    Handles both standard and 'enhanced' fields.
-    Units:
-    - Vertical Oscillation: FIT (mm) -> Result (cm)
-    - Stride Length: FIT (mm) -> Result (m)
-    - GCT: FIT (ms) -> Result (ms)
-    """
-    vo_values = []
-    gct_values = []
-    sl_values = []
-    vr_values = []
 
+    Strategy (two-pass):
+    1. SESSION frame — Garmin watches (Forerunner 265, 955, Fenix, etc.) store
+       pre-averaged dynamics here even without an external HRM-Pro sensor.
+       Fields: avg_vertical_oscillation (mm), avg_stance_time (ms),
+               avg_step_length (mm), avg_vertical_ratio (%)
+    2. RECORD frame fallback — per-point data present only when an external
+       Running Dynamics sensor (HRM-Pro, HRM-Run, RD Pod) is paired.
+       We average those values ourselves.
+
+    Units after conversion:
+    - Vertical Oscillation: mm → cm
+    - Stride Length: mm → m
+    - GCT / Stance Time: ms → ms (unchanged)
+    - Vertical Ratio: % (unchanged)
+    """
     try:
+        session_data = {}
+        vo_values = []
+        gct_values = []
+        sl_values = []
+        vr_values = []
+
         with fitdecode.FitReader(io.BytesIO(binary_content)) as fit:
             for frame in fit:
-                if frame.frame_type == fitdecode.FIT_FRAME_DATA and frame.name == 'record':
-                    # 1. Vertical Oscillation (mm)
-                    vo = frame.get_value('enhanced_vertical_oscillation') or frame.get_value('vertical_oscillation')
-                    # 2. Ground Contact Time / Stance Time (ms)
-                    gct = frame.get_value('stance_time') or frame.get_value('ground_contact_time') or frame.get_value('enhanced_ground_contact_time')
-                    # 3. Stride Length (mm)
-                    sl = frame.get_value('enhanced_avg_step_length') or frame.get_value('step_length') or frame.get_value('avg_step_length')
-                    # 4. Vertical Ratio (%)
-                    vr = frame.get_value('vertical_ratio') or frame.get_value('enhanced_vertical_ratio')
+                if frame.frame_type != fitdecode.FIT_FRAME_DATA:
+                    continue
 
-                    if vo is not None and vo > 0: vo_values.append(vo)
+                # ── Pass 1: session frame (Forerunner 265 / most Garmin watches) ──
+                if frame.name == 'session':
+                    def _sf(name):
+                        try: return frame.get_value(name)
+                        except Exception: return None
+
+                    vo  = _sf('avg_vertical_oscillation')
+                    gct = _sf('avg_stance_time') or _sf('avg_ground_contact_time')
+                    sl  = _sf('avg_step_length')
+                    vr  = _sf('avg_vertical_ratio')
+
+                    if vo  is not None and vo  > 0:
+                        session_data['avg_vertical_oscillation'] = round(vo / 10.0, 1)   # mm→cm
+                    if gct is not None and gct > 0:
+                        session_data['avg_ground_contact_time']  = int(gct)               # ms
+                    if sl  is not None and sl  > 0:
+                        session_data['avg_stride_length']        = round(sl / 1000.0, 2)  # mm→m
+                    if vr  is not None and vr  > 0:
+                        session_data['avg_vertical_ratio']       = round(vr, 2)            # %
+
+                # ── Pass 2: record frame (HRM-Pro / external sensor) ─────────────
+                if frame.name == 'record':
+                    def _rf(name):
+                        try: return frame.get_value(name)
+                        except Exception: return None
+
+                    vo  = _rf('enhanced_vertical_oscillation') or _rf('vertical_oscillation')
+                    gct = _rf('stance_time') or _rf('ground_contact_time') or _rf('enhanced_ground_contact_time')
+                    sl  = _rf('step_length') or _rf('avg_step_length') or _rf('enhanced_avg_step_length')
+                    vr  = _rf('vertical_ratio') or _rf('enhanced_vertical_ratio')
+
+                    if vo  is not None and vo  > 0: vo_values.append(vo)
                     if gct is not None and gct > 0: gct_values.append(gct)
-                    if sl is not None and sl > 0: sl_values.append(sl)
-                    if vr is not None and vr > 0: vr_values.append(vr)
+                    if sl  is not None and sl  > 0: sl_values.append(sl)
+                    if vr  is not None and vr  > 0: vr_values.append(vr)
 
-        res = {}
-        if vo_values:
+        # Build result: session frame wins; record frame fills gaps
+        res = dict(session_data)
+
+        if 'avg_vertical_oscillation' not in res and vo_values:
             res['avg_vertical_oscillation'] = round((sum(vo_values) / len(vo_values)) / 10.0, 1)
-        if gct_values:
-            res['avg_ground_contact_time'] = int(sum(gct_values) / len(gct_values))
-        if sl_values:
-            res['avg_stride_length'] = round((sum(sl_values) / len(sl_values)) / 1000.0, 2)
-        if vr_values:
-            res['avg_vertical_ratio'] = round(sum(vr_values) / len(vr_values), 2)
-        
+        if 'avg_ground_contact_time' not in res and gct_values:
+            res['avg_ground_contact_time']  = int(sum(gct_values) / len(gct_values))
+        if 'avg_stride_length' not in res and sl_values:
+            res['avg_stride_length']        = round((sum(sl_values) / len(sl_values)) / 1000.0, 2)
+        if 'avg_vertical_ratio' not in res and vr_values:
+            res['avg_vertical_ratio']       = round(sum(vr_values) / len(vr_values), 2)
+
         return res
+
     except Exception as e:
         print(f"[FIT-Parser] Error: {e}")
         return {}
