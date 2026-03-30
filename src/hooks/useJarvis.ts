@@ -123,6 +123,7 @@ export function useJarvis({
       for (let i = 0; i < event.results.length; i++) {
         full += event.results[i][0].transcript;
       }
+      console.log('[JARVIS] Sentito:', full); // debug — rimuovere dopo test
       const lower = full.toLowerCase();
 
       if (WAKE_WORD_RE.test(lower)) {
@@ -155,13 +156,15 @@ export function useJarvis({
     };
 
     recognition.onerror = (e: any) => {
+      console.warn('[JARVIS] SpeechRecognition error:', e.error);
       if (e.error === 'not-allowed') {
-        // Mic permission denied — stop trying, update state
-        console.warn('[JARVIS] Microfono non autorizzato. Vai nelle impostazioni del browser e consenti il microfono.');
         isListeningRef.current = false;
         updateOrbState('idle');
-      } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
-        console.warn('[JARVIS] SpeechRecognition error:', e.error);
+      } else if (e.error === 'language-not-supported' || e.error === 'service-not-allowed') {
+        // Fallback a en-US se it-IT non è supportato
+        console.warn('[JARVIS] it-IT non supportato, fallback en-US');
+        recognition.lang = 'en-US';
+        try { recognition.start(); } catch { /* */ }
       }
     };
 
