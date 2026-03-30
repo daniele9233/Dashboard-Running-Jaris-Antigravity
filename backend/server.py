@@ -2268,11 +2268,14 @@ async def get_runner_dna():
     if len(runs) < 5:
         return JSONResponse({"error": "not_enough_data"}, status_code=400)
 
-    # Cache mechanism
+    # Cache mechanism — skip cache if it contains a fallback result
     last_run_date = runs[-1].get("date")
     cached_dna = await db.runner_dna_cache.find_one({"athlete_id": athlete_id})
     if cached_dna and cached_dna.get("last_run_date") == last_run_date:
-        return {"dna": cached_dna.get("dna_data")}
+        cached_data = cached_dna.get("dna_data", {})
+        # Only serve cache if AI actually succeeded (not fallback)
+        if cached_data.get("profile", {}).get("level") != "Analisi AI Non Disponibile":
+            return {"dna": cached_data}
 
     # Base Metrics
     total_runs = len(runs)
@@ -2429,12 +2432,21 @@ async def get_runner_dna():
         }
     }
     
-    # Save to MongoDB cache
-    await db.runner_dna_cache.update_one(
-        {"athlete_id": athlete_id},
-        {"$set": {"last_run_date": last_run_date, "dna_data": dna}},
-        upsert=True
-    )
+    # Save to MongoDB cache — only if AI succeeded (not fallback)
+    if dna.get("profile", {}).get("level") != "Analisi AI Non Disponibile":
+        await db.runner_dna_cache.update_one(
+            {"athlete_id": athlete_id},
+            {"$set": {"last_run_date": last_run_date, "dna_data": dna}},
+            upsert=True
+        )
     
     return {"dna": dna}
 
+
+@app.delete("/api/runner-dna/cache")
+async def clear_runner_dna_cache():
+    """Manually clear the Runner DNA cache to force AI re-analysis."""
+    athlete_id = await _get_athlete_id()
+    q = {"athlete_id": athlete_id} if athlete_id else {}
+    await db.runner_dna_cache.delete_many(q)
+    return {"ok": True, "message": "Cache cleared, next request will re-analyze."}

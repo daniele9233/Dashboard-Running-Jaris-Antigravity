@@ -19,8 +19,8 @@ export function RunnerDnaView() {
 
   useEffect(() => {
     getRunnerDna()
-      .then((res) => {
-        setData(res.data.dna);
+      .then((res: any) => {
+        setData(res.dna);
         setLoading(false);
       })
       .catch((err) => {
