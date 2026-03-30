@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find . -type d -not -path */node_modules* -not -path */dist* -not -path */.git*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git clone:*)",
+      "Bash(cp \"C:\\\\Users\\\\kikkoderiso\\\\Desktop\\\\web-app\\\\GEMINI.md\" \"C:\\\\Users\\\\kikkoderiso\\\\AppData\\\\Local\\\\Temp\\\\LLM-ALL-in-ONE\\\\GEMINI.md\")",
+      "Bash(cp \"C:\\\\Users\\\\kikkoderiso\\\\Desktop\\\\web-app\\\\ANTIGRAVITY_PROMPT.md\" \"C:\\\\Users\\\\kikkoderiso\\\\AppData\\\\Local\\\\Temp\\\\LLM-ALL-in-ONE\\\\ANTIGRAVITY_PROMPT.md\")",
+      "Bash(git rm:*)",
+      "Bash(npm run:*)",
+      "Bash(find C:/Users/kikkoderiso/Desktop/web-app -type f \\\\\\(-name *.py -o -name *.js -o -name *.ts \\\\\\))",
+      "Bash(find C:/Users/kikkoderiso/Desktop/web-app/src -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.js \\\\\\))",
+      "Bash(find C:UserskikkoderisoDesktopweb-app-backend -name *.py -type f)"
+    ]
+  }
+}
