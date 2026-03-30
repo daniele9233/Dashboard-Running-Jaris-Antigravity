@@ -128,24 +128,12 @@ export function JarvisOverlay() {
     dispatch({ type: 'WAKE_WORD' });
   }, []);
 
-  const { transcript, response, orbState, browserSupported, analyser } = useJarvis({
+  const { transcript, response, orbState, browserSupported } = useJarvis({
     onAction: handleAction,
     onOrbStateChange: handleOrbStateChange,
     onWakeWord: handleWakeWord,
     enabled: true,
   });
-
-  // Resume AudioContext on user interaction (browser autoplay policy)
-  useEffect(() => {
-    const resume = () => {
-      if (analyser) {
-        const ctx = analyser.context as AudioContext;
-        if (ctx.state === 'suspended') ctx.resume();
-      }
-    };
-    window.addEventListener('click', resume);
-    return () => window.removeEventListener('click', resume);
-  }, [analyser]);
 
   const statusText = () => {
     if (!browserSupported) return 'Voice requires Chrome or Edge';
@@ -182,7 +170,7 @@ export function JarvisOverlay() {
 
             {/* Orb — fills the screen */}
             <div className="flex-1 relative">
-              <JarvisOrb state={orbState} analyser={analyser} />
+              <JarvisOrb state={orbState} analyser={null} />
 
               {/* JARVIS label */}
               <div className="absolute bottom-24 left-1/2 -translate-x-1/2 text-center pointer-events-none">

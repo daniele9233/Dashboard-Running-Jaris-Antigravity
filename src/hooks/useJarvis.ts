@@ -18,7 +18,6 @@ interface UseJarvisReturn {
   response: string;
   orbState: OrbState;
   browserSupported: boolean;
-  analyser: AnalyserNode | null;
   startListening: () => void;
   stopListening: () => void;
 }
@@ -35,15 +34,12 @@ export function useJarvis({
   const [transcript, setTranscript] = useState('');
   const [response, setResponse] = useState('');
   const [orbState, setOrbState] = useState<OrbState>('idle');
-  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
 
   const recognitionRef = useRef<AnySpeechRecognition | null>(null);
   const isListeningRef = useRef(false);
   const orbStateRef = useRef<OrbState>('idle');
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingCommandRef = useRef('');
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
   const synthRef = useRef(window.speechSynthesis);
 
   const browserSupported =
@@ -56,22 +52,6 @@ export function useJarvis({
     onOrbStateChange(s);
   }, [onOrbStateChange]);
 
-  // Set up microphone analyser for audio-reactive orb
-  const setupAudio = useCallback(async () => {
-    if (audioCtxRef.current) return;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      const ctx = new AudioContext();
-      audioCtxRef.current = ctx;
-      const an = ctx.createAnalyser();
-      an.fftSize = 256;
-      ctx.createMediaStreamSource(stream).connect(an);
-      setAnalyser(an);
-    } catch {
-      // mic denied — orb won't be audio-reactive but still works
-    }
-  }, []);
 
   const speak = useCallback((text: string, onEnd?: () => void) => {
     synthRef.current.cancel();
@@ -123,7 +103,6 @@ export function useJarvis({
 
   const startListening = useCallback(() => {
     if (!browserSupported) return;
-    setupAudio();
     isListeningRef.current = true;
     updateOrbState('listening');
 
@@ -182,7 +161,7 @@ export function useJarvis({
     };
 
     try { recognition.start(); } catch { /* already running */ }
-  }, [browserSupported, setupAudio, updateOrbState, onWakeWord, sendCommand]);
+  }, [browserSupported, updateOrbState, onWakeWord, sendCommand]);
 
   const stopListening = useCallback(() => {
     isListeningRef.current = false;
@@ -199,8 +178,6 @@ export function useJarvis({
     }
     return () => {
       stopListening();
-      streamRef.current?.getTracks().forEach(t => t.stop());
-      audioCtxRef.current?.close();
     };
   }, [enabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -209,7 +186,6 @@ export function useJarvis({
     response,
     orbState,
     browserSupported,
-    analyser,
     startListening,
     stopListening,
   };
