@@ -129,15 +129,29 @@ export function useJarvis({
       }
       const lower = full.toLowerCase();
 
+      // Show real-time transcript even if wake word isn't fully matched yet
+      // but only if we are in listening mode
+      if (orbStateRef.current === 'listening') {
+        const displayTranscript = lower.length > 40 ? `...${lower.slice(-37)}` : lower;
+        setTranscript(displayTranscript);
+      }
+
       if (WAKE_WORD_RE.test(lower)) {
-        // Correctly extract command after any variant in the regex
-        const match = lower.match(new RegExp(`${WAKE_WORD_RE.source}(.*)`, 'i'));
-        const afterWake = (match?.[match.length - 1] ?? '').trim();
+        // Robust command extraction: find the wake word and take everything after it,
+        // skipping any trailing punctuation like commas or colons.
+        const wakeWordMatch = lower.match(WAKE_WORD_RE);
+        const wakeWord = wakeWordMatch?.[0] || 'jarvis';
+        const startIndex = lower.indexOf(wakeWord.toLowerCase()) + wakeWord.length;
+        const rawAfter = lower.slice(startIndex);
+        // Remove leading non-alphanumeric (like ", " or ": ")
+        const afterWake = rawAfter.replace(/^[^a-z0-9]+/, '').trim();
+
         pendingCommandRef.current = afterWake;
 
-        updateOrbState('listening');
-        onWakeWord();
-        setTranscript(afterWake || '...');
+        if (orbStateRef.current === 'idle') {
+          updateOrbState('listening');
+          onWakeWord();
+        }
 
         // Reset silence timer — send after 1.5s of no new words
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);

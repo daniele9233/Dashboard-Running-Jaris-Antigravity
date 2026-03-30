@@ -138,10 +138,18 @@ export function JarvisOverlay() {
   const statusText = () => {
     if (!browserSupported) return 'Voice requires Chrome or Edge';
     switch (orbState) {
-      case 'listening': return transcript ? transcript : 'Listening…';
-      case 'thinking':  return 'Processing…';
-      case 'speaking':  return response;
-      default:          return 'Say "Jarvis…" or click the orb';
+      case 'listening':
+        return transcript ? (
+          <span className="text-white/80">{transcript}</span>
+        ) : (
+          <span className="animate-pulse">Listening…</span>
+        );
+      case 'thinking':
+        return <span className="text-teal-400 font-bold tracking-widest animate-pulse">Processing…</span>;
+      case 'speaking':
+        return <span className="text-[#C0FF00]/90 italic">{response}</span>;
+      default:
+        return 'Say "Jarvis…" or click the orb';
     }
   };
 
