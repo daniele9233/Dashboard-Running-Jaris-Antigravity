@@ -14,7 +14,14 @@
       "Bash(npm run:*)",
       "Bash(find C:/Users/kikkoderiso/Desktop/web-app -type f \\\\\\(-name *.py -o -name *.js -o -name *.ts \\\\\\))",
       "Bash(find C:/Users/kikkoderiso/Desktop/web-app/src -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.js \\\\\\))",
-      "Bash(find C:UserskikkoderisoDesktopweb-app-backend -name *.py -type f)"
+      "Bash(find C:UserskikkoderisoDesktopweb-app-backend -name *.py -type f)",
+      "Bash(git -C d:/webapp-antiG log --oneline -10)",
+      "Bash(git -C d:/webapp-antiG show --stat b4c5538)",
+      "Bash(git -C d:/webapp-antiG show --stat 5b1cb21)",
+      "Bash(git -C d:/webapp-antiG status)",
+      "Bash(git -C d:/webapp-antiG log --oneline -3)",
+      "Bash(git -C d:/webapp-antiG diff --stat HEAD)",
+      "Bash(git -C d:/webapp-antiG push origin main)"
     ]
   }
 }

@@ -16,6 +16,8 @@ import httpx
 import json
 from anthropic import AsyncAnthropic
 import motor.motor_asyncio as motor
+import fitdecode
+import io
 
 load_dotenv()
 
@@ -434,6 +436,19 @@ async def strava_sync():
             except Exception:
                 full_polyline = summary_polyline
 
+            # NEW: FIT Dynamics Extraction
+            fit_dynamics = {}
+            try:
+                # Use GET /activities/{id}/export as per senior instruction
+                fit_resp = await http.get(
+                    f"https://www.strava.com/api/v3/activities/{strava_id}/export",
+                    headers=headers
+                )
+                if fit_resp.status_code == 200:
+                    fit_dynamics = _extract_fit_dynamics(fit_resp.content)
+            except Exception as e:
+                print(f"[FIT-Download] Error for {strava_id}: {e}")
+
             run_doc = {
                 "athlete_id": athlete_id,
                 "strava_id": strava_id,
@@ -455,11 +470,11 @@ async def strava_sync():
                 "polyline": full_polyline or summary_polyline,
                 "start_latlng": start_latlng,
                 "plan_feedback": None,
-                # Running dynamics (Garmin HRM-Pro / compatible watches)
-                "avg_vertical_oscillation": detail.get("average_vertical_oscillation"),
-                "avg_vertical_ratio":       detail.get("average_vertical_ratio"),
-                "avg_ground_contact_time":  detail.get("average_ground_contact_time"),
-                "avg_stride_length":        detail.get("average_stride_length"),
+                # Running dynamics - Prefer processed FIT data over Strava summary
+                "avg_vertical_oscillation": fit_dynamics.get("avg_vertical_oscillation") or detail.get("average_vertical_oscillation"),
+                "avg_vertical_ratio":       fit_dynamics.get("avg_vertical_ratio") or detail.get("average_vertical_ratio"),
+                "avg_ground_contact_time":  fit_dynamics.get("avg_ground_contact_time") or detail.get("average_ground_contact_time"),
+                "avg_stride_length":        fit_dynamics.get("avg_stride_length") or detail.get("average_stride_length"),
             }
 
             await db.runs.update_one(
@@ -1744,6 +1759,54 @@ def _predict_race(vdot: float) -> dict:
     return result
 
 
+def _extract_fit_dynamics(binary_content: bytes) -> dict:
+    """Extract Running Dynamics from FIT binary data using fitdecode.
+    
+    Handles both standard and 'enhanced' fields.
+    Units:
+    - Vertical Oscillation: FIT (mm) -> Result (cm)
+    - Stride Length: FIT (mm) -> Result (m)
+    - GCT: FIT (ms) -> Result (ms)
+    """
+    vo_values = []
+    gct_values = []
+    sl_values = []
+    vr_values = []
+
+    try:
+        with fitdecode.FitReader(io.BytesIO(binary_content)) as fit:
+            for frame in fit:
+                if frame.frame_type == fitdecode.FIT_FRAME_DATA and frame.name == 'record':
+                    # 1. Vertical Oscillation (mm)
+                    vo = frame.get_value('enhanced_vertical_oscillation') or frame.get_value('vertical_oscillation')
+                    # 2. Ground Contact Time / Stance Time (ms)
+                    gct = frame.get_value('stance_time') or frame.get_value('ground_contact_time') or frame.get_value('enhanced_ground_contact_time')
+                    # 3. Stride Length (mm)
+                    sl = frame.get_value('enhanced_avg_step_length') or frame.get_value('step_length') or frame.get_value('avg_step_length')
+                    # 4. Vertical Ratio (%)
+                    vr = frame.get_value('vertical_ratio') or frame.get_value('enhanced_vertical_ratio')
+
+                    if vo is not None and vo > 0: vo_values.append(vo)
+                    if gct is not None and gct > 0: gct_values.append(gct)
+                    if sl is not None and sl > 0: sl_values.append(sl)
+                    if vr is not None and vr > 0: vr_values.append(vr)
+
+        res = {}
+        if vo_values:
+            res['avg_vertical_oscillation'] = round((sum(vo_values) / len(vo_values)) / 10.0, 1)
+        if gct_values:
+            res['avg_ground_contact_time'] = int(sum(gct_values) / len(gct_values))
+        if sl_values:
+            res['avg_stride_length'] = round((sum(sl_values) / len(sl_values)) / 1000.0, 2)
+        if vr_values:
+            res['avg_vertical_ratio'] = round(sum(vr_values) / len(vr_values), 2)
+        
+        return res
+    except Exception as e:
+        print(f"[FIT-Parser] Error: {e}")
+        return {}
+
+
 def _vdot_from_best_efforts(efforts: list) -> Optional[float]:
     """Calculate VDOT from stored best efforts (more reliable than HR-filtered runs).
 
@@ -2802,3 +2865,57 @@ async def test_ai_connection():
 
     active = [k for k, v in results.items() if v.get("ok")]
     return {"providers": results, "active": active, "will_use": active[0] if active else "algorithmic"}
+
+
+@app.post("/api/admin/backfill-dynamics")
+async def backfill_dynamics(limit: int = 20):
+    """Retroactively download and parse FIT files for existing runs in DB.
+    
+    Limited to 20 runs per call to avoid Strava rate limits.
+    """
+    tokens = await db.strava_tokens.find_one(sort=[("_id", -1)])
+    if not tokens:
+        return JSONResponse({"error": "not_connected"}, status_code=400)
+    
+    tokens = await _refresh_token_if_needed(tokens)
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+    
+    athlete_id = tokens.get("athlete_id")
+    q = {"athlete_id": athlete_id, "avg_vertical_oscillation": None}
+    runs_to_fix = await db.runs.find(q).sort("date", -1).to_list(limit)
+    
+    updated = 0
+    errors = []
+    
+    async with httpx.AsyncClient(timeout=30.0) as http:
+        for run in runs_to_fix:
+            strava_id = run.get("strava_id")
+            if not strava_id: continue
+            
+            try:
+                # 1. Download FIT
+                fit_resp = await http.get(
+                    f"https://www.strava.com/api/v3/activities/{strava_id}/export",
+                    headers=headers
+                )
+                if fit_resp.status_code == 200:
+                    # 2. Parse
+                    dynamics = _extract_fit_dynamics(fit_resp.content)
+                    if dynamics:
+                        # 3. Update DB
+                        await db.runs.update_one(
+                            {"_id": run["_id"]},
+                            {"$set": dynamics}
+                        )
+                        updated += 1
+                else:
+                    errors.append(f"ID {strava_id}: HTTP {fit_resp.status_code}")
+            except Exception as e:
+                errors.append(f"ID {strava_id}: {str(e)}")
+                
+    return {
+        "ok": True, 
+        "updated": updated, 
+        "total_attempted": len(runs_to_fix),
+        "errors": errors
+    }

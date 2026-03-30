@@ -1,8 +1,36 @@
+# Node
 node_modules/
-build/
 dist/
-coverage/
+dist-ssr/
+build/
+*.local
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+.cache/
+.pytest_cache/
+.mypy_cache/
+.coverage
+.tox/
+.nox/
+.hypothesis/
+
+# IDE / System
+.idea/
+.vscode/
 .DS_Store
 *.log
+Thumbs.db
+
+# Environment
 .env*
 !.env.example
