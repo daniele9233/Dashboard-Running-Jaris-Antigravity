@@ -2417,14 +2417,15 @@ async def _call_ai_async(prompt: str, max_tokens: int = 900) -> str:
         except Exception as e:
             print(f"[AI-L1] Claude failed: {type(e).__name__}: {e}")
 
-    # Level 2: Gemini 2.0 Flash (free tier)
+    # Level 2: Gemini (free tier)
     if GEMINI_API_KEY:
         try:
-            import google.generativeai as genai
-            genai.configure(api_key=GEMINI_API_KEY)
-            model = genai.GenerativeModel("gemini-2.0-flash")
-            resp = await model.generate_content_async(prompt)
-            return resp.text.strip()
+            from google import genai as ggenai
+            gclient2 = ggenai.Client(api_key=GEMINI_API_KEY)
+            gresp2 = await gclient2.aio.models.generate_content(
+                model="gemini-2.0-flash", contents=prompt
+            )
+            return gresp2.text.strip()
         except Exception as e:
             print(f"[AI-L2] Gemini failed: {type(e).__name__}: {e}")
 
@@ -2893,10 +2894,9 @@ async def test_ai_connection():
     # Test Gemini
     if GEMINI_API_KEY:
         try:
-            import google.generativeai as genai
-            genai.configure(api_key=GEMINI_API_KEY)
-            m = genai.GenerativeModel("gemini-2.0-flash")
-            r2 = await m.generate_content_async("Reply: OK")
+            from google import genai as ggenai
+            gtc = ggenai.Client(api_key=GEMINI_API_KEY)
+            r2 = await gtc.aio.models.generate_content(model="gemini-2.0-flash", contents="Reply: OK")
             results["gemini"] = {"ok": True, "reply": r2.text.strip()}
         except Exception as e:
             results["gemini"] = {"ok": False, "error": str(e), "type": type(e).__name__}
