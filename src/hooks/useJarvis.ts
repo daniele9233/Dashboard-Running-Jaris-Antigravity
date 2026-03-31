@@ -43,6 +43,7 @@ export function useJarvis({
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingCommandRef = useRef('');
   const synthRef = useRef(window.speechSynthesis);
+  const synthResumeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
@@ -79,10 +80,11 @@ export function useJarvis({
   };
 
   const speak = useCallback(async (text: string, audioBase64?: string, onEnd?: () => void) => {
+    // Cancel any ongoing speech
     synthRef.current.cancel();
     updateOrbState('speaking');
 
-    // If we have Native Gemini Audio (Base64), use AudioContext for high-quality playback
+    // If we have Fish Audio base64, use AudioContext for high-quality playback
     if (audioBase64 && audioContextRef.current && analyserRef.current) {
       try {
         if (audioContextRef.current.state === 'suspended') {
@@ -99,7 +101,7 @@ export function useJarvis({
         source.connect(audioContextRef.current.destination);
         
         source.onended = () => {
-          console.log('[JARVIS] Native Gemini Audio finished');
+          console.log('[JARVIS] Fish Audio finished');
           updateOrbState('idle');
           onEnd?.();
         };
@@ -107,27 +109,48 @@ export function useJarvis({
         source.start(0);
         return;
       } catch (err) {
-        console.warn('[JARVIS] Native playback failed, falling back to local TTS:', err);
+        console.warn('[JARVIS] Fish Audio playback failed, falling back to browser TTS:', err);
       }
     }
     
     // Fallback: Browser Text-to-Speech
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = 'it-IT';
-    utt.rate = 1.05;
-    utt.pitch = 0.95;
-    
-    utt.onend = () => {
-      console.log('[JARVIS] Browser TTS finished');
-      updateOrbState('idle');
-      onEnd?.();
-    };
-    utt.onerror = (e) => {
-      console.warn('[JARVIS] TTS error:', e);
-      updateOrbState('idle');
-      onEnd?.();
-    };
-    synthRef.current.speak(utt);
+    // Chrome bug fix: delay speak() after cancel() to avoid stuck 'pending' state
+    setTimeout(() => {
+      // Chrome bug fix: pause/resume unsticks the synthesis queue
+      synthRef.current.pause();
+      synthRef.current.resume();
+
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang = 'it-IT';
+      utt.rate = 1.05;
+      utt.pitch = 0.95;
+      
+      // Chrome bug fix: periodic resume keeps speechSynthesis alive during long speech
+      if (synthResumeIntervalRef.current) clearInterval(synthResumeIntervalRef.current);
+      synthResumeIntervalRef.current = setInterval(() => {
+        if (synthRef.current.speaking) {
+          synthRef.current.pause();
+          synthRef.current.resume();
+        } else {
+          if (synthResumeIntervalRef.current) clearInterval(synthResumeIntervalRef.current);
+        }
+      }, 5000);
+
+      utt.onend = () => {
+        console.log('[JARVIS] Browser TTS finished');
+        if (synthResumeIntervalRef.current) clearInterval(synthResumeIntervalRef.current);
+        updateOrbState('idle');
+        onEnd?.();
+      };
+      utt.onerror = (e) => {
+        console.warn('[JARVIS] TTS error:', e);
+        if (synthResumeIntervalRef.current) clearInterval(synthResumeIntervalRef.current);
+        updateOrbState('idle');
+        onEnd?.();
+      };
+      synthRef.current.speak(utt);
+      console.log('[JARVIS] Browser TTS speak() called for:', text.substring(0, 40));
+    }, 150);
   }, [updateOrbState]);
 
   const sendCommand = useCallback(async (command: string) => {
@@ -274,6 +297,7 @@ export function useJarvis({
     isListeningRef.current = false;
     isActuallyStartedRef.current = false;
     synthRef.current.cancel();
+    if (synthResumeIntervalRef.current) clearInterval(synthResumeIntervalRef.current);
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch { /* ignore */ }
     }
