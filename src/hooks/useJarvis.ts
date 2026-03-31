@@ -26,6 +26,17 @@ interface UseJarvisReturn {
 const WAKE_WORD_RE = /\b(jarvis|giarvis|gervis|giavis|ehi jarvis|hey jarvis|hi jarvis|ok jarvis|service|servizio)\b/i;
 const MIN_COMMAND_WORDS = 1;
 
+// ── Instant local navigation (no API call, no wake word needed) ────────────
+// Matched from speech recognition final results → instant route + browser TTS
+const DIRECT_NAV: Array<{ re: RegExp; route: string; label: string }> = [
+  { re: /\b(dashboard|home|apri\s+dashboard|vai\s+a\s+home)\b/i,          route: '/',            label: 'Dashboard' },
+  { re: /\b(allenamento|training|piano|apri\s+allenamento|vai\s+ad?\s+allenamento)\b/i, route: '/training',   label: 'piano di allenamento' },
+  { re: /\b(attivit[àa]|corse|activities|apri\s+attivit|le\s+mie\s+corse)\b/i,          route: '/activities', label: 'le attività' },
+  { re: /\b(statistiche?|stats|statistics|apri\s+statistiche?)\b/i,        route: '/statistics',  label: 'le statistiche' },
+  { re: /\b(runner\s*dna|il\s+mio\s+dna|apri\s+dna|visualizza\s+dna)\b/i, route: '/runner-dna',  label: 'Runner DNA' },
+  { re: /\b(profilo|profile|apri\s+profilo|il\s+mio\s+profilo)\b/i,       route: '/profile',     label: 'il profilo' },
+];
+
 export function useJarvis({
   onAction,
   onOrbStateChange,
@@ -53,6 +64,9 @@ export function useJarvis({
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 
   const startListeningRef = useRef<() => void>(() => {});
+  // Keep latest onAction in a ref so recognition handlers can call it directly
+  const onActionRef = useRef(onAction);
+  useEffect(() => { onActionRef.current = onAction; }, [onAction]);
 
   const updateOrbState = useCallback((s: OrbState) => {
     console.log('[JARVIS] State transition:', orbStateRef.current, '->', s);
@@ -217,13 +231,42 @@ export function useJarvis({
 
       const result = event.results[event.results.length - 1];
       const lower = result[0].transcript.toLowerCase();
-      console.log('[JARVIS] Heard:', lower);
+      const isFinal = result.isFinal;
+      console.log('[JARVIS] Heard:', lower, isFinal ? '(final)' : '(interim)');
 
       if (orbStateRef.current === 'listening') {
         const displayTranscript = lower.length > 40 ? `...${lower.slice(-37)}` : lower;
         setTranscript(displayTranscript);
       }
 
+      // ── INSTANT LOCAL NAVIGATION (no wake word, no API call) ──────────────
+      // Only on final results to avoid false positives from interim transcripts
+      if (isFinal && orbStateRef.current !== 'thinking' && orbStateRef.current !== 'speaking') {
+        for (const nav of DIRECT_NAV) {
+          if (nav.re.test(lower)) {
+            console.log('[JARVIS] Direct nav detected:', nav.route);
+            // Show fullscreen if in mini/idle mode
+            if (orbStateRef.current === 'idle' || orbStateRef.current === 'listening') {
+              updateOrbState('listening');
+              onWakeWord();
+            }
+            if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+            pendingCommandRef.current = '';
+            try { recognition.stop(); } catch { /* ignore */ }
+            // Navigate immediately
+            onActionRef.current({ type: 'navigate', route: nav.route });
+            setTranscript(lower);
+            // Quick local browser TTS — no API call needed
+            speak(`Apro ${nav.label}.`, undefined, () => {
+              updateOrbState('listening');
+              startListeningRef.current();
+            });
+            return;
+          }
+        }
+      }
+
+      // ── WAKE WORD + COMMAND (AI backend for data queries) ─────────────────
       if (WAKE_WORD_RE.test(lower)) {
         const wakeWordMatch = lower.match(WAKE_WORD_RE);
         const wakeWord = wakeWordMatch?.[0] || 'jarvis';
