@@ -1,4 +1,9 @@
-const BASE_URL = import.meta.env.VITE_BACKEND_URL ?? 'https://dani-backend-ea0s.onrender.com';
+/// <reference types="vite/client" />
+let rawUrl = import.meta.env.VITE_BACKEND_URL ?? 'https://dani-backend-ea0s.onrender.com';
+if (rawUrl && !rawUrl.startsWith('http')) {
+  rawUrl = `https://${rawUrl}`;
+}
+const BASE_URL = rawUrl;
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {

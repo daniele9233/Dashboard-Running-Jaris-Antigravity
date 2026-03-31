@@ -1,4 +1,5 @@
 services:
+  # ── BACKEND ────────────────────────────────────────────────────────────────
   - type: web
     name: dani-backend-ea0s
     runtime: python
@@ -10,3 +11,17 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.11"
+
+  # ── FRONTEND ───────────────────────────────────────────────────────────────
+  - type: static
+    name: dani-frontend-ea0s
+    region: frankfurt
+    plan: free
+    buildCommand: npm install && npm run build
+    publishDir: dist
+    envVars:
+      - key: VITE_BACKEND_URL
+        fromService:
+          type: web
+          name: dani-backend-ea0s
+          property: host

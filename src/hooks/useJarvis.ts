@@ -23,7 +23,7 @@ interface UseJarvisReturn {
   analyser: AnalyserNode | null;
 }
 
-const WAKE_WORD_RE = /\b(jarvis|giarvis|gervis|hi jarvis|ehi jarvis|hey jarvis)\b/i;
+const WAKE_WORD_RE = /\b(jarvis|giarvis|gervis|giavis|ehi jarvis|hey jarvis|hi jarvis|ok jarvis)\b/i;
 const MIN_COMMAND_WORDS = 1;
 
 export function useJarvis({
@@ -57,13 +57,32 @@ export function useJarvis({
   }, [onOrbStateChange]);
 
 
+  const setupAudio = async () => {
+    if (analyserRef.current) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const ana = ctx.createAnalyser();
+      ana.fftSize = 64;
+      const source = ctx.createMediaStreamSource(stream);
+      source.connect(ana);
+      audioContextRef.current = ctx;
+      analyserRef.current = ana;
+      setAnalyser(ana);
+    } catch (err) {
+      console.warn('[JARVIS] Audio setup failed:', err);
+    }
+  };
+
   const speak = useCallback((text: string, onEnd?: () => void) => {
     synthRef.current.cancel();
+    updateOrbState('speaking');
+    
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = 'it-IT';
     utt.rate = 1.05;
     utt.pitch = 0.95;
-    utt.onstart = () => updateOrbState('speaking');
+    
     utt.onend = () => {
       updateOrbState('idle');
       onEnd?.();
@@ -74,6 +93,8 @@ export function useJarvis({
     };
     synthRef.current.speak(utt);
   }, [updateOrbState]);
+
+  const startListeningRef = useRef<() => void>(() => {});
 
   const sendCommand = useCallback(async (command: string) => {
     if (!command.trim() || command.trim().split(' ').length < MIN_COMMAND_WORDS) {
@@ -89,7 +110,7 @@ export function useJarvis({
       result = await jarvisChat(command);
     } catch {
       result = {
-        text: 'I had trouble connecting. Please try again.',
+        text: 'Ho avuto un problema di connessione. Riprova tra un istante.',
         action: { type: 'speak_only' },
       };
     }
@@ -98,10 +119,9 @@ export function useJarvis({
     onAction(result.action);
 
     speak(result.text, () => {
-      // After speaking, resume listening only for speak_only (no nav)
-      if (result.action.type === 'speak_only') {
-        updateOrbState('listening');
-      }
+      // After speaking, resume listening
+      updateOrbState('listening');
+      startListeningRef.current();
     });
   }, [onAction, speak, updateOrbState]);
 
@@ -110,40 +130,43 @@ export function useJarvis({
     isListeningRef.current = true;
     updateOrbState('listening');
 
+    // Resume AudioContext if suspended (browser requirement)
+    if (audioContextRef.current?.state === 'suspended') {
+      audioContextRef.current.resume().catch(console.warn);
+    }
+
     const SpeechRecognitionAPI =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognitionAPI) return;
 
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch { /* ignore */ }
+    }
+
     const recognition: AnySpeechRecognition = new SpeechRecognitionAPI();
     recognition.lang = 'it-IT';
-    recognition.continuous = true;
+    // continuous: false is more robust for command detection as it resets the buffer
+    recognition.continuous = false;
     recognition.interimResults = true;
     recognitionRef.current = recognition;
 
     recognition.onresult = (event: any) => {
       if (orbStateRef.current === 'thinking' || orbStateRef.current === 'speaking') return;
 
-      let full = '';
-      for (let i = 0; i < event.results.length; i++) {
-        full += event.results[i][0].transcript;
-      }
-      const lower = full.toLowerCase();
+      const result = event.results[event.results.length - 1];
+      const lower = result[0].transcript.toLowerCase();
 
-      // Show real-time transcript even if wake word isn't fully matched yet
-      // but only if we are in listening mode
+      // Show real-time transcript
       if (orbStateRef.current === 'listening') {
         const displayTranscript = lower.length > 40 ? `...${lower.slice(-37)}` : lower;
         setTranscript(displayTranscript);
       }
 
       if (WAKE_WORD_RE.test(lower)) {
-        // Robust command extraction: find the wake word and take everything after it,
-        // skipping any trailing punctuation like commas or colons.
         const wakeWordMatch = lower.match(WAKE_WORD_RE);
         const wakeWord = wakeWordMatch?.[0] || 'jarvis';
         const startIndex = lower.indexOf(wakeWord.toLowerCase()) + wakeWord.length;
         const rawAfter = lower.slice(startIndex);
-        // Remove leading non-alphanumeric (like ", " or ": ")
         const afterWake = rawAfter.replace(/^[^a-z0-9]+/, '').trim();
 
         pendingCommandRef.current = afterWake;
@@ -153,14 +176,13 @@ export function useJarvis({
           onWakeWord();
         }
 
-        // Reset silence timer — send after 1.5s of no new words
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = setTimeout(() => {
           const cmd = pendingCommandRef.current.trim();
           pendingCommandRef.current = '';
           if (cmd.split(' ').length >= MIN_COMMAND_WORDS) {
-            // Immediate UI feedback
-            updateOrbState('thinking');
+            // Stop recognition while thinking/speaking to clear buffer and avoid self-triggering
+            recognition.stop();
             sendCommand(cmd);
           }
         }, 1500);
@@ -168,12 +190,15 @@ export function useJarvis({
     };
 
     recognition.onend = () => {
-      // Chrome auto-stops after silence — restart if still supposed to listen
-      if (isListeningRef.current && orbStateRef.current !== 'thinking' && orbStateRef.current !== 'speaking') {
-        // Add a tiny delay to avoid rapid-fire restarts
+      // Restart if still supposed to listen and not busy
+      if (isListeningRef.current && orbStateRef.current === 'listening') {
         setTimeout(() => {
-          if (isListeningRef.current) {
-            try { recognition.start(); } catch { /* already started */ }
+          if (isListeningRef.current && orbStateRef.current === 'listening') {
+            try { 
+              recognition.start(); 
+            } catch { 
+              // Usually already started
+            }
           }
         }, 300);
       }
@@ -187,27 +212,14 @@ export function useJarvis({
 
     try {
       recognition.start();
-      // Setup audio ONLY if listener starts correctly
       setupAudio();
-    } catch { /* already running */ }
+    } catch { /* ignore */ }
   }, [browserSupported, updateOrbState, onWakeWord, sendCommand]);
 
-  const setupAudio = async () => {
-    if (analyserRef.current) return;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const ana = ctx.createAnalyser();
-      ana.fftSize = 64; // Low res for light visualization
-      const source = ctx.createMediaStreamSource(stream);
-      source.connect(ana);
-      audioContextRef.current = ctx;
-      analyserRef.current = ana;
-      setAnalyser(ana);
-    } catch (err) {
-      console.warn('[JARVIS] Audio setup failed:', err);
-    }
-  };
+  // Keep the ref in sync for sendCommand to use
+  useEffect(() => {
+    startListeningRef.current = startListening;
+  }, [startListening]);
 
   const stopListening = useCallback(() => {
     isListeningRef.current = false;
@@ -223,7 +235,6 @@ export function useJarvis({
     }
   }, [updateOrbState]);
 
-  // Start on mount when enabled
   useEffect(() => {
     if (enabled && browserSupported) {
       startListening();
@@ -231,7 +242,8 @@ export function useJarvis({
     return () => {
       stopListening();
     };
-  }, [enabled]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [enabled, browserSupported, startListening, stopListening]);
+
   return {
     transcript,
     response,
@@ -242,3 +254,4 @@ export function useJarvis({
     analyser,
   };
 }
+
