@@ -3284,7 +3284,7 @@ async def jarvis_chat(request: Request):
         
         # Request standard TEXT modality for free tier stability
         gresp = await gclient.aio.models.generate_content(
-            model="gemini-1.5-flash", 
+            model="gemini-2.5-flash", 
             contents=full_prompt
         )
         
