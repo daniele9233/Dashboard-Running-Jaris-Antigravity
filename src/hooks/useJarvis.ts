@@ -233,7 +233,8 @@ export function useJarvis({
 
         pendingCommandRef.current = afterWake;
 
-        if (orbStateRef.current === 'idle') {
+        // Always fire onWakeWord to restore fullscreen — even from mini/listening mode
+        if (orbStateRef.current === 'idle' || orbStateRef.current === 'listening') {
           updateOrbState('listening');
           onWakeWord();
         }
@@ -248,7 +249,7 @@ export function useJarvis({
             try { recognition.stop(); } catch { /* ignore */ }
             sendCommand(cmd);
           }
-        }, 1500);
+        }, 2500); // 2500ms: gives time for sentence completion + Render cold start
       }
     };
 

@@ -62,6 +62,7 @@ function reducer(state: JarvisState, event: JarvisEvent): JarvisState {
     case 'ORB_STATE':
       return { ...state, orbState: event.orbState };
     case 'WAKE_WORD':
+      // Always return to fullscreen on wake word — even from mini mode
       return { ...state, displayMode: 'fullscreen' };
     case 'MINI_CLICK':
       return { ...state, displayMode: 'fullscreen' };
