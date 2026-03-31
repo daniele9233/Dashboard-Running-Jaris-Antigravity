@@ -3279,27 +3279,16 @@ async def jarvis_chat(request: Request):
     audio_base64 = None
     try:
         from google import genai as ggenai
-        from google.genai import types
         gclient = ggenai.Client(api_key=JARVIS_GEMINI_KEY)
         full_prompt = f"{_JARVIS_SYSTEM_PROMPT}\n\n{context_block}\n\nUSER SAID: \"{transcript}\""
         
-        # Request both TEXT and AUDIO modalities for native TTS
+        # Request standard TEXT modality for free tier stability
         gresp = await gclient.aio.models.generate_content(
-            model="gemini-2.5-flash-latest",
-            contents=full_prompt,
-            config=types.GenerateContentConfig(
-                response_modalities=["AUDIO", "TEXT"]
-            )
+            model="gemini-1.5-flash", 
+            contents=full_prompt
         )
         
-        raw_text = ""
-        for part in gresp.candidates[0].content.parts:
-            if part.text:
-                raw_text += part.text
-            if part.inline_data:
-                audio_base64 = part.inline_data.data 
-        
-        raw = raw_text.strip()
+        raw = gresp.text.strip()
 
         # Robust JSON extraction
         json_match = re.search(r'\{.*\}', raw, re.DOTALL)
@@ -3321,8 +3310,5 @@ async def jarvis_chat(request: Request):
             "action": {"type": "speak_only"}
         }
 
-    # Add native audio to result if available
-    if audio_base64:
-        result["audio"] = audio_base64
-
+    # Return result (Frontend will fallback to browser TTS if audio is missing)
     return result
