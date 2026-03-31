@@ -18,6 +18,7 @@ from anthropic import AsyncAnthropic
 import motor.motor_asyncio as motor
 import fitdecode
 import io
+import base64
 
 load_dotenv()
 
@@ -3275,15 +3276,30 @@ async def jarvis_chat(request: Request):
             "action": {"type": "speak_only"}
         }, status_code=200)
 
+    audio_base64 = None
     try:
         from google import genai as ggenai
+        from google.genai import types
         gclient = ggenai.Client(api_key=JARVIS_GEMINI_KEY)
         full_prompt = f"{_JARVIS_SYSTEM_PROMPT}\n\n{context_block}\n\nUSER SAID: \"{transcript}\""
+        
+        # Request both TEXT and AUDIO modalities for native TTS
         gresp = await gclient.aio.models.generate_content(
-            model="gemini-1.5-flash",
+            model="gemini-2.5-flash-latest",
             contents=full_prompt,
+            config=types.GenerateContentConfig(
+                response_modalities=["AUDIO", "TEXT"]
+            )
         )
-        raw = gresp.text.strip()
+        
+        raw_text = ""
+        for part in gresp.candidates[0].content.parts:
+            if part.text:
+                raw_text += part.text
+            if part.inline_data:
+                audio_base64 = part.inline_data.data 
+        
+        raw = raw_text.strip()
 
         # Robust JSON extraction
         json_match = re.search(r'\{.*\}', raw, re.DOTALL)
@@ -3304,5 +3320,9 @@ async def jarvis_chat(request: Request):
             "text": error_msg,
             "action": {"type": "speak_only"}
         }
+
+    # Add native audio to result if available
+    if audio_base64:
+        result["audio"] = audio_base64
 
     return result

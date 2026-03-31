@@ -17,6 +17,7 @@ export interface JarvisAction {
 export interface JarvisResponse {
   text: string;
   action: JarvisAction;
+  audio?: string; // Base64 encoded audio from Fish Audio
   error?: string;
 }
 
