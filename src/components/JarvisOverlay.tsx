@@ -1,4 +1,4 @@
-import { useReducer, useCallback, useEffect } from 'react';
+import { useReducer, useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -84,12 +84,23 @@ export function JarvisOverlay() {
     hasNavigated: false,
   });
 
+  const [persistentMessage, setPersistentMessage] = useState<string>('');
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  const triggerNavigation = useCallback((route: string) => {
+    setIsNavigating(true);
+    setTimeout(() => {
+      navigate(route);
+      dispatch({ type: 'NAVIGATE' });
+      setIsNavigating(false);
+    }, 2500);
+  }, [navigate]);
+
   const handleAction = useCallback((action: JarvisAction) => {
     switch (action.type) {
       case 'navigate':
         if (action.route) {
-          navigate(action.route);
-          dispatch({ type: 'NAVIGATE' });
+          triggerNavigation(action.route);
         }
         break;
       case 'show_data': {
@@ -101,8 +112,7 @@ export function JarvisOverlay() {
           last_run: '/activities',
         };
         if (action.data_key && routeMap[action.data_key]) {
-          navigate(routeMap[action.data_key]);
-          dispatch({ type: 'NAVIGATE' });
+          triggerNavigation(routeMap[action.data_key]);
         }
         break;
       }
@@ -114,12 +124,12 @@ export function JarvisOverlay() {
         break;
       case 'regenerate_dna':
         clearRunnerDnaCache()
-          .then(() => { navigate('/runner-dna'); dispatch({ type: 'NAVIGATE' }); })
+          .then(() => { triggerNavigation('/runner-dna'); })
           .catch(console.error);
         break;
       // speak_only: no navigation, orb stays fullscreen
     }
-  }, [navigate]);
+  }, [triggerNavigation]);
 
   const handleOrbStateChange = useCallback((s: OrbState) => {
     dispatch({ type: 'ORB_STATE', orbState: s });
@@ -136,9 +146,17 @@ export function JarvisOverlay() {
     enabled: true,
   });
 
+  useEffect(() => {
+    if (response) {
+      setPersistentMessage(response);
+    }
+  }, [response]);
+
+  const visualOrbState: OrbState = isNavigating ? 'navigating' : orbState;
+
   const statusText = () => {
     if (!browserSupported) return 'Voice requires Chrome or Edge';
-    switch (orbState) {
+    switch (visualOrbState) {
       case 'listening':
         return transcript ? (
           <span className="text-white/80">{transcript}</span>
@@ -149,7 +167,13 @@ export function JarvisOverlay() {
         return <span className="text-teal-400 font-bold tracking-widest animate-pulse">Processing…</span>;
       case 'speaking':
         return <span className="text-[#C0FF00]/90 italic">{response}</span>;
+      case 'navigating':
+        return <span className="text-purple-400 font-bold tracking-widest animate-pulse">Navigating…</span>;
       default:
+        // Persistent text logic, falls back to default prompt
+        if (persistentMessage) {
+            return <span className="text-[#C0FF00]/60 italic">« {persistentMessage} »</span>;
+        }
         return 'Say "Jarvis…" or click the orb';
     }
   };
@@ -177,7 +201,7 @@ export function JarvisOverlay() {
 
             {/* Orb — fills the screen, click = riavvia microfono */}
             <div className="flex-1 relative cursor-pointer" onClick={startListening}>
-              <JarvisOrb state={orbState} analyser={analyser} />
+              <JarvisOrb state={visualOrbState} analyser={analyser} />
 
               {/* JARVIS label */}
               <div className="absolute bottom-24 left-1/2 -translate-x-1/2 text-center pointer-events-none">
@@ -251,7 +275,7 @@ export function JarvisOverlay() {
             onClick={() => dispatch({ type: 'MINI_CLICK' })}
             className="fixed bottom-6 left-6 z-[9999] w-14 h-14 rounded-full bg-black border border-[#C0FF00]/40 cursor-pointer flex items-center justify-center"
             style={{
-              boxShadow: orbState === 'listening' || orbState === 'speaking'
+              boxShadow: visualOrbState === 'listening' || visualOrbState === 'speaking'
                 ? '0 0 30px rgba(192,255,0,0.5), 0 0 60px rgba(192,255,0,0.2)'
                 : '0 0 15px rgba(192,255,0,0.25)',
             }}
@@ -263,7 +287,7 @@ export function JarvisOverlay() {
             <div
               className="w-5 h-5 rounded-full"
               style={{
-                background: orbState === 'thinking' || orbState === 'speaking'
+                background: visualOrbState === 'thinking' || visualOrbState === 'speaking' || visualOrbState === 'navigating'
                   ? 'radial-gradient(circle, #00FFAA, #00FFAA44)'
                   : 'radial-gradient(circle, #C0FF00, #C0FF0044)',
               }}

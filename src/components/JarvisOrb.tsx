@@ -119,6 +119,8 @@ export function JarvisOrb({ state, analyser }: JarvisOrbProps) {
           targetRadius = 16; targetSpeed = 0.55; targetBright = 0.75; targetSize = 0.32; targetLineAmount = 1.0; break;
         case 'speaking':
           targetRadius = 20; targetSpeed = 0.25; targetBright = 0.75; targetSize = 0.42; targetLineAmount = 0.75; break;
+        case 'navigating':
+          targetRadius = 18; targetSpeed = 0.8; targetBright = 0.9; targetSize = 0.5; targetLineAmount = 1.0; break;
       }
 
       currentRadius = lerp(currentRadius, targetRadius, 0.025);
@@ -146,10 +148,27 @@ export function JarvisOrb({ state, analyser }: JarvisOrbProps) {
         bass = sum / (8 * 255);
       }
 
+      // Add pseudo bass for idle breathing or navigating high energy
+      let pseudoBass = 0;
+      if (s === 'idle') {
+        pseudoBass = (Math.sin(t * 0.8) * Math.sin(t * 1.3) + 1) * 0.03 + (Math.random() * 0.015);
+      } else if (s === 'navigating') {
+        pseudoBass = 0.15 + (Math.random() * 0.1);
+      }
+      bass = Math.max(bass, pseudoBass);
+
       // Color lerp
-      const targetColor = (s === 'thinking' || s === 'speaking') ? COLOR_TEAL : COLOR_LIME;
-      mat.color.lerp(targetColor, 0.02);
-      lineMat.color.lerp(targetColor, 0.02);
+      if (s === 'navigating') {
+        // Fast color cycling: green -> yellow -> orange -> red -> purple
+        const h = (t * 0.8) % 1;
+        const colorDyn = new Color().setHSL(h, 1, 0.5);
+        mat.color.lerp(colorDyn, 0.1);
+        lineMat.color.lerp(colorDyn, 0.1);
+      } else {
+        const targetColor = (s === 'thinking' || s === 'speaking') ? COLOR_TEAL : COLOR_LIME;
+        mat.color.lerp(targetColor, 0.02);
+        lineMat.color.lerp(targetColor, 0.02);
+      }
 
       // Particle update
       const p = geo.getAttribute('position') as BufferAttribute;

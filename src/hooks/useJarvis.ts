@@ -59,6 +59,16 @@ export function useJarvis({
   const analyserRef = useRef<AnalyserNode | null>(null);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
 
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const vadLoopRef = useRef<number>();
+  const silenceStartRef = useRef<number>(0);
+  const isSpeakingMicRef = useRef(false);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const [localWhisperActive, setLocalWhisperActive] = useState(false);
+  const localWhisperActiveRef = useRef(false);
+
   const browserSupported =
     typeof window !== 'undefined' &&
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
@@ -80,9 +90,10 @@ export function useJarvis({
     try {
       console.log('[JARVIS] Setting up AudioContext...');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const ana = ctx.createAnalyser();
-      ana.fftSize = 64;
+      ana.fftSize = 256;
       const source = ctx.createMediaStreamSource(stream);
       source.connect(ana);
       audioContextRef.current = ctx;
@@ -198,14 +209,176 @@ export function useJarvis({
     });
   }, [onAction, speak, updateOrbState]);
 
-  const startListening = useCallback(() => {
-    if (!browserSupported || !isListeningRef.current) return;
+  const processFinalText = useCallback((lowerText: string) => {
+    // ── INSTANT LOCAL NAVIGATION ──
+    for (const nav of DIRECT_NAV) {
+      if (nav.re.test(lowerText)) {
+        console.log('[JARVIS] Direct nav detected:', nav.route);
+        if (orbStateRef.current === 'idle' || orbStateRef.current === 'listening') {
+          updateOrbState('listening');
+          onWakeWord();
+        }
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        pendingCommandRef.current = '';
+        if (recognitionRef.current) {
+          try { recognitionRef.current.stop(); } catch { /* ignore */ }
+        }
+        onActionRef.current({ type: 'navigate', route: nav.route });
+        setTranscript(lowerText);
+        speak(`Apro ${nav.label}.`, undefined, () => {
+          updateOrbState('listening');
+          startListeningRef.current();
+        });
+        return;
+      }
+    }
+
+    // ── WAKE WORD + COMMAND ──
+    if (WAKE_WORD_RE.test(lowerText)) {
+      const wakeWordMatch = lowerText.match(WAKE_WORD_RE);
+      const wakeWord = wakeWordMatch?.[0] || 'jarvis';
+      const startIndex = lowerText.indexOf(wakeWord.toLowerCase()) + wakeWord.length;
+      const rawAfter = lowerText.slice(startIndex);
+      const cmd = rawAfter.replace(/^[^a-z0-9]+/, '').trim();
+
+      if (orbStateRef.current === 'idle' || orbStateRef.current === 'listening') {
+        updateOrbState('listening');
+        onWakeWord();
+      }
+
+      if (cmd.split(' ').length >= MIN_COMMAND_WORDS) {
+        console.log('[JARVIS] Voice Command fully detected:', cmd);
+        updateOrbState('thinking');
+        if (recognitionRef.current) {
+          try { recognitionRef.current.stop(); } catch { /* ignore */ }
+        }
+        sendCommand(cmd);
+      }
+    } else {
+      // Not a wake word and not a direct nav. Ignored.
+      console.log('[JARVIS] Ignored (no wake word or command):', lowerText);
+      // restart listening if local whisper
+      if (localWhisperActiveRef.current && isListeningRef.current) {
+         startListeningRef.current();
+      }
+    }
+  }, [onWakeWord, sendCommand, speak, updateOrbState]);
+
+  // ── LOCAL WHISPER VAD LOOP ──
+  const startLocalWhisperVAD = useCallback(async () => {
+    if (!streamRef.current || !analyserRef.current) await setupAudio();
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      try { await audioContextRef.current.resume(); } catch (e) { console.warn(e); }
+    }
+    if (!streamRef.current || !analyserRef.current) return;
+
+    // Reset states
+    try {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+         mediaRecorderRef.current.stop();
+      }
+    } catch {}
+
+    const mr = new MediaRecorder(streamRef.current, { mimeType: 'audio/webm' });
+    audioChunksRef.current = [];
+    mr.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
     
-    if (orbStateRef.current === 'thinking' || orbStateRef.current === 'speaking') {
+    mr.onstop = async () => {
+      cancelAnimationFrame(vadLoopRef.current!);
+      if (!isListeningRef.current || orbStateRef.current === 'thinking' || orbStateRef.current === 'speaking') return;
+      
+      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      audioChunksRef.current = [];
+      if (audioBlob.size < 5000) {
+          // Too small, probably empty
+          if (isListeningRef.current && orbStateRef.current !== 'thinking') {
+             startLocalWhisperVAD();
+          }
+          return;
+      }
+
+      console.log('[JARVIS] VAD Silence detected. Sending 4080 Whisper chunk...');
+      updateOrbState('thinking');
+
+      const fd = new FormData();
+      fd.append('file', audioBlob, 'audio.webm');
+
+      try {
+        const res = await fetch('http://localhost:9000/transcribe', { method: 'POST', body: fd });
+        const data = await res.json();
+        console.log(`[JARVIS] RTX 4080 WHISPER (${data.time_ms}ms):`, data.text);
+        
+        const lowerText = data.text.toLowerCase();
+        setTranscript(lowerText);
+        
+        // Use the exact same logic as Chrome's isFinal
+        processFinalText(lowerText);
+
+      } catch (err) {
+        console.error('[JARVIS] Local Whisper failed:', err);
+        updateOrbState('listening');
+        if (isListeningRef.current) startLocalWhisperVAD();
+      }
+    };
+
+    mediaRecorderRef.current = mr;
+    mr.start();
+    isSpeakingMicRef.current = false;
+    silenceStartRef.current = 0;
+
+    const checkSilence = () => {
+      if (!analyserRef.current || !mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') return;
+      
+      const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+      analyserRef.current.getByteFrequencyData(dataArray);
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+      const avg = sum / dataArray.length;
+      
+      const isSpeaking = avg > 1.5; // very sensitive VAD threshold
+      
+      if (isSpeaking) {
+          isSpeakingMicRef.current = true;
+          silenceStartRef.current = 0;
+      } else if (isSpeakingMicRef.current) {
+          if (silenceStartRef.current === 0) {
+              silenceStartRef.current = Date.now();
+          } else if (Date.now() - silenceStartRef.current > 1200) {
+              // Silence for 1.2s -> Stop and transcribe
+              mediaRecorderRef.current.stop();
+              return; // exit loop
+          }
+      }
+      
+      vadLoopRef.current = requestAnimationFrame(checkSilence);
+    };
+
+    vadLoopRef.current = requestAnimationFrame(checkSilence);
+  }, [processFinalText, updateOrbState]);
+
+  const startListening = useCallback(async () => {
+    // Resume context to wake up orb visualization
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      try { await audioContextRef.current.resume(); } catch (e) {}
+    }
+
+    if ((!browserSupported && !localWhisperActiveRef.current) || !isListeningRef.current) return;
+    
+    if (orbStateRef.current === 'thinking' || orbStateRef.current === 'speaking' || orbStateRef.current === 'navigating') {
       console.log('[JARVIS] Postponing start, state is busy:', orbStateRef.current);
       return;
     }
 
+    // ── LOCAL WHISPER INTERCEPT ──
+    if (localWhisperActiveRef.current) {
+        if (isActuallyStartedRef.current) return;
+        isActuallyStartedRef.current = true;
+        console.log('[JARVIS] Starting Local RTC 4080 VAD loop...');
+        await startLocalWhisperVAD();
+        return;
+    }
+
+    // ── CHROME WEBSPEECH FALLBACK ──
     const SpeechRecognitionAPI =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognitionAPI) return;
@@ -227,7 +400,7 @@ export function useJarvis({
     };
 
     recognition.onresult = (event: any) => {
-      if (orbStateRef.current === 'thinking' || orbStateRef.current === 'speaking') return;
+      if (orbStateRef.current === 'thinking' || orbStateRef.current === 'speaking' || orbStateRef.current === 'navigating') return;
 
       const result = event.results[event.results.length - 1];
       const lower = result[0].transcript.toLowerCase();
@@ -239,35 +412,13 @@ export function useJarvis({
         setTranscript(displayTranscript);
       }
 
-      // ── INSTANT LOCAL NAVIGATION (no wake word, no API call) ──────────────
-      // Only on final results to avoid false positives from interim transcripts
-      if (isFinal && orbStateRef.current !== 'thinking' && orbStateRef.current !== 'speaking') {
-        for (const nav of DIRECT_NAV) {
-          if (nav.re.test(lower)) {
-            console.log('[JARVIS] Direct nav detected:', nav.route);
-            // Show fullscreen if in mini/idle mode
-            if (orbStateRef.current === 'idle' || orbStateRef.current === 'listening') {
-              updateOrbState('listening');
-              onWakeWord();
-            }
-            if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-            pendingCommandRef.current = '';
-            try { recognition.stop(); } catch { /* ignore */ }
-            // Navigate immediately
-            onActionRef.current({ type: 'navigate', route: nav.route });
-            setTranscript(lower);
-            // Quick local browser TTS — no API call needed
-            speak(`Apro ${nav.label}.`, undefined, () => {
-              updateOrbState('listening');
-              startListeningRef.current();
-            });
-            return;
-          }
-        }
+      if (isFinal && orbStateRef.current !== 'thinking' && orbStateRef.current !== 'speaking' && orbStateRef.current !== 'navigating') {
+         processFinalText(lower);
+         return;
       }
 
-      // ── WAKE WORD + COMMAND (AI backend for data queries) ─────────────────
-      if (WAKE_WORD_RE.test(lower)) {
+      // If interim, we do the 2500ms fallback command trigger
+      if (!isFinal && WAKE_WORD_RE.test(lower)) {
         const wakeWordMatch = lower.match(WAKE_WORD_RE);
         const wakeWord = wakeWordMatch?.[0] || 'jarvis';
         const startIndex = lower.indexOf(wakeWord.toLowerCase()) + wakeWord.length;
@@ -276,7 +427,6 @@ export function useJarvis({
 
         pendingCommandRef.current = afterWake;
 
-        // Always fire onWakeWord to restore fullscreen — even from mini/listening mode
         if (orbStateRef.current === 'idle' || orbStateRef.current === 'listening') {
           updateOrbState('listening');
           onWakeWord();
@@ -287,12 +437,12 @@ export function useJarvis({
           const cmd = pendingCommandRef.current.trim();
           pendingCommandRef.current = '';
           if (cmd.split(' ').length >= MIN_COMMAND_WORDS) {
-            console.log('[JARVIS] Command detected:', cmd);
+            console.log('[JARVIS] Command detected (interim fallback):', cmd);
             updateOrbState('thinking');
             try { recognition.stop(); } catch { /* ignore */ }
             sendCommand(cmd);
           }
-        }, 2500); // 2500ms: gives time for sentence completion + Render cold start
+        }, 2500);
       }
     };
 
@@ -345,15 +495,36 @@ export function useJarvis({
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch { /* ignore */ }
     }
+    if (vadLoopRef.current) cancelAnimationFrame(vadLoopRef.current);
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      try { mediaRecorderRef.current.stop(); } catch {}
+    }
     updateOrbState('idle');
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     if (audioContextRef.current) {
       audioContextRef.current.close().catch(console.error);
       audioContextRef.current = null;
       analyserRef.current = null;
+      streamRef.current = null;
       setAnalyser(null);
     }
   }, [updateOrbState]);
+
+  // LOCAL WHISPER HEALTH CHECK ON MOUNT
+  useEffect(() => {
+    fetch('http://localhost:9000/status', { method: 'GET', mode: 'cors' })
+      .then(r => r.json())
+      .then(() => {
+         console.log('✅ [JARVIS] LOCAL WHISPER RTX 4080 DETECTED! Bypassing Chrome Speech Rec.');
+         setLocalWhisperActive(true);
+         localWhisperActiveRef.current = true;
+      })
+      .catch(() => {
+         console.log('⚠️ [JARVIS] Local Whisper offline. Using Chrome Web Speech API fallback.');
+         setLocalWhisperActive(false);
+         localWhisperActiveRef.current = false;
+      });
+  }, []);
 
   useEffect(() => {
     console.log('[JARVIS] Hook configuration changed');

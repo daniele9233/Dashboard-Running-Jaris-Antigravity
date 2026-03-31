@@ -109,6 +109,15 @@ Basata sulla logica scientifica dell'app [CORRALEJO 2026](https://github.com/dan
 - [ ] Soglia anaerobica — stima da corse threshold, trend storico
 - [ ] Storico VDOT settimana per settimana (grafico progressione)
 
+#### FASE 1.7 — JARVIS Local Whisper (RTX 4080 Super)
+- [ ] **Nuovo Microservizio Python Locale (`local-whisper/`)**: Server FastAPI indipendente dal cloud, fatto per girare sul PC desktop con la RTX 4080 Super.
+- [ ] **Modello Whisper Large-v3/Turbo**: Trascrizione con `faster-whisper` abilitato CUDA (FP16/INT8) per precisione perfetta sull'italiano e sui termini tecnici ("Garmin", "VDOT"), con latenza < 200ms.
+- [ ] **Endpoint `/transcribe`**: Accetta upload binario (`audio/webm`) dal browser, trascrive in millisecondi e restituisce il testo. Endpoint `/status` per health-check istantaneo.
+- [ ] **Sistema Ibrido nel Frontend (Fallback Intelligente)**:
+  - Il frontend fa ping a `http://localhost:9000/status` all'avvio. 
+  - Se il server PC è acceso (utene a casa) → disabilita la Web Speech API di Chrome, avvia il microfono nativo (`MediaRecorder`) con un VAD (Voice Activity Detector) custom basato su `AnalyserNode`. Entro 1.5s di silenzio invia l'audio alla GPU locale.
+  - Se il server PC è spento (utente fuori casa da smartphone) → ricade automaticamente sull'affidabile Web Speech API di Chrome (sistema attuale).
+
 #### FASE 2 — Advanced Analytics
 - [ ] Recovery Score — 4 fattori oggettivi + check-in mattutino (energia, sonno, dolori, umore)
 - [ ] Injury Risk — 7 fattori ponderati: ACWR, WoW, intensità, recupero, Foster Monotony, ACSM 10%

@@ -3069,6 +3069,7 @@ async def garmin_sync(limit: int = Query(50, ge=1, le=200)):
     if not GARMIN_EMAIL or not GARMIN_PASSWORD:
         return JSONResponse({"error": "garmin_not_configured"}, status_code=400)
 
+    print(f"[GARMIN] Starting sync (limit={limit}). Pausing 5s between FIT downloads to avoid IP block.")
     try:
         client = await _garmin_login()
     except Exception as e:
@@ -3129,6 +3130,10 @@ async def garmin_sync(limit: int = Query(50, ge=1, le=200)):
 
         # Download original FIT file
         try:
+            # 5s delay between activities as requested to avoid hammering Garmin
+            if updated > 0:
+                await asyncio.sleep(5)
+                
             fit_bytes = client.download_activity(
                 garmin_id,
                 dl_fmt=client.ActivityDownloadFormat.ORIGINAL
@@ -3167,7 +3172,7 @@ async def garmin_sync_all():
     Same as /api/garmin/sync but fetches the full history.
     Can take several minutes — runs are matched by date+distance to existing Strava runs.
     """
-    return await garmin_sync(limit=1000)
+    return await garmin_sync(limit=30)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

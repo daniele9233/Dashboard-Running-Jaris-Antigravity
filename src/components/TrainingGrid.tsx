@@ -436,7 +436,7 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
 
 export function TrainingGrid() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<'Day' | 'Week' | 'Month' | 'Year'>('Month');
+  const [view, setView] = useState<'Day' | 'Week' | 'Month' | 'Year'>('Year');
   const [previousView, setPreviousView] = useState<'Week' | 'Month' | 'Year' | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showAdaptModal, setShowAdaptModal] = useState(false);
