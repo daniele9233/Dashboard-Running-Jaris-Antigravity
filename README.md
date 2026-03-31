@@ -171,6 +171,14 @@ Basata sulla logica scientifica dell'app [CORRALEJO 2026](https://github.com/dan
 - [x] Fallback browser TTS — se Fish Audio non disponibile, usa `speechSynthesis` con locale `it-IT`
 - [x] **Bug Chrome speechSynthesis fix** — delay 150ms dopo `cancel()`, trick `pause()/resume()`, interval keepalive ogni 5s
 
+#### FASE 1.8 — Activities 3D View (COMPLETATO)
+- [x] ActivitiesView — Split-screen layout (50% lista scrollabile, 50% mappa 3D fissa)
+- [x] Mapbox 3D — Stile `standard` con illuminazione `dusk`, edifici 3D e POI/strade forzati
+- [x] Vista "World" — Proiezione a globo terrestre
+- [x] Vista "Last Run" — Zoom 3D (pitch 62) sull'ultima corsa
+- [x] Vista "All Runs" — Centroid calculation sul cluster più denso degli ultimi 6 mesi (zoom 3D)
+- [x] Animazioni — FlyTo fluido al click + auto-rotazione 360° (interrompibile)
+
 #### FASE 3 — Gamification & Reports
 - [ ] Medaglie 6 livelli per distanza (5K, 10K, 15K, 21K): Warm-up → Bronzo → Argento → Oro → Platino → Elite
 - [ ] Badge 100+ in 8 categorie (milestone, costanza, miglioramenti, allenamento, mezza, scienza, velocità, fun)
@@ -432,6 +440,15 @@ uvicorn server:app --reload --port 8000
 ---
 
 ## Changelog
+
+### v1.3.0 — 31 Marzo 2026
+- **Activities 3D Mapbox Integration**: Nuovo layout split-screen per la lista attività con mappa 3D interattiva.
+- **Mapbox Standard Style**: Illuminazione `dusk`, edifici 3D e visualizzazione forzata di POI, strade e negozi.
+- **3 Modalità di Visualizzazione Mappa**: 
+  - *World*: Proiezione a globo terrestre.
+  - *Last Run*: Zoom 3D sull'ultima corsa con POI.
+  - *All Runs*: Zoom 3D automatico sul cluster più denso degli ultimi 6 mesi.
+- **Animazioni interattive**: FlyTo dinamico al click sulle card e rotazione a 360° automatica della mappa.
 
 ### v1.2.1 — 31 Marzo 2026
 - **Fix Gemini model**: migrato da `gemini-1.5-flash` (404 NOT_FOUND) a `gemini-2.5-flash` (gratuito, funzionante)
