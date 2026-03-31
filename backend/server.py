@@ -31,6 +31,7 @@ FRONTEND_URL       = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 ANTHROPIC_API_KEY  = os.environ.get("ANTHROPIC_API_KEY", "")
 GEMINI_API_KEY     = os.environ.get("GEMINI_API_KEY", "")
 JARVIS_GEMINI_KEY  = os.environ.get("JARVIS_GEMINI_KEY", "") or GEMINI_API_KEY
+FISH_AUDIO_API_KEY = os.environ.get("FISH_AUDIO_API_KEY", "")
 GARMIN_EMAIL       = os.environ.get("GARMIN_EMAIL", "")
 GARMIN_PASSWORD    = os.environ.get("GARMIN_PASSWORD", "")
 
@@ -3301,6 +3302,30 @@ async def jarvis_chat(request: Request):
         else:
             print(f"[JARVIS] No JSON found in response. Raw: {raw}")
             result = {"text": raw[:200], "action": {"type": "speak_only"}}
+
+        if FISH_AUDIO_API_KEY and result.get("text"):
+            import httpx, base64
+            try:
+                payload = {
+                    "text": result["text"],
+                    "format": "mp3"
+                }
+                async with httpx.AsyncClient() as http:
+                    tts_resp = await http.post(
+                        "https://api.fish.audio/v1/tts",
+                        headers={
+                            "Authorization": f"Bearer {FISH_AUDIO_API_KEY}",
+                            "Content-Type": "application/json"
+                        },
+                        json=payload,
+                        timeout=15.0
+                    )
+                    if tts_resp.status_code == 200:
+                        result["audio"] = base64.b64encode(tts_resp.content).decode("utf-8")
+                    else:
+                        print(f"[JARVIS] Fish Audio status {tts_resp.status_code}: {tts_resp.text}")
+            except Exception as fe:
+                print(f"[JARVIS] Exception calling Fish Audio: {fe}")
 
     except Exception as e:
         error_msg = f"DEBUG: {str(e)}"
