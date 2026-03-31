@@ -155,10 +155,12 @@ Basata sulla logica scientifica dell'app [CORRALEJO 2026](https://github.com/dan
 - [x] Web Speech API: riconoscimento vocale `it-IT` continuo, wake word `"Jarvis"`
 - [x] 18 comandi vocali in italiano (6 nav · 9 dati · 3 azioni) mostrati bottom-left
 - [x] Silence timer 1.5s — invia comando dopo pausa naturale
-- [x] Backend `POST /api/jarvis/chat`: contesto atleta (VDOT, TSB, last run, weekly km) + Gemini 2.5 Flash Native Audio
+- [x] Backend `POST /api/jarvis/chat`: contesto atleta (VDOT, TSB, last run, weekly km) + **Gemini 2.5 Flash** (text)
 - [x] State machine: fullscreen intro → mini bubble dopo navigazione → fullscreen su wake word/click
 - [x] Azioni: navigate, show_data, sync_strava, sync_garmin, regenerate_dna
-- [x] Zero-latency: audio generato nativamente da Gemini (senza servizi TTS esterni)
+- [x] **Fish Audio TTS** — risposta vocale naturale in italiano via `POST /v1/tts` (mp3 → base64 → AudioContext)
+- [x] Fallback browser TTS — se Fish Audio non disponibile, usa `speechSynthesis` con locale `it-IT`
+- [x] **Bug Chrome speechSynthesis fix** — delay 150ms dopo `cancel()`, trick `pause()/resume()`, interval keepalive ogni 5s
 
 #### FASE 3 — Gamification & Reports
 - [ ] Medaglie 6 livelli per distanza (5K, 10K, 15K, 21K): Warm-up → Bronzo → Argento → Oro → Platino → Elite
@@ -200,8 +202,9 @@ Basata sulla logica scientifica dell'app [CORRALEJO 2026](https://github.com/dan
 | FastAPI | Web framework async |
 | Uvicorn | ASGI server |
 | Motor 3.x | MongoDB async driver |
-| httpx | HTTP client (Strava API) |
-| google-genai | JARVIS AI — Gemini 2.5 Flash Native Voice |
+| httpx | HTTP client (Strava API, Fish Audio) |
+| google-genai | JARVIS AI — Gemini 2.5 Flash (text reasoning) |
+| Fish Audio API | JARVIS TTS — voce italiana naturale (`/v1/tts`) |
 | garminconnect + garth | Garmin Connect sync + OAuth token |
 | fitdecode | Parser FIT files (running dynamics FR265) |
 | python-dotenv | Env variables |
@@ -374,10 +377,31 @@ Ogni documento MongoDB contiene `athlete_id` (da Strava). Tutte le query filtran
 | `STRAVA_CLIENT_SECRET` | Client Secret app Strava |
 | `ANTHROPIC_API_KEY` | API key Claude Sonnet 4.6 |
 | `GEMINI_API_KEY` | API key Gemini (fallback AI generico) |
-| `JARVIS_GEMINI_KEY` | API key Gemini dedicata a JARVIS (Gemini 2.5 Flash Native Audio) |
+| `JARVIS_GEMINI_KEY` | API key Gemini dedicata a JARVIS — usa `JARVIS_GEMINI_KEY`, fallback a `GEMINI_API_KEY` |
+| `FISH_AUDIO_API_KEY` | API key Fish Audio — TTS voce italiana naturale per JARVIS ([fish.audio/app/api-keys](https://fish.audio/app/api-keys/)) |
 | `GARMIN_EMAIL` | Email account Garmin Connect |
 | `GARMIN_PASSWORD` | Password account Garmin Connect |
 | `BACKEND_URL` | URL pubblico del backend (es. `https://dani-backend-ea0s.onrender.com`) |
+
+### Debug JARVIS — Come diagnosticare problemi
+
+```bash
+# Test backend JARVIS da terminale locale
+node test_jarvis.js
+# → Risposta attesa: HTTP 200, text in italiano, Has audio? true (se FISH_AUDIO_API_KEY ok)
+
+# Se Has audio? false → Fish Audio non configurata o chiave scaduta
+# Se text inizia con "DEBUG:" → problema con JARVIS_GEMINI_KEY o modello Gemini
+# Se nessuna risposta → backend Render in sleep, aspetta 30-50s e riprova
+```
+
+**Problemi noti e soluzioni:**
+| Problema | Causa | Soluzione |
+|---|---|---|
+| Orb si muove ma JARVIS non parla | Bug Chrome `speechSynthesis` stuck | Già fixato: delay 150ms + pause/resume trick |
+| JARVIS risponde una sola volta poi silenzio | Bug Chrome `speechSynthesis` pending state | Già fixato: interval keepalive ogni 5s |
+| `DEBUG: 404 NOT_FOUND models/gemini...` | Modello Gemini sbagliato | Usa sempre `gemini-2.5-flash` (non `1.5-flash`) |
+| `Has audio? false` | `FISH_AUDIO_API_KEY` mancante su Render | Aggiungi la variabile nelle env di Render |
 
 ---
 
@@ -400,9 +424,16 @@ uvicorn server:app --reload --port 8000
 
 ## Changelog
 
+### v1.2.1 — 31 Marzo 2026
+- **Fix Gemini model**: migrato da `gemini-1.5-flash` (404 NOT_FOUND) a `gemini-2.5-flash` (gratuito, funzionante)
+- **Integrazione Fish Audio TTS**: JARVIS ora parla con voce naturale italiana via `POST https://api.fish.audio/v1/tts` — risposta mp3 encodata base64 e riprodotta via `AudioContext`
+- **Fix critico Chrome speechSynthesis**: risolto bug noto dove `speak()` si bloccava in stato `pending` dopo la prima chiamata — 3 fix applicati: delay 150ms dopo `cancel()`, trick `pause()/resume()` per sbloccare la coda, interval keepalive ogni 5s durante sintesi
+- **Variabile env** `FISH_AUDIO_API_KEY` aggiunta al backend e documentata
+- **Debug script** `test_jarvis.js` — testa endpoint produzione da Node.js locale
+
 ### v1.2.0 — Marzo 2026
 - **JARVIS Voice Assistant**: orb Three.js fullscreen, 18 comandi vocali in italiano
-- **Gemini 2.5 Native Audio**: migrazione a output multimodale (audio nativo senza TTS esterno)
+- **Gemini 2.5 Flash**: cervello AI per reasoning e risposta testuale in italiano
 - **Fix microfono**: rimosso doppio getUserMedia, delay 300ms riavvio SpeechRecognition
 
 ### v1.1.0 — Marzo 2026
