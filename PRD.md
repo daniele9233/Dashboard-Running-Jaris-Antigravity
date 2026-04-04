@@ -107,6 +107,12 @@ weekly_reports    — Report settimanali AI
 - Countdown alla prossima gara
 - Barra progresso settimana (sessioni completate / totale)
 
+**RF-DASH-02**: Vista "Activities" con layout split-screen:
+- Lista attività scrollabile indipendente (sinistra)
+- Mappa Mapbox 3D fissa (destra) con stile `standard` (dusk, POI, edifici 3D)
+- 3 visualizzazioni mappa: "World" (globo), "All Runs" (zoom cluster più denso), "Last Run" (zoom dettaglio corsa).
+- FlyTo animation ed auto-rotazione su card click.
+
 ---
 
 ### 3.4 Sistema VDOT (Jack Daniels)
