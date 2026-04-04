@@ -23,7 +23,7 @@ import Map, { Marker, NavigationControl } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { MapRef } from 'react-map-gl/mapbox';
 
-const MAPBOX_TOKEN = 'import.meta.env.VITE_MAPBOX_TOKEN as string';
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
 
 type RunType = 'Easy' | 'Tempo' | 'Intervals' | 'Long' | 'Recovery' | string;
 type MapViewMode = 'world' | 'last-run' | 'all-zoomed';
