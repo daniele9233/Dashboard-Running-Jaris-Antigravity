@@ -66,33 +66,17 @@ function buildHistory(runs: Run[]) {
   });
 }
 
-// ─── Training zones from VDOT ─────────────────────────────────────────────────
-function buildZones(vdot: number) {
-  // Based on Jack Daniels pace zones
-  const threshold = vdot; // VDOT is threshold intensity
-  const easyPctMin = 0.59;
-  const easyPctMax = 0.74;
-  const tempoPct = 0.88;
-  const intervalPct = 0.98;
-
-  // Reverse-engineer pace from VDOT: pace_per_km = 1000 / v_m_per_min
-  // v at VO2max ≈ vdot / 0.8 * 1/0.182258 approx
-  const v_max = (vdot * 1.25 + 4.6) / 0.182258;
-
-  function toPace(pct: number) {
-    const v = v_max * pct;
-    const paceMin = 1000 / v;
-    const m = Math.floor(paceMin);
-    const s = Math.round((paceMin % 1) * 60);
-    return `${m}:${String(s).padStart(2, "0")}`;
-  }
-
-  return [
-    { name: "Easy", range: `${toPace(easyPctMin)}–${toPace(easyPctMax)}/km`, color: "#14B8A6" },
-    { name: "Soglia", range: `${toPace(tempoPct)}/km`, color: "#3B82F6" },
-    { name: "Intervalli", range: `${toPace(intervalPct)}/km`, color: "#F59E0B" },
-    { name: "Gara 5K", range: `${toPace(1.02)}/km`, color: "#F43F5E" },
-  ];
+// ─── T-Pace (soglia) da VDOT ─────────────────────────────────────────────────
+function calcTPace(vdot: number): string {
+  // Daniels T pace = 88% VO2max intensity
+  // vMax in m/min che produce VO2max: solve 0.000104*v^2 + 0.182258*v - (vdot+4.60) = 0
+  const a = 0.000104, b = 0.182258, c = -(vdot + 4.60);
+  const vMax = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+  const vT = vMax * 0.88; // T pace velocity
+  const paceMin = 1000 / vT;
+  const m = Math.floor(paceMin);
+  const s = Math.round((paceMin % 1) * 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 // ─── Semi-circular gauge SVG ──────────────────────────────────────────────────
@@ -187,7 +171,7 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
   const displayVdot = vdot ?? filledHistory[filledHistory.length - 1]?.vdot ?? null;
   const color = displayVdot ? vdotColor(displayVdot) : "#94A3B8";
   const label = displayVdot ? vdotLabel(displayVdot) : "—";
-  const zones = displayVdot ? buildZones(displayVdot) : [];
+  const tPace = displayVdot ? calcTPace(displayVdot) : null;
 
   // Trend vs 3 months ago
   const recent = filledHistory[filledHistory.length - 1]?.vdot;
@@ -195,7 +179,7 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
   const trend = recent != null && older != null ? parseFloat((recent - older).toFixed(1)) : null;
 
   return (
-    <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 flex flex-col gap-4 h-full">
+    <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 flex flex-col gap-4 min-h-[320px] h-full">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-[10px] text-text-muted font-semibold tracking-wider uppercase">
@@ -208,7 +192,7 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
         )}
       </div>
 
-      {/* Gauge + level */}
+      {/* Gauge + level + T-pace */}
       {displayVdot ? (
         <div className="flex flex-col items-center gap-1">
           <VdotGauge value={displayVdot} color={color} />
@@ -216,29 +200,17 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
             {label}
           </div>
           <div className="text-[9px] text-text-muted">ml/kg/min · Jack Daniels</div>
+          {tPace && (
+            <div className="mt-2 flex flex-col items-center">
+              <div className="text-lg font-black text-white">{tPace}<span className="text-sm text-text-muted font-normal">/km</span></div>
+              <div className="text-[9px] text-text-muted uppercase tracking-wider">Pace Soglia (T)</div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-center py-4">
           <div className="text-2xl font-black text-text-muted">—</div>
           <div className="text-[10px] text-text-muted mt-1">Aggiungi corse per calcolare</div>
-        </div>
-      )}
-
-      {/* Training zones */}
-      {zones.length > 0 && (
-        <div className="space-y-1.5">
-          <div className="text-[9px] text-text-muted font-semibold tracking-wider uppercase mb-1">
-            Zone di allenamento
-          </div>
-          {zones.map((z) => (
-            <div key={z.name} className="flex justify-between items-center text-[10px]">
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: z.color }} />
-                <span className="text-text-secondary">{z.name}</span>
-              </div>
-              <span className="font-mono font-medium" style={{ color: z.color }}>{z.range}</span>
-            </div>
-          ))}
         </div>
       )}
 

@@ -222,6 +222,67 @@ export function StatisticsView() {
     });
   }, [runs]);
 
+  // ── Avg Pace stats ────────────────────────────────────────────────────────
+  const { avgPaceStr, paceMonthData, pacePct, paceMin, paceMax } = React.useMemo(() => {
+    const now = new Date();
+    function parsePaceToSecs(pace: string): number {
+      if (!pace) return 0;
+      const parts = pace.split(":");
+      if (parts.length !== 2) return 0;
+      const m = parseInt(parts[0]);
+      const s = parseInt(parts[1]);
+      if (isNaN(m) || isNaN(s)) return 0;
+      return m * 60 + s;
+    }
+    function secsToPaceStr(secs: number): string {
+      if (secs <= 0) return "--";
+      const m = Math.floor(secs / 60);
+      const s = Math.round(secs % 60);
+      return `${m}:${s.toString().padStart(2, "0")}`;
+    }
+    const monthData: { name: string; value: number }[] = [];
+    let currSecs = 0;
+    let prevSecs = 0;
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthRuns = runs.filter((r) => {
+        const rd = new Date(r.date);
+        return rd.getFullYear() === d.getFullYear() && rd.getMonth() === d.getMonth() && r.avg_pace && parsePaceToSecs(r.avg_pace) > 100;
+      });
+      const avgSecs = monthRuns.length > 0 ? monthRuns.reduce((sum, r) => sum + parsePaceToSecs(r.avg_pace), 0) / monthRuns.length : 0;
+      const decimalMins = avgSecs > 0 ? parseFloat((avgSecs / 60).toFixed(3)) : 0;
+      monthData.push({ name: d.toLocaleString("it", { month: "short" }).toUpperCase(), value: decimalMins });
+      if (i === 0) currSecs = avgSecs;
+      if (i === 1) prevSecs = avgSecs;
+    }
+    const pct = prevSecs > 0 && currSecs > 0 ? Math.round(((currSecs - prevSecs) / prevSecs) * 100) : null;
+    const values = monthData.map((m) => m.value).filter((v) => v > 0);
+    const minV = values.length > 0 ? Math.min(...values) - 0.3 : 4;
+    const maxV = values.length > 0 ? Math.max(...values) + 0.3 : 7;
+    return { avgPaceStr: secsToPaceStr(currSecs), paceMonthData: monthData, pacePct: pct, paceMin: minV, paceMax: maxV };
+  }, [runs]);
+
+  // ── Elevation gain stats ──────────────────────────────────────────────────
+  const { thisYearElev, elevPct, elevMonthData, elevMax } = React.useMemo(() => {
+    const now = new Date();
+    const thisYear = now.getFullYear();
+    const lastYear = thisYear - 1;
+    const monthData: { name: string; value: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(thisYear, now.getMonth() - i, 1);
+      const elev = runs.filter((r) => {
+        const rd = new Date(r.date);
+        return rd.getFullYear() === d.getFullYear() && rd.getMonth() === d.getMonth();
+      }).reduce((sum, r) => sum + (r.elevation_gain || 0), 0);
+      monthData.push({ name: d.toLocaleString("it", { month: "short" }).toUpperCase(), value: Math.round(elev) });
+    }
+    const thisTotal = runs.filter((r) => new Date(r.date).getFullYear() === thisYear).reduce((sum, r) => sum + (r.elevation_gain || 0), 0);
+    const lastTotal = runs.filter((r) => new Date(r.date).getFullYear() === lastYear).reduce((sum, r) => sum + (r.elevation_gain || 0), 0);
+    const pct = lastTotal > 0 ? Math.round(((thisTotal - lastTotal) / lastTotal) * 100) : null;
+    const maxV = Math.max(...monthData.map((m) => m.value), 200);
+    return { thisYearElev: Math.round(thisTotal), elevPct: pct, elevMonthData: monthData, elevMax: maxV };
+  }, [runs]);
+
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
     { id: 'performance', label: 'Performance', icon: Zap },
@@ -248,8 +309,8 @@ export function StatisticsView() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black transition-all tracking-widest ${
-                  activeTab === tab.id 
-                    ? 'bg-[#2A2A2A] text-white shadow-lg border border-[#3A3A3A]' 
+                  activeTab === tab.id
+                    ? 'bg-[#2A2A2A] text-white shadow-lg border border-[#3A3A3A]'
                     : 'text-gray-500 hover:text-gray-300'
                 }`}
               >
@@ -257,6 +318,115 @@ export function StatisticsView() {
                 {tab.label.toUpperCase()}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* ── Avg Pace + Elevation Gain stat cards ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Avg Pace */}
+          <div className="bg-[#111111] border border-[#222] rounded-2xl p-5 flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-xs text-gray-500 font-semibold tracking-wider mb-1 uppercase">Avg Pace</h3>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-white">
+                    {avgPaceStr !== "--" ? `${avgPaceStr} /km` : "--"}
+                  </span>
+                  {pacePct !== null && (
+                    <span className={`text-xs px-1.5 py-0.5 rounded font-bold ${pacePct <= 0 ? "text-[#14B8A6] bg-[#14B8A6]/10" : "text-[#F43F5E] bg-[#F43F5E]/10"}`}>
+                      {pacePct >= 0 ? "+" : ""}{pacePct}%
+                    </span>
+                  )}
+                </div>
+              </div>
+              <span className="text-xs text-gray-500">QUEST'ANNO</span>
+            </div>
+            <div className="h-20 w-full mt-auto">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={paceMonthData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="statsPaceGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#F43F5E" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#F43F5E" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="name" hide />
+                  <YAxis domain={[paceMin, paceMax]} hide />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const { name, value } = payload[0].payload as { name: string; value: number };
+                      if (!value) return null;
+                      const secs = value * 60;
+                      const m = Math.floor(secs / 60);
+                      const s = Math.round(secs % 60);
+                      return (
+                        <div className="bg-[#1E293B] border border-[#334155] px-3 py-2 rounded-lg text-xs">
+                          <p className="text-gray-400 mb-1">{name}</p>
+                          <p className="text-white font-bold">{m}:{s.toString().padStart(2, "0")} /km</p>
+                        </div>
+                      );
+                    }}
+                    cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }}
+                  />
+                  <Area type="monotone" dataKey="value" stroke="#F43F5E" strokeWidth={2} fillOpacity={1} fill="url(#statsPaceGrad)" isAnimationActive={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex justify-between mt-2 text-[10px] text-gray-600">
+              {paceMonthData.map((d) => <span key={d.name}>{d.name}</span>)}
+            </div>
+          </div>
+
+          {/* Elevation Gain */}
+          <div className="bg-[#111111] border border-[#222] rounded-2xl p-5 flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-xs text-gray-500 font-semibold tracking-wider mb-1 uppercase">Elevation Gain</h3>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-white">
+                    {thisYearElev > 0 ? `${thisYearElev.toLocaleString("it")} m` : "0 m"}
+                  </span>
+                  {elevPct !== null && (
+                    <span className={`text-xs px-1.5 py-0.5 rounded font-bold ${elevPct >= 0 ? "text-[#14B8A6] bg-[#14B8A6]/10" : "text-[#F43F5E] bg-[#F43F5E]/10"}`}>
+                      {elevPct >= 0 ? "+" : ""}{elevPct}%
+                    </span>
+                  )}
+                </div>
+              </div>
+              <span className="text-xs text-gray-500">QUEST'ANNO</span>
+            </div>
+            <div className="h-20 w-full mt-auto">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={elevMonthData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="statsElevGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#14B8A6" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="name" hide />
+                  <YAxis domain={[0, elevMax + 50]} hide />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const { name, value } = payload[0].payload as { name: string; value: number };
+                      return (
+                        <div className="bg-[#1E293B] border border-[#334155] px-3 py-2 rounded-lg text-xs">
+                          <p className="text-gray-400 mb-1">{name}</p>
+                          <p className="text-white font-bold">{value.toLocaleString("it")} m</p>
+                        </div>
+                      );
+                    }}
+                    cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }}
+                  />
+                  <Area type="monotone" dataKey="value" stroke="#14B8A6" strokeWidth={2} fillOpacity={1} fill="url(#statsElevGrad)" isAnimationActive={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex justify-between mt-2 text-[10px] text-gray-600">
+              {elevMonthData.map((d) => <span key={d.name}>{d.name}</span>)}
+            </div>
           </div>
         </div>
 

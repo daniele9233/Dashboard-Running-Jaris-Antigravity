@@ -116,22 +116,53 @@ function findPrediction(predictions: Record<string, string>, key: string): strin
   return null;
 }
 
-// ─── Trend chart tooltip ─────────────────────────────────────────────────────
-const TrendTooltip = ({ active, payload, label }: any) => {
+// ─── vdotToTime: converte VDOT + distanza → tempo gara formattato ────────────
+function vdotToTime(vdot: number, distanceMeters: number): string {
+  const a = 0.000104, b = 0.182258, c = -(vdot + 4.60);
+  const vMax = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a); // m/min a 100% VO2max
+
+  let intensityFactor: number;
+  if (distanceMeters <= 5000) intensityFactor = 0.979;
+  else if (distanceMeters <= 10000) intensityFactor = 0.960;
+  else if (distanceMeters <= 21097) intensityFactor = 0.920;
+  else intensityFactor = 0.879;
+
+  const raceVelocity = vMax * intensityFactor;
+  const totalSeconds = (distanceMeters / raceVelocity) * 60;
+
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = Math.round(totalSeconds % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+// ─── Trend chart tooltip con previsioni gara ─────────────────────────────────
+const TrendTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number | null; color: string; name: string }>; label?: string }) => {
   if (!active || !payload?.length) return null;
+  const vdotEntry = payload.find((e) => e.name === "VDOT" && e.value != null);
+  const vdotVal = vdotEntry?.value ?? null;
   return (
-    <div className="bg-[#1E293B] border border-[#334155] p-3 rounded-xl shadow-xl text-xs min-w-[140px]">
+    <div className="bg-[#1E293B] border border-[#334155] p-3 rounded-xl shadow-xl text-xs min-w-[180px]">
       <p className="text-[#C0FF00] font-bold mb-2 uppercase tracking-wider">{label}</p>
-      <div className="space-y-1">
-        {payload
-          .filter((e: any) => e.value != null)
-          .map((e: any, i: number) => (
-            <div key={i} className="flex justify-between gap-3">
-              <span style={{ color: e.color }}>{e.name}</span>
-              <span className="text-white font-bold">VDOT {e.value}</span>
-            </div>
-          ))}
-      </div>
+      {vdotVal != null && (
+        <>
+          <p className="text-white font-bold mb-2">VDOT {vdotVal}</p>
+          <div className="space-y-1 border-t border-white/10 pt-2">
+            {[
+              { label: "5K", meters: 5000, color: "#14B8A6" },
+              { label: "10K", meters: 10000, color: "#3B82F6" },
+              { label: "Mezza", meters: 21097, color: "#F59E0B" },
+              { label: "Maratona", meters: 42195, color: "#8B5CF6" },
+            ].map((race) => (
+              <div key={race.label} className="flex justify-between gap-4">
+                <span style={{ color: race.color }}>{race.label}</span>
+                <span className="text-white font-bold font-mono">{vdotToTime(vdotVal, race.meters)}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 };

@@ -6,7 +6,6 @@ import {
   YAxis,
   XAxis,
   Tooltip,
-  ReferenceLine,
   CartesianGrid,
 } from "recharts";
 import type { Run } from "../types/api";
@@ -17,29 +16,45 @@ interface AnaerobicThresholdProps {
 }
 
 // ─── Tooltip personalizzato ──────────────────────────────────────────────────
-const ThresholdTooltip = ({ active, payload }: any) => {
+const ThresholdTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: { name: string; value: number; aerobic: number; anaerobic: number } }> }) => {
   if (!active || !payload?.length) return null;
-  const { name, value, aerobic, anaerobic } = payload[0].payload;
+  const { name, value, aerobic } = payload[0].payload;
   return (
-    <div className="bg-[#1E293B] border border-[#334155] px-4 py-3 rounded-xl shadow-2xl text-xs min-w-[160px]">
-      <p className="text-[#C0FF00] font-bold mb-2 uppercase tracking-wider">{name}</p>
-      <div className="space-y-1.5">
-        <div className="flex justify-between gap-4">
-          <span className="text-[#8B5CF6]">Soglia Anaerobica</span>
+    <div className="bg-[#1E293B] border border-[#334155] px-3 py-2 rounded-xl shadow-2xl text-xs min-w-[140px]">
+      <p className="text-[#C0FF00] font-bold mb-1.5 uppercase tracking-wider">{name}</p>
+      <div className="space-y-1">
+        <div className="flex justify-between gap-3">
+          <span className="text-[#8B5CF6]">Anaerobica</span>
           <span className="text-white font-bold">{value} bpm</span>
         </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-[#14B8A6]">Soglia Aerobica</span>
+        <div className="flex justify-between gap-3">
+          <span className="text-[#14B8A6]">Aerobica</span>
           <span className="text-white font-bold">{aerobic} bpm</span>
-        </div>
-        <div className="flex justify-between gap-4 border-t border-white/10 pt-1.5">
-          <span className="text-text-muted">Zona Lattato</span>
-          <span className="text-[#F59E0B] font-bold">{aerobic}–{anaerobic} bpm</span>
         </div>
       </div>
     </div>
   );
 };
+
+// ─── Calcola pace dalla FC soglia ────────────────────────────────────────────
+function hrToPace(thresholdHr: number, maxHr: number): string {
+  // Stima velocità soglia: alla soglia anaerobica (≈88% maxHR) il VO2 è circa 88% VO2max
+  // Usiamo l'approssimazione Daniels: v_soglia ≈ (vdot_est * 0.88 + 4.6) / 0.182258
+  // Ma senza VDOT diretto, usiamo la percentuale HR per stimare il pace
+  // Formula approssimata: pace soglia ≈ 4:30-6:00 per runner tipici
+  // Semplice mapping: % HR → velocità relativa
+  const pctHR = thresholdHr / maxHr;
+  // VO2 a questa % HR ≈ (pctHR - 0.37) / 0.0012 (formula lineare approssimata)
+  const vo2 = Math.max(20, (pctHR - 0.37) / 0.0012);
+  // Velocità in m/min a questo VO2
+  // Inverso: v = (-0.182258 + sqrt(0.182258^2 + 4*0.000104*(vo2+4.60))) / (2*0.000104)
+  const a = 0.000104, b = 0.182258, c = -(vo2 + 4.60);
+  const v = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+  const paceMin = 1000 / v;
+  const m = Math.floor(paceMin);
+  const s = Math.round((paceMin % 1) * 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
@@ -124,16 +139,21 @@ export function AnaerobicThreshold({ runs, maxHr }: AnaerobicThresholdProps) {
     };
   }, [runs, maxHr]);
 
+  const safeMax = maxHr > 0 ? maxHr : 180;
+  const thresholdPace = currentThreshold > 0 ? hrToPace(currentThreshold, safeMax) : null;
+
   return (
-    <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 flex flex-col h-full">
+    <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 flex flex-col min-h-[320px] h-full">
       {/* Header */}
-      <div className="flex justify-between items-start mb-3">
+      <h3 className="text-[10px] text-text-muted font-semibold tracking-wider mb-3 uppercase">
+        Zona Lattato · 12 Mesi
+      </h3>
+
+      {/* Key metrics */}
+      <div className="flex items-end justify-between mb-4">
         <div>
-          <h3 className="text-[10px] text-text-muted font-semibold tracking-wider mb-1 uppercase">
-            Zona Lattato · 12 Mesi
-          </h3>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-text-primary">{currentThreshold}</span>
+            <span className="text-3xl font-black text-[#8B5CF6]">{currentThreshold}</span>
             <span className="text-sm text-text-muted">bpm</span>
             {delta !== 0 && (
               <span
@@ -141,31 +161,22 @@ export function AnaerobicThreshold({ runs, maxHr }: AnaerobicThresholdProps) {
                   delta >= 0 ? "text-[#8B5CF6] bg-[#8B5CF6]/10" : "text-[#F43F5E] bg-[#F43F5E]/10"
                 }`}
               >
-                {delta >= 0 ? "↑" : "↓"} {Math.abs(delta)} bpm
+                {delta >= 0 ? "↑" : "↓"} {Math.abs(delta)}
               </span>
             )}
           </div>
+          <div className="text-[9px] text-text-muted uppercase tracking-wider mt-0.5">Soglia Anaerobica</div>
         </div>
-        <div className="text-right">
-          <div className="text-[9px] text-text-muted uppercase tracking-wider mb-0.5">Aerobica</div>
-          <div className="text-sm font-bold text-[#14B8A6]">{aerobicThreshold} bpm</div>
-        </div>
-      </div>
-
-      {/* Zone labels */}
-      <div className="flex gap-2 mb-3">
-        <div className="flex items-center gap-1.5 text-[9px] font-semibold tracking-wider">
-          <div className="w-2 h-2 rounded-full bg-[#8B5CF6]" />
-          <span className="text-[#8B5CF6]">ANAEROBICA</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[9px] font-semibold tracking-wider">
-          <div className="w-2 h-2 rounded-full bg-[#14B8A6]" />
-          <span className="text-[#14B8A6]">AEROBICA</span>
-        </div>
+        {thresholdPace && (
+          <div className="text-right">
+            <div className="text-xl font-black text-white">{thresholdPace}<span className="text-sm text-text-muted font-normal">/km</span></div>
+            <div className="text-[9px] text-text-muted uppercase tracking-wider">Pace Soglia</div>
+          </div>
+        )}
       </div>
 
       {/* Chart */}
-      <div className="flex-1 min-h-0 w-full">
+      <div className="flex-1 min-h-[140px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={monthData} margin={{ top: 8, right: 4, left: -20, bottom: 0 }}>
             <defs>
@@ -192,14 +203,6 @@ export function AnaerobicThreshold({ runs, maxHr }: AnaerobicThresholdProps) {
               content={<ThresholdTooltip />}
               cursor={{ stroke: "rgba(255,255,255,0.08)", strokeWidth: 1 }}
             />
-            {/* Reference lines for zones */}
-            <ReferenceLine
-              y={aerobicThreshold}
-              stroke="#14B8A6"
-              strokeDasharray="3 3"
-              strokeOpacity={0.4}
-            />
-            {/* Aerobic zone area */}
             <Area
               type="monotone"
               dataKey="aerobic"
@@ -210,7 +213,6 @@ export function AnaerobicThreshold({ runs, maxHr }: AnaerobicThresholdProps) {
               dot={false}
               isAnimationActive={false}
             />
-            {/* Anaerobic threshold line */}
             <Area
               type="monotone"
               dataKey="value"
@@ -224,6 +226,18 @@ export function AnaerobicThreshold({ runs, maxHr }: AnaerobicThresholdProps) {
             />
           </AreaChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* Legend */}
+      <div className="flex gap-3 mt-2">
+        <div className="flex items-center gap-1.5 text-[9px] font-semibold tracking-wider">
+          <div className="w-2 h-2 rounded-full bg-[#8B5CF6]" />
+          <span className="text-[#8B5CF6]">ANAEROBICA</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[9px] font-semibold tracking-wider">
+          <div className="w-2 h-2 rounded-full bg-[#14B8A6]" />
+          <span className="text-[#14B8A6]">AEROBICA · {aerobicThreshold} bpm</span>
+        </div>
       </div>
     </div>
   );
