@@ -17,9 +17,9 @@ interface RacePredictionsProps {
   racePredictions: Record<string, string> | null;
 }
 
-// ─── VDOT calculation ────────────────────────────────────────────────────────
+// ─── VDOT da singola corsa (Daniels) ─────────────────────────────────────────
 function estimateVdot(distanceKm: number, durationMin: number): number | null {
-  if (distanceKm <= 0 || durationMin <= 0 || durationMin < 10) return null;
+  if (distanceKm < 5 || durationMin <= 0 || durationMin < 10) return null; // < 5K distorce VDOT
   const v = (distanceKm * 1000) / durationMin;
   const vo2 = -4.60 + 0.182258 * v + 0.000104 * v * v;
   const denom =
@@ -31,19 +31,25 @@ function estimateVdot(distanceKm: number, durationMin: number): number | null {
   return parseFloat(vdot.toFixed(1));
 }
 
-// ─── Pace (min/km) da VDOT + distanza ────────────────────────────────────────
+// ─── Tempo gara (min) via bisection — metodo esatto Daniels ──────────────────
+// Trova T tale che: VO2(distM/T) = vdot * %VO2max(T)
+function vdotToRaceTimeMin(vdot: number, distanceM: number): number {
+  let lo = distanceM / 600; // velocità massima teorica (600 m/min)
+  let hi = distanceM / 5;   // velocità minima teorica (5 m/min)
+  for (let i = 0; i < 60; i++) {
+    const T = (lo + hi) / 2;
+    const v = distanceM / T;
+    const vo2 = -4.60 + 0.182258 * v + 0.000104 * v * v;
+    const pct = 0.8 + 0.1894393 * Math.exp(-0.012778 * T) + 0.2989558 * Math.exp(-0.1932605 * T);
+    if (vo2 > vdot * pct) lo = T; else hi = T;
+  }
+  return (lo + hi) / 2;
+}
+
+// ─── Pace min/km da VDOT + distanza (metodo esatto) ──────────────────────────
 function vdotToPaceMinKm(vdot: number, distanceMeters: number): number {
-  const a = 0.000104, b = 0.182258, c = -(vdot + 4.60);
-  const vMax = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a); // m/min a VO2max
-
-  let factor: number;
-  if (distanceMeters <= 5000) factor = 0.979;
-  else if (distanceMeters <= 10000) factor = 0.960;
-  else if (distanceMeters <= 21097) factor = 0.920;
-  else factor = 0.879;
-
-  const raceV = vMax * factor; // m/min
-  return 1000 / raceV; // min/km
+  const T = vdotToRaceTimeMin(vdot, distanceMeters);
+  return T / (distanceMeters / 1000);
 }
 
 function fmtPace(v: number): string {
@@ -54,8 +60,7 @@ function fmtPace(v: number): string {
 
 // ─── Tempo gara formattato ────────────────────────────────────────────────────
 function vdotToTime(vdot: number, distanceMeters: number): string {
-  const paceMin = vdotToPaceMinKm(vdot, distanceMeters);
-  const totalMin = paceMin * (distanceMeters / 1000);
+  const totalMin = vdotToRaceTimeMin(vdot, distanceMeters);
   const h = Math.floor(totalMin / 60);
   const m = Math.floor(totalMin % 60);
   const s = Math.round((totalMin % 1) * 60);
@@ -63,7 +68,6 @@ function vdotToTime(vdot: number, distanceMeters: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-// ─── Predict race time (legacy, for cards) ───────────────────────────────────
 function predictRaceTime(vdot: number, distanceKm: number): string {
   return vdotToTime(vdot, distanceKm * 1000);
 }

@@ -55,7 +55,7 @@ function buildHistory(runs: Run[]) {
     });
     let best: number | null = null;
     for (const r of monthRuns) {
-      if (r.distance_km < 3) continue;
+      if (r.distance_km < 5) continue; // < 5K distorce VDOT per contributo anaerobico
       const v = estimateVdot(r.distance_km, r.duration_minutes);
       if (v !== null && (best === null || v > best)) best = v;
     }
