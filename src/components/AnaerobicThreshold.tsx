@@ -15,26 +15,34 @@ interface AnaerobicThresholdProps {
   maxHr: number;
 }
 
-// ─── Tooltip personalizzato ──────────────────────────────────────────────────
-const ThresholdTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: { name: string; value: number; aerobic: number; anaerobic: number } }> }) => {
-  if (!active || !payload?.length) return null;
-  const { name, value, aerobic } = payload[0].payload;
-  return (
-    <div className="bg-[#1E293B] border border-[#334155] px-3 py-2 rounded-xl shadow-2xl text-xs min-w-[140px]">
-      <p className="text-[#C0FF00] font-bold mb-1.5 uppercase tracking-wider">{name}</p>
-      <div className="space-y-1">
-        <div className="flex justify-between gap-3">
-          <span className="text-[#8B5CF6]">Anaerobica</span>
-          <span className="text-white font-bold">{value} bpm</span>
-        </div>
-        <div className="flex justify-between gap-3">
-          <span className="text-[#14B8A6]">Aerobica</span>
-          <span className="text-white font-bold">{aerobic} bpm</span>
+// ─── Tooltip personalizzato (factory che chiude su maxHr) ───────────────────
+function makeThresholdTooltip(maxHr: number) {
+  return function ThresholdTooltip({ active, payload }: any) {
+    if (!active || !payload?.length) return null;
+    const { name, value, aerobic } = payload[0].payload;
+    const pace = hrToPace(value, maxHr);
+    const aerobicPace = hrToPace(aerobic, maxHr);
+    return (
+      <div className="bg-[#1E293B] border border-[#334155] px-3 py-2 rounded-xl shadow-2xl text-xs min-w-[160px]">
+        <p className="text-[#C0FF00] font-bold mb-1.5 uppercase tracking-wider">{name}</p>
+        <div className="space-y-1.5">
+          <div className="flex justify-between gap-3">
+            <span className="text-[#8B5CF6]">Anaerobica</span>
+            <span className="text-white font-bold">{value} bpm</span>
+          </div>
+          <div className="flex justify-between gap-3">
+            <span className="text-[#8B5CF6] text-[10px]">Pace soglia</span>
+            <span className="text-[#C0FF00] font-black">{pace}/km</span>
+          </div>
+          <div className="border-t border-[#334155] pt-1 flex justify-between gap-3">
+            <span className="text-[#14B8A6]">Aerobica</span>
+            <span className="text-white font-bold">{aerobic} bpm · {aerobicPace}/km</span>
+          </div>
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
+}
 
 // ─── Calcola pace dalla FC soglia ────────────────────────────────────────────
 function hrToPace(thresholdHr: number, maxHr: number): string {
@@ -222,7 +230,7 @@ export function AnaerobicThreshold({ runs, maxHr }: AnaerobicThresholdProps) {
                 />
                 <YAxis domain={[yMin, yMax]} hide />
                 <Tooltip
-                  content={<ThresholdTooltip />}
+                  content={makeThresholdTooltip(safeMax)}
                   cursor={{ stroke: "rgba(255,255,255,0.08)", strokeWidth: 1 }}
                 />
                 <Area type="monotone" dataKey="aerobic" stroke="#14B8A6" strokeWidth={1.5} fillOpacity={1} fill="url(#gradAerobic)" dot={false} isAnimationActive={false} />

@@ -143,11 +143,16 @@ const ChartTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   const v = payload[0].value;
   if (!v) return null;
+  const pace = calcTPace(v);
   return (
-    <div className="bg-[#1E293B] border border-[#334155] px-3 py-2 rounded-xl shadow-xl text-xs">
+    <div className="bg-[#1E293B] border border-[#334155] px-3 py-2 rounded-xl shadow-xl text-xs min-w-[150px]">
       <p className="text-[#C0FF00] font-bold mb-1">{label}</p>
-      <p className="text-white font-black">VDOT {v}</p>
-      <p className="text-text-muted">{vdotLabel(v)}</p>
+      <p className="text-white font-black text-base">VDOT {v}</p>
+      <p className="text-text-muted text-[10px]">{vdotLabel(v)}</p>
+      <div className="border-t border-[#334155] mt-1.5 pt-1.5 flex justify-between gap-3">
+        <span className="text-text-muted">T-Pace</span>
+        <span className="text-[#C0FF00] font-black">{pace}/km</span>
+      </div>
     </div>
   );
 };
