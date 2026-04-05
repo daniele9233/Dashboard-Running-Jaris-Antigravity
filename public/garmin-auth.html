@@ -25,8 +25,17 @@
       const spinner = document.getElementById('spinner');
       const msg     = document.getElementById('msg');
 
+      // BroadcastChannel — works between same-origin windows WITHOUT window.opener
+      // (Garmin clears window.opener for security, so postMessage would fail)
+      const bc = new BroadcastChannel('garmin_auth');
+
+      function notify(status, detail) {
+        bc.postMessage({ status, detail });
+        bc.close();
+      }
+
       // 1. Read ticket from URL
-      const params = new URLSearchParams(window.location.search);
+      const params  = new URLSearchParams(window.location.search);
       const ticket  = params.get('ticket');
       const service = window.location.origin + '/garmin-auth.html';
 
@@ -34,38 +43,45 @@
         spinner.style.display = 'none';
         msg.className = 'err';
         msg.textContent = 'Nessun ticket ricevuto da Garmin.';
-        window.opener && window.opener.postMessage('garmin_auth_error', '*');
+        notify('error', 'missing ticket');
         return;
       }
 
       // 2. Read API base from localStorage (set by parent before opening popup)
-      const apiBase = localStorage.getItem('garmin_api_base') || 'https://dani-backend-ea0s.onrender.com';
+      const apiBase = localStorage.getItem('garmin_api_base')
+                   || 'https://dani-backend-ea0s.onrender.com';
 
       try {
-        // 3. Exchange ticket with backend
+        // 3. Exchange ticket with backend (30s timeout)
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), 30000);
+
         const res = await fetch(apiBase + '/api/garmin/exchange-ticket', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ticket, service }),
+          signal: controller.signal,
         });
+        clearTimeout(tid);
 
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: 'exchange failed' }));
-          throw new Error(err.error || 'Scambio ticket fallito');
+          throw new Error(err.error || 'Scambio ticket fallito (' + res.status + ')');
         }
 
-        // 4. Success — notify parent and close
+        // 4. Success
         spinner.style.display = 'none';
         msg.className = 'ok';
         msg.textContent = '✓ Garmin autenticato!';
-        window.opener && window.opener.postMessage('garmin_auth_complete', '*');
+        notify('complete', null);
         setTimeout(() => window.close(), 1200);
 
       } catch (e) {
         spinner.style.display = 'none';
         msg.className = 'err';
         msg.textContent = 'Errore: ' + e.message;
-        window.opener && window.opener.postMessage('garmin_auth_error', '*');
+        notify('error', e.message);
+        // Don't auto-close on error so user can read the message
       }
     })();
   </script>

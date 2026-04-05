@@ -190,32 +190,35 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
         return;
       }
 
-      // 4. Wait for postMessage from garmin-auth.html
-      //    The static HTML page handles the token exchange and sends the message
+      // 4. Wait for BroadcastChannel message from garmin-auth.html
+      //    BroadcastChannel works between same-origin windows without window.opener
+      //    (Garmin clears window.opener for security → postMessage would silently fail)
       await new Promise<void>((resolve, reject) => {
-        const handler = (ev: MessageEvent) => {
-          if (ev.data === 'garmin_auth_complete') {
-            window.removeEventListener('message', handler);
+        const bc = new BroadcastChannel('garmin_auth');
+
+        bc.onmessage = (ev) => {
+          bc.close();
+          clearInterval(closedTimer);
+          clearTimeout(timeoutId);
+          if (ev.data?.status === 'complete') {
             resolve();
-          } else if (ev.data === 'garmin_auth_error') {
-            window.removeEventListener('message', handler);
-            reject(new Error('Autenticazione Garmin fallita'));
+          } else {
+            reject(new Error(ev.data?.detail || 'Autenticazione Garmin fallita'));
           }
         };
-        window.addEventListener('message', handler);
 
-        // Also watch for manual popup close
+        // Watch for manual popup close
         const closedTimer = setInterval(() => {
           if (popup.closed) {
             clearInterval(closedTimer);
-            window.removeEventListener('message', handler);
+            bc.close();
             reject(new Error('Popup chiuso prima del completamento'));
           }
         }, 1000);
 
-        setTimeout(() => {
+        const timeoutId = setTimeout(() => {
           clearInterval(closedTimer);
-          window.removeEventListener('message', handler);
+          bc.close();
           popup.close();
           reject(new Error('Timeout autenticazione Garmin'));
         }, 180_000);
