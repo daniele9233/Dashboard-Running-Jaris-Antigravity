@@ -13,28 +13,39 @@ import type { Run } from "../types/api";
 interface AnaerobicThresholdProps {
   runs: Run[];
   maxHr: number;
+  vdot?: number | null;
 }
 
-// ─── Tooltip personalizzato (factory che chiude su maxHr) ───────────────────
-function makeThresholdTooltip(maxHr: number) {
+// ─── Tooltip personalizzato (factory che chiude su vdot e maxHr) ────────────
+function makeThresholdTooltip(maxHr: number, vdot: number | null | undefined) {
   return function ThresholdTooltip({ active, payload }: any) {
     if (!active || !payload?.length) return null;
     const { name, value, aerobic } = payload[0].payload;
-    const pace = hrToPace(value, maxHr);
-    const aerobicPace = hrToPace(aerobic, maxHr);
+    // Usa VDOT reale se disponibile, altrimenti fallback HR-based
+    const pace = vdot ? calcTPaceFromVdot(vdot) : hrToPaceFallback(value, maxHr);
+    // Aerobica ≈ E-pace (70% VO2max) — se ho VDOT uso 70%, altrimenti fallback
+    const aerobicPace = vdot
+      ? (() => {
+          const a = 0.000104, b = 0.182258, c = -(vdot + 4.60);
+          const vMax = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+          const vE = vMax * 0.70;
+          const pmin = 1000 / vE;
+          return `${Math.floor(pmin)}:${String(Math.round((pmin % 1) * 60)).padStart(2, "0")}`;
+        })()
+      : hrToPaceFallback(aerobic, maxHr);
     return (
-      <div className="bg-[#1E293B] border border-[#334155] px-3 py-2 rounded-xl shadow-2xl text-xs min-w-[160px]">
+      <div className="bg-[#1E293B] border border-[#334155] px-3 py-2 rounded-xl shadow-2xl text-xs min-w-[170px]">
         <p className="text-[#C0FF00] font-bold mb-1.5 uppercase tracking-wider">{name}</p>
         <div className="space-y-1.5">
           <div className="flex justify-between gap-3">
-            <span className="text-[#8B5CF6]">Anaerobica</span>
+            <span className="text-[#8B5CF6]">Soglia</span>
             <span className="text-white font-bold">{value} bpm</span>
           </div>
           <div className="flex justify-between gap-3">
             <span className="text-[#8B5CF6] text-[10px]">Pace soglia</span>
             <span className="text-[#C0FF00] font-black">{pace}/km</span>
           </div>
-          <div className="border-t border-[#334155] pt-1 flex justify-between gap-3">
+          <div className="border-t border-[#334155] pt-1.5 flex justify-between gap-3">
             <span className="text-[#14B8A6]">Aerobica</span>
             <span className="text-white font-bold">{aerobic} bpm · {aerobicPace}/km</span>
           </div>
@@ -44,29 +55,32 @@ function makeThresholdTooltip(maxHr: number) {
   };
 }
 
-// ─── Calcola pace dalla FC soglia ────────────────────────────────────────────
-function hrToPace(thresholdHr: number, maxHr: number): string {
-  // Stima velocità soglia: alla soglia anaerobica (≈88% maxHR) il VO2 è circa 88% VO2max
-  // Usiamo l'approssimazione Daniels: v_soglia ≈ (vdot_est * 0.88 + 4.6) / 0.182258
-  // Ma senza VDOT diretto, usiamo la percentuale HR per stimare il pace
-  // Formula approssimata: pace soglia ≈ 4:30-6:00 per runner tipici
-  // Semplice mapping: % HR → velocità relativa
-  const pctHR = thresholdHr / maxHr;
-  // VO2 a questa % HR ≈ (pctHR - 0.37) / 0.0012 (formula lineare approssimata)
-  const vo2 = Math.max(20, (pctHR - 0.37) / 0.0012);
-  // Velocità in m/min a questo VO2
-  // Inverso: v = (-0.182258 + sqrt(0.182258^2 + 4*0.000104*(vo2+4.60))) / (2*0.000104)
-  const a = 0.000104, b = 0.182258, c = -(vo2 + 4.60);
-  const v = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
-  const paceMin = 1000 / v;
+// ─── Calcola T-pace (soglia) da VDOT — formula Daniels ──────────────────────
+// T pace = 88% VO2max intensity. Stessa formula usata in VO2MaxChart.
+function calcTPaceFromVdot(vdot: number): string {
+  const a = 0.000104, b = 0.182258, c = -(vdot + 4.60);
+  const vMax = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a); // m/min a 100% VO2max
+  const vT = vMax * 0.88; // T pace velocity (88% VO2max)
+  const paceMin = 1000 / vT;
   const m = Math.floor(paceMin);
   const s = Math.round((paceMin % 1) * 60);
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+// ─── Fallback: stima pace da %FC quando VDOT non disponibile ─────────────────
+function hrToPaceFallback(thresholdHr: number, maxHr: number): string {
+  // Relazione %HRmax → %VO2max (Swain et al.): %VO2max ≈ 1.12 × %HRmax - 0.12
+  const pctHR = Math.min(1, thresholdHr / maxHr);
+  const pctVO2 = Math.max(0.5, 1.12 * pctHR - 0.12);
+  // VDOT stimato per un runner medio (VDOT 40) a quella % VO2max
+  const estimatedVdot = 40 * pctVO2 / 0.88; // normalizzato alla soglia
+  const clampedVdot = Math.max(30, Math.min(60, estimatedVdot));
+  return calcTPaceFromVdot(clampedVdot);
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export function AnaerobicThreshold({ runs, maxHr }: AnaerobicThresholdProps) {
+export function AnaerobicThreshold({ runs, maxHr, vdot }: AnaerobicThresholdProps) {
   const { monthData, currentThreshold, aerobicThreshold, delta, yMin, yMax } = useMemo(() => {
     const now = new Date();
     const safeMax = maxHr > 0 ? maxHr : 180;
@@ -148,7 +162,12 @@ export function AnaerobicThreshold({ runs, maxHr }: AnaerobicThresholdProps) {
   }, [runs, maxHr]);
 
   const safeMax = maxHr > 0 ? maxHr : 180;
-  const thresholdPace = currentThreshold > 0 ? hrToPace(currentThreshold, safeMax) : null;
+  // Usa VDOT reale (Daniels T-pace) se disponibile, altrimenti fallback HR
+  const thresholdPace = vdot
+    ? calcTPaceFromVdot(vdot)
+    : currentThreshold > 0
+    ? hrToPaceFallback(currentThreshold, safeMax)
+    : null;
 
   return (
     <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 flex flex-col" style={{ minHeight: 220 }}>
@@ -230,7 +249,7 @@ export function AnaerobicThreshold({ runs, maxHr }: AnaerobicThresholdProps) {
                 />
                 <YAxis domain={[yMin, yMax]} hide />
                 <Tooltip
-                  content={makeThresholdTooltip(safeMax)}
+                  content={makeThresholdTooltip(safeMax, vdot)}
                   cursor={{ stroke: "rgba(255,255,255,0.08)", strokeWidth: 1 }}
                 />
                 <Area type="monotone" dataKey="aerobic" stroke="#14B8A6" strokeWidth={1.5} fillOpacity={1} fill="url(#gradAerobic)" dot={false} isAnimationActive={false} />

@@ -76,10 +76,11 @@ interface KpiCardsProps {
 }
 
 function KpiCards({ runs, vdot, dashData }: KpiCardsProps) {
-  // Total Distance questa settimana
+  // Total Distance questa settimana (lunedì → domenica, gestisce anche domenica)
   const now = new Date();
   const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - now.getDay() + 1); // lunedì
+  const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay(); // 1=Lun … 7=Dom
+  startOfWeek.setDate(now.getDate() - dayOfWeek + 1);
   startOfWeek.setHours(0, 0, 0, 0);
   const weekKm = runs
     .filter((r) => new Date(r.date) >= startOfWeek)
@@ -114,10 +115,13 @@ function KpiCards({ runs, vdot, dashData }: KpiCardsProps) {
   // Prossimo obiettivo
   const nextTitle =
     dashData?.next_session?.title ??
-    (dashData?.profile?.race_goal ? dashData.profile.race_goal : null);
+    dashData?.profile?.race_goal ??
+    "Nessun piano attivo";
   const nextSub = dashData?.profile?.race_date
     ? `${daysUntil(dashData.profile.race_date)} gg alla gara`
-    : null;
+    : dashData?.next_session
+    ? null
+    : "Genera un piano di allenamento";
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -262,27 +266,27 @@ export function DashboardView() {
         </div>
       </div>
 
-      {/* ── 3) Fitness & Freshness — full width ── */}
-      <div className="mb-6">
-        <FitnessFreshness
-          fitnessFreshness={ffHistory}
-          currentFf={dashData?.current_ff ?? null}
-          prevCtl={prevCtl}
-        />
-      </div>
-
-      {/* ── 4) Zona Lattato + VO2Max — side by side 50/50 ── */}
+      {/* ── 3) Zona Lattato + VO2Max — side by side 50/50 ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <AnaerobicThreshold runs={runs} maxHr={dashData?.profile?.max_hr ?? 180} />
+        <AnaerobicThreshold runs={runs} maxHr={dashData?.profile?.max_hr ?? 180} vdot={vdot} />
         <VO2MaxChart runs={runs} vdot={vdot} />
       </div>
 
-      {/* ── 5) Race Predictions — full width ── */}
+      {/* ── 4) Race Predictions — full width ── */}
       <div className="mb-6">
         <RacePredictions
           runs={runs}
           vdot={vdot}
           racePredictions={racePredictions}
+        />
+      </div>
+
+      {/* ── 5) Fitness & Freshness — in fondo ── */}
+      <div className="mb-6">
+        <FitnessFreshness
+          fitnessFreshness={ffHistory}
+          currentFf={dashData?.current_ff ?? null}
+          prevCtl={prevCtl}
         />
       </div>
 
