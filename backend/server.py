@@ -3079,7 +3079,9 @@ async def garmin_auth_start(frontend_origin: str = Query(...)):
     and extract the ticket without any cross-origin issues.
     """
     from urllib.parse import quote
-    service = f"{frontend_origin}/garmin-auth"
+    # Use /garmin-auth.html — a static file served by Vite/CDN that bypasses
+    # React Router (which would strip ?ticket= query param on unknown routes).
+    service = f"{frontend_origin}/garmin-auth.html"
     sso_url = (
         f"https://sso.garmin.com/sso/signin"
         f"?service={quote(service)}"
