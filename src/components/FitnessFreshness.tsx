@@ -153,58 +153,74 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
       </div>
 
       {/* ── KPI Cards ── */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        {/* CTL */}
-        <div className="bg-[#0F172A] border border-[#1E293B] rounded-xl p-5">
-          <div className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: CLR_CTL }}>
-            CTL · Condizione Fisica
-          </div>
-          <div className="text-5xl font-black mb-1" style={{ color: CLR_CTL }}>
-            {ctl > 0 ? ctl.toFixed(1) : "—"}
-          </div>
-          {ctlTrend !== null && ctlTrend !== 0 && (
-            <div className={`text-xs font-bold mt-2 ${ctlTrend >= 0 ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
-              {ctlTrend >= 0 ? "+" : ""}{ctlTrend} (7 giorni)
-            </div>
-          )}
-          <div className="text-[10px] text-[#475569] mt-1">Chronic Training Load · 42gg</div>
-        </div>
+      {(() => {
+        const prevAtl = fitnessFreshness.length >= 2
+          ? fitnessFreshness[fitnessFreshness.length - 2].atl
+          : null;
+        const atlTrend = prevAtl !== null && atl > 0 ? parseFloat((atl - prevAtl).toFixed(1)) : null;
 
-        {/* ATL */}
-        <div className="bg-[#0F172A] border border-[#1E293B] rounded-xl p-5">
-          <div className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: CLR_ATL }}>
-            ATL · Affaticamento
-          </div>
-          <div className="text-5xl font-black mb-1" style={{ color: CLR_ATL }}>
-            {atl > 0 ? atl.toFixed(1) : "—"}
-          </div>
-          {atl > 0 && ctlTrend !== null && (
-            <div className="text-xs font-bold mt-2 text-[#F43F5E]">
-              +{(atl - ctl).toFixed(1) > "0" ? (atl - ctl).toFixed(1) : Math.abs(atl - ctl).toFixed(1)} vs CTL
+        return (
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            {/* CTL */}
+            <div className="bg-[#0F172A] border border-[#1E293B] rounded-xl p-5 flex flex-col gap-2">
+              <div className="text-6xl font-black leading-none" style={{ color: CLR_CTL }}>
+                {ctl > 0 ? ctl.toFixed(1) : "—"}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: CLR_CTL }} />
+                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: CLR_CTL }}>
+                  Condizione Fisica
+                </span>
+              </div>
+              {ctlTrend !== null && ctlTrend !== 0 && (
+                <div className={`text-xs font-bold ${ctlTrend >= 0 ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
+                  {ctlTrend >= 0 ? "+" : ""}{ctlTrend} (7 giorni)
+                </div>
+              )}
             </div>
-          )}
-          <div className="text-[10px] text-[#475569] mt-1">Acute Training Load · 7gg</div>
-        </div>
 
-        {/* TSB */}
-        <div
-          className="bg-[#0F172A] rounded-xl p-5 border"
-          style={{ borderColor: statusColor + "40" }}
-        >
-          <div className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: statusColor }}>
-            TSB · Forma Fisica
+            {/* ATL */}
+            <div className="bg-[#0F172A] border border-[#1E293B] rounded-xl p-5 flex flex-col gap-2">
+              <div className="text-6xl font-black leading-none" style={{ color: CLR_ATL }}>
+                {atl > 0 ? atl.toFixed(1) : "—"}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: CLR_ATL }} />
+                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: CLR_ATL }}>
+                  Affaticamento
+                </span>
+              </div>
+              {atlTrend !== null && atlTrend !== 0 && (
+                <div className={`text-xs font-bold ${atlTrend >= 0 ? "text-[#F43F5E]" : "text-[#22c55e]"}`}>
+                  {atlTrend >= 0 ? "+" : ""}{atlTrend} (7 giorni)
+                </div>
+              )}
+            </div>
+
+            {/* TSB */}
+            <div
+              className="bg-[#0F172A] rounded-xl p-5 border flex flex-col gap-2"
+              style={{ borderColor: statusColor + "40" }}
+            >
+              <div className="text-6xl font-black leading-none" style={{ color: statusColor }}>
+                {currentFf ? (tsb >= 0 ? "+" : "") + tsb.toFixed(1) : "—"}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColor }} />
+                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: statusColor }}>
+                  Forma Fisica
+                </span>
+              </div>
+              <div
+                className="text-xs font-black uppercase tracking-widest px-2 py-0.5 rounded-md inline-block self-start"
+                style={{ color: statusColor, backgroundColor: statusColor + "18" }}
+              >
+                {statusLabel}
+              </div>
+            </div>
           </div>
-          <div className="text-5xl font-black mb-1" style={{ color: statusColor }}>
-            {currentFf ? (tsb >= 0 ? "+" : "") + tsb.toFixed(1) : "—"}
-          </div>
-          <div
-            className="text-xs font-black uppercase tracking-widest mt-2 px-2 py-0.5 rounded-md inline-block"
-            style={{ color: statusColor, backgroundColor: statusColor + "18" }}
-          >
-            {statusLabel}
-          </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* ── Grafico ── */}
       {fitnessFreshness && fitnessFreshness.length > 0 ? (
@@ -249,6 +265,7 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
                   tick={{ fill: "#475569", fontSize: 9 }}
                   dx={-4}
                   width={28}
+                  ticks={[0, 20, 40, 60, 80]}
                 />
                 <ReferenceLine y={0} stroke="#334155" strokeDasharray="4 3" strokeWidth={1} />
                 <Tooltip
