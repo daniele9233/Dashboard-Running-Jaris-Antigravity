@@ -3079,16 +3079,15 @@ async def garmin_auth_start(request: Request):
     from urllib.parse import quote
     base = str(request.base_url).rstrip("/")
     callback = f"{base}/api/garmin/auth-callback"
-    # service= must equal garth's hardcoded login-url so the preauthorized endpoint accepts the ticket
-    service_url = "https://sso.garmin.com/sso/embed"
+    # Non-embed mode: Garmin does a full browser redirect to service?ticket=XXX after login.
+    # embedWidget=true uses JS callbacks instead of redirects — doesn't work for popups.
     sso_url = (
         f"https://sso.garmin.com/sso/signin"
-        f"?id=gauth-widget&embedWidget=true"
-        f"&gauthHost={quote('https://sso.garmin.com/sso')}"
-        f"&service={quote(callback)}"
-        f"&source={quote(service_url)}"
+        f"?service={quote(callback)}"
         f"&redirectAfterAccountLoginUrl={quote(callback)}"
         f"&redirectAfterAccountCreationUrl={quote(callback)}"
+        f"&gauthHost={quote('https://sso.garmin.com/sso')}"
+        f"&consumeServiceTicket=false"
     )
     return {"auth_url": sso_url}
 
