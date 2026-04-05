@@ -253,16 +253,25 @@ export function DashboardView() {
         <KpiCards runs={runs} vdot={vdot} dashData={dashData ?? null} />
       ) : null}
 
-      {/* ── 2) Main grid: RecentActivities left + MainChart right ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 mb-6">
+      {/* ── 2) Main grid: RecentActivities | MainChart | RacePredictions ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr_1fr] gap-6 mb-6">
         {/* Left column — recent activities */}
         <div className="min-h-[500px] lg:h-[700px]">
           <RecentActivities runs={runs} />
         </div>
 
-        {/* Right chart */}
+        {/* Center — volume chart */}
         <div className="min-h-[500px] lg:h-[700px]">
           <MainChart runs={runs} />
+        </div>
+
+        {/* Right — race predictions */}
+        <div className="min-h-[500px] lg:h-[700px] overflow-y-auto">
+          <RacePredictions
+            runs={runs}
+            vdot={vdot}
+            racePredictions={racePredictions}
+          />
         </div>
       </div>
 
@@ -272,23 +281,12 @@ export function DashboardView() {
         <VO2MaxChart runs={runs} vdot={vdot} />
       </div>
 
-      {/* ── 4) Race Predictions — full width ── */}
-      <div className="mb-6">
-        <RacePredictions
-          runs={runs}
-          vdot={vdot}
-          racePredictions={racePredictions}
-        />
-      </div>
-
-      {/* ── 5) Fitness & Freshness — in fondo ── */}
-      <div className="mb-6">
-        <FitnessFreshness
-          fitnessFreshness={ffHistory}
-          currentFf={dashData?.current_ff ?? null}
-          prevCtl={prevCtl}
-        />
-      </div>
+      {/* ── 4) Fitness & Freshness — in fondo ── */}
+      <FitnessFreshness
+        fitnessFreshness={ffHistory}
+        currentFf={dashData?.current_ff ?? null}
+        prevCtl={prevCtl}
+      />
 
       {/* TopStats mantienuto per compatibilità — nascosto visivamente tramite sostituzione con KpiCards */}
       <div className="hidden">
