@@ -5,6 +5,7 @@ import { AnaerobicThreshold } from "./AnaerobicThreshold";
 import { FitnessFreshness } from "./FitnessFreshness";
 import { RacePredictions } from "./RacePredictions";
 import { VO2MaxChart } from "./VO2MaxChart";
+import { LastRunMap } from "./LastRunMap";
 import { useApi } from "../hooks/useApi";
 import { getDashboard, getRuns, getAnalytics } from "../api";
 import type { DashboardResponse, RunsResponse, AnalyticsResponse, Run } from "../types/api";
@@ -68,142 +69,89 @@ function DashboardHeader({ data }: { data: DashboardResponse }) {
   );
 }
 
-// ─── KPI Cards row ────────────────────────────────────────────────────────────
-interface KpiCardsProps {
-  runs: Run[];
-  vdot: number | null;
-  dashData: DashboardResponse | null;
-}
+// ─── Stato di Forma card (enhanced) ──────────────────────────────────────────
+function StatoFormaCard({ dashData }: { dashData: DashboardResponse | null }) {
+  const ff = dashData?.current_ff;
+  const tsb = ff?.tsb ?? null;
+  const ctl = ff?.ctl ?? 0;
+  const atl = ff?.atl ?? 0;
 
-function KpiCards({ runs, vdot, dashData }: KpiCardsProps) {
-  // Total Distance questa settimana (lunedì → domenica, gestisce anche domenica)
-  const now = new Date();
-  const startOfWeek = new Date(now);
-  const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay(); // 1=Lun … 7=Dom
-  startOfWeek.setDate(now.getDate() - dayOfWeek + 1);
-  startOfWeek.setHours(0, 0, 0, 0);
-  const weekKm = runs
-    .filter((r) => new Date(r.date) >= startOfWeek)
-    .reduce((s, r) => s + r.distance_km, 0);
-
-  // Weekly KM last week for % change
-  const lastWeekStart = new Date(startOfWeek);
-  lastWeekStart.setDate(startOfWeek.getDate() - 7);
-  const lastWeekKm = runs
-    .filter((r) => {
-      const d = new Date(r.date);
-      return d >= lastWeekStart && d < startOfWeek;
-    })
-    .reduce((s, r) => s + r.distance_km, 0);
-  const weekPct = lastWeekKm > 0 ? Math.round(((weekKm - lastWeekKm) / lastWeekKm) * 100) : null;
-
-  // Stato forma da TSB
-  const tsb = dashData?.current_ff?.tsb ?? null;
-  const formLabel =
-    tsb === null ? "—" : tsb > 5 ? "Fresco" : tsb > -10 ? "Neutro" : tsb > -20 ? "Affaticato" : "Sovracc.";
-  const formColor =
+  type StatusConfig = { label: string; color: string; desc: string; icon: string };
+  const status: StatusConfig =
     tsb === null
-      ? "#64748B"
-      : tsb > 5
-      ? "#C0FF00"
+      ? { label: "—", color: "#64748B", desc: "Sincronizza le corse", icon: "●" }
+      : tsb > 10
+      ? { label: "Fresco", color: "#C0FF00", desc: "Pronto per la gara", icon: "⚡" }
+      : tsb > 0
+      ? { label: "Neutro", color: "#14B8A6", desc: "Allenamento regolare", icon: "●" }
       : tsb > -10
-      ? "#14B8A6"
-      : tsb > -20
-      ? "#F59E0B"
-      : "#F43F5E";
+      ? { label: "Affaticato", color: "#F59E0B", desc: "Mantieni il ritmo", icon: "▲" }
+      : { label: "Sovracc.", color: "#F43F5E", desc: "Recupera prima di spingere", icon: "⚠" };
 
-  // Prossimo obiettivo
-  const nextTitle =
-    dashData?.next_session?.title ??
-    dashData?.profile?.race_goal ??
-    "Nessun piano attivo";
-  const nextSub = dashData?.profile?.race_date
-    ? `${daysUntil(dashData.profile.race_date)} gg alla gara`
-    : dashData?.next_session
-    ? null
-    : "Genera un piano di allenamento";
+  // Prontezza 0-100: 50 = neutro, >50 = fresco, <50 = affaticato
+  const readiness = tsb !== null ? Math.max(0, Math.min(100, 50 + tsb * 3)) : null;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      {/* Total Distance */}
-      <div className="bg-bg-card border border-[#1E293B] rounded-xl p-4 flex flex-col justify-between">
-        <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-2">
-          Distanza Sett.
-        </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-black text-white">
-            {weekKm > 0 ? weekKm.toFixed(1) : "0"}
-          </span>
-          <span className="text-sm text-gray-500">km</span>
-          {weekPct !== null && (
-            <span
-              className={`text-xs font-bold px-1.5 py-0.5 rounded ml-auto ${
-                weekPct >= 0
-                  ? "text-[#14B8A6] bg-[#14B8A6]/10"
-                  : "text-[#F43F5E] bg-[#F43F5E]/10"
-              }`}
-            >
-              {weekPct >= 0 ? "+" : ""}
-              {weekPct}%
-            </span>
-          )}
-        </div>
-        <div className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Questa settimana</div>
+    <div
+      className="bg-bg-card border rounded-xl p-5 flex flex-col justify-between h-full relative overflow-hidden"
+      style={{ borderColor: status.color + "30" }}
+    >
+      {/* Background accent glow */}
+      <div
+        className="absolute -bottom-8 -right-8 w-32 h-32 rounded-full opacity-10 blur-2xl"
+        style={{ backgroundColor: status.color }}
+      />
+
+      {/* Header */}
+      <div className="text-[10px] text-text-muted uppercase tracking-widest font-bold">
+        Stato di Forma
       </div>
 
-      {/* VO2Max */}
-      <div className="bg-bg-card border border-[#1E293B] rounded-xl p-4 flex flex-col justify-between">
-        <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-2">
-          VO2 Max
-        </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-black text-[#C0FF00]">
-            {vdot != null ? vdot.toFixed(1) : "—"}
-          </span>
-          {vdot != null && <span className="text-sm text-gray-500">VDOT</span>}
-        </div>
-        <div className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">
-          {vdot != null
-            ? vdot > 55
-              ? "Elite"
-              : vdot > 45
-              ? "Avanzato"
-              : vdot > 35
-              ? "Intermedio"
-              : "Principiante"
-            : "Aggiungi corse"}
-        </div>
-      </div>
-
-      {/* Stato di Forma */}
-      <div className="bg-bg-card border border-[#1E293B] rounded-xl p-4 flex flex-col justify-between">
-        <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-2">
-          Stato di Forma
-        </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-black" style={{ color: formColor }}>
-            {formLabel}
-          </span>
-        </div>
-        <div className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">
-          {tsb !== null ? `TSB ${tsb > 0 ? "+" : ""}${tsb.toFixed(0)}` : "Fitness & Freshness"}
-        </div>
-      </div>
-
-      {/* Prossimo Obiettivo */}
-      <div className="bg-bg-card border border-[#1E293B] rounded-xl p-4 flex flex-col justify-between">
-        <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-2">
-          Prossimo Obiettivo
-        </div>
-        <div className="text-base font-black text-white leading-tight line-clamp-2">
-          {nextTitle ?? "—"}
-        </div>
-        {nextSub && (
-          <div className="text-[10px] text-[#C0FF00] font-bold uppercase tracking-widest mt-1">
-            {nextSub}
+      {/* Status + TSB */}
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="text-4xl font-black leading-none mb-1" style={{ color: status.color }}>
+            {status.label}
           </div>
-        )}
+          <div
+            className="text-xs font-black tracking-widest uppercase px-2 py-0.5 rounded-full inline-block mt-1"
+            style={{ color: status.color, backgroundColor: status.color + "18", border: `1px solid ${status.color}35` }}
+          >
+            TSB {tsb !== null ? (tsb >= 0 ? "+" : "") + tsb.toFixed(1) : "—"}
+          </div>
+        </div>
+        <div className="text-3xl opacity-50">{status.icon}</div>
       </div>
+
+      {/* CTL / ATL */}
+      <div className="flex gap-5 text-xs">
+        <div className="flex flex-col">
+          <span className="text-[9px] text-[#475569] uppercase tracking-wider">CTL</span>
+          <span className="text-[#3B82F6] font-black text-base">{ctl > 0 ? ctl.toFixed(1) : "—"}</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[9px] text-[#475569] uppercase tracking-wider">ATL</span>
+          <span className="text-[#F43F5E] font-black text-base">{atl > 0 ? atl.toFixed(1) : "—"}</span>
+        </div>
+      </div>
+
+      {/* Prontezza bar */}
+      {readiness !== null && (
+        <div>
+          <div className="flex justify-between text-[9px] text-text-muted mb-1.5">
+            <span>Prontezza</span>
+            <span style={{ color: status.color }}>{readiness.toFixed(0)}%</span>
+          </div>
+          <div className="h-1 bg-[#1E293B] rounded-full">
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${readiness}%`, backgroundColor: status.color }}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="text-[9px] text-text-muted">{status.desc}</div>
     </div>
   );
 }
@@ -248,10 +196,11 @@ export function DashboardView() {
         </div>
       )}
 
-      {/* ── 1) KPI Row — 4 cards ── */}
-      {runs.length > 0 || dashData ? (
-        <KpiCards runs={runs} vdot={vdot} dashData={dashData ?? null} />
-      ) : null}
+      {/* ── 1) Stato di Forma + Ultima Corsa (mappa) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 mb-6" style={{ height: 220 }}>
+        <StatoFormaCard dashData={dashData ?? null} />
+        <LastRunMap run={dashData?.last_run ?? runs[0] ?? null} />
+      </div>
 
       {/* ── 2) Main grid: RecentActivities | MainChart | RacePredictions ── */}
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr_1fr] gap-6 mb-6">
