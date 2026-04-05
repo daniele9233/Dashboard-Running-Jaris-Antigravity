@@ -3007,7 +3007,16 @@ async def _garmin_login():
             client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
             client.garth = garth_client
             # Smoke test — garth auto-refreshes access_token if expired
-            client.get_activities(0, 1)
+            try:
+                client.get_activities(0, 1)
+            except Exception as smoke_err:
+                err_str = str(smoke_err)
+                if "429" in err_str or "Too Many Requests" in err_str:
+                    # Rate-limited by Garmin — token is likely still valid,
+                    # skip re-auth (it won't help) and let sync handle it
+                    print(f"[GARMIN] Smoke test rate-limited (429), reusing stored token anyway")
+                    return client
+                raise  # Genuine token failure → fall through to re-auth
             # Save updated dump (refresh_token gets renewed on each refresh)
             try:
                 new_dump = client.garth.dumps()
@@ -3019,7 +3028,8 @@ async def _garmin_login():
             except Exception:
                 pass
             return client
-        except Exception:
+        except Exception as e:
+            print(f"[GARMIN] Stored token invalid: {e}")
             pass  # expired / corrupt → raise so frontend triggers OAuth flow
 
     # No valid token — signal frontend to open auth popup
@@ -3128,6 +3138,11 @@ async def garmin_exchange_ticket(request: Request):
         from requests_oauthlib import OAuth1Session
         oauth1_sess = OAuth1Session(consumer_key, client_secret=consumer_secret)
         resp = oauth1_sess.get(preauth_url)
+        if resp.status_code == 429:
+            return JSONResponse({
+                "error": "garmin_rate_limited",
+                "detail": "Garmin OAuth rate limit — aspetta 15 minuti e riprova"
+            }, status_code=429)
         resp.raise_for_status()
 
         from urllib.parse import parse_qs
