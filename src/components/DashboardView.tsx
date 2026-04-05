@@ -5,7 +5,7 @@ import { AnaerobicThreshold } from "./AnaerobicThreshold";
 import { FitnessFreshness } from "./FitnessFreshness";
 import { RacePredictions } from "./RacePredictions";
 import { VO2MaxChart } from "./VO2MaxChart";
-import { SupercompensationChart } from "./SupercompensationChart";
+import { AdaptationPanel } from "./AdaptationPanel";
 import { useApi } from "../hooks/useApi";
 import { getDashboard, getRuns, getAnalytics } from "../api";
 import type { DashboardResponse, RunsResponse, AnalyticsResponse, Run } from "../types/api";
@@ -203,9 +203,9 @@ export function DashboardView() {
       )}
 
       {/* ── 1) Stato di Forma + Ultima Corsa (mappa) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 mb-6" style={{ height: 220 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 mb-6" style={{ height: 300 }}>
         <StatoFormaCard dashData={dashData ?? null} />
-        <SupercompensationChart currentFf={dashData?.current_ff ?? null} />
+        <AdaptationPanel runs={runs} />
       </div>
 
       {/* ── 2) Main grid: RecentActivities | MainChart | RacePredictions ── */}
