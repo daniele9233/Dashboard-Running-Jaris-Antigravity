@@ -16,38 +16,80 @@ interface AnaerobicThresholdProps {
   vdot?: number | null;
 }
 
-// ─── Tooltip personalizzato (factory che chiude su vdot e maxHr) ────────────
-function makeThresholdTooltip(maxHr: number, vdot: number | null | undefined) {
+// ─── VDOT da una singola corsa (stessa formula di VO2MaxChart) ────────────────
+function estimateMonthVdot(monthRuns: Run[]): number | null {
+  let best: number | null = null;
+  for (const r of monthRuns) {
+    if (r.distance_km < 3 || r.duration_minutes <= 0 || r.duration_minutes < 10) continue;
+    const v = (r.distance_km * 1000) / r.duration_minutes; // m/min
+    const vo2 = -4.60 + 0.182258 * v + 0.000104 * v * v;
+    const denom =
+      0.8 +
+      0.1894393 * Math.exp(-0.012778 * r.duration_minutes) +
+      0.2989558 * Math.exp(-0.1932605 * r.duration_minutes);
+    const vdot = vo2 / denom;
+    if (vdot < 28 || vdot > 70) continue;
+    if (best === null || vdot > best) best = parseFloat(vdot.toFixed(1));
+  }
+  return best;
+}
+
+// ─── T-pace (soglia Daniels 88% VO2max) da VDOT ─────────────────────────────
+function calcTPaceFromVdot(vdot: number): string {
+  const a = 0.000104, b = 0.182258, c = -(vdot + 4.60);
+  const vMax = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+  const vT = vMax * 0.88;
+  const paceMin = 1000 / vT;
+  const m = Math.floor(paceMin);
+  const s = Math.round((paceMin % 1) * 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+// ─── E-pace (aerobica Daniels 70% VO2max) da VDOT ───────────────────────────
+function calcEPaceFromVdot(vdot: number): string {
+  const a = 0.000104, b = 0.182258, c = -(vdot + 4.60);
+  const vMax = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+  const vE = vMax * 0.70;
+  const paceMin = 1000 / vE;
+  const m = Math.floor(paceMin);
+  const s = Math.round((paceMin % 1) * 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+// ─── Tooltip (factory che chiude sul monthData per accedere al vdot per-mese) ─
+function makeThresholdTooltip(
+  monthVdots: Record<string, number | null>
+) {
   return function ThresholdTooltip({ active, payload }: any) {
     if (!active || !payload?.length) return null;
     const { name, value, aerobic } = payload[0].payload;
-    // Usa VDOT reale se disponibile, altrimenti fallback HR-based
-    const pace = vdot ? calcTPaceFromVdot(vdot) : hrToPaceFallback(value, maxHr);
-    // Aerobica ≈ E-pace (70% VO2max) — se ho VDOT uso 70%, altrimenti fallback
-    const aerobicPace = vdot
-      ? (() => {
-          const a = 0.000104, b = 0.182258, c = -(vdot + 4.60);
-          const vMax = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
-          const vE = vMax * 0.70;
-          const pmin = 1000 / vE;
-          return `${Math.floor(pmin)}:${String(Math.round((pmin % 1) * 60)).padStart(2, "0")}`;
-        })()
-      : hrToPaceFallback(aerobic, maxHr);
+    const monthVdot = monthVdots[name] ?? null;
+
+    const tPace = monthVdot ? calcTPaceFromVdot(monthVdot) : null;
+    const ePace = monthVdot ? calcEPaceFromVdot(monthVdot) : null;
+
     return (
-      <div className="bg-[#1E293B] border border-[#334155] px-3 py-2 rounded-xl shadow-2xl text-xs min-w-[170px]">
+      <div className="bg-[#1E293B] border border-[#334155] px-3 py-2 rounded-xl shadow-2xl text-xs min-w-[185px]">
         <p className="text-[#C0FF00] font-bold mb-1.5 uppercase tracking-wider">{name}</p>
+        {monthVdot && (
+          <p className="text-text-muted text-[10px] mb-1.5">VDOT {monthVdot}</p>
+        )}
         <div className="space-y-1.5">
           <div className="flex justify-between gap-3">
             <span className="text-[#8B5CF6]">Soglia</span>
             <span className="text-white font-bold">{value} bpm</span>
           </div>
-          <div className="flex justify-between gap-3">
-            <span className="text-[#8B5CF6] text-[10px]">Pace soglia</span>
-            <span className="text-[#C0FF00] font-black">{pace}/km</span>
-          </div>
+          {tPace && (
+            <div className="flex justify-between gap-3">
+              <span className="text-[#8B5CF6] text-[10px]">T-pace</span>
+              <span className="text-[#C0FF00] font-black">{tPace}/km</span>
+            </div>
+          )}
           <div className="border-t border-[#334155] pt-1.5 flex justify-between gap-3">
             <span className="text-[#14B8A6]">Aerobica</span>
-            <span className="text-white font-bold">{aerobic} bpm · {aerobicPace}/km</span>
+            <span className="text-white font-bold">
+              {aerobic} bpm{ePace ? ` · ${ePace}/km` : ""}
+            </span>
           </div>
         </div>
       </div>
@@ -55,33 +97,10 @@ function makeThresholdTooltip(maxHr: number, vdot: number | null | undefined) {
   };
 }
 
-// ─── Calcola T-pace (soglia) da VDOT — formula Daniels ──────────────────────
-// T pace = 88% VO2max intensity. Stessa formula usata in VO2MaxChart.
-function calcTPaceFromVdot(vdot: number): string {
-  const a = 0.000104, b = 0.182258, c = -(vdot + 4.60);
-  const vMax = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a); // m/min a 100% VO2max
-  const vT = vMax * 0.88; // T pace velocity (88% VO2max)
-  const paceMin = 1000 / vT;
-  const m = Math.floor(paceMin);
-  const s = Math.round((paceMin % 1) * 60);
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
-// ─── Fallback: stima pace da %FC quando VDOT non disponibile ─────────────────
-function hrToPaceFallback(thresholdHr: number, maxHr: number): string {
-  // Relazione %HRmax → %VO2max (Swain et al.): %VO2max ≈ 1.12 × %HRmax - 0.12
-  const pctHR = Math.min(1, thresholdHr / maxHr);
-  const pctVO2 = Math.max(0.5, 1.12 * pctHR - 0.12);
-  // VDOT stimato per un runner medio (VDOT 40) a quella % VO2max
-  const estimatedVdot = 40 * pctVO2 / 0.88; // normalizzato alla soglia
-  const clampedVdot = Math.max(30, Math.min(60, estimatedVdot));
-  return calcTPaceFromVdot(clampedVdot);
-}
-
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function AnaerobicThreshold({ runs, maxHr, vdot }: AnaerobicThresholdProps) {
-  const { monthData, currentThreshold, aerobicThreshold, delta, yMin, yMax } = useMemo(() => {
+  const { monthData, monthVdots, currentThreshold, currentMonthVdot, aerobicThreshold, delta, yMin, yMax } = useMemo(() => {
     const now = new Date();
     const safeMax = maxHr > 0 ? maxHr : 180;
     const thresholdFloor = Math.round(safeMax * 0.78);
@@ -90,24 +109,27 @@ export function AnaerobicThreshold({ runs, maxHr, vdot }: AnaerobicThresholdProp
     const aerobicCeil = Math.round(safeMax * 0.79);
 
     const data: { name: string; value: number; aerobic: number; anaerobic: number }[] = [];
+    const vdotMap: Record<string, number | null> = {};
     let curr = 0;
     let prev = 0;
     let aerobic = 0;
+    let currMonthVdot: number | null = null;
 
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
 
-      const monthRuns = runs.filter((r) => {
+      // Tutte le corse del mese (con HR per la soglia, tutte per VDOT)
+      const allMonthRuns = runs.filter((r) => {
         const rd = new Date(r.date);
-        return (
-          rd.getFullYear() === d.getFullYear() &&
-          rd.getMonth() === d.getMonth() &&
-          r.avg_hr !== null &&
-          r.avg_hr > 0
-        );
+        return rd.getFullYear() === d.getFullYear() && rd.getMonth() === d.getMonth();
       });
 
-      const threshRuns = monthRuns.filter((r) => {
+      const hrMonthRuns = allMonthRuns.filter((r) => r.avg_hr !== null && r.avg_hr > 0);
+
+      // VDOT per-mese dal dataset reale Strava
+      const monthVdot = estimateMonthVdot(allMonthRuns);
+
+      const threshRuns = hrMonthRuns.filter((r) => {
         const t = (r.run_type || "").toLowerCase();
         return t.includes("tempo") || t.includes("threshold") || t.includes("soglia");
       });
@@ -115,21 +137,19 @@ export function AnaerobicThreshold({ runs, maxHr, vdot }: AnaerobicThresholdProp
       const targetRuns =
         threshRuns.length > 0
           ? threshRuns
-          : monthRuns.filter((r) => (r.avg_hr ?? 0) > safeMax * 0.75);
+          : hrMonthRuns.filter((r) => (r.avg_hr ?? 0) > safeMax * 0.75);
 
       let value = 0;
       let aerobicVal = 0;
       if (targetRuns.length > 0) {
-        const avgHr =
-          targetRuns.reduce((sum, r) => sum + (r.avg_hr ?? 0), 0) / targetRuns.length;
+        const avgHr = targetRuns.reduce((sum, r) => sum + (r.avg_hr ?? 0), 0) / targetRuns.length;
         value = Math.round(avgHr);
         aerobicVal = Math.round(avgHr * 0.86);
-      } else if (monthRuns.length > 0) {
-        const hrRuns = monthRuns.filter((r) => r.max_hr && r.max_hr > 0);
-        const avgMax =
-          hrRuns.length > 0
-            ? hrRuns.reduce((sum, r) => sum + (r.max_hr ?? 0), 0) / hrRuns.length
-            : safeMax;
+      } else if (hrMonthRuns.length > 0) {
+        const hrRuns = hrMonthRuns.filter((r) => r.max_hr && r.max_hr > 0);
+        const avgMax = hrRuns.length > 0
+          ? hrRuns.reduce((sum, r) => sum + (r.max_hr ?? 0), 0) / hrRuns.length
+          : safeMax;
         value = Math.round(avgMax * 0.88);
         aerobicVal = Math.round(avgMax * 0.76);
       } else {
@@ -142,45 +162,43 @@ export function AnaerobicThreshold({ runs, maxHr, vdot }: AnaerobicThresholdProp
 
       const monthName = d.toLocaleString("it", { month: "short" }).toUpperCase();
       data.push({ name: monthName, value, aerobic: aerobicVal, anaerobic: value });
+      vdotMap[monthName] = monthVdot;
 
-      if (i === 0) { curr = value; aerobic = aerobicVal; }
+      if (i === 0) { curr = value; aerobic = aerobicVal; currMonthVdot = monthVdot; }
       if (i === 1) prev = value;
     }
 
     const values = data.flatMap((d) => [d.value, d.aerobic]);
-    const minV = Math.min(...values) - 8;
-    const maxV = Math.max(...values) + 8;
 
     return {
       monthData: data,
+      monthVdots: vdotMap,
       currentThreshold: curr,
+      currentMonthVdot: currMonthVdot,
       aerobicThreshold: aerobic,
       delta: curr - prev,
-      yMin: minV,
-      yMax: maxV,
+      yMin: Math.min(...values) - 8,
+      yMax: Math.max(...values) + 8,
     };
   }, [runs, maxHr]);
 
   const safeMax = maxHr > 0 ? maxHr : 180;
-  // Usa VDOT reale (Daniels T-pace) se disponibile, altrimenti fallback HR
-  const thresholdPace = vdot
-    ? calcTPaceFromVdot(vdot)
-    : currentThreshold > 0
-    ? hrToPaceFallback(currentThreshold, safeMax)
-    : null;
+
+  // Pace corrente: usa VDOT del mese corrente se disponibile, poi VDOT globale analytics,
+  // entrambi basati su corse reali Strava — si aggiorna ad ogni sync
+  const effectiveVdot = currentMonthVdot ?? vdot ?? null;
+  const thresholdPace = effectiveVdot ? calcTPaceFromVdot(effectiveVdot) : null;
+  const aerobicPace = effectiveVdot ? calcEPaceFromVdot(effectiveVdot) : null;
 
   return (
     <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 flex flex-col" style={{ minHeight: 220 }}>
-      {/* Header */}
       <h3 className="text-[10px] text-text-muted font-semibold tracking-wider mb-4 uppercase">
         Zona Lattato · 12 Mesi
       </h3>
 
-      {/* Horizontal layout: metrics left, chart right */}
       <div className="flex gap-8 flex-1 min-h-0">
-        {/* Left — key metrics */}
+        {/* Left — metrics */}
         <div className="flex flex-col justify-center gap-5 shrink-0 w-[200px]">
-          {/* Soglia anaerobica */}
           <div>
             <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Soglia Anaerobica</div>
             <div className="flex items-baseline gap-2">
@@ -193,22 +211,30 @@ export function AnaerobicThreshold({ runs, maxHr, vdot }: AnaerobicThresholdProp
               )}
             </div>
           </div>
-          {/* Pace soglia */}
+
           {thresholdPace && (
             <div>
-              <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Pace Soglia</div>
+              <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">
+                T-Pace · Soglia
+                {effectiveVdot && (
+                  <span className="ml-1 text-[#8B5CF6]">(VDOT {effectiveVdot})</span>
+                )}
+              </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-4xl font-black text-white">{thresholdPace}</span>
                 <span className="text-base text-text-muted">/km</span>
               </div>
             </div>
           )}
-          {/* Aerobica */}
+
           <div>
-            <div className="text-[9px] text-[#14B8A6] uppercase tracking-wider mb-0.5">Aerobica</div>
-            <div className="flex items-baseline gap-1">
+            <div className="text-[9px] text-[#14B8A6] uppercase tracking-wider mb-0.5">Aerobica (E-pace)</div>
+            <div className="flex items-baseline gap-2">
               <span className="text-xl font-black text-[#14B8A6]">{aerobicThreshold}</span>
               <span className="text-sm text-text-muted">bpm</span>
+              {aerobicPace && (
+                <span className="text-sm font-bold text-[#14B8A6]">· {aerobicPace}/km</span>
+              )}
             </div>
           </div>
         </div>
@@ -249,11 +275,30 @@ export function AnaerobicThreshold({ runs, maxHr, vdot }: AnaerobicThresholdProp
                 />
                 <YAxis domain={[yMin, yMax]} hide />
                 <Tooltip
-                  content={makeThresholdTooltip(safeMax, vdot)}
+                  content={makeThresholdTooltip(monthVdots)}
                   cursor={{ stroke: "rgba(255,255,255,0.08)", strokeWidth: 1 }}
                 />
-                <Area type="monotone" dataKey="aerobic" stroke="#14B8A6" strokeWidth={1.5} fillOpacity={1} fill="url(#gradAerobic)" dot={false} isAnimationActive={false} />
-                <Area type="monotone" dataKey="value" stroke="#8B5CF6" strokeWidth={2} fillOpacity={1} fill="url(#gradAnaerobic)" dot={{ r: 3, fill: "#8B5CF6", strokeWidth: 0 }} activeDot={{ r: 5, fill: "#8B5CF6", stroke: "#C0FF00", strokeWidth: 1.5 }} isAnimationActive={false} />
+                <Area
+                  type="monotone"
+                  dataKey="aerobic"
+                  stroke="#14B8A6"
+                  strokeWidth={1.5}
+                  fillOpacity={1}
+                  fill="url(#gradAerobic)"
+                  dot={false}
+                  isAnimationActive={false}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#8B5CF6"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#gradAnaerobic)"
+                  dot={{ r: 3, fill: "#8B5CF6", strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: "#8B5CF6", stroke: "#C0FF00", strokeWidth: 1.5 }}
+                  isAnimationActive={false}
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
