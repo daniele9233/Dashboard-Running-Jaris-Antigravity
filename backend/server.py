@@ -3006,28 +3006,24 @@ async def _garmin_login():
             garth_client.loads(saved["token_dump"])
             client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
             client.garth = garth_client
-            # Quick smoke test — if expired garth will raise
+            # Smoke test — garth auto-refreshes access_token if expired
             client.get_activities(0, 1)
+            # Save updated dump (refresh_token gets renewed on each refresh)
+            try:
+                new_dump = client.garth.dumps()
+                if new_dump != saved.get("token_dump"):
+                    await db.garmin_tokens.update_one(
+                        {"email": GARMIN_EMAIL},
+                        {"$set": {"token_dump": new_dump}},
+                    )
+            except Exception:
+                pass
             return client
         except Exception:
-            pass  # expired / corrupt → full login below
+            pass  # expired / corrupt → raise so frontend triggers OAuth flow
 
-    # Fresh login
-    client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
-    client.login()
-
-    # Persist garth token dump to DB for reuse
-    try:
-        token_dump = client.garth.dumps()
-        await db.garmin_tokens.update_one(
-            {"email": GARMIN_EMAIL},
-            {"$set": {"email": GARMIN_EMAIL, "token_dump": token_dump}},
-            upsert=True,
-        )
-    except Exception:
-        pass  # best-effort
-
-    return client
+    # No valid token — signal frontend to open auth popup
+    raise ValueError("garmin_token_missing")
 
 
 @app.get("/api/garmin/status")
@@ -3071,6 +3067,126 @@ async def garmin_save_token(request: Request):
         upsert=True,
     )
     return {"ok": True, "message": "Token salvato — Garmin Sync ora funzionerà senza login."}
+
+
+@app.get("/api/garmin/auth-start")
+async def garmin_auth_start(request: Request):
+    """Return the Garmin SSO URL the frontend should open in a popup.
+
+    The popup lands on the Garmin login page. If the user is already logged in,
+    Garmin redirects straight to our /api/garmin/auth-callback?ticket=XXX.
+    """
+    from urllib.parse import quote
+    base = str(request.base_url).rstrip("/")
+    callback = f"{base}/api/garmin/auth-callback"
+    # service= must equal garth's hardcoded login-url so the preauthorized endpoint accepts the ticket
+    service_url = "https://sso.garmin.com/sso/embed"
+    sso_url = (
+        f"https://sso.garmin.com/sso/signin"
+        f"?id=gauth-widget&embedWidget=true"
+        f"&gauthHost={quote('https://sso.garmin.com/sso')}"
+        f"&service={quote(callback)}"
+        f"&source={quote(service_url)}"
+        f"&redirectAfterAccountLoginUrl={quote(callback)}"
+        f"&redirectAfterAccountCreationUrl={quote(callback)}"
+    )
+    return {"auth_url": sso_url}
+
+
+@app.get("/api/garmin/auth-callback")
+async def garmin_auth_callback(request: Request, ticket: str = None):
+    """Exchange a Garmin SSO ticket for OAuth tokens and save to MongoDB.
+
+    Called automatically by Garmin after SSO login succeeds.
+    Returns an HTML page that closes the popup and notifies the parent window.
+    """
+    if not ticket:
+        html = "<html><body><script>window.opener&&window.opener.postMessage('garmin_auth_error','*');window.close();</script><p>Missing ticket.</p></body></html>"
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(html, status_code=400)
+
+    try:
+        import garth
+        import httpx as _httpx
+        from garminconnect import Garmin
+
+        # Fetch Garmin OAuth consumer credentials
+        async with _httpx.AsyncClient(timeout=10) as hc:
+            cr = (await hc.get("https://thegarth.s3.amazonaws.com/oauth_consumer.json")).json()
+        consumer_key    = cr["consumer_key"]
+        consumer_secret = cr["consumer_secret"]
+
+        # Build the preauthorized URL — login-url MUST match what garth hardcodes
+        from urllib.parse import quote as _q
+        base = str(request.base_url).rstrip("/")
+        callback_url = f"{base}/api/garmin/auth-callback"
+        login_url = "https://sso.garmin.com/sso/embed"
+        preauth_url = (
+            f"https://connectapi.garmin.com/oauth-service/oauth/preauthorized"
+            f"?ticket={_q(ticket)}"
+            f"&login-url={_q(login_url)}"
+            f"&accepts-mfa-tokens=true"
+        )
+
+        # Step 1 — get OAuth1 token via requests_oauthlib
+        from requests_oauthlib import OAuth1Session
+        oauth1_sess = OAuth1Session(consumer_key, client_secret=consumer_secret)
+        resp = oauth1_sess.get(preauth_url)
+        resp.raise_for_status()
+        from urllib.parse import parse_qs
+        params = parse_qs(resp.text)
+        oauth1_token  = params["oauth_token"][0]
+        oauth1_secret = params["oauth_token_secret"][0]
+
+        # Step 2 — exchange OAuth1 for OAuth2 via garth
+        garth_client = garth.Client()
+        garth_client.configure(domain="garmin.com")
+        # Inject the OAuth1 token into a garth OAuth1Token object
+        from garth.auth_tokens import OAuth1Token, OAuth2Token
+        oauth1 = OAuth1Token(
+            oauth_token=oauth1_token,
+            oauth_token_secret=oauth1_secret,
+            mfa_token=None,
+            mfa_expiration_timestamp=None,
+            domain="garmin.com",
+        )
+        oauth2 = garth.exchange(oauth1, garth_client)
+        garth_client.oauth2_token = oauth2
+
+        # Step 3 — verify and persist
+        g_client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
+        g_client.garth = garth_client
+        g_client.get_activities(0, 1)  # smoke test
+        token_dump = garth_client.dumps()
+
+        await db.garmin_tokens.update_one(
+            {"email": GARMIN_EMAIL},
+            {"$set": {"email": GARMIN_EMAIL, "token_dump": token_dump}},
+            upsert=True,
+        )
+        print("[GARMIN AUTH] OAuth2 token saved successfully via popup flow")
+
+        html = """<html><body style="font-family:sans-serif;text-align:center;padding-top:60px">
+<h2 style="color:#22c55e">Garmin autenticato!</h2>
+<p>Puoi chiudere questa finestra.</p>
+<script>
+  if(window.opener){window.opener.postMessage('garmin_auth_complete','*');}
+  setTimeout(()=>window.close(),1500);
+</script></body></html>"""
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(html)
+
+    except Exception as e:
+        print(f"[GARMIN AUTH] Callback error: {e}")
+        html = f"""<html><body style="font-family:sans-serif;text-align:center;padding-top:60px">
+<h2 style="color:#ef4444">Errore autenticazione</h2>
+<p>{str(e)[:200]}</p>
+<script>
+  if(window.opener){{window.opener.postMessage('garmin_auth_error','*');}}
+  setTimeout(()=>window.close(),3000);
+</script></body></html>"""
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(html, status_code=500)
 
 
 @app.post("/api/garmin/sync")

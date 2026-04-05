@@ -453,6 +453,11 @@ uvicorn server:app --reload --port 8000
 
 ## Changelog
 
+### v1.4.2 — 5 Aprile 2026
+- **Garmin OAuth automatico**: eliminata ogni procedura manuale. Se il token non è presente o scade, il pulsante Garmin apre automaticamente un popup SSO (`/api/garmin/auth-start` → `/api/garmin/auth-callback`). Il popup chiede il login Garmin (se già loggato nel browser si chiude da solo), salva il token OAuth2 in MongoDB via garth, poi ritenta il sync — tutto senza intervento utente.
+- **Nuovi endpoint backend**: `GET /api/garmin/auth-start` (restituisce SSO URL), `GET /api/garmin/auth-callback` (scambia ticket Garmin → OAuth1 → OAuth2 via garth, persiste dump)
+- **garth token auto-refresh**: dopo ogni sync riuscito il dump aggiornato viene riscritto in DB (refresh_token 90-day expiry si rinnova ad ogni uso)
+
 ### v1.4.1 — 5 Aprile 2026
 - **Fix Garmin Sync critico**: `download_activity(ORIGINAL)` restituisce un archivio ZIP, non raw FIT bytes — `fitdecode` falliva silenziosamente su ogni attività. Aggiunto rilevamento magic bytes `PK` e decompressione automatica prima del parse FIT.
 - **sync-all limit**: aumentato da 30 a 200 attività

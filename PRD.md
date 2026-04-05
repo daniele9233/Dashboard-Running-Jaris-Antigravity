@@ -120,6 +120,12 @@ weekly_reports    — Report settimanali AI
 - Skip run se `avg_vertical_oscillation` già presente nel documento
 - Feedback frontend: mostra dynamics aggiornate o errore login leggibile
 
+**RF-GARMIN-02**: Auth Garmin OAuth completamente automatica (zero intervento manuale):
+- `GET /api/garmin/auth-start`: restituisce SSO URL con `service=callback_url`
+- `GET /api/garmin/auth-callback?ticket=XXX`: scambia ticket → OAuth1 (requests_oauthlib) → OAuth2 (garth.exchange) → salva `token_dump` in MongoDB
+- Frontend: se sync fallisce con `garmin_token_missing`, apre popup SSO automaticamente, ascolta `window.postMessage('garmin_auth_complete')`, ritenta sync
+- Token auto-refresh: ogni sync riuscito riscrive il dump aggiornato in DB (refresh_token 90gg si rinnova ad ogni refresh)
+
 **RF-DASH-03**: Vista dettaglio corsa — Live Telemetry 3D:
 - Toggle STANDARD / 3D TELEMETRY nella pagina dettaglio attività
 - Mappa Mapbox GL dark-v11 con terreno DEM esagerato (1.5x), fog atmosferico, edifici 3D fill-extrusion (pitch 60°)

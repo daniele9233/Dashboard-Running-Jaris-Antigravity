@@ -152,9 +152,64 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
       setGarminState('done');
     } catch (e: any) {
       let msg = e?.message ?? 'Unknown error';
-      // Parse FastAPI error JSON if present
       try { const parsed = JSON.parse(msg); msg = parsed.detail ?? parsed.error ?? msg; } catch {}
+
+      // Token missing → open auth popup automatically, then retry sync
+      if (msg === 'garmin_token_missing' || msg.includes('garmin_token_missing')) {
+        await openGarminAuthPopupAndSync();
+        return;
+      }
+
       setGarminResult({ updated: 0, errors: [msg] });
+      setGarminState('error');
+    }
+  }
+
+  async function openGarminAuthPopupAndSync() {
+    try {
+      // 1. Get the SSO URL from backend
+      let apiBase = import.meta.env.VITE_BACKEND_URL ?? 'https://dani-backend-ea0s.onrender.com';
+      if (apiBase && !apiBase.startsWith('http')) apiBase = `https://${apiBase}`;
+      const startRes = await fetch(`${apiBase}/api/garmin/auth-start`);
+      const { auth_url } = await startRes.json();
+
+      // 2. Open popup centered on screen
+      const w = 500, h = 700;
+      const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
+      const top  = Math.round(window.screenY + (window.outerHeight - h) / 2);
+      const popup = window.open(auth_url, 'garmin_auth', `width=${w},height=${h},left=${left},top=${top},resizable=yes`);
+
+      if (!popup) {
+        setGarminResult({ updated: 0, errors: ['Popup bloccato — abilita i popup per questo sito'] });
+        setGarminState('error');
+        return;
+      }
+
+      // 3. Wait for postMessage from popup
+      await new Promise<void>((resolve, reject) => {
+        const handler = (ev: MessageEvent) => {
+          if (ev.data === 'garmin_auth_complete') {
+            window.removeEventListener('message', handler);
+            resolve();
+          } else if (ev.data === 'garmin_auth_error') {
+            window.removeEventListener('message', handler);
+            reject(new Error('Autenticazione Garmin fallita'));
+          }
+        };
+        window.addEventListener('message', handler);
+        // Timeout after 3 minutes
+        setTimeout(() => {
+          window.removeEventListener('message', handler);
+          reject(new Error('Timeout autenticazione Garmin'));
+        }, 180_000);
+      });
+
+      // 4. Retry the sync now that token is saved
+      const res = await syncGarminAll();
+      setGarminResult({ updated: res.updated, errors: res.errors ?? [] });
+      setGarminState('done');
+    } catch (err: any) {
+      setGarminResult({ updated: 0, errors: [err?.message ?? 'Auth popup error'] });
       setGarminState('error');
     }
   }
