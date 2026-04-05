@@ -17,6 +17,7 @@ import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
 import { useApi } from '../hooks/useApi';
 import { getRuns, syncGarminAll } from '../api';
+import type { GarminSyncResult } from '../api';
 import type { Run, RunsResponse } from '../types/api';
 import { useState, useRef, useCallback, useEffect, type ReactNode } from 'react';
 import { Map, Marker, NavigationControl } from 'react-map-gl/mapbox';
@@ -124,7 +125,8 @@ interface ActivitiesViewProps {
 export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
   const { data, loading, error } = useApi<RunsResponse>(getRuns);
   const [garminState, setGarminState] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle');
-  const [garminResult, setGarminResult] = useState<{ updated: number; errors: string[] } | null>(null);
+  const [garminResult, setGarminResult] = useState<GarminSyncResult | null>(null);
+  const [garminForce, setGarminForce] = useState(false);
   const [hoveredRunId, setHoveredRunId] = useState<string | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [mapViewMode, setMapViewMode] = useState<MapViewMode>('all-zoomed');
@@ -143,12 +145,12 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
   const initialLat = lastRunWithCoords ? lastRunWithCoords.start_latlng![0] : 41.89;
 
   // ── Garmin sync ────────────────────────────────────────────────────────────
-  async function handleGarminSync() {
+  async function handleGarminSync(force = false) {
     setGarminState('syncing');
     setGarminResult(null);
     try {
-      const res = await syncGarminAll();
-      setGarminResult({ updated: res.updated, errors: res.errors ?? [] });
+      const res = await syncGarminAll(force);
+      setGarminResult(res);
       setGarminState('done');
     } catch (e: any) {
       let msg = e?.message ?? 'Unknown error';
@@ -156,16 +158,16 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
 
       // Token missing → open auth popup automatically, then retry sync
       if (msg === 'garmin_token_missing' || msg.includes('garmin_token_missing')) {
-        await openGarminAuthPopupAndSync();
+        await openGarminAuthPopupAndSync(force);
         return;
       }
 
-      setGarminResult({ updated: 0, errors: [msg] });
+      setGarminResult({ ok: false, hr_updated: 0, dynamics_updated: 0, updated: 0, skipped: 0, skipped_no_match: 0, skipped_complete: 0, total_garmin_runs: 0, errors: [msg] });
       setGarminState('error');
     }
   }
 
-  async function openGarminAuthPopupAndSync() {
+  async function openGarminAuthPopupAndSync(force = false) {
     let apiBase = import.meta.env.VITE_BACKEND_URL ?? 'https://dani-backend-ea0s.onrender.com';
     if (apiBase && !apiBase.startsWith('http')) apiBase = `https://${apiBase}`;
 
@@ -225,11 +227,11 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
       });
 
       // 5. Retry sync now that token is saved
-      const res = await syncGarminAll();
-      setGarminResult({ updated: res.updated, errors: res.errors ?? [] });
+      const res = await syncGarminAll(force);
+      setGarminResult(res);
       setGarminState('done');
     } catch (err: any) {
-      setGarminResult({ updated: 0, errors: [err?.message ?? 'Auth popup error'] });
+      setGarminResult({ ok: false, hr_updated: 0, dynamics_updated: 0, updated: 0, skipped: 0, skipped_no_match: 0, skipped_complete: 0, total_garmin_runs: 0, errors: [err?.message ?? 'Auth popup error'] });
       setGarminState('error');
     }
   }
@@ -410,15 +412,17 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
           </div>
 
           {/* Counts + Garmin */}
-          <div className="flex items-center gap-2 mt-3">
+          <div className="flex flex-wrap items-center gap-2 mt-3">
             <div className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2">
               <Calendar className="w-3.5 h-3.5 text-[#C0FF00]" />
               <span className="text-xs font-bold text-gray-400">
                 {loading ? '...' : `${runs.length} corse`}
               </span>
             </div>
+
+            {/* Sync button */}
             <button
-              onClick={handleGarminSync}
+              onClick={() => handleGarminSync(false)}
               disabled={garminState === 'syncing'}
               className={cn(
                 'flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all',
@@ -428,25 +432,54 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
               )}
             >
               {garminState === 'syncing' ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                : garminState === 'done' ? <CheckCircle2 className="w-3.5 h-3.5" />
+                : garminState === 'done'  ? <CheckCircle2 className="w-3.5 h-3.5" />
                 : <Watch className="w-3.5 h-3.5" />}
-              {garminState === 'syncing' ? 'Sync...' : garminState === 'done' ? `+${garminResult?.updated}` : 'Garmin'}
+              {garminState === 'syncing' ? 'Sync...' : 'Garmin'}
             </button>
+
+            {/* Force re-sync button */}
+            {(garminState === 'idle' || garminState === 'done' || garminState === 'error') && (
+              <button
+                onClick={() => handleGarminSync(true)}
+                disabled={garminState === 'syncing'}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-[#F59E0B]/30 text-[#F59E0B] bg-[#F59E0B]/5 hover:bg-[#F59E0B]/10 transition-all"
+                title="Forza ri-sincronizzazione di tutti i dati (ignora quelli già presenti)"
+              >
+                <Watch className="w-3 h-3" />
+                Forza
+              </button>
+            )}
+
+            {/* Result feedback */}
             {garminState === 'done' && garminResult && (
-              <span className={cn(
-                'text-[10px] font-medium',
-                garminResult.errors.length > 0 ? 'text-rose-400' : 'text-gray-500'
-              )}>
-                {garminResult.updated > 0
-                  ? `+${garminResult.updated} dynamics`
-                  : garminResult.errors.length > 0
-                    ? `0 updated · ${garminResult.errors.length} err`
-                    : 'nessuna nuova corsa'}
-              </span>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2 text-[10px]">
+                  {garminResult.hr_updated > 0 && (
+                    <span className="text-[#00FFAA] font-bold">♥ {garminResult.hr_updated} HR</span>
+                  )}
+                  {garminResult.dynamics_updated > 0 && (
+                    <span className="text-[#3B82F6] font-bold">⚡ {garminResult.dynamics_updated} dynamics</span>
+                  )}
+                  {garminResult.hr_updated === 0 && garminResult.dynamics_updated === 0 && (
+                    <span className="text-gray-500">Nessun dato nuovo</span>
+                  )}
+                  {garminResult.skipped_no_match > 0 && (
+                    <span className="text-[#F59E0B]">{garminResult.skipped_no_match} no-match</span>
+                  )}
+                </div>
+                {garminResult.errors.length > 0 && (
+                  <span
+                    className="text-[9px] text-rose-400 cursor-help"
+                    title={garminResult.errors.join('\n')}
+                  >
+                    {garminResult.errors.length} errore/i (hover per dettagli)
+                  </span>
+                )}
+              </div>
             )}
             {garminState === 'error' && garminResult && garminResult.errors.length > 0 && (
               <span className="text-[10px] text-rose-400 font-medium" title={garminResult.errors.join('\n')}>
-                {garminResult.errors[0].slice(0, 40)}…
+                {garminResult.errors[0].slice(0, 50)}
               </span>
             )}
           </div>

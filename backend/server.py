@@ -3184,21 +3184,22 @@ async def garmin_exchange_ticket(request: Request):
 
 
 @app.post("/api/garmin/sync")
-async def garmin_sync(limit: int = Query(50, ge=1, le=200)):
-    """Download FIT files from Garmin Connect and enrich runs with Running Dynamics.
+async def garmin_sync(
+    limit: int = Query(50, ge=1, le=200),
+    force: bool = Query(False, description="Forza ri-sincronizzazione anche se i dati esistono"),
+):
+    """Download FIT files from Garmin Connect e arricchisce le corse con Running Dynamics + HR.
 
-    Flow:
-    1. Login to Garmin Connect
-    2. Fetch up to `limit` most recent running activities
-    3. For each activity, find the matching run in DB by date (same day, similar distance)
-    4. Download the original FIT file
-    5. Parse running dynamics (VO, GCT, stride length, vertical ratio)
-    6. Update the run document in MongoDB
+    Due fasi per ogni corsa:
+    1. FAST PATH: sincronizza HR (averageHR, maxHR, hr%) direttamente dall'activity JSON Garmin.
+       Questo aggiorna sempre i dati HR senza scaricare il FIT.
+    2. FIT DOWNLOAD: scarica il file FIT originale per Running Dynamics (VO, GCT, SL, VR).
+       Viene saltato se TUTTI e 4 i campi dynamics sono già presenti (a meno che force=True).
     """
     if not GARMIN_EMAIL or not GARMIN_PASSWORD:
         return JSONResponse({"error": "garmin_not_configured"}, status_code=400)
 
-    print(f"[GARMIN] Starting sync (limit={limit}). Pausing 5s between FIT downloads to avoid IP block.")
+    print(f"[GARMIN] Starting sync (limit={limit}, force={force})")
     try:
         client = await _garmin_login()
     except Exception as e:
@@ -3206,20 +3207,28 @@ async def garmin_sync(limit: int = Query(50, ge=1, le=200)):
 
     athlete_id = await _get_athlete_id()
 
-    # Fetch Garmin running activities (start index 0, count = limit)
+    # Fetch max_hr dal profilo per calcolare HR%
+    profile_doc = await db.profiles.find_one({"athlete_id": athlete_id} if athlete_id else {})
+    profile_max_hr = int(profile_doc.get("max_hr", 0)) if profile_doc else 0
+
+    # Fetch Garmin running activities
     try:
         activities = client.get_activities(0, limit)
     except Exception as e:
         return JSONResponse({"error": "garmin_fetch_failed", "detail": str(e)}, status_code=500)
 
-    # Filter only running activities
+    # Filtra solo corsa
     running = [
         a for a in activities
-        if (a.get("activityType", {}).get("typeKey", "") in ("running", "trail_running", "treadmill_running"))
+        if (a.get("activityType", {}).get("typeKey", "") in
+            ("running", "trail_running", "treadmill_running"))
     ]
+    print(f"[GARMIN] Found {len(running)} running activities on Garmin")
 
-    updated = 0
-    skipped = 0
+    hr_updated = 0
+    dynamics_updated = 0
+    skipped_no_match = 0
+    skipped_complete = 0
     errors = []
 
     for act in running:
@@ -3227,15 +3236,15 @@ async def garmin_sync(limit: int = Query(50, ge=1, le=200)):
         if not garmin_id:
             continue
 
-        # Parse date and distance from Garmin
-        start_time = act.get("startTimeLocal", "")  # "2024-03-15 08:30:00"
+        # Data e distanza dall'activity JSON Garmin
+        start_time = act.get("startTimeLocal", "")   # "2024-03-15 08:30:00"
         date_str = start_time[:10] if start_time else ""
         garmin_dist_km = round((act.get("distance") or 0) / 1000, 2)
 
         if not date_str or garmin_dist_km < 1:
             continue
 
-        # Find matching run in our DB — same date, distance within 10%
+        # Trova corsa nel DB: stessa data, distanza entro 15%
         q = {"date": date_str}
         if athlete_id:
             q["athlete_id"] = athlete_id
@@ -3244,64 +3253,95 @@ async def garmin_sync(limit: int = Query(50, ge=1, le=200)):
         matched_run = None
         for run in candidates:
             db_dist = run.get("distance_km", 0) or 0
-            if garmin_dist_km > 0 and abs(db_dist - garmin_dist_km) / garmin_dist_km < 0.10:
+            if garmin_dist_km > 0 and abs(db_dist - garmin_dist_km) / garmin_dist_km < 0.15:
                 matched_run = run
                 break
 
         if not matched_run:
-            skipped += 1
+            print(f"[GARMIN] No match: {date_str} {garmin_dist_km}km")
+            skipped_no_match += 1
             continue
 
-        # Skip if we already have dynamics data
-        if matched_run.get("avg_vertical_oscillation") is not None:
-            skipped += 1
+        # ── FASE 1: Sincronizza HR dall'activity JSON (sempre, senza scaricare FIT) ──
+        hr_fields: dict = {"garmin_activity_id": garmin_id}
+        garmin_avg_hr = act.get("averageHR") or act.get("avgHr")
+        garmin_max_hr = act.get("maxHR") or act.get("maxHr")
+
+        if garmin_avg_hr and int(garmin_avg_hr) > 0:
+            hr_fields["avg_hr"] = int(garmin_avg_hr)
+            if profile_max_hr > 0:
+                hr_fields["avg_hr_pct"] = round(int(garmin_avg_hr) / profile_max_hr * 100, 1)
+        if garmin_max_hr and int(garmin_max_hr) > 0:
+            hr_fields["max_hr"] = int(garmin_max_hr)
+            if profile_max_hr > 0:
+                hr_fields["max_hr_pct"] = round(int(garmin_max_hr) / profile_max_hr * 100, 1)
+
+        # Salva HR subito (anche se la cadenza/dynamics fallirà)
+        await db.runs.update_one({"_id": matched_run["_id"]}, {"$set": hr_fields})
+        if garmin_avg_hr:
+            hr_updated += 1
+            print(f"[GARMIN] HR synced: {date_str} avg={garmin_avg_hr} max={garmin_max_hr}")
+
+        # ── FASE 2: Scarica FIT per Running Dynamics ──
+        # Salta se tutti e 4 i campi dynamics sono già presenti E non force
+        has_all_dynamics = all([
+            matched_run.get("avg_vertical_oscillation"),
+            matched_run.get("avg_ground_contact_time"),
+            matched_run.get("avg_stride_length"),
+            matched_run.get("avg_vertical_ratio"),
+        ])
+        if has_all_dynamics and not force:
+            skipped_complete += 1
+            print(f"[GARMIN] Dynamics complete, skip FIT: {date_str}")
             continue
 
-        # Download original FIT file
+        # Pausa 5s tra download per evitare blocchi IP
+        if dynamics_updated > 0:
+            await asyncio.sleep(5)
+
         try:
-            # 5s delay between activities as requested to avoid hammering Garmin
-            if updated > 0:
-                await asyncio.sleep(5)
-                
             fit_bytes = client.download_activity(
                 garmin_id,
                 dl_fmt=client.ActivityDownloadFormat.ORIGINAL
             )
         except Exception as e:
-            errors.append(f"Garmin ID {garmin_id}: download failed — {e}")
+            errors.append(f"{date_str} {garmin_dist_km}km: download FIT fallito — {e}")
+            print(f"[GARMIN] FIT download error: {e}")
             continue
 
-        # Parse dynamics
         dynamics = _extract_fit_dynamics(fit_bytes)
         if not dynamics:
-            errors.append(f"Garmin ID {garmin_id} ({date_str}): no dynamics in FIT")
+            errors.append(f"{date_str} {garmin_dist_km}km: nessuna dynamics nel FIT (orologio non supportato?)")
+            print(f"[GARMIN] No dynamics extracted from FIT for {date_str}")
             continue
 
-        # Update run in DB
-        update_fields = {**dynamics, "garmin_activity_id": garmin_id}
         await db.runs.update_one(
             {"_id": matched_run["_id"]},
-            {"$set": update_fields}
+            {"$set": dynamics}
         )
-        updated += 1
+        dynamics_updated += 1
+        print(f"[GARMIN] Dynamics synced: {date_str} → {dynamics}")
 
     return {
         "ok": True,
-        "updated": updated,
-        "skipped": skipped,
+        "hr_updated": hr_updated,
+        "dynamics_updated": dynamics_updated,
+        "updated": hr_updated,          # compatibilità frontend
+        "skipped": skipped_no_match + skipped_complete,
+        "skipped_no_match": skipped_no_match,
+        "skipped_complete": skipped_complete,
         "total_garmin_runs": len(running),
         "errors": errors,
     }
 
 
 @app.post("/api/garmin/sync-all")
-async def garmin_sync_all():
-    """Sync ALL historical Garmin running activities (downloads up to 1000).
+async def garmin_sync_all(force: bool = Query(False)):
+    """Sync tutti gli allenamenti Garmin storici (fino a 200 più recenti).
 
-    Same as /api/garmin/sync but fetches the full history.
-    Can take several minutes — runs are matched by date+distance to existing Strava runs.
+    Usa force=True per forzare ri-download dei FIT anche se dynamics già presenti.
     """
-    return await garmin_sync(limit=200)
+    return await garmin_sync(limit=200, force=force)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

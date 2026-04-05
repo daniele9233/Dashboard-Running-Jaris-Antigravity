@@ -112,8 +112,9 @@ export const getHeatmap = () => api.get<HeatmapResponse>('/api/heatmap');
 
 // ─── GARMIN ──────────────────────────────────────────────────────────────────
 export const getGarminStatus = () => api.get<{ configured: boolean; email: string | null }>('/api/garmin/status');
-export const syncGarmin = (limit = 50) => api.post<{ ok: boolean; updated: number; skipped: number; total_garmin_runs: number; errors: string[] }>(`/api/garmin/sync?limit=${limit}`);
-export const syncGarminAll = () => api.post<{ ok: boolean; updated: number; skipped: number; total_garmin_runs: number; errors: string[] }>('/api/garmin/sync-all');
+export interface GarminSyncResult { ok: boolean; hr_updated: number; dynamics_updated: number; updated: number; skipped: number; skipped_no_match: number; skipped_complete: number; total_garmin_runs: number; errors: string[]; }
+export const syncGarmin = (limit = 50, force = false) => api.post<GarminSyncResult>(`/api/garmin/sync?limit=${limit}&force=${force}`);
+export const syncGarminAll = (force = false) => api.post<GarminSyncResult>(`/api/garmin/sync-all?force=${force}`);
 
 // ─── AI ──────────────────────────────────────────────────────────────────────
 export const analyzeRun = (runId: string) =>
