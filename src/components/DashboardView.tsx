@@ -3,9 +3,11 @@ import { RecentActivities } from "./RecentActivities";
 import { MainChart } from "./MainChart";
 import { AnaerobicThreshold } from "./AnaerobicThreshold";
 import { FitnessFreshness } from "./FitnessFreshness";
+import { RacePredictions } from "./RacePredictions";
+import { VO2MaxChart } from "./VO2MaxChart";
 import { useApi } from "../hooks/useApi";
-import { getDashboard, getRuns } from "../api";
-import type { DashboardResponse, RunsResponse } from "../types/api";
+import { getDashboard, getRuns, getAnalytics } from "../api";
+import type { DashboardResponse, RunsResponse, AnalyticsResponse } from "../types/api";
 
 function daysUntil(dateStr: string): number {
   const target = new Date(dateStr);
@@ -71,8 +73,12 @@ export function DashboardView() {
     useApi<DashboardResponse>(getDashboard);
   const { data: runsData, loading: runsLoading } =
     useApi<RunsResponse>(getRuns);
+  const { data: analyticsData } =
+    useApi<AnalyticsResponse>(getAnalytics);
 
   const runs = runsData?.runs ?? [];
+  const vdot = analyticsData?.vdot ?? null;
+  const racePredictions = analyticsData?.race_predictions ?? null;
 
   // Calcola il CTL del penultimo punto per il delta
   const ffHistory = dashData?.fitness_freshness ?? [];
@@ -81,7 +87,7 @@ export function DashboardView() {
     : null;
 
   return (
-    <main className="flex-1 flex flex-col p-8 overflow-y-auto custom-scrollbar">
+    <main className="flex-1 flex flex-col p-6 lg:p-8 overflow-y-auto custom-scrollbar">
       {/* ── Header ── */}
       {dashLoading && (
         <div className="mb-6 h-16 bg-white/5 rounded-xl animate-pulse" />
@@ -105,23 +111,40 @@ export function DashboardView() {
       {/* ── Componenti con dati reali ── */}
       <TopStats runs={runs} />
 
-      <div className="grid grid-cols-[350px_1fr] gap-6 mb-6">
-        <div className="flex flex-col gap-6 h-[674px]">
+      {/* ── Main grid: left column + right chart ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-6 mb-6">
+        {/* Left column */}
+        <div className="flex flex-col gap-6 min-h-[600px] lg:h-[700px]">
           <div className="flex-1 min-h-0">
             <RecentActivities runs={runs} />
           </div>
-          <div className="h-[200px]">
+          <div className="flex-shrink-0" style={{ minHeight: 220 }}>
             <AnaerobicThreshold
               runs={runs}
               maxHr={dashData?.profile?.max_hr ?? 180}
             />
           </div>
+          <div className="flex-shrink-0" style={{ minHeight: 260 }}>
+            <VO2MaxChart runs={runs} vdot={vdot} />
+          </div>
         </div>
-        <div className="h-[674px]">
+
+        {/* Right chart */}
+        <div className="min-h-[500px] lg:h-[700px]">
           <MainChart runs={runs} />
         </div>
       </div>
 
+      {/* ── Race Predictions ── */}
+      <div className="mb-6">
+        <RacePredictions
+          runs={runs}
+          vdot={vdot}
+          racePredictions={racePredictions}
+        />
+      </div>
+
+      {/* ── Fitness & Freshness ── */}
       <FitnessFreshness
         fitnessFreshness={ffHistory}
         currentFf={dashData?.current_ff ?? null}

@@ -69,19 +69,24 @@ function addRun(entry: Entry, run: Run) {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   const total = payload.reduce((s: number, e: any) => s + (e.value || 0), 0);
+  const activeCategories = payload.filter((e: any) => e.value > 0);
+  const runCount = activeCategories.length;
   return (
-    <div className="bg-[#1E293B] border border-[#334155] p-3 rounded-lg shadow-xl text-xs">
-      <p className="text-text-muted mb-1 uppercase tracking-wider">{label}</p>
-      <p className="text-sm font-bold text-text-primary mb-2">Totale: {total.toFixed(1)} km</p>
-      {payload
-        .filter((e: any) => e.value > 0)
-        .map((e: any, i: number) => (
-          <div key={i} className="flex items-center gap-2 mb-1">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: e.color }} />
-            <span className="text-text-secondary w-16 capitalize">{e.name}:</span>
-            <span className="text-text-primary font-medium">{e.value.toFixed(1)} km</span>
+    <div className="bg-[#1E293B] border border-[#334155] p-3 rounded-lg shadow-xl text-xs min-w-[160px]">
+      <p className="text-[#C0FF00] font-bold mb-1 uppercase tracking-wider text-[11px]">{label}</p>
+      <p className="text-base font-black text-white mb-2">{total.toFixed(1)} km</p>
+      {runCount > 0 && (
+        <p className="text-[10px] text-text-muted mb-2">{runCount} uscit{runCount === 1 ? "a" : "e"}</p>
+      )}
+      <div className="border-t border-white/10 pt-2 space-y-1">
+        {activeCategories.map((e: any, i: number) => (
+          <div key={i} className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: e.color }} />
+            <span className="text-text-secondary capitalize flex-1">{e.name}:</span>
+            <span className="text-text-primary font-semibold">{e.value.toFixed(1)} km</span>
           </div>
         ))}
+      </div>
     </div>
   );
 };
@@ -176,21 +181,65 @@ export function MainChart({ runs }: MainChartProps) {
 
   const chartData = useMemo(() => buildData(runs, period), [runs, period]);
 
-  const { totalYearKm, avgKm, maxKm } = useMemo(() => {
+  const { periodKm, periodLabel, avgKm, maxKm, totalRuns, maxWeekKm } = useMemo(() => {
     const now = new Date();
-    const yearKm = runs
-      .filter((r) => new Date(r.date).getFullYear() === now.getFullYear())
-      .reduce((sum, r) => sum + (r.distance_km || 0), 0);
 
+    // Total km for the selected period (sum of chart bars)
+    const periodTotal = parseFloat(
+      chartData.reduce((s, e) => s + e.total, 0).toFixed(1)
+    );
+
+    // Label suffix based on period
+    const labelMap: Record<Period, string> = {
+      "1S": "questa settimana",
+      "4S": "ultimi 4 settimane",
+      "8S": "ultimi 8 settimane",
+      "12S": "ultimi 12 settimane",
+      "6M": "ultimi 6 mesi",
+      "1A": "quest'anno",
+      "TUTTO": "in totale",
+    };
+
+    // Average km per bar (only bars with runs)
     const withRuns = chartData.filter((w) => w.total > 0);
     const avg = withRuns.length > 0
       ? parseFloat((withRuns.reduce((s, w) => s + w.total, 0) / withRuns.length).toFixed(1))
       : 0;
 
     const max = Math.max(...chartData.map((w) => w.total), 10);
+    const maxWeek = parseFloat(Math.max(...chartData.map((w) => w.total), 0).toFixed(1));
 
-    return { totalYearKm: parseFloat(yearKm.toFixed(1)), avgKm: avg, maxKm: max };
-  }, [runs, chartData]);
+    // Total run count in period
+    let filteredRuns = runs;
+    if (period === "1S") {
+      const weekStart = getWeekStart(now);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 7);
+      filteredRuns = runs.filter((r) => {
+        const d = new Date(r.date);
+        return d >= weekStart && d < weekEnd;
+      });
+    } else if (period === "4S" || period === "8S" || period === "12S") {
+      const numWeeks = period === "4S" ? 4 : period === "8S" ? 8 : 12;
+      const cutoff = new Date(now);
+      cutoff.setDate(cutoff.getDate() - numWeeks * 7);
+      filteredRuns = runs.filter((r) => new Date(r.date) >= cutoff);
+    } else if (period === "6M") {
+      const cutoff = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      filteredRuns = runs.filter((r) => new Date(r.date) >= cutoff);
+    } else if (period === "1A") {
+      filteredRuns = runs.filter((r) => new Date(r.date).getFullYear() === now.getFullYear());
+    }
+
+    return {
+      periodKm: periodTotal,
+      periodLabel: labelMap[period],
+      avgKm: avg,
+      maxKm: max,
+      totalRuns: filteredRuns.length,
+      maxWeekKm: maxWeek,
+    };
+  }, [runs, chartData, period]);
 
   const barSize = period === "1S" ? 28 : period === "4S" ? 22 : period === "TUTTO" && chartData.length > 24 ? 8 : 14;
 
@@ -198,9 +247,20 @@ export function MainChart({ runs }: MainChartProps) {
     <div className="bg-bg-card border border-[#1E293B] rounded-xl p-6 flex flex-col h-full">
       {/* ── Header ── */}
       <div className="flex justify-between items-start mb-6">
-        <div className="text-xl font-bold text-text-primary">
-          {totalYearKm > 0 ? `${totalYearKm.toLocaleString("it")} km` : "Nessuna corsa"}
-          <span className="text-sm text-text-muted font-normal ml-2">quest'anno</span>
+        <div>
+          <div className="text-xl font-bold text-text-primary">
+            {periodKm > 0 ? `${periodKm.toLocaleString("it")} km` : "Nessuna corsa"}
+            <span className="text-sm text-text-muted font-normal ml-2">{periodLabel}</span>
+          </div>
+          {periodKm > 0 && (
+            <div className="flex gap-4 mt-1 text-[10px] text-text-muted font-semibold tracking-wider">
+              <span>{totalRuns} uscite</span>
+              <span className="text-text-secondary">·</span>
+              <span>avg {avgKm} km/{period === "1S" ? "giorno" : period.includes("S") ? "sett." : "mese"}</span>
+              <span className="text-text-secondary">·</span>
+              <span>max {maxWeekKm} km</span>
+            </div>
+          )}
         </div>
 
         {/* ── Selettore periodo ── */}
@@ -264,17 +324,17 @@ export function MainChart({ runs }: MainChartProps) {
               />
             )}
 
-            <Bar dataKey="easy"      stackId="a" fill="#14B8A6" radius={[0, 0, 2, 2]} name="easy" />
+            <Bar dataKey="easy"      stackId="a" fill="#14B8A6" fillOpacity={0.85} radius={[0, 0, 3, 3]} name="easy" />
             <Bar dataKey="tempo"     stackId="a" fill="#3B82F6" name="tempo" />
             <Bar dataKey="intervals" stackId="a" fill="#F59E0B" name="intervals" />
             <Bar dataKey="long"      stackId="a" fill="#F43F5E" name="long" />
-            <Bar dataKey="race"      stackId="a" fill="#8B5CF6" radius={[2, 2, 0, 0]} name="race" />
+            <Bar dataKey="race"      stackId="a" fill="#8B5CF6" radius={[3, 3, 0, 0]} name="race" />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       {/* ── Legenda ── */}
-      <div className="flex gap-6 mt-6 pt-6 border-t border-[#1E293B] text-[10px] text-text-muted font-semibold tracking-wider justify-center">
+      <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-[#1E293B] text-[10px] text-text-muted font-semibold tracking-wider justify-center">
         {[
           { color: "#14B8A6", label: "EASY RUN" },
           { color: "#3B82F6", label: "TEMPO" },

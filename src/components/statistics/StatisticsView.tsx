@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApi } from '../../hooks/useApi';
-import { getAnalytics, getVdotPaces } from '../../api';
-import type { AnalyticsResponse, VdotPacesResponse } from '../../types/api';
+import { getAnalytics, getVdotPaces, getRuns } from '../../api';
+import type { AnalyticsResponse, VdotPacesResponse, RunsResponse } from '../../types/api';
 import { 
   Activity, 
   Zap, 
@@ -196,12 +196,31 @@ export function StatisticsView() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const { data: analyticsData } = useApi<AnalyticsResponse>(getAnalytics);
   const { data: vdotData } = useApi<VdotPacesResponse>(getVdotPaces);
+  const { data: runsData } = useApi<RunsResponse>(getRuns);
 
+  const runs = runsData?.runs ?? [];
   const vdot = vdotData?.vdot ?? null;
   const level = vdot ? vdotLevel(vdot) : null;
   const paces = vdotData?.paces ?? {};
   const racePredictions = vdotData?.race_predictions ?? analyticsData?.race_predictions ?? {};
   const zoneDistribution = analyticsData?.zone_distribution ?? [];
+
+  // ── Monthly elevation gain from runs ─────────────────────────────────────
+  const elevationData = React.useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 12 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
+      const monthRuns = runs.filter((r) => {
+        const rd = new Date(r.date);
+        return rd.getFullYear() === d.getFullYear() && rd.getMonth() === d.getMonth();
+      });
+      const elevation = monthRuns.reduce((sum, r) => sum + (r.elevation_gain ?? 0), 0);
+      return {
+        name: d.toLocaleString("it", { month: "short" }).toUpperCase(),
+        dislivello: Math.round(elevation),
+      };
+    });
+  }, [runs]);
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
@@ -379,6 +398,52 @@ export function StatisticsView() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Elevation Gain */}
+            <div className="bg-[#111111] border border-[#222] rounded-3xl p-8">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="w-6 h-6 text-[#F59E0B]" />
+                  <div>
+                    <h2 className="text-xl font-black tracking-widest uppercase italic">Dislivello Mensile</h2>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Guadagno altimetrico (m) — ultimi 12 mesi</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-black italic" style={{ color: "#F59E0B" }}>
+                    {elevationData.reduce((s, d) => s + d.dislivello, 0).toLocaleString("it")} m
+                  </div>
+                  <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Totale anno</div>
+                </div>
+              </div>
+              {elevationData.some((d) => d.dislivello > 0) ? (
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={elevationData} margin={{ top: 4, right: 0, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="elevGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.9} />
+                          <stop offset="100%" stopColor="#D97706" stopOpacity={0.6} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#222" />
+                      <XAxis dataKey="name" stroke="#444" fontSize={10} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#444" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}m`} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#111', border: '1px solid #222', borderRadius: '12px' }}
+                        formatter={(v: any) => [`${v.toLocaleString("it")} m`, "Dislivello"]}
+                        labelStyle={{ color: "#F59E0B", fontWeight: 700, fontSize: 11 }}
+                      />
+                      <Bar dataKey="dislivello" fill="url(#elevGrad)" radius={[4, 4, 0, 0]} maxBarSize={36} name="Dislivello" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-48 flex items-center justify-center text-gray-600 text-sm">
+                  Nessun dato di dislivello disponibile
+                </div>
+              )}
             </div>
           </div>
         )}

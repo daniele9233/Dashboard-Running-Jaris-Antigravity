@@ -11,8 +11,8 @@ interface FitnessFreshnessProps {
 
 // ─── Costanti SVG ─────────────────────────────────────────────────────────────
 const SVG_W = 1000;
-const SVG_H = 260;
-const PAD = { top: 16, right: 16, bottom: 28, left: 8 };
+const SVG_H = 280;
+const PAD = { top: 20, right: 20, bottom: 32, left: 8 };
 const CW = SVG_W - PAD.left - PAD.right;
 const CH = SVG_H - PAD.top - PAD.bottom;
 
@@ -149,9 +149,9 @@ function FFChart({ points }: { points: ChartPoint[] }) {
 
   const hovered = hoverIdx !== null ? points[hoverIdx] : null;
 
-  // Tooltip position: evita di uscire dai bordi
+  // Tooltip position: evita di uscire dai bordi (tooltip width = 148)
   const tooltipX = hovered
-    ? hovered.x > SVG_W * 0.75 ? hovered.x - 130 : hovered.x + 12
+    ? hovered.x > SVG_W * 0.75 ? hovered.x - 160 : hovered.x + 14
     : 0;
 
   return (
@@ -223,31 +223,49 @@ function FFChart({ points }: { points: ChartPoint[] }) {
             fill={hovered.data.tsb >= 0 ? CLR_TSB_POS : CLR_TSB_NEG}
           />
 
-          {/* Tooltip */}
-          <g transform={`translate(${tooltipX}, ${PAD.top + 8})`}>
-            <rect x={0} y={0} width={118} height={90} rx={6}
-              fill="#1e293b" stroke="#334155" strokeWidth={1} />
-            <text x={10} y={18} fill="#94a3b8" fontSize={9} fontWeight={700} fontFamily="sans-serif">
-              {new Date(hovered.data.date).toLocaleDateString("it", { day: "numeric", month: "short", year: "2-digit" }).toUpperCase()}
+          {/* Tooltip migliorato */}
+          <g transform={`translate(${tooltipX}, ${PAD.top + 6})`}>
+            <rect x={0} y={0} width={148} height={118} rx={8}
+              fill="#0f172a" stroke="#334155" strokeWidth={1.5} />
+            {/* Date header */}
+            <rect x={0} y={0} width={148} height={24} rx={8} fill="#1e293b" />
+            <rect x={0} y={16} width={148} height={8} fill="#1e293b" />
+            <text x={10} y={16} fill="#94a3b8" fontSize={10} fontWeight={700} fontFamily="sans-serif">
+              {new Date(hovered.data.date).toLocaleDateString("it", { day: "numeric", month: "short", year: "numeric" }).toUpperCase()}
             </text>
-            <rect x={10} y={26} width={8} height={2} rx={1} fill={CLR_CTL} />
-            <text x={22} y={31} fill="#e2e8f0" fontSize={10} fontFamily="sans-serif">
-              CTL: <tspan fontWeight={700}>{hovered.data.ctl.toFixed(1)}</tspan>
+            {/* CTL */}
+            <rect x={10} y={32} width={10} height={3} rx={1.5} fill={CLR_CTL} />
+            <text x={24} y={37} fill="#94a3b8" fontSize={10} fontFamily="sans-serif">
+              Condizione
             </text>
-            <rect x={10} y={44} width={8} height={2} rx={1} fill={CLR_ATL} />
-            <text x={22} y={49} fill="#e2e8f0" fontSize={10} fontFamily="sans-serif">
-              ATL: <tspan fontWeight={700}>{hovered.data.atl.toFixed(1)}</tspan>
+            <text x={130} y={37} fill="#e2e8f0" fontSize={11} fontWeight={700} fontFamily="sans-serif" textAnchor="end">
+              {hovered.data.ctl.toFixed(1)}
             </text>
-            <rect x={10} y={62} width={8} height={2} rx={1}
+            {/* ATL */}
+            <rect x={10} y={52} width={10} height={3} rx={1.5} fill={CLR_ATL} />
+            <text x={24} y={57} fill="#94a3b8" fontSize={10} fontFamily="sans-serif">
+              Affaticamento
+            </text>
+            <text x={130} y={57} fill="#e2e8f0" fontSize={11} fontWeight={700} fontFamily="sans-serif" textAnchor="end">
+              {hovered.data.atl.toFixed(1)}
+            </text>
+            {/* TSB */}
+            <rect x={10} y={72} width={10} height={3} rx={1.5}
               fill={hovered.data.tsb >= 0 ? CLR_TSB_POS : CLR_TSB_NEG} />
-            <text x={22} y={67} fill="#e2e8f0" fontSize={10} fontFamily="sans-serif">
-              TSB: <tspan fontWeight={700}
-                fill={hovered.data.tsb >= 0 ? CLR_TSB_POS : CLR_TSB_NEG}>
-                {hovered.data.tsb >= 0 ? "+" : ""}{hovered.data.tsb.toFixed(1)}
-              </tspan>
+            <text x={24} y={77} fill="#94a3b8" fontSize={10} fontFamily="sans-serif">
+              Forma (TSB)
             </text>
-            <text x={22} y={82} fill="#64748b" fontSize={9} fontFamily="sans-serif">
-              TRIMP: {hovered.data.trimp?.toFixed(0) ?? "--"}
+            <text x={130} y={77} fontSize={11} fontWeight={700} fontFamily="sans-serif" textAnchor="end"
+              fill={hovered.data.tsb >= 0 ? CLR_TSB_POS : CLR_TSB_NEG}>
+              {hovered.data.tsb >= 0 ? "+" : ""}{hovered.data.tsb.toFixed(1)}
+            </text>
+            {/* TRIMP */}
+            <line x1={10} y1={92} x2={138} y2={92} stroke="#334155" strokeWidth={0.5} />
+            <text x={10} y={106} fill="#64748b" fontSize={9} fontFamily="sans-serif">
+              TRIMP
+            </text>
+            <text x={130} y={106} fill="#64748b" fontSize={9} fontFamily="sans-serif" textAnchor="end">
+              {hovered.data.trimp?.toFixed(0) ?? "--"}
             </text>
           </g>
         </>
@@ -307,15 +325,15 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
       </div>
 
       {/* ── Metriche ── */}
-      <div className="grid grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-3 gap-4 mb-8">
         {/* CTL */}
-        <div>
-          <div className="text-5xl font-black mb-1" style={{ color: CLR_CTL }}>
+        <div className="min-w-0">
+          <div className="text-4xl lg:text-5xl font-black mb-1 truncate" style={{ color: CLR_CTL }}>
             {ctl > 0 ? ctl.toFixed(1) : "--"}
           </div>
-          <div className="flex items-center gap-2 text-xs font-bold tracking-wider uppercase" style={{ color: CLR_CTL }}>
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CLR_CTL }} />
-            Condizione Fisica
+          <div className="flex items-center gap-1.5 text-[11px] font-bold tracking-wider uppercase truncate" style={{ color: CLR_CTL }}>
+            <div className="w-2 h-2 flex-shrink-0 rounded-full" style={{ backgroundColor: CLR_CTL }} />
+            <span className="truncate">Condizione Fisica</span>
           </div>
           {ctlTrend !== null && ctlTrend !== 0 && (
             <div className={`text-sm font-bold mt-1 ${ctlTrend >= 0 ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
@@ -325,26 +343,26 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
         </div>
 
         {/* ATL */}
-        <div>
-          <div className="text-5xl font-black mb-1" style={{ color: CLR_ATL }}>
+        <div className="min-w-0">
+          <div className="text-4xl lg:text-5xl font-black mb-1 truncate" style={{ color: CLR_ATL }}>
             {atl > 0 ? atl.toFixed(1) : "--"}
           </div>
-          <div className="flex items-center gap-2 text-xs font-bold tracking-wider uppercase" style={{ color: CLR_ATL }}>
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CLR_ATL }} />
-            Affaticamento
+          <div className="flex items-center gap-1.5 text-[11px] font-bold tracking-wider uppercase truncate" style={{ color: CLR_ATL }}>
+            <div className="w-2 h-2 flex-shrink-0 rounded-full" style={{ backgroundColor: CLR_ATL }} />
+            <span className="truncate">Affaticamento</span>
           </div>
         </div>
 
         {/* TSB */}
-        <div>
-          <div className="text-5xl font-black mb-1" style={{ color: statusColor }}>
+        <div className="min-w-0">
+          <div className="text-4xl lg:text-5xl font-black mb-1 truncate" style={{ color: statusColor }}>
             {currentFf ? (tsb >= 0 ? "+" : "") + tsb.toFixed(1) : "--"}
           </div>
-          <div className="flex items-center gap-2 text-xs font-bold tracking-wider uppercase" style={{ color: statusColor }}>
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: statusColor }} />
-            Forma Fisica
+          <div className="flex items-center gap-1.5 text-[11px] font-bold tracking-wider uppercase truncate" style={{ color: statusColor }}>
+            <div className="w-2 h-2 flex-shrink-0 rounded-full" style={{ backgroundColor: statusColor }} />
+            <span className="truncate">Forma Fisica</span>
           </div>
-          <div className="text-sm font-bold mt-1 uppercase" style={{ color: statusColor }}>
+          <div className="text-sm font-bold mt-1 uppercase truncate" style={{ color: statusColor }}>
             {statusLabel}
           </div>
         </div>
