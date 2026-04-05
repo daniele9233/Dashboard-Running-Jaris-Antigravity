@@ -120,11 +120,23 @@ weekly_reports    — Report settimanali AI
 - Skip run se `avg_vertical_oscillation` già presente nel documento
 - Feedback frontend: mostra dynamics aggiornate o errore login leggibile
 
-**RF-GARMIN-02**: Auth Garmin OAuth completamente automatica (zero intervento manuale):
-- `GET /api/garmin/auth-start`: restituisce SSO URL con `service=callback_url`
-- `GET /api/garmin/auth-callback?ticket=XXX`: scambia ticket → OAuth1 (requests_oauthlib) → OAuth2 (garth.exchange) → salva `token_dump` in MongoDB
-- Frontend: se sync fallisce con `garmin_token_missing`, apre popup SSO automaticamente, ascolta `window.postMessage('garmin_auth_complete')`, ritenta sync
-- Token auto-refresh: ogni sync riuscito riscrive il dump aggiornato in DB (refresh_token 90gg si rinnova ad ogni refresh)
+**RF-GARMIN-02**: Auth Garmin OAuth completamente automatica (zero intervento manuale) — IMPLEMENTATO:
+- `GET /api/garmin/auth-start?frontend_origin=...`: restituisce SSO URL Garmin CAS con `service=frontend_origin/garmin-auth.html`
+- `POST /api/garmin/exchange-ticket`: riceve `{ticket, service}`, chiama `preauthorized` endpoint Garmin, scambia OAuth1→OAuth2 via `garth.exchange()`, salva `token_dump` in MongoDB
+- `public/garmin-auth.html`: pagina statica in `public/` (bypassa React Router), legge `?ticket=` dall'URL, chiama backend, usa **BroadcastChannel('garmin_auth')** per notificare la finestra parent
+- Nota tecnica: Garmin setta `window.opener = null` prima del redirect → `postMessage` non funziona → BroadcastChannel risolve
+- Frontend `openGarminAuthPopupAndSync()`: se sync fallisce con `garmin_token_missing`, apre popup centrato, scrive `garmin_api_base` in `localStorage`, ascolta BroadcastChannel, ritenta sync al successo
+- Gestione 429: smoke test rate-limited → restituisce token salvato; exchange-ticket 429 → errore umano "aspetta 15 minuti e riprova"
+- Token auto-refresh: ogni sync riuscito riscrive il dump aggiornato in DB (garth lo aggiorna automaticamente)
+
+**RF-DASH-04**: Dashboard Analytics Avanzata — IMPLEMENTATO:
+- `RacePredictions`: 4 card gara (5K/10K/Mezza/Maratona) con tempo previsto, pace, VDOT; grafico linea VDOT 12 mesi; trend vs 3 mesi fa
+- `VO2MaxChart`: gauge SVG semi-circolare con colore per livello (gray/blue/teal/lime), zone allenamento Daniels (E/M/T/I/R), grafico area storico 12 mesi
+- `AnaerobicThreshold`: 12 mesi (era 7), dual-line aerobica + anaerobica, gradient fill, dots; tooltip completo
+- `MainChart`: header mostra km specifici per periodo selezionato; metriche aggiuntive (count, avg, max week)
+- `FitnessFreshness`: tooltip hover con data + CTL/ATL/TSB color-coded; fix overflow metriche (truncate)
+- `StatisticsView`: sezione Elevation Gain con grafico barre mensili ultimi 12 mesi
+- Layout responsivo: `grid-cols-1 lg:grid-cols-[350px_1fr]`, nessun `h-fixed` rigido, adattamento zoom
 
 **RF-DASH-03**: Vista dettaglio corsa — Live Telemetry 3D:
 - Toggle STANDARD / 3D TELEMETRY nella pagina dettaglio attività

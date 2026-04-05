@@ -102,12 +102,17 @@ Basata sulla logica scientifica dell'app [CORRALEJO 2026](https://github.com/dan
 - [ ] Analisi AI Claude — 9 sezioni (classificazione, utilità obiettivo, voto /10)
 - [ ] Click su grafico splits → zoom sul segmento mappa
 
-#### FASE 1.6 — Analytics Completa
-- [ ] VO2max gauge con trend storico (grafico linea nel tempo)
-- [ ] Best efforts con record personali per distanza e navigazione alla corsa
-- [ ] Volume per zona (pie chart da dati HR reali)
-- [ ] Soglia anaerobica — stima da corse threshold, trend storico
-- [ ] Storico VDOT settimana per settimana (grafico progressione)
+#### FASE 1.6 — Analytics Completa (COMPLETATO)
+- [x] VO2Max gauge SVG semi-circolare — colore per livello (gray/blue/teal/lime), zone allenamento Daniels
+- [x] VO2Max trend storico — grafico area 12 mesi con VDOT corrente
+- [x] Race Predictions — 4 card gara (5K/10K/Mezza/Maratona) con previsione tempo, pace, VDOT
+- [x] VDOT trend 12 mesi — grafico linea con confronto vs 3 mesi fa
+- [x] Soglia anaerobica estesa — 12 mesi, dual-line (aerobica + anaerobica), gradient fill, dots
+- [x] MainChart header — km specifici per periodo selezionato (non sempre "quest'anno")
+- [x] MainChart metriche aggiuntive — conteggio corse, media per unità, settimana max
+- [x] FitnessFreshness tooltip migliorato — data, CTL/ATL/TSB color-coded, no overflow
+- [x] Elevation Gain spostato in Statistics — grafico barre mensile ultimi 12 mesi
+- [x] Layout dashboard responsive — grid `1col → lg:2col`, nessun `h-fixed` rigido
 
 #### FASE 1.7 — JARVIS Local Whisper (RTX 4080 Super)
 - [ ] **Nuovo Microservizio Python Locale (`local-whisper/`)**: Server FastAPI indipendente dal cloud, fatto per girare sul PC desktop con la RTX 4080 Super.
@@ -157,6 +162,13 @@ Basata sulla logica scientifica dell'app [CORRALEJO 2026](https://github.com/dan
 - [x] `syncGarmin()` e `syncGarminAll()` aggiunte a `api/index.ts`
 - [x] `garth_generate_token.py` — script one-shot per sblocco Garmin 429 (via hotspot diverso IP)
 - [x] `POST /api/garmin/save-token` — salva token garth manualmente su MongoDB
+- [x] **Auto OAuth popup** — `openGarminAuthPopupAndSync()`: se token mancante, apre popup Garmin SSO automaticamente, nessun passo manuale
+- [x] `public/garmin-auth.html` — pagina statica (bypassa React Router), legge `?ticket=` e scambia con backend
+- [x] **BroadcastChannel('garmin_auth')** — comunicazione cross-window senza `window.opener` (Garmin lo azzera per sicurezza)
+- [x] `GET /api/garmin/auth-start` — restituisce URL SSO con `service=frontend_origin/garmin-auth.html`
+- [x] `POST /api/garmin/exchange-ticket` — scambia ticket CAS con OAuth2 via garth, salva su MongoDB
+- [x] Gestione 429 su smoke test — se rate-limited restituisce token salvato senza re-auth
+- [x] Errore umano su 429 — "aspetta 15 minuti e riprova" invece di crash
 
 #### JARVIS — Voice Assistant AI (COMPLETATO)
 - [x] Three.js particle orb fullscreen: 2000 particelle, connection lines, AdditiveBlending
