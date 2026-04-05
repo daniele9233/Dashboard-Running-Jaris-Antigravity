@@ -19,7 +19,7 @@ import { useApi } from '../hooks/useApi';
 import { getRuns, syncGarminAll } from '../api';
 import type { Run, RunsResponse } from '../types/api';
 import { useState, useRef, useCallback, useEffect, type ReactNode } from 'react';
-import Map, { Marker, NavigationControl } from 'react-map-gl/mapbox';
+import { Map, Marker, NavigationControl } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { MapRef } from 'react-map-gl/mapbox';
 
