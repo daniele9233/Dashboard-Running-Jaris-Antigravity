@@ -19,79 +19,70 @@ interface FitnessFreshnessProps {
   prevCtl: number | null;
 }
 
-const CLR_CTL = "#3B82F6";
-const CLR_ATL = "#F43F5E";
-const CLR_TSB = "#14B8A6";
-const CLR_TRIMP = "#C0FF00";
+const CLR_CTL  = "#3B82F6"; // blue  — Condizione fisica
+const CLR_ATL  = "#F43F5E"; // red   — Affaticamento
+const CLR_TSB  = "#14B8A6"; // teal  — Forma (neutro)
+
+function tsbStatusColor(tsb: number): string {
+  if (tsb > 10)  return "#C0FF00";  // lime  — Fresco
+  if (tsb > -5)  return "#14B8A6";  // teal  — Neutro
+  if (tsb > -20) return "#F59E0B";  // amber — Affaticato
+  return "#F43F5E";                  // red   — Sovrallenamento
+}
 
 function tsbStatusLabel(tsb: number): string {
-  if (tsb > 10) return "Fresco";
-  if (tsb > -5) return "Neutro";
+  if (tsb > 10)  return "Fresco";
+  if (tsb > -5)  return "Neutro";
   if (tsb > -20) return "Affaticato";
   return "Sovrallenamento";
 }
 
-function tsbStatusColor(tsb: number): string {
-  if (tsb > 10) return "#14B8A6";
-  if (tsb > -5) return "#F59E0B";
-  if (tsb > -20) return "#8B5CF6";
-  return "#F43F5E";
+function getInsight(tsb: number): { emoji: string; text: string } {
+  if (tsb > 10)
+    return { emoji: "🌟", text: "Sei in forma ottimale. Momento perfetto per gareggiare o fare un test di velocità." };
+  if (tsb > -5)
+    return { emoji: "⚖️", text: "Equilibrio tra allenamento e recupero. Continua così per migliorare costantemente." };
+  if (tsb > -20)
+    return { emoji: "🔥", text: "Il corpo sta assorbendo il carico. Gli adattamenti emergeranno nei prossimi giorni." };
+  return { emoji: "💤", text: "Recupera prima di spingere. La supercompensazione richiede riposo per manifestarsi." };
 }
 
-// ─── Custom Tooltip ──────────────────────────────────────────────────────────
+// ─── Tooltip compatto ─────────────────────────────────────────────────────────
 const FFTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   const ctl = payload.find((p: any) => p.dataKey === "ctl")?.value ?? null;
   const atl = payload.find((p: any) => p.dataKey === "atl")?.value ?? null;
   const tsb = payload.find((p: any) => p.dataKey === "tsb")?.value ?? null;
-  const trimp = payload.find((p: any) => p.dataKey === "trimp")?.value ?? null;
   const dateStr = label
-    ? new Date(label).toLocaleDateString("it", { day: "numeric", month: "short", year: "numeric" }).toUpperCase()
+    ? new Date(label).toLocaleDateString("it", { weekday: "short", day: "numeric", month: "numeric" })
     : "";
-  const tsbColor = tsb !== null ? tsbStatusColor(tsb) : "#64748B";
+  const tsbColor = tsb !== null ? tsbStatusColor(tsb) : CLR_TSB;
 
   return (
-    <div className="bg-[#0F172A] border border-[#334155] px-3 py-2.5 rounded-xl shadow-2xl text-xs min-w-[180px]">
-      <p className="text-[#94A3B8] font-bold mb-2 tracking-wider">{dateStr}</p>
-      <div className="space-y-1.5">
-        <div className="flex justify-between gap-6">
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-[2px] rounded-full inline-block" style={{ backgroundColor: CLR_CTL }} />
-            <span style={{ color: CLR_CTL }}>Condizione Fisica</span>
+    <div className="bg-[#0F172A] border border-[#334155] px-3 py-2 rounded-xl shadow-xl text-xs">
+      <p className="text-[#94A3B8] font-semibold mb-1.5 capitalize">{dateStr}</p>
+      <div className="flex gap-3 flex-wrap">
+        {ctl !== null && (
+          <span style={{ color: CLR_CTL }} className="font-bold">
+            {ctl.toFixed(1)} Cond.
           </span>
-          <span className="text-white font-bold">{ctl?.toFixed(1) ?? "—"}</span>
-        </div>
-        <div className="flex justify-between gap-6">
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-[2px] rounded-full inline-block" style={{ backgroundColor: CLR_ATL }} />
-            <span style={{ color: CLR_ATL }}>Affaticamento</span>
+        )}
+        {atl !== null && (
+          <span style={{ color: CLR_ATL }} className="font-bold">
+            {atl.toFixed(1)} Affat.
           </span>
-          <span className="text-white font-bold">{atl?.toFixed(1) ?? "—"}</span>
-        </div>
-        <div className="flex justify-between gap-6">
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-[2px] rounded-full inline-block" style={{ backgroundColor: tsbColor }} />
-            <span style={{ color: tsbColor }}>Forma Fisica</span>
+        )}
+        {tsb !== null && (
+          <span style={{ color: tsbColor }} className="font-bold">
+            {tsb >= 0 ? "+" : ""}{tsb.toFixed(1)} Forma
           </span>
-          <span className="font-bold" style={{ color: tsbColor }}>
-            {tsb !== null ? (tsb >= 0 ? "+" : "") + tsb.toFixed(1) : "—"}
-          </span>
-        </div>
-        {trimp != null && trimp > 0 && (
-          <div className="border-t border-[#1E293B] pt-1.5 flex justify-between gap-6">
-            <span className="flex items-center gap-1.5">
-              <span className="w-3 h-[2px] rounded-full inline-block" style={{ backgroundColor: CLR_TRIMP }} />
-              <span style={{ color: CLR_TRIMP }}>TRIMP</span>
-            </span>
-            <span className="text-[#94A3B8] font-bold">{trimp.toFixed(0)}</span>
-          </div>
         )}
       </div>
     </div>
   );
 };
 
-// ─── Componente principale ───────────────────────────────────────────────────
+// ─── Componente principale ────────────────────────────────────────────────────
 
 export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: FitnessFreshnessProps) {
   const [recalcLoading, setRecalcLoading] = useState(false);
@@ -103,7 +94,16 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
   const statusLabel = currentFf?.form_status ?? tsbStatusLabel(tsb);
   const statusColor = tsbStatusColor(tsb);
 
-  // Ticks mensili per X-axis (prima occorrenza di ogni mese)
+  // ATL trend dall'array storico
+  const atlTrend = useMemo(() => {
+    if (!fitnessFreshness || fitnessFreshness.length < 2) return null;
+    const prev = fitnessFreshness[fitnessFreshness.length - 2].atl;
+    return parseFloat((atl - prev).toFixed(1));
+  }, [fitnessFreshness, atl]);
+
+  const insight = useMemo(() => getInsight(tsb), [tsb]);
+
+  // Ticks mensili per X-axis
   const monthTicks = useMemo(() => {
     const seen = new Set<string>();
     return (fitnessFreshness ?? [])
@@ -131,16 +131,61 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
     }
   };
 
+  // ── KPI helper
+  const KPI = ({
+    value,
+    label,
+    color,
+    trend,
+    trendInverted = false,
+    showSign = false,
+  }: {
+    value: number;
+    label: string;
+    color: string;
+    trend?: number | null;
+    trendInverted?: boolean;
+    showSign?: boolean;
+  }) => (
+    <div className="flex flex-col gap-1.5">
+      <div className="text-5xl font-black leading-none tabular-nums" style={{ color }}>
+        {showSign && value >= 0 ? "+" : ""}{value > 0 || showSign ? value.toFixed(1) : "—"}
+      </div>
+      <div className="flex items-center gap-1.5">
+        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+        <span className="text-[9px] font-bold uppercase tracking-widest leading-tight" style={{ color }}>
+          {label}
+        </span>
+      </div>
+      {trend !== null && trend !== undefined && trend !== 0 && (
+        <div
+          className="text-xs font-bold"
+          style={{ color: (trendInverted ? trend < 0 : trend >= 0) ? "#22c55e" : "#ef4444" }}
+        >
+          {trend >= 0 ? "+" : ""}{trend}
+        </div>
+      )}
+      {/* Status badge per TSB */}
+      {showSign && (
+        <div
+          className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md self-start"
+          style={{ color, backgroundColor: color + "18" }}
+        >
+          {statusLabel}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="bg-bg-card border border-[#1E293B] rounded-xl p-6">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
-          <Activity className="w-5 h-5 text-[#3B82F6]" />
+          <Activity className="w-5 h-5" style={{ color: CLR_CTL }} />
           <h2 className="text-lg font-bold tracking-wider uppercase text-text-primary">
             Fitness &amp; Freshness
           </h2>
-          <span className="text-[10px] text-text-muted font-mono ml-1">(TRIMP Lucia)</span>
         </div>
         <button
           onClick={handleRecalculate}
@@ -152,100 +197,33 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
         </button>
       </div>
 
-      {/* ── KPI Cards ── */}
-      {(() => {
-        const prevAtl = fitnessFreshness.length >= 2
-          ? fitnessFreshness[fitnessFreshness.length - 2].atl
-          : null;
-        const atlTrend = prevAtl !== null && atl > 0 ? parseFloat((atl - prevAtl).toFixed(1)) : null;
-
-        return (
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            {/* CTL */}
-            <div className="bg-[#0F172A] border border-[#1E293B] rounded-xl p-5 flex flex-col gap-2">
-              <div className="text-6xl font-black leading-none" style={{ color: CLR_CTL }}>
-                {ctl > 0 ? ctl.toFixed(1) : "—"}
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: CLR_CTL }} />
-                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: CLR_CTL }}>
-                  Condizione Fisica
-                </span>
-              </div>
-              {ctlTrend !== null && ctlTrend !== 0 && (
-                <div className={`text-xs font-bold ${ctlTrend >= 0 ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
-                  {ctlTrend >= 0 ? "+" : ""}{ctlTrend} (7 giorni)
-                </div>
-              )}
-            </div>
-
-            {/* ATL */}
-            <div className="bg-[#0F172A] border border-[#1E293B] rounded-xl p-5 flex flex-col gap-2">
-              <div className="text-6xl font-black leading-none" style={{ color: CLR_ATL }}>
-                {atl > 0 ? atl.toFixed(1) : "—"}
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: CLR_ATL }} />
-                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: CLR_ATL }}>
-                  Affaticamento
-                </span>
-              </div>
-              {atlTrend !== null && atlTrend !== 0 && (
-                <div className={`text-xs font-bold ${atlTrend >= 0 ? "text-[#F43F5E]" : "text-[#22c55e]"}`}>
-                  {atlTrend >= 0 ? "+" : ""}{atlTrend} (7 giorni)
-                </div>
-              )}
-            </div>
-
-            {/* TSB */}
-            <div
-              className="bg-[#0F172A] rounded-xl p-5 border flex flex-col gap-2"
-              style={{ borderColor: statusColor + "40" }}
-            >
-              <div className="text-6xl font-black leading-none" style={{ color: statusColor }}>
-                {currentFf ? (tsb >= 0 ? "+" : "") + tsb.toFixed(1) : "—"}
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColor }} />
-                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: statusColor }}>
-                  Forma Fisica
-                </span>
-              </div>
-              <div
-                className="text-xs font-black uppercase tracking-widest px-2 py-0.5 rounded-md inline-block self-start"
-                style={{ color: statusColor, backgroundColor: statusColor + "18" }}
-              >
-                {statusLabel}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {/* ── KPI Row ── */}
+      <div className="grid grid-cols-3 gap-4 pb-5 mb-5 border-b border-[#1E293B]">
+        <KPI
+          value={ctl}
+          label="Condizione fisica"
+          color={CLR_CTL}
+          trend={ctlTrend}
+        />
+        <KPI
+          value={atl}
+          label="Affaticamento"
+          color={CLR_ATL}
+          trend={atlTrend}
+          trendInverted
+        />
+        <KPI
+          value={tsb}
+          label="Forma"
+          color={statusColor}
+          showSign
+        />
+      </div>
 
       {/* ── Grafico ── */}
       {fitnessFreshness && fitnessFreshness.length > 0 ? (
         <>
-          {/* Legend */}
-          <div className="flex gap-5 mb-3 text-[9px] font-semibold tracking-wider">
-            <div className="flex items-center gap-1.5">
-              <div className="w-5 h-[2.5px] rounded-full" style={{ backgroundColor: CLR_CTL }} />
-              <span style={{ color: CLR_CTL }}>CONDIZIONE (CTL 42gg)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-5 h-[2px] rounded-full" style={{ backgroundColor: CLR_ATL }} />
-              <span style={{ color: CLR_ATL }}>AFFATICAMENTO (ATL 7gg)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-5 h-[2px] rounded-full" style={{ backgroundColor: CLR_TSB }} />
-              <span style={{ color: CLR_TSB }}>FORMA (TSB)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-5 h-[1.5px] rounded-full opacity-60" style={{ backgroundColor: CLR_TRIMP }} />
-              <span className="opacity-60" style={{ color: CLR_TRIMP }}>TRIMP</span>
-            </div>
-          </div>
-
-          <div style={{ height: 280 }}>
+          <div style={{ height: 260 }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={fitnessFreshness} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="2 6" vertical={false} stroke="#1E293B" />
@@ -272,27 +250,26 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
                   content={<FFTooltip />}
                   cursor={{ stroke: "rgba(255,255,255,0.06)", strokeWidth: 1 }}
                 />
-                {/* TRIMP (background, low opacity) */}
+                {/* Condizione (CTL) — linea principale */}
                 <Line
                   type="monotone"
-                  dataKey="trimp"
-                  stroke={CLR_TRIMP}
-                  strokeWidth={1}
-                  strokeOpacity={0.35}
+                  dataKey="ctl"
+                  stroke={CLR_CTL}
+                  strokeWidth={2.5}
                   dot={false}
                   isAnimationActive={false}
                 />
-                {/* ATL */}
+                {/* Affaticamento (ATL) */}
                 <Line
                   type="monotone"
                   dataKey="atl"
                   stroke={CLR_ATL}
                   strokeWidth={1.5}
-                  strokeOpacity={0.85}
+                  strokeOpacity={0.8}
                   dot={false}
                   isAnimationActive={false}
                 />
-                {/* TSB */}
+                {/* Forma (TSB) */}
                 <Line
                   type="monotone"
                   dataKey="tsb"
@@ -301,37 +278,28 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
                   dot={false}
                   isAnimationActive={false}
                 />
-                {/* CTL (in cima, più spesso) */}
-                <Line
-                  type="monotone"
-                  dataKey="ctl"
-                  stroke={CLR_CTL}
-                  strokeWidth={3}
-                  dot={false}
-                  isAnimationActive={false}
-                />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
-          {/* TSB status guide */}
-          <div className="grid grid-cols-4 gap-3 mt-5 text-[10px]">
+          {/* ── Legenda ── */}
+          <div className="flex gap-5 mt-3 mb-4 text-[9px] font-semibold tracking-wider">
             {[
-              { label: "Fresco", range: "TSB > 10", color: "#14B8A6", desc: "Pronto per gara/test" },
-              { label: "Neutro", range: "TSB −5–10", color: "#F59E0B", desc: "Buon allenamento" },
-              { label: "Affaticato", range: "TSB −20–−5", color: "#8B5CF6", desc: "Mantieni il ritmo" },
-              { label: "Sovrallenamento", range: "TSB < −20", color: "#F43F5E", desc: "Recupera" },
-            ].map(({ label, range, color, desc }) => (
-              <div
-                key={label}
-                className="rounded-lg px-3 py-2 border"
-                style={{ borderColor: color + "30", backgroundColor: color + "08" }}
-              >
-                <div className="font-bold uppercase tracking-wider" style={{ color }}>{label}</div>
-                <div className="text-text-muted mt-0.5">{range}</div>
-                <div className="text-text-muted mt-0.5">{desc}</div>
+              { label: "Condizione fisica", color: CLR_CTL, width: 2.5 },
+              { label: "Affaticamento",     color: CLR_ATL, width: 1.5 },
+              { label: "Forma fisica",      color: CLR_TSB, width: 2 },
+            ].map(({ label, color, width }) => (
+              <div key={label} className="flex items-center gap-1.5">
+                <div className="w-5 rounded-full" style={{ height: width, backgroundColor: color }} />
+                <span style={{ color }}>{label}</span>
               </div>
             ))}
+          </div>
+
+          {/* ── Insight ── */}
+          <div className="bg-white/[0.03] border border-[#1E293B] rounded-xl px-4 py-3 text-xs text-[#94A3B8]">
+            <span className="mr-1.5">{insight.emoji}</span>
+            {insight.text}
           </div>
         </>
       ) : (
