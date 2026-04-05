@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   LineChart,
   Line,
@@ -7,7 +7,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
 import { Timer, TrendingUp, TrendingDown } from "lucide-react";
 import type { Run } from "../types/api";
@@ -18,11 +17,10 @@ interface RacePredictionsProps {
   racePredictions: Record<string, string> | null;
 }
 
-// ─── VDOT calculation from a single run ──────────────────────────────────────
+// ─── VDOT calculation ────────────────────────────────────────────────────────
 function estimateVdot(distanceKm: number, durationMin: number): number | null {
-  if (distanceKm <= 0 || durationMin <= 0) return null;
-  if (durationMin < 10) return null; // too short
-  const v = (distanceKm * 1000) / durationMin; // meters per minute
+  if (distanceKm <= 0 || durationMin <= 0 || durationMin < 10) return null;
+  const v = (distanceKm * 1000) / durationMin;
   const vo2 = -4.60 + 0.182258 * v + 0.000104 * v * v;
   const denom =
     0.8 +
@@ -33,33 +31,44 @@ function estimateVdot(distanceKm: number, durationMin: number): number | null {
   return parseFloat(vdot.toFixed(1));
 }
 
-// ─── Approximate race predictions from VDOT (Jack Daniels) ──────────────────
-function predictRaceTime(vdot: number, distanceKm: number): string {
-  // Formula: estimate optimal velocity in m/min from VDOT
-  // v at VO2max ≈ (vdot + 4.6) / 0.182258 (ignoring quadratic term as approx)
-  // Then apply race efficiency factor
-  const efficiencyFactors: Record<number, number> = {
-    5: 0.9757,
-    10: 0.9387,
-    21.0975: 0.9020,
-    42.195: 0.8600,
-  };
-  const ef = efficiencyFactors[distanceKm] ?? 0.88;
-  // optimal velocity at 100% VO2max
-  const vo2max = vdot;
-  const v_opt = (vo2max + 4.60) / 0.182258; // approx, ignores quadratic
-  const v_race = v_opt * ef; // race velocity m/min
-  const totalMin = (distanceKm * 1000) / v_race;
-  const hours = Math.floor(totalMin / 60);
-  const mins = Math.floor(totalMin % 60);
-  const secs = Math.round((totalMin % 1) * 60);
-  if (hours > 0) {
-    return `${hours}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-  }
-  return `${mins}:${String(secs).padStart(2, "0")}`;
+// ─── Pace (min/km) da VDOT + distanza ────────────────────────────────────────
+function vdotToPaceMinKm(vdot: number, distanceMeters: number): number {
+  const a = 0.000104, b = 0.182258, c = -(vdot + 4.60);
+  const vMax = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a); // m/min a VO2max
+
+  let factor: number;
+  if (distanceMeters <= 5000) factor = 0.979;
+  else if (distanceMeters <= 10000) factor = 0.960;
+  else if (distanceMeters <= 21097) factor = 0.920;
+  else factor = 0.879;
+
+  const raceV = vMax * factor; // m/min
+  return 1000 / raceV; // min/km
 }
 
-// ─── Parse time string → minutes ────────────────────────────────────────────
+function fmtPace(v: number): string {
+  const m = Math.floor(v);
+  const s = Math.round((v % 1) * 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+// ─── Tempo gara formattato ────────────────────────────────────────────────────
+function vdotToTime(vdot: number, distanceMeters: number): string {
+  const paceMin = vdotToPaceMinKm(vdot, distanceMeters);
+  const totalMin = paceMin * (distanceMeters / 1000);
+  const h = Math.floor(totalMin / 60);
+  const m = Math.floor(totalMin % 60);
+  const s = Math.round((totalMin % 1) * 60);
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+// ─── Predict race time (legacy, for cards) ───────────────────────────────────
+function predictRaceTime(vdot: number, distanceKm: number): string {
+  return vdotToTime(vdot, distanceKm * 1000);
+}
+
+// ─── Parse time string → minutes ─────────────────────────────────────────────
 function parseTime(t: string): number | null {
   const parts = t.split(":").map(Number);
   if (parts.some(isNaN)) return null;
@@ -68,7 +77,7 @@ function parseTime(t: string): number | null {
   return null;
 }
 
-// ─── Monthly VDOT history ────────────────────────────────────────────────────
+// ─── Monthly VDOT history ─────────────────────────────────────────────────────
 function buildMonthlyVdot(runs: Run[]): { name: string; vdot: number | null }[] {
   const now = new Date();
   return Array.from({ length: 12 }, (_, i) => {
@@ -77,31 +86,24 @@ function buildMonthlyVdot(runs: Run[]): { name: string; vdot: number | null }[] 
       const rd = new Date(r.date);
       return rd.getFullYear() === d.getFullYear() && rd.getMonth() === d.getMonth();
     });
-    let bestVdot: number | null = null;
+    let best: number | null = null;
     for (const r of monthRuns) {
-      if (!r.distance_km || !r.duration_minutes) continue;
-      if (r.distance_km < 3) continue; // ignore very short runs
+      if (r.distance_km < 3) continue;
       const v = estimateVdot(r.distance_km, r.duration_minutes);
-      if (v !== null && (bestVdot === null || v > bestVdot)) {
-        bestVdot = v;
-      }
+      if (v !== null && (best === null || v > best)) best = v;
     }
-    return {
-      name: d.toLocaleString("it", { month: "short" }).toUpperCase(),
-      vdot: bestVdot,
-    };
+    return { name: d.toLocaleString("it", { month: "short" }).toUpperCase(), vdot: best };
   });
 }
 
-// ─── Races config ────────────────────────────────────────────────────────────
+// ─── Race config ──────────────────────────────────────────────────────────────
 const RACES = [
-  { key: "5K",  label: "5K",   distKm: 5,       icon: "⚡", color: "#14B8A6" },
-  { key: "10K", label: "10K",  distKm: 10,      icon: "🏃", color: "#3B82F6" },
-  { key: "HM",  label: "Mezza",distKm: 21.0975, icon: "🎯", color: "#F59E0B" },
-  { key: "M",   label: "Maratona", distKm: 42.195, icon: "🏆", color: "#8B5CF6" },
+  { key: "5K",  label: "5K",      distKm: 5,       distM: 5000,  color: "#14B8A6" },
+  { key: "10K", label: "10K",     distKm: 10,      distM: 10000, color: "#3B82F6" },
+  { key: "HM",  label: "Mezza",   distKm: 21.0975, distM: 21097, color: "#F59E0B" },
+  { key: "M",   label: "Maratona",distKm: 42.195,  distM: 42195, color: "#8B5CF6" },
 ];
 
-// Keys used in racePredictions from backend
 const BACKEND_KEYS: Record<string, string[]> = {
   "5K":  ["5K", "5k"],
   "10K": ["10K", "10k"],
@@ -116,68 +118,48 @@ function findPrediction(predictions: Record<string, string>, key: string): strin
   return null;
 }
 
-// ─── vdotToTime: converte VDOT + distanza → tempo gara formattato ────────────
-function vdotToTime(vdot: number, distanceMeters: number): string {
-  const a = 0.000104, b = 0.182258, c = -(vdot + 4.60);
-  const vMax = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a); // m/min a 100% VO2max
-
-  let intensityFactor: number;
-  if (distanceMeters <= 5000) intensityFactor = 0.979;
-  else if (distanceMeters <= 10000) intensityFactor = 0.960;
-  else if (distanceMeters <= 21097) intensityFactor = 0.920;
-  else intensityFactor = 0.879;
-
-  const raceVelocity = vMax * intensityFactor;
-  const totalSeconds = (distanceMeters / raceVelocity) * 60;
-
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = Math.round(totalSeconds % 60);
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
-// ─── Trend chart tooltip con previsioni gara ─────────────────────────────────
-const TrendTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number | null; color: string; name: string }>; label?: string }) => {
+// ─── Pace chart tooltip ───────────────────────────────────────────────────────
+const PaceTooltip = ({
+  active,
+  payload,
+  label,
+  activeRace,
+}: {
+  active?: boolean;
+  payload?: any[];
+  label?: string;
+  activeRace: string;
+}) => {
   if (!active || !payload?.length) return null;
-  const vdotEntry = payload.find((e) => e.name === "VDOT" && e.value != null);
-  const vdotVal = vdotEntry?.value ?? null;
+  const entries = payload.filter((p) => p.value != null);
   return (
-    <div className="bg-[#1E293B] border border-[#334155] p-3 rounded-xl shadow-xl text-xs min-w-[180px]">
+    <div className="bg-[#1E293B] border border-[#334155] p-3 rounded-xl shadow-xl text-xs min-w-[170px]">
       <p className="text-[#C0FF00] font-bold mb-2 uppercase tracking-wider">{label}</p>
-      {vdotVal != null && (
-        <>
-          <p className="text-white font-bold mb-2">VDOT {vdotVal}</p>
-          <div className="space-y-1 border-t border-white/10 pt-2">
-            {[
-              { label: "5K", meters: 5000, color: "#14B8A6" },
-              { label: "10K", meters: 10000, color: "#3B82F6" },
-              { label: "Mezza", meters: 21097, color: "#F59E0B" },
-              { label: "Maratona", meters: 42195, color: "#8B5CF6" },
-            ].map((race) => (
-              <div key={race.label} className="flex justify-between gap-4">
-                <span style={{ color: race.color }}>{race.label}</span>
-                <span className="text-white font-bold font-mono">{vdotToTime(vdotVal, race.meters)}</span>
-              </div>
-            ))}
+      <div className="space-y-1.5">
+        {entries.map((e) => (
+          <div key={e.dataKey} className="flex justify-between gap-4">
+            <span style={{ color: e.color }}>{e.name}</span>
+            <span className="text-white font-bold font-mono">{fmtPace(e.value)}/km</span>
           </div>
-        </>
-      )}
+        ))}
+      </div>
     </div>
   );
 };
 
-// ─── Component ──────────────────────────────────────────────────────────────
+// ─── Component ───────────────────────────────────────────────────────────────
+
+type ActiveRace = "all" | "5K" | "10K" | "HM" | "M";
 
 export function RacePredictions({ runs, vdot, racePredictions }: RacePredictionsProps) {
   const predictions = racePredictions ?? {};
+  const [activeRace, setActiveRace] = useState<ActiveRace>("all");
 
   const monthlyVdot = useMemo(() => buildMonthlyVdot(runs), [runs]);
 
-  // Fill gaps in monthly VDOT with interpolation / forward-fill
+  // Forward-fill nulls
   const filledVdot = useMemo(() => {
     const arr = [...monthlyVdot];
-    // forward fill
     let last: number | null = null;
     for (let i = 0; i < arr.length; i++) {
       if (arr[i].vdot !== null) last = arr[i].vdot;
@@ -186,7 +168,22 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
     return arr;
   }, [monthlyVdot]);
 
-  // Compute trend: compare last month vs 3 months ago
+  // Pace data per ogni distanza
+  const paceData = useMemo(() => {
+    return filledVdot.map((point) => {
+      const v = point.vdot;
+      if (v == null) return { name: point.name, vdot: null };
+      return {
+        name: point.name,
+        vdot: v,
+        pace5k:  parseFloat(vdotToPaceMinKm(v, 5000).toFixed(3)),
+        pace10k: parseFloat(vdotToPaceMinKm(v, 10000).toFixed(3)),
+        paceHM:  parseFloat(vdotToPaceMinKm(v, 21097).toFixed(3)),
+        paceM:   parseFloat(vdotToPaceMinKm(v, 42195).toFixed(3)),
+      };
+    });
+  }, [filledVdot]);
+
   const vdotTrend = useMemo(() => {
     const recent = filledVdot[filledVdot.length - 1]?.vdot;
     const old = filledVdot[filledVdot.length - 4]?.vdot;
@@ -194,13 +191,37 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
     return parseFloat((recent - old).toFixed(1));
   }, [filledVdot]);
 
+  // Y-axis domain basato su linee visibili
+  const yDomain = useMemo(() => {
+    const keys =
+      activeRace === "all"
+        ? ["pace5k", "pace10k", "paceHM", "paceM"]
+        : activeRace === "5K" ? ["pace5k"]
+        : activeRace === "10K" ? ["pace10k"]
+        : activeRace === "HM" ? ["paceHM"]
+        : ["paceM"];
+    const vals = paceData.flatMap((p: any) => keys.map((k) => p[k]).filter(Boolean));
+    if (!vals.length) return ["auto", "auto"];
+    const min = Math.min(...vals) - 0.1;
+    const max = Math.max(...vals) + 0.1;
+    return [parseFloat(min.toFixed(2)), parseFloat(max.toFixed(2))];
+  }, [paceData, activeRace]);
+
+  const FILTER_BUTTONS: { key: ActiveRace; label: string; color: string }[] = [
+    { key: "all", label: "Tutte", color: "#94A3B8" },
+    { key: "5K",  label: "5K",    color: "#14B8A6" },
+    { key: "10K", label: "10K",   color: "#3B82F6" },
+    { key: "HM",  label: "Mezza", color: "#F59E0B" },
+    { key: "M",   label: "Maratona", color: "#8B5CF6" },
+  ];
+
   return (
-    <div className="bg-bg-card border border-[#1E293B] rounded-xl p-6">
+    <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-2">
-          <Timer className="w-5 h-5 text-[#C0FF00]" />
-          <h2 className="text-lg font-bold tracking-wider uppercase text-text-primary">
+          <Timer className="w-4 h-4 text-[#C0FF00]" />
+          <h2 className="text-sm font-bold tracking-wider uppercase text-text-primary">
             Previsioni di Gara
           </h2>
           {vdot && (
@@ -210,68 +231,71 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
           )}
         </div>
         {vdotTrend !== null && (
-          <div className={`flex items-center gap-1 text-sm font-bold ${vdotTrend >= 0 ? "text-[#14B8A6]" : "text-[#F43F5E]"}`}>
-            {vdotTrend >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-            {vdotTrend >= 0 ? "+" : ""}{vdotTrend} VDOT (3 mesi)
+          <div className={`flex items-center gap-1 text-xs font-bold ${vdotTrend >= 0 ? "text-[#14B8A6]" : "text-[#F43F5E]"}`}>
+            {vdotTrend >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+            {vdotTrend >= 0 ? "+" : ""}{vdotTrend} (3M)
           </div>
         )}
       </div>
 
-      {/* Race prediction cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {/* Race cards */}
+      <div className="grid grid-cols-2 gap-3 mb-4 shrink-0">
         {RACES.map((race) => {
           const backendTime = findPrediction(predictions, race.key);
           const vdotTime = vdot ? predictRaceTime(vdot, race.distKm) : null;
           const displayTime = backendTime ?? vdotTime;
           const timeMin = displayTime ? parseTime(displayTime) : null;
-
-          // Pace per km
           let paceStr = "—";
           if (timeMin && timeMin > 0) {
-            const paceMinPerKm = timeMin / race.distKm;
-            const pm = Math.floor(paceMinPerKm);
-            const ps = Math.round((paceMinPerKm % 1) * 60);
-            paceStr = `${pm}:${String(ps).padStart(2, "0")}/km`;
+            const p = timeMin / race.distKm;
+            paceStr = `${Math.floor(p)}:${String(Math.round((p % 1) * 60)).padStart(2, "0")}/km`;
           }
-
           return (
             <div
               key={race.key}
-              className="rounded-xl p-4 border flex flex-col gap-2 relative overflow-hidden group hover:border-opacity-60 transition-all"
-              style={{
-                borderColor: race.color + "30",
-                backgroundColor: race.color + "06",
-              }}
+              className="rounded-xl p-3 border flex flex-col gap-1 relative overflow-hidden group hover:border-opacity-60 transition-all"
+              style={{ borderColor: race.color + "30", backgroundColor: race.color + "06" }}
             >
-              {/* accent bar */}
-              <div
-                className="absolute top-0 left-0 h-0.5 w-0 group-hover:w-full transition-all duration-500 rounded-t-xl"
-                style={{ backgroundColor: race.color }}
-              />
-              <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: race.color }}>
-                {race.label}
-              </div>
-              <div className="text-xl font-black text-white leading-tight">
-                {displayTime ?? "—"}
-              </div>
-              <div className="text-[10px] text-text-muted font-medium">{paceStr}</div>
-              {!backendTime && vdot && (
-                <div className="text-[9px] text-text-muted italic">stimata da VDOT</div>
-              )}
+              <div className="absolute top-0 left-0 h-0.5 w-0 group-hover:w-full transition-all duration-500" style={{ backgroundColor: race.color }} />
+              <div className="text-[9px] font-black uppercase tracking-widest" style={{ color: race.color }}>{race.label}</div>
+              <div className="text-lg font-black text-white leading-tight">{displayTime ?? "—"}</div>
+              <div className="text-[9px] text-text-muted">{paceStr}</div>
             </div>
           );
         })}
       </div>
 
-      {/* VDOT trend chart */}
-      <div>
-        <div className="text-[10px] text-text-muted font-semibold tracking-wider uppercase mb-3">
-          Andamento VDOT — Ultimi 12 Mesi
+      {/* Chart section — fills remaining space */}
+      <div className="flex flex-col flex-1 min-h-0">
+        {/* Chart header + filter */}
+        <div className="flex items-center justify-between mb-2 shrink-0">
+          <div className="text-[9px] text-text-muted font-semibold tracking-wider uppercase">
+            Andamento Pace · 12 Mesi
+          </div>
+          {/* Filter buttons */}
+          <div className="flex gap-1">
+            {FILTER_BUTTONS.map(({ key, label, color }) => (
+              <button
+                key={key}
+                onClick={() => setActiveRace(key)}
+                className="text-[9px] font-bold px-2 py-0.5 rounded-md transition-all border"
+                style={{
+                  color: activeRace === key ? "#0F172A" : color,
+                  backgroundColor: activeRace === key ? color : "transparent",
+                  borderColor: color + (activeRace === key ? "FF" : "50"),
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="h-[160px] w-full">
+
+        {/* Chart */}
+        <div className="flex-1 min-h-0">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={filledVdot} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E293B" />
+            <LineChart data={paceData} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#1E293B" />
               <XAxis
                 dataKey="name"
                 axisLine={false}
@@ -284,32 +308,59 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: "#475569", fontSize: 9 }}
-                domain={["auto", "auto"]}
+                domain={yDomain}
+                tickFormatter={fmtPace}
                 dx={-4}
+                width={36}
+                reversed
               />
-              <Tooltip content={<TrendTooltip />} cursor={{ stroke: "rgba(255,255,255,0.08)" }} />
+              <Tooltip
+                content={(props) => (
+                  <PaceTooltip {...props} activeRace={activeRace} />
+                )}
+                cursor={{ stroke: "rgba(255,255,255,0.08)" }}
+              />
               <Line
                 type="monotone"
-                dataKey="vdot"
-                name="VDOT"
-                stroke="#C0FF00"
-                strokeWidth={2}
-                dot={{ r: 3, fill: "#C0FF00", strokeWidth: 0 }}
-                activeDot={{ r: 5, fill: "#C0FF00", stroke: "#fff", strokeWidth: 1 }}
-                connectNulls={false}
+                dataKey="pace5k"
+                name="5K"
+                stroke="#14B8A6"
+                strokeWidth={activeRace === "5K" || activeRace === "all" ? 2 : 0.5}
+                strokeOpacity={activeRace === "all" || activeRace === "5K" ? 1 : 0.2}
+                dot={false}
+                isAnimationActive={false}
+                hide={false}
               />
-              {vdot && (
-                <Line
-                  type="monotone"
-                  dataKey={() => vdot}
-                  name="Attuale"
-                  stroke="#C0FF00"
-                  strokeWidth={1}
-                  strokeDasharray="4 3"
-                  strokeOpacity={0.3}
-                  dot={false}
-                />
-              )}
+              <Line
+                type="monotone"
+                dataKey="pace10k"
+                name="10K"
+                stroke="#3B82F6"
+                strokeWidth={activeRace === "10K" || activeRace === "all" ? 2 : 0.5}
+                strokeOpacity={activeRace === "all" || activeRace === "10K" ? 1 : 0.2}
+                dot={false}
+                isAnimationActive={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="paceHM"
+                name="Mezza"
+                stroke="#F59E0B"
+                strokeWidth={activeRace === "HM" || activeRace === "all" ? 2 : 0.5}
+                strokeOpacity={activeRace === "all" || activeRace === "HM" ? 1 : 0.2}
+                dot={false}
+                isAnimationActive={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="paceM"
+                name="Maratona"
+                stroke="#8B5CF6"
+                strokeWidth={activeRace === "M" || activeRace === "all" ? 2 : 0.5}
+                strokeOpacity={activeRace === "all" || activeRace === "M" ? 1 : 0.2}
+                dot={false}
+                isAnimationActive={false}
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
