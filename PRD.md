@@ -113,6 +113,13 @@ weekly_reports    — Report settimanali AI
 - 3 visualizzazioni mappa: "World" (globo), "All Runs" (zoom cluster più denso), "Last Run" (zoom dettaglio corsa).
 - FlyTo animation ed auto-rotazione su card click.
 
+**RF-GARMIN-01**: Sync Running Dynamics da FIT files Garmin:
+- `download_activity(ORIGINAL)` → ZIP archive → estrai .fit dentro → `fitdecode`
+- Session frame: `avg_vertical_oscillation`, `avg_stance_time`, `avg_step_length`, `avg_vertical_ratio`
+- Record frame fallback (HRM-Pro): media per-point values
+- Skip run se `avg_vertical_oscillation` già presente nel documento
+- Feedback frontend: mostra dynamics aggiornate o errore login leggibile
+
 **RF-DASH-03**: Vista dettaglio corsa — Live Telemetry 3D:
 - Toggle STANDARD / 3D TELEMETRY nella pagina dettaglio attività
 - Mappa Mapbox GL dark-v11 con terreno DEM esagerato (1.5x), fog atmosferico, edifici 3D fill-extrusion (pitch 60°)

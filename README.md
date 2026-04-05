@@ -453,6 +453,11 @@ uvicorn server:app --reload --port 8000
 
 ## Changelog
 
+### v1.4.1 — 5 Aprile 2026
+- **Fix Garmin Sync critico**: `download_activity(ORIGINAL)` restituisce un archivio ZIP, non raw FIT bytes — `fitdecode` falliva silenziosamente su ogni attività. Aggiunto rilevamento magic bytes `PK` e decompressione automatica prima del parse FIT.
+- **sync-all limit**: aumentato da 30 a 200 attività
+- **Frontend error display**: dopo il sync mostra `+N dynamics` / `0 updated · N err` / errore login leggibile invece di sparire silenziosamente
+
 ### v1.4.0 — 5 Aprile 2026
 - **Live Telemetry 3D**: nuova modalità dettaglio corsa con mappa Mapbox 3D, edifici, terreno DEM e percorso con gradient lime
 - **Playback engine**: riproduzione a 0.5x/1x/2x/4x con RAF loop, ghost runner, chase camera con bearing interpolato
