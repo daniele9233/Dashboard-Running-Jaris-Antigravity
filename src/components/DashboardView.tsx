@@ -114,25 +114,27 @@ export function DashboardView() {
       {/* ── Main grid: left column + right chart ── */}
       <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-6 mb-6">
         {/* Left column */}
-        <div className="flex flex-col gap-6 min-h-[600px] lg:h-[700px]">
-          <div className="flex-1 min-h-0">
-            <RecentActivities runs={runs} />
-          </div>
-          <div className="flex-shrink-0" style={{ minHeight: 220 }}>
-            <AnaerobicThreshold
-              runs={runs}
-              maxHr={dashData?.profile?.max_hr ?? 180}
-            />
-          </div>
-          <div className="flex-shrink-0" style={{ minHeight: 260 }}>
-            <VO2MaxChart runs={runs} vdot={vdot} />
-          </div>
+        <div className="min-h-[500px] lg:h-[700px]">
+          <RecentActivities runs={runs} />
         </div>
 
         {/* Right chart */}
         <div className="min-h-[500px] lg:h-[700px]">
           <MainChart runs={runs} />
         </div>
+      </div>
+
+      {/* ── Zona Lattato — full width ── */}
+      <div className="mb-6">
+        <AnaerobicThreshold
+          runs={runs}
+          maxHr={dashData?.profile?.max_hr ?? 180}
+        />
+      </div>
+
+      {/* ── VO2Max — full width ── */}
+      <div className="mb-6">
+        <VO2MaxChart runs={runs} vdot={vdot} />
       </div>
 
       {/* ── Race Predictions ── */}

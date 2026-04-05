@@ -179,9 +179,9 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
   const trend = recent != null && older != null ? parseFloat((recent - older).toFixed(1)) : null;
 
   return (
-    <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 flex flex-col gap-4 min-h-[320px] h-full">
+    <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 flex flex-col" style={{ minHeight: 220 }}>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-4">
         <h3 className="text-[10px] text-text-muted font-semibold tracking-wider uppercase">
           VO2 Max / VDOT
         </h3>
@@ -192,64 +192,72 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
         )}
       </div>
 
-      {/* Gauge + level + T-pace */}
-      {displayVdot ? (
-        <div className="flex flex-col items-center gap-1">
-          <VdotGauge value={displayVdot} color={color} />
-          <div className="text-xs font-black uppercase tracking-widest" style={{ color }}>
-            {label}
-          </div>
-          <div className="text-[9px] text-text-muted">ml/kg/min · Jack Daniels</div>
-          {tPace && (
-            <div className="mt-2 flex flex-col items-center">
-              <div className="text-lg font-black text-white">{tPace}<span className="text-sm text-text-muted font-normal">/km</span></div>
-              <div className="text-[9px] text-text-muted uppercase tracking-wider">Pace Soglia (T)</div>
+      {/* Horizontal layout: gauge+metrics left, chart right */}
+      <div className="flex gap-8 flex-1 min-h-0">
+        {/* Left — gauge + metrics */}
+        <div className="flex flex-col items-center justify-center gap-3 shrink-0 w-[220px]">
+          {displayVdot ? (
+            <>
+              <VdotGauge value={displayVdot} color={color} />
+              <div className="text-sm font-black uppercase tracking-widest" style={{ color }}>{label}</div>
+              <div className="text-[9px] text-text-muted">ml/kg/min · Jack Daniels</div>
+              {tPace && (
+                <div className="flex flex-col items-center mt-1">
+                  <div className="text-[9px] text-text-muted uppercase tracking-wider mb-0.5">Pace Soglia (T)</div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-black text-white">{tPace}</span>
+                    <span className="text-base text-text-muted">/km</span>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-4">
+              <div className="text-2xl font-black text-text-muted">—</div>
+              <div className="text-[10px] text-text-muted mt-1">Aggiungi corse per calcolare</div>
             </div>
           )}
         </div>
-      ) : (
-        <div className="text-center py-4">
-          <div className="text-2xl font-black text-text-muted">—</div>
-          <div className="text-[10px] text-text-muted mt-1">Aggiungi corse per calcolare</div>
-        </div>
-      )}
 
-      {/* History chart */}
-      <div className="flex-1 min-h-[80px]">
-        <div className="text-[9px] text-text-muted font-semibold tracking-wider uppercase mb-1.5">
-          Storico 12 mesi
+        {/* Right — history chart */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="text-[9px] text-text-muted font-semibold tracking-wider uppercase mb-2">
+            Storico 12 mesi
+          </div>
+          <div className="flex-1" style={{ minHeight: 140 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={filledHistory} margin={{ top: 8, right: 8, left: -28, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="vo2Grad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={color} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#1E293B" />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#475569", fontSize: 9 }}
+                  dy={4}
+                  interval={0}
+                />
+                <YAxis hide domain={["auto", "auto"]} />
+                <Tooltip content={<ChartTooltip />} cursor={{ stroke: "rgba(255,255,255,0.08)" }} />
+                <Area
+                  type="monotone"
+                  dataKey="vdot"
+                  stroke={color}
+                  strokeWidth={2}
+                  fill="url(#vo2Grad)"
+                  dot={{ r: 3, fill: color, strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: color, stroke: "#fff", strokeWidth: 1.5 }}
+                  connectNulls={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={filledHistory} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
-            <defs>
-              <linearGradient id="vo2Grad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-                <stop offset="95%" stopColor={color} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#1E293B" />
-            <XAxis
-              dataKey="name"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#475569", fontSize: 7 }}
-              dy={4}
-              interval={2}
-            />
-            <YAxis hide domain={["auto", "auto"]} />
-            <Tooltip content={<ChartTooltip />} cursor={{ stroke: "rgba(255,255,255,0.08)" }} />
-            <Area
-              type="monotone"
-              dataKey="vdot"
-              stroke={color}
-              strokeWidth={2}
-              fill="url(#vo2Grad)"
-              dot={{ r: 2.5, fill: color, strokeWidth: 0 }}
-              activeDot={{ r: 4, fill: color, stroke: "#fff", strokeWidth: 1 }}
-              connectNulls={false}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
       </div>
     </div>
   );

@@ -143,100 +143,93 @@ export function AnaerobicThreshold({ runs, maxHr }: AnaerobicThresholdProps) {
   const thresholdPace = currentThreshold > 0 ? hrToPace(currentThreshold, safeMax) : null;
 
   return (
-    <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 flex flex-col min-h-[320px] h-full">
+    <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 flex flex-col" style={{ minHeight: 220 }}>
       {/* Header */}
-      <h3 className="text-[10px] text-text-muted font-semibold tracking-wider mb-3 uppercase">
+      <h3 className="text-[10px] text-text-muted font-semibold tracking-wider mb-4 uppercase">
         Zona Lattato · 12 Mesi
       </h3>
 
-      {/* Key metrics */}
-      <div className="flex items-end justify-between mb-4">
-        <div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-black text-[#8B5CF6]">{currentThreshold}</span>
-            <span className="text-sm text-text-muted">bpm</span>
-            {delta !== 0 && (
-              <span
-                className={`text-xs px-1.5 py-0.5 rounded font-bold ${
-                  delta >= 0 ? "text-[#8B5CF6] bg-[#8B5CF6]/10" : "text-[#F43F5E] bg-[#F43F5E]/10"
-                }`}
-              >
-                {delta >= 0 ? "↑" : "↓"} {Math.abs(delta)}
-              </span>
-            )}
+      {/* Horizontal layout: metrics left, chart right */}
+      <div className="flex gap-8 flex-1 min-h-0">
+        {/* Left — key metrics */}
+        <div className="flex flex-col justify-center gap-5 shrink-0 w-[200px]">
+          {/* Soglia anaerobica */}
+          <div>
+            <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Soglia Anaerobica</div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-5xl font-black text-[#8B5CF6]">{currentThreshold}</span>
+              <span className="text-base text-text-muted">bpm</span>
+              {delta !== 0 && (
+                <span className={`text-xs px-1.5 py-0.5 rounded font-bold ${delta >= 0 ? "text-[#8B5CF6] bg-[#8B5CF6]/10" : "text-[#F43F5E] bg-[#F43F5E]/10"}`}>
+                  {delta >= 0 ? "↑" : "↓"} {Math.abs(delta)}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="text-[9px] text-text-muted uppercase tracking-wider mt-0.5">Soglia Anaerobica</div>
-        </div>
-        {thresholdPace && (
-          <div className="text-right">
-            <div className="text-xl font-black text-white">{thresholdPace}<span className="text-sm text-text-muted font-normal">/km</span></div>
-            <div className="text-[9px] text-text-muted uppercase tracking-wider">Pace Soglia</div>
+          {/* Pace soglia */}
+          {thresholdPace && (
+            <div>
+              <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Pace Soglia</div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-4xl font-black text-white">{thresholdPace}</span>
+                <span className="text-base text-text-muted">/km</span>
+              </div>
+            </div>
+          )}
+          {/* Aerobica */}
+          <div>
+            <div className="text-[9px] text-[#14B8A6] uppercase tracking-wider mb-0.5">Aerobica</div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-xl font-black text-[#14B8A6]">{aerobicThreshold}</span>
+              <span className="text-sm text-text-muted">bpm</span>
+            </div>
           </div>
-        )}
-      </div>
-
-      {/* Chart */}
-      <div className="flex-1 min-h-[140px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={monthData} margin={{ top: 8, right: 4, left: -20, bottom: 0 }}>
-            <defs>
-              <linearGradient id="gradAnaerobic" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.4} />
-                <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.05} />
-              </linearGradient>
-              <linearGradient id="gradAerobic" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#14B8A6" stopOpacity={0.03} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#1E293B" />
-            <XAxis
-              dataKey="name"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#475569", fontSize: 8 }}
-              dy={6}
-              interval={1}
-            />
-            <YAxis domain={[yMin, yMax]} hide />
-            <Tooltip
-              content={<ThresholdTooltip />}
-              cursor={{ stroke: "rgba(255,255,255,0.08)", strokeWidth: 1 }}
-            />
-            <Area
-              type="monotone"
-              dataKey="aerobic"
-              stroke="#14B8A6"
-              strokeWidth={1.5}
-              fillOpacity={1}
-              fill="url(#gradAerobic)"
-              dot={false}
-              isAnimationActive={false}
-            />
-            <Area
-              type="monotone"
-              dataKey="value"
-              stroke="#8B5CF6"
-              strokeWidth={2}
-              fillOpacity={1}
-              fill="url(#gradAnaerobic)"
-              dot={{ r: 3, fill: "#8B5CF6", strokeWidth: 0 }}
-              activeDot={{ r: 5, fill: "#8B5CF6", stroke: "#C0FF00", strokeWidth: 1.5 }}
-              isAnimationActive={false}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Legend */}
-      <div className="flex gap-3 mt-2">
-        <div className="flex items-center gap-1.5 text-[9px] font-semibold tracking-wider">
-          <div className="w-2 h-2 rounded-full bg-[#8B5CF6]" />
-          <span className="text-[#8B5CF6]">ANAEROBICA</span>
         </div>
-        <div className="flex items-center gap-1.5 text-[9px] font-semibold tracking-wider">
-          <div className="w-2 h-2 rounded-full bg-[#14B8A6]" />
-          <span className="text-[#14B8A6]">AEROBICA · {aerobicThreshold} bpm</span>
+
+        {/* Right — chart */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex gap-3 mb-2">
+            <div className="flex items-center gap-1.5 text-[9px] font-semibold tracking-wider">
+              <div className="w-2 h-2 rounded-full bg-[#8B5CF6]" />
+              <span className="text-[#8B5CF6]">ANAEROBICA</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[9px] font-semibold tracking-wider">
+              <div className="w-2 h-2 rounded-full bg-[#14B8A6]" />
+              <span className="text-[#14B8A6]">AEROBICA</span>
+            </div>
+          </div>
+          <div className="flex-1" style={{ minHeight: 140 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={monthData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gradAnaerobic" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.05} />
+                  </linearGradient>
+                  <linearGradient id="gradAerobic" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#14B8A6" stopOpacity={0.03} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#1E293B" />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#475569", fontSize: 9 }}
+                  dy={6}
+                  interval={0}
+                />
+                <YAxis domain={[yMin, yMax]} hide />
+                <Tooltip
+                  content={<ThresholdTooltip />}
+                  cursor={{ stroke: "rgba(255,255,255,0.08)", strokeWidth: 1 }}
+                />
+                <Area type="monotone" dataKey="aerobic" stroke="#14B8A6" strokeWidth={1.5} fillOpacity={1} fill="url(#gradAerobic)" dot={false} isAnimationActive={false} />
+                <Area type="monotone" dataKey="value" stroke="#8B5CF6" strokeWidth={2} fillOpacity={1} fill="url(#gradAnaerobic)" dot={{ r: 3, fill: "#8B5CF6", strokeWidth: 0 }} activeDot={{ r: 5, fill: "#8B5CF6", stroke: "#C0FF00", strokeWidth: 1.5 }} isAnimationActive={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
     </div>
