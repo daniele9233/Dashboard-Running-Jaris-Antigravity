@@ -166,14 +166,16 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
   }
 
   async function openGarminAuthPopupAndSync() {
-    try {
-      // 1. Get the SSO URL from backend
-      let apiBase = import.meta.env.VITE_BACKEND_URL ?? 'https://dani-backend-ea0s.onrender.com';
-      if (apiBase && !apiBase.startsWith('http')) apiBase = `https://${apiBase}`;
-      const startRes = await fetch(`${apiBase}/api/garmin/auth-start`);
-      const { auth_url } = await startRes.json();
+    let apiBase = import.meta.env.VITE_BACKEND_URL ?? 'https://dani-backend-ea0s.onrender.com';
+    if (apiBase && !apiBase.startsWith('http')) apiBase = `https://${apiBase}`;
 
-      // 2. Open popup centered on screen
+    try {
+      // 1. Ask backend for SSO URL — pass our origin so Garmin redirects back here
+      const frontendOrigin = window.location.origin;
+      const startRes = await fetch(`${apiBase}/api/garmin/auth-start?frontend_origin=${encodeURIComponent(frontendOrigin)}`);
+      const { auth_url, service } = await startRes.json();
+
+      // 2. Open centered popup
       const w = 500, h = 700;
       const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
       const top  = Math.round(window.screenY + (window.outerHeight - h) / 2);
@@ -185,26 +187,38 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
         return;
       }
 
-      // 3. Wait for postMessage from popup
-      await new Promise<void>((resolve, reject) => {
-        const handler = (ev: MessageEvent) => {
-          if (ev.data === 'garmin_auth_complete') {
-            window.removeEventListener('message', handler);
-            resolve();
-          } else if (ev.data === 'garmin_auth_error') {
-            window.removeEventListener('message', handler);
-            reject(new Error('Autenticazione Garmin fallita'));
+      // 3. Poll popup.location.href every 500ms
+      //    Cross-origin (sso.garmin.com) → throws SecurityError, keep waiting
+      //    Same-origin (our /garmin-auth?ticket=XXX) → readable!
+      const ticket = await new Promise<string>((resolve, reject) => {
+        const timer = setInterval(() => {
+          try {
+            if (popup.closed) { clearInterval(timer); reject(new Error('Popup chiuso prematuramente')); return; }
+            const href = popup.location.href;
+            const params = new URL(href).searchParams;
+            const t = params.get('ticket');
+            if (t) { clearInterval(timer); popup.close(); resolve(t); }
+          } catch {
+            // Cross-origin — popup still on sso.garmin.com, keep waiting
           }
-        };
-        window.addEventListener('message', handler);
-        // Timeout after 3 minutes
-        setTimeout(() => {
-          window.removeEventListener('message', handler);
-          reject(new Error('Timeout autenticazione Garmin'));
-        }, 180_000);
+        }, 500);
+
+        // 3-minute timeout
+        setTimeout(() => { clearInterval(timer); popup.close(); reject(new Error('Timeout autenticazione Garmin')); }, 180_000);
       });
 
-      // 4. Retry the sync now that token is saved
+      // 4. Send ticket to backend for OAuth exchange
+      const exRes = await fetch(`${apiBase}/api/garmin/exchange-ticket`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket, service }),
+      });
+      if (!exRes.ok) {
+        const err = await exRes.json().catch(() => ({ error: 'exchange failed' }));
+        throw new Error(err.error ?? 'Scambio ticket fallito');
+      }
+
+      // 5. Retry sync now that token is saved
       const res = await syncGarminAll();
       setGarminResult({ updated: res.updated, errors: res.errors ?? [] });
       setGarminState('done');
