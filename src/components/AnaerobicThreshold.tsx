@@ -20,7 +20,8 @@ interface AnaerobicThresholdProps {
 function estimateMonthVdot(monthRuns: Run[]): number | null {
   let best: number | null = null;
   for (const r of monthRuns) {
-    if (r.distance_km < 5 || r.duration_minutes <= 0 || r.duration_minutes < 10) continue; // < 5K distorce VDOT
+    if (r.distance_km < 5 || r.duration_minutes <= 0 || r.duration_minutes < 10) continue;
+    if (r.duration_minutes / r.distance_km > 6.0) continue; // ritmo facile — non usare per VDOT
     const v = (r.distance_km * 1000) / r.duration_minutes; // m/min
     const vo2 = -4.60 + 0.182258 * v + 0.000104 * v * v;
     const denom =

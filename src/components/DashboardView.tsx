@@ -5,7 +5,7 @@ import { AnaerobicThreshold } from "./AnaerobicThreshold";
 import { FitnessFreshness } from "./FitnessFreshness";
 import { RacePredictions } from "./RacePredictions";
 import { VO2MaxChart } from "./VO2MaxChart";
-import { LastRunMap } from "./LastRunMap";
+import { WeeklyStatsPanel } from "./WeeklyStatsPanel";
 import { useApi } from "../hooks/useApi";
 import { getDashboard, getRuns, getAnalytics } from "../api";
 import type { DashboardResponse, RunsResponse, AnalyticsResponse, Run } from "../types/api";
@@ -82,9 +82,9 @@ function StatoFormaCard({ dashData }: { dashData: DashboardResponse | null }) {
       ? { label: "—", color: "#64748B", desc: "Sincronizza le corse", icon: "●" }
       : tsb > 10
       ? { label: "Fresco", color: "#C0FF00", desc: "Pronto per la gara", icon: "⚡" }
-      : tsb > 0
+      : tsb > -5
       ? { label: "Neutro", color: "#14B8A6", desc: "Allenamento regolare", icon: "●" }
-      : tsb > -10
+      : tsb > -20
       ? { label: "Affaticato", color: "#F59E0B", desc: "Mantieni il ritmo", icon: "▲" }
       : { label: "Sovracc.", color: "#F43F5E", desc: "Recupera prima di spingere", icon: "⚠" };
 
@@ -123,15 +123,21 @@ function StatoFormaCard({ dashData }: { dashData: DashboardResponse | null }) {
         <div className="text-3xl opacity-50">{status.icon}</div>
       </div>
 
-      {/* CTL / ATL */}
+      {/* Condizione / Fatica */}
       <div className="flex gap-5 text-xs">
         <div className="flex flex-col">
-          <span className="text-[9px] text-[#475569] uppercase tracking-wider">CTL</span>
-          <span className="text-[#3B82F6] font-black text-base">{ctl > 0 ? ctl.toFixed(1) : "—"}</span>
+          <span className="text-[9px] text-[#475569] uppercase tracking-wider">Condizione</span>
+          <span className="text-[#3B82F6] font-black text-base">{ctl > 0 ? ctl.toFixed(0) : "—"}</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-[9px] text-[#475569] uppercase tracking-wider">ATL</span>
-          <span className="text-[#F43F5E] font-black text-base">{atl > 0 ? atl.toFixed(1) : "—"}</span>
+          <span className="text-[9px] text-[#475569] uppercase tracking-wider">Fatica</span>
+          <span className="text-[#F43F5E] font-black text-base">{atl > 0 ? atl.toFixed(0) : "—"}</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[9px] text-[#475569] uppercase tracking-wider">Equilibrio</span>
+          <span className="font-black text-base" style={{ color: status.color }}>
+            {tsb !== null ? (tsb >= 0 ? "+" : "") + tsb.toFixed(0) : "—"}
+          </span>
         </div>
       </div>
 
@@ -199,7 +205,7 @@ export function DashboardView() {
       {/* ── 1) Stato di Forma + Ultima Corsa (mappa) ── */}
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 mb-6" style={{ height: 220 }}>
         <StatoFormaCard dashData={dashData ?? null} />
-        <LastRunMap run={dashData?.last_run ?? runs[0] ?? null} />
+        <WeeklyStatsPanel runs={runs} />
       </div>
 
       {/* ── 2) Main grid: RecentActivities | MainChart | RacePredictions ── */}

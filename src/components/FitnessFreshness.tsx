@@ -26,15 +26,15 @@ const CLR_TRIMP = "#C0FF00";
 
 function tsbStatusLabel(tsb: number): string {
   if (tsb > 10) return "Fresco";
-  if (tsb > 0) return "Neutro";
-  if (tsb > -10) return "Affaticato";
+  if (tsb > -5) return "Neutro";
+  if (tsb > -20) return "Affaticato";
   return "Sovrallenamento";
 }
 
 function tsbStatusColor(tsb: number): string {
   if (tsb > 10) return "#14B8A6";
-  if (tsb > 0) return "#F59E0B";
-  if (tsb > -10) return "#8B5CF6";
+  if (tsb > -5) return "#F59E0B";
+  if (tsb > -20) return "#8B5CF6";
   return "#F43F5E";
 }
 
@@ -301,9 +301,9 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
           <div className="grid grid-cols-4 gap-3 mt-5 text-[10px]">
             {[
               { label: "Fresco", range: "TSB > 10", color: "#14B8A6", desc: "Pronto per gara/test" },
-              { label: "Neutro", range: "TSB 0–10", color: "#F59E0B", desc: "Buon allenamento" },
-              { label: "Affaticato", range: "TSB −10–0", color: "#8B5CF6", desc: "Mantieni il ritmo" },
-              { label: "Sovrallenamento", range: "TSB < −10", color: "#F43F5E", desc: "Recupera" },
+              { label: "Neutro", range: "TSB −5–10", color: "#F59E0B", desc: "Buon allenamento" },
+              { label: "Affaticato", range: "TSB −20–−5", color: "#8B5CF6", desc: "Mantieni il ritmo" },
+              { label: "Sovrallenamento", range: "TSB < −20", color: "#F43F5E", desc: "Recupera" },
             ].map(({ label, range, color, desc }) => (
               <div
                 key={label}

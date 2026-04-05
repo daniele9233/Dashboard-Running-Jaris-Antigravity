@@ -20,6 +20,8 @@ interface RacePredictionsProps {
 // ─── VDOT da singola corsa (Daniels) ─────────────────────────────────────────
 function estimateVdot(distanceKm: number, durationMin: number): number | null {
   if (distanceKm < 5 || durationMin <= 0 || durationMin < 10) return null; // < 5K distorce VDOT
+  const paceMinPerKm = durationMin / distanceKm;
+  if (paceMinPerKm > 6.0) return null; // ritmo facile/recupero — non usare per VDOT
   const v = (distanceKm * 1000) / durationMin;
   const vo2 = -4.60 + 0.182258 * v + 0.000104 * v * v;
   const denom =
@@ -92,7 +94,6 @@ function buildMonthlyVdot(runs: Run[]): { name: string; vdot: number | null }[] 
     });
     let best: number | null = null;
     for (const r of monthRuns) {
-      if (r.distance_km < 3) continue;
       const v = estimateVdot(r.distance_km, r.duration_minutes);
       if (v !== null && (best === null || v > best)) best = v;
     }
