@@ -1781,7 +1781,26 @@ def _extract_fit_dynamics(binary_content: bytes) -> dict:
     - Stride Length: mm → m
     - GCT / Stance Time: ms → ms (unchanged)
     - Vertical Ratio: % (unchanged)
+
+    Note: Garmin's download_activity(ORIGINAL) returns a ZIP archive containing
+    the FIT file. We detect ZIP magic bytes (PK) and extract the .fit inside.
     """
+    import zipfile
+
+    # ── Unzip if Garmin returned a ZIP archive ───────────────────────────────
+    if binary_content[:2] == b'PK':
+        try:
+            with zipfile.ZipFile(io.BytesIO(binary_content)) as z:
+                fit_names = [n for n in z.namelist() if n.lower().endswith('.fit')]
+                if not fit_names:
+                    print("[FIT-Parser] ZIP contains no .fit file")
+                    return {}
+                binary_content = z.read(fit_names[0])
+                print(f"[FIT-Parser] Extracted {fit_names[0]} from ZIP ({len(binary_content)} bytes)")
+        except Exception as e:
+            print(f"[FIT-Parser] ZIP extraction failed: {e}")
+            return {}
+
     try:
         session_data = {}
         vo_values = []
@@ -3172,7 +3191,7 @@ async def garmin_sync_all():
     Same as /api/garmin/sync but fetches the full history.
     Can take several minutes — runs are matched by date+distance to existing Strava runs.
     """
-    return await garmin_sync(limit=30)
+    return await garmin_sync(limit=200)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

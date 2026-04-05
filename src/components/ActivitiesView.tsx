@@ -148,10 +148,13 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
     setGarminResult(null);
     try {
       const res = await syncGarminAll();
-      setGarminResult({ updated: res.updated, errors: res.errors });
+      setGarminResult({ updated: res.updated, errors: res.errors ?? [] });
       setGarminState('done');
     } catch (e: any) {
-      setGarminResult({ updated: 0, errors: [e?.message ?? 'Unknown error'] });
+      let msg = e?.message ?? 'Unknown error';
+      // Parse FastAPI error JSON if present
+      try { const parsed = JSON.parse(msg); msg = parsed.detail ?? parsed.error ?? msg; } catch {}
+      setGarminResult({ updated: 0, errors: [msg] });
       setGarminState('error');
     }
   }
@@ -354,8 +357,22 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                 : <Watch className="w-3.5 h-3.5" />}
               {garminState === 'syncing' ? 'Sync...' : garminState === 'done' ? `+${garminResult?.updated}` : 'Garmin'}
             </button>
-            {garminState === 'done' && garminResult && garminResult.errors.length > 0 && (
-              <span className="text-[10px] text-rose-400 font-medium">{garminResult.errors.length} err</span>
+            {garminState === 'done' && garminResult && (
+              <span className={cn(
+                'text-[10px] font-medium',
+                garminResult.errors.length > 0 ? 'text-rose-400' : 'text-gray-500'
+              )}>
+                {garminResult.updated > 0
+                  ? `+${garminResult.updated} dynamics`
+                  : garminResult.errors.length > 0
+                    ? `0 updated · ${garminResult.errors.length} err`
+                    : 'nessuna nuova corsa'}
+              </span>
+            )}
+            {garminState === 'error' && garminResult && garminResult.errors.length > 0 && (
+              <span className="text-[10px] text-rose-400 font-medium" title={garminResult.errors.join('\n')}>
+                {garminResult.errors[0].slice(0, 40)}…
+              </span>
             )}
           </div>
           <p className="text-gray-600 text-[10px] font-medium mt-2 uppercase tracking-widest">
