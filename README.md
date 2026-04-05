@@ -179,6 +179,18 @@ Basata sulla logica scientifica dell'app [CORRALEJO 2026](https://github.com/dan
 - [x] Vista "All Runs" — Centroid calculation sul cluster più denso degli ultimi 6 mesi (zoom 3D)
 - [x] Animazioni — FlyTo fluido al click + auto-rotazione 360° (interrompibile)
 
+#### FASE 1.9 — Live Telemetry 3D (COMPLETATO)
+- [x] Toggle STANDARD / 3D TELEMETRY nel dettaglio corsa
+- [x] LiveTelemetry3DMap — Mapbox GL dark-v11 con terreno DEM esagerato (1.5x) e fog
+- [x] Edifici 3D fill-extrusion (pitch 60°, bearing dinamico)
+- [x] Percorso completato con gradient line `rgba(192,255,0,0→1)` + glow layer
+- [x] Runner marker animato (ping + pulse) che avanza in tempo reale
+- [x] Ghost runner (punto bianco 1s indietro) per confronto
+- [x] Playback engine: RAF loop con speed 0.5x / 1x / 2x / 4x
+- [x] Chase Camera: `flyTo` con bearing interpolato sulla direzione di corsa
+- [x] Left panel (380px): 4 metric cards live (Dist / Pace / HR / Elev) + progress bar + KM splits
+- [x] Floating HUD (top-right): Pace / HR / Elev / Dist — visibile solo durante riproduzione, posizionato in alto a destra per non sovrapporsi al toggle STANDARD/3D
+
 #### FASE 3 — Gamification & Reports
 - [ ] Medaglie 6 livelli per distanza (5K, 10K, 15K, 21K): Warm-up → Bronzo → Argento → Oro → Platino → Elite
 - [ ] Badge 100+ in 8 categorie (milestone, costanza, miglioramenti, allenamento, mezza, scienza, velocità, fun)
@@ -440,6 +452,11 @@ uvicorn server:app --reload --port 8000
 ---
 
 ## Changelog
+
+### v1.4.0 — 5 Aprile 2026
+- **Live Telemetry 3D**: nuova modalità dettaglio corsa con mappa Mapbox 3D, edifici, terreno DEM e percorso con gradient lime
+- **Playback engine**: riproduzione a 0.5x/1x/2x/4x con RAF loop, ghost runner, chase camera con bearing interpolato
+- **Floating HUD**: Pace/HR/Elev/Dist durante riproduzione — riposizionato in alto a destra (`top-6 right-6`) per non sovrapporsi al toggle STANDARD/3D
 
 ### v1.3.0 — 31 Marzo 2026
 - **Activities 3D Mapbox Integration**: Nuovo layout split-screen per la lista attività con mappa 3D interattiva.

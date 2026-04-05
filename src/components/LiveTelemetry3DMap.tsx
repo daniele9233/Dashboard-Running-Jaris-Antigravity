@@ -569,7 +569,7 @@ export function LiveTelemetry3DMap({ routeCoords, streams, splits, run }: LiveTe
 
         {/* Floating telemetry HUD */}
         {playbackPoint && isPlaying && (
-          <div className="absolute top-6 left-1/2 -translate-x-1/2 pointer-events-none">
+          <div className="absolute top-6 right-6 pointer-events-none">
             <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl px-6 py-3 flex items-center gap-6 shadow-2xl">
               <div className="text-center">
                 <div className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Pace</div>

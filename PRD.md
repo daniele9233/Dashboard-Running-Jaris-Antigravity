@@ -113,6 +113,14 @@ weekly_reports    — Report settimanali AI
 - 3 visualizzazioni mappa: "World" (globo), "All Runs" (zoom cluster più denso), "Last Run" (zoom dettaglio corsa).
 - FlyTo animation ed auto-rotazione su card click.
 
+**RF-DASH-03**: Vista dettaglio corsa — Live Telemetry 3D:
+- Toggle STANDARD / 3D TELEMETRY nella pagina dettaglio attività
+- Mappa Mapbox GL dark-v11 con terreno DEM esagerato (1.5x), fog atmosferico, edifici 3D fill-extrusion (pitch 60°)
+- Playback engine: RAF loop con velocità 0.5x/1x/2x/4x, progress bar seekable, ghost runner
+- Chase Camera: `flyTo` con bearing interpolato sulla direzione di corsa
+- Left panel 380px: 4 metric cards live (Dist/Pace/HR/Elev) + KM splits scrollabili
+- Floating HUD in alto a destra (`top-6 right-6`): Pace/HR/Elev/Dist — visibile solo durante riproduzione, non si sovrappone al toggle STANDARD/3D
+
 ---
 
 ### 3.4 Sistema VDOT (Jack Daniels)
