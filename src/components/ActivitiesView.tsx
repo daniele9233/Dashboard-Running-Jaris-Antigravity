@@ -144,7 +144,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
   const initialLng = lastRunWithCoords ? lastRunWithCoords.start_latlng![1] : 12.49;
   const initialLat = lastRunWithCoords ? lastRunWithCoords.start_latlng![0] : 41.89;
 
-  // ── Garmin sync ────────────────────────────────────────────────────────────
+  // ── Garmin sync (login diretto, niente popup) ───────────────────────────────
   async function handleGarminSync(force = false) {
     setGarminState('syncing');
     setGarminResult(null);
@@ -155,83 +155,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
     } catch (e: any) {
       let msg = e?.message ?? 'Unknown error';
       try { const parsed = JSON.parse(msg); msg = parsed.detail ?? parsed.error ?? msg; } catch {}
-
-      // Token missing → open auth popup automatically, then retry sync
-      if (msg === 'garmin_token_missing' || msg.includes('garmin_token_missing')) {
-        await openGarminAuthPopupAndSync(force);
-        return;
-      }
-
       setGarminResult({ ok: false, hr_updated: 0, dynamics_updated: 0, updated: 0, skipped: 0, skipped_no_match: 0, skipped_complete: 0, total_garmin_runs: 0, errors: [msg] });
-      setGarminState('error');
-    }
-  }
-
-  async function openGarminAuthPopupAndSync(force = false) {
-    let apiBase = import.meta.env.VITE_BACKEND_URL ?? 'https://dani-backend-ea0s.onrender.com';
-    if (apiBase && !apiBase.startsWith('http')) apiBase = `https://${apiBase}`;
-
-    try {
-      // 1. Store API base in localStorage so garmin-auth.html can read it (same origin)
-      localStorage.setItem('garmin_api_base', apiBase);
-
-      // 2. Get SSO URL — service points to our static /garmin-auth.html (bypasses React Router)
-      const frontendOrigin = window.location.origin;
-      const startRes = await fetch(`${apiBase}/api/garmin/auth-start?frontend_origin=${encodeURIComponent(frontendOrigin)}`);
-      const { auth_url } = await startRes.json();
-
-      // 3. Open centered popup
-      const w = 500, h = 700;
-      const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
-      const top  = Math.round(window.screenY + (window.outerHeight - h) / 2);
-      const popup = window.open(auth_url, 'garmin_auth', `width=${w},height=${h},left=${left},top=${top},resizable=yes`);
-
-      if (!popup) {
-        setGarminResult({ updated: 0, errors: ['Popup bloccato — abilita i popup per questo sito'] });
-        setGarminState('error');
-        return;
-      }
-
-      // 4. Wait for BroadcastChannel message from garmin-auth.html
-      //    BroadcastChannel works between same-origin windows without window.opener
-      //    (Garmin clears window.opener for security → postMessage would silently fail)
-      await new Promise<void>((resolve, reject) => {
-        const bc = new BroadcastChannel('garmin_auth');
-
-        bc.onmessage = (ev) => {
-          bc.close();
-          clearInterval(closedTimer);
-          clearTimeout(timeoutId);
-          if (ev.data?.status === 'complete') {
-            resolve();
-          } else {
-            reject(new Error(ev.data?.detail || 'Autenticazione Garmin fallita'));
-          }
-        };
-
-        // Watch for manual popup close
-        const closedTimer = setInterval(() => {
-          if (popup.closed) {
-            clearInterval(closedTimer);
-            bc.close();
-            reject(new Error('Popup chiuso prima del completamento'));
-          }
-        }, 1000);
-
-        const timeoutId = setTimeout(() => {
-          clearInterval(closedTimer);
-          bc.close();
-          popup.close();
-          reject(new Error('Timeout autenticazione Garmin'));
-        }, 180_000);
-      });
-
-      // 5. Retry sync now that token is saved
-      const res = await syncGarminAll(force);
-      setGarminResult(res);
-      setGarminState('done');
-    } catch (err: any) {
-      setGarminResult({ ok: false, hr_updated: 0, dynamics_updated: 0, updated: 0, skipped: 0, skipped_no_match: 0, skipped_complete: 0, total_garmin_runs: 0, errors: [err?.message ?? 'Auth popup error'] });
       setGarminState('error');
     }
   }

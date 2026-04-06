@@ -2987,18 +2987,20 @@ async def backfill_dynamics(limit: int = 20):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 async def _garmin_login():
-    """Login to Garmin Connect and return a Garmin client instance.
+    """Login to Garmin Connect e restituisce un client autenticato.
 
-    Tries to reuse saved OAuth tokens (via garth.Client.loads) from MongoDB.
-    Falls back to username/password login if tokens are missing or expired.
+    Strategia (python-garminconnect):
+    1. Prova token salvato in MongoDB (garth auto-refresh se scaduto)
+    2. Se fallisce → login diretto con email/password (niente SSO popup!)
+    3. Salva il nuovo token in MongoDB per riuso futuro
     """
     from garminconnect import Garmin
     import garth
 
     if not GARMIN_EMAIL or not GARMIN_PASSWORD:
-        raise ValueError("GARMIN_EMAIL / GARMIN_PASSWORD not set in environment")
+        raise ValueError("GARMIN_EMAIL / GARMIN_PASSWORD non impostati in .env")
 
-    # Try to restore from saved garth token dump
+    # ── 1) Prova token salvato ────────────────────────────────────────────────
     saved = await db.garmin_tokens.find_one({"email": GARMIN_EMAIL})
     if saved and saved.get("token_dump"):
         try:
@@ -3006,18 +3008,15 @@ async def _garmin_login():
             garth_client.loads(saved["token_dump"])
             client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
             client.garth = garth_client
-            # Smoke test — garth auto-refreshes access_token if expired
             try:
-                client.get_activities(0, 1)
+                client.get_activities(0, 1)  # smoke test — garth auto-refresh
             except Exception as smoke_err:
                 err_str = str(smoke_err)
                 if "429" in err_str or "Too Many Requests" in err_str:
-                    # Rate-limited by Garmin — token is likely still valid,
-                    # skip re-auth (it won't help) and let sync handle it
-                    print(f"[GARMIN] Smoke test rate-limited (429), reusing stored token anyway")
+                    print("[GARMIN] Smoke test 429, token comunque valido")
                     return client
-                raise  # Genuine token failure → fall through to re-auth
-            # Save updated dump (refresh_token gets renewed on each refresh)
+                raise
+            # Salva token aggiornato
             try:
                 new_dump = client.garth.dumps()
                 if new_dump != saved.get("token_dump"):
@@ -3025,15 +3024,41 @@ async def _garmin_login():
                         {"email": GARMIN_EMAIL},
                         {"$set": {"token_dump": new_dump}},
                     )
+                    print("[GARMIN] Token refreshed e salvato")
             except Exception:
                 pass
+            print("[GARMIN] Login via token salvato OK")
             return client
         except Exception as e:
-            print(f"[GARMIN] Stored token invalid: {e}")
-            pass  # expired / corrupt → raise so frontend triggers OAuth flow
+            print(f"[GARMIN] Token salvato non valido: {e} → login con credenziali")
 
-    # No valid token — signal frontend to open auth popup
-    raise ValueError("garmin_token_missing")
+    # ── 2) Login diretto con email/password (garminconnect) ───────────────────
+    print(f"[GARMIN] Login diretto con {GARMIN_EMAIL}...")
+    client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
+    try:
+        await asyncio.to_thread(client.login)
+    except Exception as login_err:
+        err_str = str(login_err)
+        if "429" in err_str or "Too Many Requests" in err_str:
+            raise ValueError(
+                "Garmin rate-limit — troppi tentativi di login. "
+                "Aspetta 15-30 minuti e riprova, oppure usa garth_generate_token.py"
+            )
+        raise ValueError(f"Login Garmin fallito: {login_err}")
+
+    # Salva token per riuso futuro
+    try:
+        token_dump = client.garth.dumps()
+        await db.garmin_tokens.update_one(
+            {"email": GARMIN_EMAIL},
+            {"$set": {"email": GARMIN_EMAIL, "token_dump": token_dump}},
+            upsert=True,
+        )
+        print("[GARMIN] Login diretto OK — token salvato in MongoDB")
+    except Exception as save_err:
+        print(f"[GARMIN] Token login OK ma salvataggio fallito: {save_err}")
+
+    return client
 
 
 @app.get("/api/garmin/status")
