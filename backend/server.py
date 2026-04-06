@@ -1241,19 +1241,13 @@ async def generate_training_plan(request: Request):
         peak_vdot=peak_vdot, dist_km=dist_km,
     )
 
-    # ── ALWAYS generate the plan with the user's requested goal ──────────────
-    # No target reduction — the user's goal is respected even if unrealistic
-    # The feasibility assessment provides informative context only
+    # ── ALWAYS generate the plan with the user's EXACT requested goal ────────
+    # No target reduction, no plan_mode — the user's goal is ALWAYS respected
     suggested_weeks = max(8, min(weeks_to_race, 32))
     suggested_months = round(suggested_weeks / 4.345, 1)  # weeks → months
 
-    # ── Apply plan_mode ONLY if user explicitly requests an easier path ──────
+    # Use the user's target VDOT directly — never reduce it
     effective_target_vdot = target_vdot
-    if not feasibility["feasible"] and plan_mode:
-        if plan_mode == "aggressive":
-            effective_target_vdot = feasibility["optimistic_vdot"]
-        else:
-            effective_target_vdot = feasibility["conservative_vdot"]
 
     # ── Calculate suggested weeks/months to reach the FULL user goal ─────────
     gap = original_target_vdot - current_vdot
