@@ -16,7 +16,7 @@ import {
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
 import { useApi } from '../hooks/useApi';
-import { getRuns, syncGarminAll } from '../api';
+import { getRuns, syncGarminAll, getGarminStatus, saveGarminToken, exchangeGarminTicket, getGarminAuthUrl } from '../api';
 import type { GarminSyncResult } from '../api';
 import type { Run, RunsResponse } from '../types/api';
 import { useState, useRef, useCallback, useEffect, useMemo, type ReactNode } from 'react';
@@ -125,9 +125,10 @@ interface ActivitiesViewProps {
 
 export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
   const { data, loading, error } = useApi<RunsResponse>(getRuns);
-  const [garminState, setGarminState] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle');
+  const [garminState, setGarminState] = useState<'idle' | 'connecting' | 'syncing' | 'done' | 'error'>('idle');
   const [garminResult, setGarminResult] = useState<GarminSyncResult | null>(null);
   const [garminForce, setGarminForce] = useState(false);
+  const [garminConnected, setGarminConnected] = useState(false);
   const [hoveredRunId, setHoveredRunId] = useState<string | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [mapViewMode, setMapViewMode] = useState<MapViewMode>('all-zoomed');
@@ -156,6 +157,46 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
   // Center fallback
   const initialLng = lastRunWithCoords ? lastRunWithCoords.start_latlng![1] : 12.49;
   const initialLat = lastRunWithCoords ? lastRunWithCoords.start_latlng![0] : 41.89;
+
+  // ── Garmin auth via popup ──────────────────────────────────────────────────
+  async function handleGarminAuth() {
+    setGarminState('connecting');
+    try {
+      const { auth_url, service } = await getGarminAuthUrl();
+      
+      // Open Garmin SSO in popup
+      const popup = window.open(auth_url, 'garmin-auth', 'width=500,height=600,scrollbars=yes');
+      if (!popup) {
+        throw new Error('Popup blocked — enable popups for this site');
+      }
+
+      // Listen for message from popup
+      const handleMessage = async (event: MessageEvent) => {
+        if (event.origin !== window.location.origin) return;
+        
+        if (event.data?.type === 'garmin-auth') {
+          window.removeEventListener('message', handleMessage);
+          try {
+            await exchangeGarminTicket(event.data.ticket, event.data.service);
+            setGarminConnected(true);
+            setGarminState('done');
+            // Auto-sync after auth
+            await handleGarminSync(false);
+          } catch (e: any) {
+            let msg = e?.message ?? 'Unknown error';
+            try { const parsed = JSON.parse(msg); msg = parsed.detail ?? parsed.error ?? msg; } catch {}
+            setGarminResult({ ok: false, hr_updated: 0, dynamics_updated: 0, updated: 0, skipped: 0, skipped_no_match: 0, skipped_complete: 0, total_garmin_runs: 0, errors: [msg] });
+            setGarminState('error');
+          }
+        }
+      };
+      
+      window.addEventListener('message', handleMessage);
+    } catch (e: any) {
+      setGarminResult({ ok: false, hr_updated: 0, dynamics_updated: 0, updated: 0, skipped: 0, skipped_no_match: 0, skipped_complete: 0, total_garmin_runs: 0, errors: [e?.message ?? 'Auth failed'] });
+      setGarminState('error');
+    }
+  }
 
   // ── Garmin sync (login diretto, niente popup) ───────────────────────────────
   async function handleGarminSync(force = false) {
@@ -357,10 +398,21 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
               </span>
             </div>
 
+            {/* Connect Garmin button (when no token) */}
+            <button
+              onClick={() => handleGarminAuth()}
+              disabled={garminState === 'connecting'}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[#3B82F6]/30 text-[#3B82F6] bg-[#3B82F6]/5 hover:bg-[#3B82F6]/10 transition-all"
+              title="Connetti il tuo account Garmin per scaricare Running Dynamics"
+            >
+              {garminState === 'connecting' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Watch className="w-3.5 h-3.5" />}
+              {garminState === 'connecting' ? 'Connessione...' : 'Connetti Garmin'}
+            </button>
+
             {/* Sync button */}
             <button
               onClick={() => handleGarminSync(false)}
-              disabled={garminState === 'syncing'}
+              disabled={garminState === 'syncing' || garminState === 'connecting'}
               className={cn(
                 'flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all',
                 garminState === 'done'   ? 'bg-[#00FFAA]/10 border-[#00FFAA]/30 text-[#00FFAA]'
@@ -371,7 +423,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
               {garminState === 'syncing' ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 : garminState === 'done'  ? <CheckCircle2 className="w-3.5 h-3.5" />
                 : <Watch className="w-3.5 h-3.5" />}
-              {garminState === 'syncing' ? 'Sync...' : 'Garmin'}
+              {garminState === 'syncing' ? 'Sync...' : 'Garmin Sync'}
             </button>
 
             {/* Force re-sync button */}

@@ -1,87 +1,100 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Garmin Auth</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Garmin Authentication</title>
   <style>
-    body { margin: 0; background: #0a0a0a; color: #fff; font-family: sans-serif;
-           display: flex; flex-direction: column; align-items: center;
-           justify-content: center; height: 100vh; gap: 16px; }
-    .spinner { width: 40px; height: 40px; border: 3px solid #333;
-               border-top-color: #00FFAA; border-radius: 50%;
-               animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    p { color: #aaa; font-size: 14px; }
-    .ok  { color: #00FFAA; font-size: 18px; font-weight: 600; }
-    .err { color: #ef4444; font-size: 16px; }
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #0a0a0a;
+      color: #fff;
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .container {
+      text-align: center;
+      max-width: 300px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: #C0FF00;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .text {
+      font-size: 14px;
+      font-weight: 600;
+      color: #888;
+    }
+    .error {
+      color: #f43f5e;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+    .success {
+      color: #10B981;
+      font-size: 14px;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
-  <div class="spinner" id="spinner"></div>
-  <p id="msg">Autenticazione Garmin in corso...</p>
-
+  <div class="container">
+    <div id="loading">
+      <div class="spinner"></div>
+      <div class="text">Completing Garmin authentication...</div>
+    </div>
+    <div id="success" style="display:none;">
+      <div class="success">✓ Authentication successful!</div>
+      <div class="text" style="margin-top:8px;">You can close this window.</div>
+    </div>
+    <div id="error" class="error" style="display:none;"></div>
+  </div>
   <script>
-    (async () => {
-      const spinner = document.getElementById('spinner');
-      const msg     = document.getElementById('msg');
-
-      // BroadcastChannel — works between same-origin windows WITHOUT window.opener
-      // (Garmin clears window.opener for security, so postMessage would fail)
-      const bc = new BroadcastChannel('garmin_auth');
-
-      function notify(status, detail) {
-        bc.postMessage({ status, detail });
-        bc.close();
-      }
-
-      // 1. Read ticket from URL
-      const params  = new URLSearchParams(window.location.search);
-      const ticket  = params.get('ticket');
-      const service = window.location.origin + '/garmin-auth.html';
-
-      if (!ticket) {
-        spinner.style.display = 'none';
-        msg.className = 'err';
-        msg.textContent = 'Nessun ticket ricevuto da Garmin.';
-        notify('error', 'missing ticket');
-        return;
-      }
-
-      // 2. Read API base from localStorage (set by parent before opening popup)
-      const apiBase = localStorage.getItem('garmin_api_base')
-                   || 'https://dani-backend-ea0s.onrender.com';
-
+    (function() {
       try {
-        // 3. Exchange ticket with backend (30s timeout)
-        const controller = new AbortController();
-        const tid = setTimeout(() => controller.abort(), 30000);
-
-        const res = await fetch(apiBase + '/api/garmin/exchange-ticket', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ticket, service }),
-          signal: controller.signal,
-        });
-        clearTimeout(tid);
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: 'exchange failed' }));
-          throw new Error(err.error || 'Scambio ticket fallito (' + res.status + ')');
+        // Extract ticket from URL query params
+        const params = new URLSearchParams(window.location.search);
+        const ticket = params.get('ticket');
+        
+        if (!ticket) {
+          throw new Error('No ticket found in URL. Please try again.');
         }
 
-        // 4. Success
-        spinner.style.display = 'none';
-        msg.className = 'ok';
-        msg.textContent = '✓ Garmin autenticato!';
-        notify('complete', null);
-        setTimeout(() => window.close(), 1200);
+        // Get the service URL (same as what was passed to Garmin SSO)
+        const service = window.location.origin + '/garmin-auth.html';
 
-      } catch (e) {
-        spinner.style.display = 'none';
-        msg.className = 'err';
-        msg.textContent = 'Errore: ' + e.message;
-        notify('error', e.message);
-        // Don't auto-close on error so user can read the message
+        // Send ticket to parent window via postMessage
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage({
+            type: 'garmin-auth',
+            ticket: ticket,
+            service: service
+          }, '*');
+        }
+
+        // Show success
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('success').style.display = 'block';
+        
+        // Auto-close after 2 seconds
+        setTimeout(function() { window.close(); }, 2000);
+      } catch (err) {
+        console.error('Garmin auth error:', err);
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('error').textContent = 'Error: ' + err.message;
       }
     })();
   </script>
