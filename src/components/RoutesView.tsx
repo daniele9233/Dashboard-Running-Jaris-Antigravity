@@ -556,6 +556,42 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                   </div>
                 )}
               </div>
+
+              {/* ── Garmin Running Dynamics ─────────────────────────────── */}
+              {(run.avg_vertical_oscillation || run.avg_vertical_ratio || run.avg_ground_contact_time || run.avg_stride_length) && (
+                <>
+                  <div className="flex justify-between items-center border-b border-white/5 pb-2 mt-3">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">Running Dynamics</span>
+                    <Zap className="w-3 h-3 text-[#3B82F6]" />
+                  </div>
+                  <div className="space-y-2">
+                    {run.avg_vertical_oscillation != null && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-[8px] font-bold text-gray-500 uppercase">Osc. Verticale</span>
+                        <span className="text-[10px] font-black text-[#3B82F6]">{run.avg_vertical_oscillation} cm</span>
+                      </div>
+                    )}
+                    {run.avg_vertical_ratio != null && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-[8px] font-bold text-gray-500 uppercase">Rapporto Vert.</span>
+                        <span className="text-[10px] font-black text-[#3B82F6]">{run.avg_vertical_ratio}%</span>
+                      </div>
+                    )}
+                    {run.avg_ground_contact_time != null && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-[8px] font-bold text-gray-500 uppercase">GCT</span>
+                        <span className="text-[10px] font-black text-[#3B82F6]">{run.avg_ground_contact_time} ms</span>
+                      </div>
+                    )}
+                    {run.avg_stride_length != null && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-[8px] font-bold text-gray-500 uppercase">Lunghezza Falcata</span>
+                        <span className="text-[10px] font-black text-[#3B82F6]">{run.avg_stride_length} m</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

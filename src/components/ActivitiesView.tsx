@@ -415,9 +415,16 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
               </div>
             )}
             {garminState === 'error' && garminResult && garminResult.errors.length > 0 && (
-              <span className="text-[10px] text-rose-400 font-medium" title={garminResult.errors.join('\n')}>
-                {garminResult.errors[0].slice(0, 50)}
-              </span>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-rose-400 font-medium" title={garminResult.errors.join('\n')}>
+                  {garminResult.errors[0].slice(0, 60)}
+                </span>
+                {garminResult.errors[0].includes('rate-limit') || garminResult.errors[0].includes('rate limit') || garminResult.errors[0].includes('429') ? (
+                  <div className="text-[9px] text-amber-400/80 bg-amber-500/5 border border-amber-500/20 rounded-lg px-2 py-1">
+                    ⏳ Rate-limit Garmin: aspetta 15-30 min oppure usa lo script <code className="text-amber-300 font-mono">garth_generate_token.py</code> per salvare un token manuale
+                  </div>
+                ) : null}
+              </div>
             )}
           </div>
           <p className="text-gray-600 text-[10px] font-medium mt-2 uppercase tracking-widest">
