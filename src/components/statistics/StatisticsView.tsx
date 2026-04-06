@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { StatsDrift } from './StatsDrift';
+import { BadgesGrid } from '../BadgesGrid';
 import { useApi } from '../../hooks/useApi';
 import { getAnalytics, getVdotPaces, getRuns } from '../../api';
 import type { AnalyticsResponse, VdotPacesResponse, RunsResponse } from '../../types/api';
@@ -26,7 +28,8 @@ import {
   Info,
   Shield,
   ArrowDown,
-  TrendingDown
+  TrendingDown,
+  Trophy
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -288,6 +291,7 @@ export function StatisticsView() {
     { id: 'performance', label: 'Performance', icon: Zap },
     { id: 'biology', label: 'Biologia & Futuro', icon: FlaskConical },
     { id: 'load', label: 'Carico & Rischio', icon: ShieldAlert },
+    { id: 'badges', label: 'Badge', icon: Star },
   ];
 
   return (
@@ -820,6 +824,9 @@ export function StatisticsView() {
                 <p className="text-center text-gray-600 text-sm py-4">VDOT non disponibile — sincronizza corse validate per calcolare i passi</p>
               )}
             </div>
+
+            {/* Deriva Cardiaca */}
+            <StatsDrift runs={runs} />
           </div>
         )}
 
@@ -970,6 +977,18 @@ export function StatisticsView() {
                 <CircularGauge value={20} label="Dolori Muscolari" status="Basso" color="#10B981" size="large" />
               </div>
             </div>
+          </div>
+        )}
+
+        {/* BADGES TAB */}
+        {activeTab === 'badges' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <BadgesGrid
+              runs={runs}
+              vdot={vdot ?? 0}
+              vdotPeak={vdot ? vdot + 2 : 0}
+              vdotDelta={0}
+            />
           </div>
         )}
 
