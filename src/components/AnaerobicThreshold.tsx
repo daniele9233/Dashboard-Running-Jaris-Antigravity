@@ -1,309 +1,328 @@
 import { useMemo } from "react";
 import {
-  AreaChart,
-  Area,
-  ResponsiveContainer,
-  YAxis,
+  ScatterChart,
+  Scatter,
   XAxis,
+  YAxis,
   Tooltip,
   CartesianGrid,
+  ResponsiveContainer,
+  ReferenceLine,
+  Area,
 } from "recharts";
 import type { Run } from "../types/api";
 
-interface AnaerobicThresholdProps {
-  runs: Run[];
-  maxHr: number;
-  vdot?: number | null;
+// ─── helpers ─────────────────────────────────────────────────────────────────
+
+function parsePaceSec(pace: string): number | null {
+  if (!pace) return null;
+  const parts = pace.split(":");
+  if (parts.length < 2) return null;
+  const v = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+  return v > 0 ? v : null;
 }
 
-// ─── VDOT da una singola corsa (stessa formula di VO2MaxChart) ────────────────
-function estimateMonthVdot(monthRuns: Run[]): number | null {
-  let best: number | null = null;
-  for (const r of monthRuns) {
-    if (r.distance_km < 5 || r.duration_minutes <= 0 || r.duration_minutes < 10) continue;
-    if (r.duration_minutes / r.distance_km > 6.0) continue; // ritmo facile — non usare per VDOT
-    const v = (r.distance_km * 1000) / r.duration_minutes; // m/min
-    const vo2 = -4.60 + 0.182258 * v + 0.000104 * v * v;
-    const denom =
-      0.8 +
-      0.1894393 * Math.exp(-0.012778 * r.duration_minutes) +
-      0.2989558 * Math.exp(-0.1932605 * r.duration_minutes);
-    const vdot = vo2 / denom;
-    if (vdot < 28 || vdot > 70) continue;
-    if (best === null || vdot > best) best = parseFloat(vdot.toFixed(1));
-  }
-  return best;
+function fmtPace(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-// ─── T-pace (soglia Daniels 88% VO2max) da VDOT ─────────────────────────────
-function calcTPaceFromVdot(vdot: number): string {
+// ─── T-pace & E-pace from VDOT ───────────────────────────────────────────────
+function calcTPace(vdot: number): string {
   const a = 0.000104, b = 0.182258, c = -(vdot + 4.60);
   const vMax = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
-  const vT = vMax * 0.88;
-  const paceMin = 1000 / vT;
-  const m = Math.floor(paceMin);
-  const s = Math.round((paceMin % 1) * 60);
-  return `${m}:${String(s).padStart(2, "0")}`;
+  const p = 1000 / (vMax * 0.88);
+  return `${Math.floor(p)}:${String(Math.round((p % 1) * 60)).padStart(2, "0")}`;
 }
-
-// ─── E-pace (aerobica Daniels 70% VO2max) da VDOT ───────────────────────────
-function calcEPaceFromVdot(vdot: number): string {
+function calcEPace(vdot: number): string {
   const a = 0.000104, b = 0.182258, c = -(vdot + 4.60);
   const vMax = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
-  const vE = vMax * 0.70;
-  const paceMin = 1000 / vE;
-  const m = Math.floor(paceMin);
-  const s = Math.round((paceMin % 1) * 60);
-  return `${m}:${String(s).padStart(2, "0")}`;
+  const p = 1000 / (vMax * 0.70);
+  return `${Math.floor(p)}:${String(Math.round((p % 1) * 60)).padStart(2, "0")}`;
 }
 
-// ─── Tooltip (factory che chiude sul monthData per accedere al vdot per-mese) ─
-function makeThresholdTooltip(
-  monthVdots: Record<string, number | null>
-) {
-  return function ThresholdTooltip({ active, payload }: any) {
-    if (!active || !payload?.length) return null;
-    const { name, value, aerobic } = payload[0].payload;
-    const monthVdot = monthVdots[name] ?? null;
+// ─── Tooltip ─────────────────────────────────────────────────────────────────
 
-    const tPace = monthVdot ? calcTPaceFromVdot(monthVdot) : null;
-    const ePace = monthVdot ? calcEPaceFromVdot(monthVdot) : null;
-
-    return (
-      <div className="bg-[#1E293B] border border-[#334155] px-3 py-2 rounded-xl shadow-2xl text-xs min-w-[185px]">
-        <p className="text-[#C0FF00] font-bold mb-1.5 uppercase tracking-wider">{name}</p>
-        {monthVdot && (
-          <p className="text-text-muted text-[10px] mb-1.5">VDOT {monthVdot}</p>
-        )}
-        <div className="space-y-1.5">
-          <div className="flex justify-between gap-3">
-            <span className="text-[#8B5CF6]">Soglia</span>
-            <span className="text-white font-bold">{value} bpm</span>
-          </div>
-          {tPace && (
-            <div className="flex justify-between gap-3">
-              <span className="text-[#8B5CF6] text-[10px]">T-pace</span>
-              <span className="text-[#C0FF00] font-black">{tPace}/km</span>
-            </div>
-          )}
-          <div className="border-t border-[#334155] pt-1.5 flex justify-between gap-3">
-            <span className="text-[#14B8A6]">Aerobica</span>
-            <span className="text-white font-bold">
-              {aerobic} bpm{ePace ? ` · ${ePace}/km` : ""}
+function CustomTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  const pt = payload[0]?.payload;
+  if (!pt) return null;
+  return (
+    <div className="bg-[#0F172A] border border-[#1E293B] rounded-xl px-3 py-2.5 shadow-2xl text-xs min-w-[180px]">
+      <p className="text-[#C0FF00] font-bold mb-2 text-[10px] uppercase tracking-wider">{pt.date}</p>
+      <div className="space-y-1.5">
+        {pt.hr && (
+          <div className="flex items-center justify-between gap-4">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#F43F5E] shrink-0" />
+              <span className="text-gray-400">FC Media</span>
             </span>
+            <span className="font-bold text-white">{pt.hr} bpm</span>
           </div>
-        </div>
+        )}
+        {pt.paceSec && (
+          <div className="flex items-center justify-between gap-4">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#3B82F6] shrink-0" />
+              <span className="text-gray-400">Passo</span>
+            </span>
+            <span className="font-bold text-white">{fmtPace(pt.paceSec)}/km</span>
+          </div>
+        )}
+        {pt.distKm && (
+          <div className="border-t border-[#1E293B] pt-1 text-gray-500">
+            {pt.distKm.toFixed(1)} km
+          </div>
+        )}
       </div>
-    );
-  };
+    </div>
+  );
 }
 
-// ─── Component ──────────────────────────────────────────────────────────────
+// Custom right-axis tick (pace) — formatted as mm:ss
+function PaceTick({ x, y, payload }: any) {
+  return (
+    <text x={x + 4} y={y} fill="#475569" fontSize={9} textAnchor="start" dominantBaseline="middle">
+      {fmtPace(payload.value)}
+    </text>
+  );
+}
 
-export function AnaerobicThreshold({ runs, maxHr, vdot }: AnaerobicThresholdProps) {
-  const { monthData, monthVdots, currentThreshold, currentMonthVdot, aerobicThreshold, delta, yMin, yMax } = useMemo(() => {
-    const now = new Date();
-    const safeMax = maxHr > 0 ? maxHr : 180;
-    const thresholdFloor = Math.round(safeMax * 0.78);
-    const thresholdCeil = Math.round(safeMax * 0.92);
-    const aerobicFloor = Math.round(safeMax * 0.68);
-    const aerobicCeil = Math.round(safeMax * 0.79);
+// ─── Component ────────────────────────────────────────────────────────────────
 
-    const data: { name: string; value: number; aerobic: number; anaerobic: number }[] = [];
-    const vdotMap: Record<string, number | null> = {};
-    let curr = 0;
-    let prev = 0;
-    let aerobic = 0;
-    let currMonthVdot: number | null = null;
+interface Props { runs: Run[]; maxHr: number; vdot?: number | null; }
 
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-
-      // Tutte le corse del mese (con HR per la soglia, tutte per VDOT)
-      const allMonthRuns = runs.filter((r) => {
+export function AnaerobicThreshold({ runs, maxHr, vdot }: Props) {
+  const { points, hrMin, hrMax, paceDomain, paceTickValues, trend, bestPace, bestHr } = useMemo(() => {
+    // Filter runs since April 2025, >= 3km, with HR data
+    const validRuns = runs
+      .filter(r => {
         const rd = new Date(r.date);
-        return rd.getFullYear() === d.getFullYear() && rd.getMonth() === d.getMonth();
-      });
+        return rd >= new Date("2025-04-01") && r.distance_km >= 3 && r.avg_hr && r.avg_hr > 0;
+      })
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-      const hrMonthRuns = allMonthRuns.filter((r) => r.avg_hr !== null && r.avg_hr > 0);
+    const points = validRuns.map(r => ({
+      date: new Date(r.date).toLocaleDateString("it", { day: "numeric", month: "short" }),
+      fullDate: r.date,
+      hr: r.avg_hr ?? 0,
+      paceSec: parsePaceSec(r.avg_pace) ?? 0,
+      distKm: r.distance_km,
+    })).filter(p => p.paceSec > 0);
 
-      // VDOT per-mese dal dataset reale Strava
-      const monthVdot = estimateMonthVdot(allMonthRuns);
+    const hrs = points.map(p => p.hr);
+    const paces = points.map(p => p.paceSec);
 
-      const threshRuns = hrMonthRuns.filter((r) => {
-        const t = (r.run_type || "").toLowerCase();
-        return t.includes("tempo") || t.includes("threshold") || t.includes("soglia");
-      });
+    const hrMin = hrs.length ? Math.min(...hrs) - 5 : 120;
+    const hrMax = hrs.length ? Math.max(...hrs) + 5 : 180;
+    const paceMin = paces.length ? Math.min(...paces) - 10 : 200;
+    const paceMax = paces.length ? Math.max(...paces) + 10 : 400;
 
-      const targetRuns =
-        threshRuns.length > 0
-          ? threshRuns
-          : hrMonthRuns.filter((r) => (r.avg_hr ?? 0) > safeMax * 0.75);
-
-      let value = 0;
-      let aerobicVal = 0;
-      if (targetRuns.length > 0) {
-        const avgHr = targetRuns.reduce((sum, r) => sum + (r.avg_hr ?? 0), 0) / targetRuns.length;
-        value = Math.round(avgHr);
-        aerobicVal = Math.round(avgHr * 0.86);
-      } else if (hrMonthRuns.length > 0) {
-        const hrRuns = hrMonthRuns.filter((r) => r.max_hr && r.max_hr > 0);
-        const avgMax = hrRuns.length > 0
-          ? hrRuns.reduce((sum, r) => sum + (r.max_hr ?? 0), 0) / hrRuns.length
-          : safeMax;
-        value = Math.round(avgMax * 0.88);
-        aerobicVal = Math.round(avgMax * 0.76);
-      } else {
-        value = Math.round(safeMax * 0.85);
-        aerobicVal = Math.round(safeMax * 0.73);
-      }
-
-      value = Math.max(thresholdFloor, Math.min(thresholdCeil, value));
-      aerobicVal = Math.max(aerobicFloor, Math.min(aerobicCeil, aerobicVal));
-
-      const monthName = d.toLocaleString("it", { month: "short" }).toUpperCase();
-      data.push({ name: monthName, value, aerobic: aerobicVal, anaerobic: value });
-      vdotMap[monthName] = monthVdot;
-
-      if (i === 0) { curr = value; aerobic = aerobicVal; currMonthVdot = monthVdot; }
-      if (i === 1) prev = value;
+    // Ticks every 15s
+    const paceTickValues: number[] = [];
+    const step = 15;
+    for (let v = Math.ceil(paceMin / step) * step; v <= paceMax; v += step) {
+      paceTickValues.push(v);
     }
 
-    const values = data.flatMap((d) => [d.value, d.aerobic]);
+    // Trend: linear regression on pace over time
+    let trend = 0;
+    if (paces.length >= 4) {
+      const n = paces.length;
+      const xMean = (n - 1) / 2;
+      const yMean = paces.reduce((a, b) => a + b, 0) / n;
+      let num = 0, den = 0;
+      for (let i = 0; i < n; i++) {
+        num += (i - xMean) * (paces[i] - yMean);
+        den += (i - xMean) ** 2;
+      }
+      if (den > 0) {
+        trend = num / den; // negative = improving (faster), positive = worsening
+      }
+    }
+
+    const bestPace = paces.length ? Math.min(...paces) : 0;
+    const bestHr = hrs.length ? Math.max(...hrs) : 0;
 
     return {
-      monthData: data,
-      monthVdots: vdotMap,
-      currentThreshold: curr,
-      currentMonthVdot: currMonthVdot,
-      aerobicThreshold: aerobic,
-      delta: curr - prev,
-      yMin: Math.min(...values) - 8,
-      yMax: Math.max(...values) + 8,
+      points,
+      hrMin, hrMax,
+      paceDomain: [paceMax, paceMin] as [number, number],
+      paceTickValues,
+      trend,
+      bestPace,
+      bestHr,
     };
-  }, [runs, maxHr]);
+  }, [runs]);
 
   const safeMax = maxHr > 0 ? maxHr : 180;
+  const latestPoint = points[points.length - 1];
+  const currentHr = latestPoint?.hr ?? Math.round(safeMax * 0.85);
+  const currentPace = latestPoint?.paceSec ?? 0;
+  const aerobicHr = Math.round(safeMax * 0.75);
 
-  // Pace corrente: usa VDOT del mese corrente se disponibile, poi VDOT globale analytics,
-  // entrambi basati su corse reali Strava — si aggiorna ad ogni sync
-  const effectiveVdot = currentMonthVdot ?? vdot ?? null;
-  const thresholdPace = effectiveVdot ? calcTPaceFromVdot(effectiveVdot) : null;
-  const aerobicPace = effectiveVdot ? calcEPaceFromVdot(effectiveVdot) : null;
+  const tPace = vdot ? calcTPace(vdot) : null;
+  const ePace = vdot ? calcEPace(vdot) : null;
+
+  // Trend label
+  const trendLabel = trend < -0.5
+    ? "Miglioramento"
+    : trend > 0.5
+    ? "Peggioramento"
+    : "Stabile";
+  const trendColor = trend < -0.5 ? "text-emerald-400" : trend > 0.5 ? "text-rose-400" : "text-gray-400";
+  const trendIcon = trend < -0.5 ? "↓" : trend > 0.5 ? "↑" : "→";
 
   return (
-    <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 flex flex-col" style={{ minHeight: 220 }}>
-      <h3 className="text-[10px] text-text-muted font-semibold tracking-wider mb-4 uppercase">
-        Zona Lattato · 12 Mesi
-      </h3>
+    <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 flex flex-col" style={{ minHeight: 300 }}>
 
-      <div className="flex gap-8 flex-1 min-h-0">
-        {/* Left — metrics */}
-        <div className="flex flex-col justify-center gap-5 shrink-0 w-[200px]">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-[10px] text-text-muted font-semibold tracking-wider uppercase flex items-center gap-1.5">
+          Soglia Anaerobica
+          <span className="w-3.5 h-3.5 rounded-full bg-white/10 text-[8px] text-gray-500 flex items-center justify-center cursor-default" title="Tutte le corse ≥3km da Aprile 2025. FC sinistra, Passo destra — più in alto = più veloce.">?</span>
+        </h3>
+        <span className="text-[9px] text-gray-600 uppercase tracking-wider">Tutte le corse · ≥3 km · da Apr 2025</span>
+      </div>
+
+      <div className="flex gap-5 flex-1 min-h-0">
+        {/* ── Left: current metrics ── */}
+        <div className="flex flex-col justify-center gap-4 shrink-0 w-[160px]">
+
           <div>
-            <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Soglia Anaerobica</div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-5xl font-black text-[#8B5CF6]">{currentThreshold}</span>
-              <span className="text-base text-text-muted">bpm</span>
-              {delta !== 0 && (
-                <span className={`text-xs px-1.5 py-0.5 rounded font-bold ${delta >= 0 ? "text-[#8B5CF6] bg-[#8B5CF6]/10" : "text-[#F43F5E] bg-[#F43F5E]/10"}`}>
-                  {delta >= 0 ? "↑" : "↓"} {Math.abs(delta)}
-                </span>
-              )}
+            <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">FC Ultima Corsa</div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-4xl font-black text-[#F43F5E]">{currentHr}</span>
+              <span className="text-sm text-text-muted">bpm</span>
             </div>
           </div>
 
-          {thresholdPace && (
+          {currentPace > 0 && (
             <div>
-              <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">
-                T-Pace · Soglia
-                {effectiveVdot && (
-                  <span className="ml-1 text-[#8B5CF6]">(VDOT {effectiveVdot})</span>
-                )}
+              <div className="text-[9px] text-[#3B82F6] uppercase tracking-wider mb-1">Passo Ultima Corsa</div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-black text-white">{fmtPace(currentPace)}</span>
+                <span className="text-sm text-text-muted">/km</span>
+              </div>
+            </div>
+          )}
+
+          {tPace && (
+            <div>
+              <div className="text-[9px] text-[#8B5CF6] uppercase tracking-wider mb-1">
+                T-Pace {vdot ? `· VDOT ${vdot}` : ""}
               </div>
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-black text-white">{thresholdPace}</span>
-                <span className="text-base text-text-muted">/km</span>
+                <span className="text-2xl font-black text-[#8B5CF6]">{tPace}</span>
+                <span className="text-sm text-text-muted">/km</span>
               </div>
             </div>
           )}
 
           <div>
-            <div className="text-[9px] text-[#14B8A6] uppercase tracking-wider mb-0.5">Aerobica (E-pace)</div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-black text-[#14B8A6]">{aerobicThreshold}</span>
-              <span className="text-sm text-text-muted">bpm</span>
-              {aerobicPace && (
-                <span className="text-sm font-bold text-[#14B8A6]">· {aerobicPace}/km</span>
-              )}
+            <div className="text-[9px] text-[#14B8A6] uppercase tracking-wider mb-0.5">Trend</div>
+            <div className={`text-lg font-black ${trendColor}`}>
+              {trendIcon} {trendLabel}
             </div>
           </div>
         </div>
 
-        {/* Right — chart */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex gap-3 mb-2">
-            <div className="flex items-center gap-1.5 text-[9px] font-semibold tracking-wider">
-              <div className="w-2 h-2 rounded-full bg-[#8B5CF6]" />
-              <span className="text-[#8B5CF6]">ANAEROBICA</span>
+        {/* ── Right: chart ── */}
+        <div className="flex-1 min-w-0" style={{ minHeight: 200 }}>
+          {points.length === 0 ? (
+            <div className="h-full flex items-center justify-center">
+              <p className="text-xs text-gray-600">Nessuna corsa ≥3km da Aprile 2025.</p>
             </div>
-            <div className="flex items-center gap-1.5 text-[9px] font-semibold tracking-wider">
-              <div className="w-2 h-2 rounded-full bg-[#14B8A6]" />
-              <span className="text-[#14B8A6]">AEROBICA</span>
-            </div>
-          </div>
-          <div className="flex-1" style={{ minHeight: 140 }}>
+          ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gradAnaerobic" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.05} />
-                  </linearGradient>
-                  <linearGradient id="gradAerobic" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#14B8A6" stopOpacity={0.03} />
-                  </linearGradient>
-                </defs>
+              <ScatterChart margin={{ top: 6, right: 50, left: -20, bottom: 4 }}>
                 <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#1E293B" />
                 <XAxis
-                  dataKey="name"
+                  dataKey="date"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#475569", fontSize: 8 }}
+                  dy={4}
+                  interval={Math.max(0, Math.floor(points.length / 12) - 1)}
+                />
+                <YAxis
+                  yAxisId="hr"
+                  orientation="left"
+                  domain={[hrMin, hrMax]}
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: "#475569", fontSize: 9 }}
-                  dy={6}
-                  interval={0}
+                  width={28}
                 />
-                <YAxis domain={[yMin, yMax]} hide />
-                <Tooltip
-                  content={makeThresholdTooltip(monthVdots)}
-                  cursor={{ stroke: "rgba(255,255,255,0.08)", strokeWidth: 1 }}
+                <YAxis
+                  yAxisId="pace"
+                  orientation="right"
+                  domain={paceDomain}
+                  ticks={paceTickValues}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={<PaceTick />}
+                  width={40}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="aerobic"
-                  stroke="#14B8A6"
-                  strokeWidth={1.5}
-                  fillOpacity={1}
-                  fill="url(#gradAerobic)"
-                  dot={false}
-                  isAnimationActive={false}
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.06)", strokeWidth: 1 }} />
+
+                {/* Pace dots — size based on distance */}
+                <Scatter
+                  yAxisId="pace"
+                  dataKey="paceSec"
+                  data={points}
+                  fill="#3B82F6"
+                  shape={(props: any) => {
+                    const { cx, cy, payload } = props;
+                    const r = Math.max(3, Math.min(7, payload.distKm / 2));
+                    return <circle cx={cx} cy={cy} r={r} fill="#3B82F6" fillOpacity={0.6} stroke="#3B82F6" strokeWidth={1} />;
+                  }}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#8B5CF6"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#gradAnaerobic)"
-                  dot={{ r: 3, fill: "#8B5CF6", strokeWidth: 0 }}
-                  activeDot={{ r: 5, fill: "#8B5CF6", stroke: "#C0FF00", strokeWidth: 1.5 }}
-                  isAnimationActive={false}
+
+                {/* HR dots — size based on distance */}
+                <Scatter
+                  yAxisId="hr"
+                  dataKey="hr"
+                  data={points}
+                  fill="#F43F5E"
+                  shape={(props: any) => {
+                    const { cx, cy, payload } = props;
+                    const r = Math.max(3, Math.min(7, payload.distKm / 2));
+                    return <circle cx={cx} cy={cy} r={r} fill="#F43F5E" fillOpacity={0.6} stroke="#F43F5E" strokeWidth={1} />;
+                  }}
                 />
-              </AreaChart>
+
+                {/* T-Pace reference line */}
+                {vdot && tPace && (() => {
+                  const tp = parsePaceSec(tPace);
+                  return tp ? <ReferenceLine yAxisId="pace" y={tp} stroke="#8B5CF6" strokeDasharray="4 3" label={{ value: "T-Pace", fill: "#8B5CF6", fontSize: 9, position: "insideTopRight" }} /> : null;
+                })()}
+              </ScatterChart>
             </ResponsiveContainer>
-          </div>
+          )}
         </div>
+      </div>
+
+      {/* ── Legend ── */}
+      <div className="flex items-center gap-4 mt-2 pt-2 border-t border-white/5">
+        <span className="flex items-center gap-1.5 text-[10px] text-[#F43F5E]">
+          <span className="w-2 h-2 rounded-full bg-[#F43F5E]" />
+          FC Media
+        </span>
+        <span className="flex items-center gap-1.5 text-[10px] text-[#3B82F6]">
+          <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
+          Passo
+        </span>
+        {tPace && (
+          <span className="flex items-center gap-1.5 text-[10px] text-[#8B5CF6]">
+            <span className="w-3 h-0 border-t border-dashed border-[#8B5CF6]" />
+            T-Pace
+          </span>
+        )}
+        <span className="ml-auto text-[9px] text-gray-500">
+          Dim. punto = distanza · più in alto = più veloce
+        </span>
       </div>
     </div>
   );
