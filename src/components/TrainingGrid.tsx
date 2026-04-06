@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer } from "lucide-react";
 import { useApi } from "../hooks/useApi";
-import { getTrainingPlan, generateTrainingPlan, adaptTrainingPlan } from "../api";
+import { getTrainingPlan, generateTrainingPlan, adaptTrainingPlan, evaluateTest } from "../api";
 import type { Session, TrainingPlanResponse, AdaptAdaptation } from "../types/api";
 
 const SESSION_COLORS: Record<string, string> = {
@@ -179,6 +179,234 @@ function AdaptPlanModal({ onClose, onDone }: { onClose: () => void; onDone: () =
             >
               <Zap className="w-4 h-4" />
               Analizza e Adatta
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Evaluate Test Modal ─────────────────────────────────────────────────────
+
+function EvaluateTestModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{
+    test_vdot: number;
+    test_pace: string;
+    previous_plan_vdot: number;
+    new_target_vdot: number;
+    vdot_change: number;
+    direction: string;
+    confidence: number;
+    message: string;
+  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [testDistance, setTestDistance] = useState("3");
+  const [testTime, setTestTime] = useState("");
+  const [testDate, setTestDate] = useState(new Date().toISOString().split("T")[0]);
+
+  const handleEvaluate = async () => {
+    if (!testDistance || !testTime) {
+      setError("Inserisci distanza e tempo del test.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await evaluateTest({
+        test_distance_km: parseFloat(testDistance),
+        test_time: testTime.trim(),
+        test_date: testDate,
+      });
+      setResult(res as unknown as typeof result);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Errore nella valutazione del test.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh]">
+        {/* Header */}
+        <div className="p-6 border-b border-[#2A2A2A] shrink-0">
+          <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
+            <Timer className="w-5 h-5 text-purple-400" />
+            Test di Valutazione
+          </h2>
+          <p className="text-gray-400 text-sm leading-relaxed">
+            Esegui un test (minimo 3km) per ricalibrare il piano. Il nuovo VDOT verrà usato per adattare le sessioni future.
+          </p>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {!result && !loading && (
+            <div className="space-y-5">
+              {/* Test Distance */}
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">Distanza Test (km)</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {["3", "5", "10"].map(d => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setTestDistance(d)}
+                      className={`py-2.5 px-2 rounded-lg text-xs font-medium border transition-colors ${
+                        testDistance === d
+                          ? "bg-purple-500 border-purple-500 text-white"
+                          : "bg-[#121212] border-[#2A2A2A] text-gray-400 hover:border-gray-500"
+                      }`}
+                    >
+                      {d} km
+                    </button>
+                  ))}
+                  <input
+                    type="number"
+                    value={testDistance}
+                    onChange={e => setTestDistance(e.target.value)}
+                    placeholder="Custom"
+                    className="bg-[#121212] border border-[#2A2A2A] rounded-lg px-2 py-2 text-white text-xs font-mono placeholder:text-gray-600 focus:border-purple-500 focus:outline-none text-center"
+                  />
+                </div>
+              </div>
+
+              {/* Test Time */}
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">
+                  Tempo del Test
+                </label>
+                <input
+                  type="text"
+                  value={testTime}
+                  onChange={e => setTestTime(e.target.value)}
+                  placeholder="es. 14:30"
+                  className="w-full bg-[#121212] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white text-lg font-mono placeholder:text-gray-600 focus:border-purple-500 focus:outline-none transition-colors"
+                />
+              </div>
+
+              {/* Test Date */}
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">
+                  Data del Test
+                </label>
+                <input
+                  type="date"
+                  value={testDate}
+                  onChange={e => setTestDate(e.target.value)}
+                  className="w-full bg-[#121212] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white focus:border-purple-500 focus:outline-none transition-colors"
+                />
+              </div>
+
+              {/* Info box */}
+              <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
+                <p className="text-[11px] text-purple-300 leading-relaxed">
+                  <span className="font-bold">Base scientifica:</span> Daniels (2013) — il VDOT da time trial è il metodo più accurato per stimare la forma attuale. Test ≥ 3km per affidabilità.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <div className="w-10 h-10 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+              <p className="text-gray-400 text-sm">Valutazione in corso…</p>
+            </div>
+          )}
+
+          {result && (
+            <div className="space-y-4">
+              {/* VDOT comparison */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4 text-center">
+                  <div className="text-[10px] text-gray-500 uppercase mb-1">VDOT Precedente</div>
+                  <div className="text-2xl font-bold text-gray-400">{result.previous_plan_vdot}</div>
+                </div>
+                <div className="bg-[#121212] border border-purple-500/30 rounded-xl p-4 text-center">
+                  <div className="text-[10px] text-purple-400 uppercase mb-1">VDOT Test</div>
+                  <div className="text-2xl font-bold text-purple-400">{result.test_vdot}</div>
+                  <div className="text-[10px] text-gray-500 mt-1">Passo: {result.test_pace}/km</div>
+                </div>
+                <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4 text-center">
+                  <div className="text-[10px] text-gray-500 uppercase mb-1">Nuovo Target</div>
+                  <div className="text-2xl font-bold text-white">{result.new_target_vdot}</div>
+                </div>
+              </div>
+
+              {/* Direction indicator */}
+              <div className={`rounded-xl border p-4 ${
+                result.direction === "improved"
+                  ? "bg-emerald-500/10 border-emerald-500/20"
+                  : result.direction === "declined"
+                  ? "bg-red-500/10 border-red-500/20"
+                  : "bg-blue-500/10 border-blue-500/20"
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  {result.direction === "improved" ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  ) : result.direction === "declined" ? (
+                    <AlertTriangle className="w-4 h-4 text-red-400" />
+                  ) : (
+                    <Info className="w-4 h-4 text-blue-400" />
+                  )}
+                  <span className={`text-sm font-bold ${
+                    result.direction === "improved" ? "text-emerald-400" :
+                    result.direction === "declined" ? "text-red-400" : "text-blue-400"
+                  }`}>
+                    {result.direction === "improved" ? "Miglioramento!" :
+                     result.direction === "declined" ? "Leggero calo" : "Stabile"}
+                  </span>
+                  <span className="text-sm text-gray-400">
+                    {result.vdot_change > 0 ? "+" : ""}{result.vdot_change} VDOT
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400">{result.message}</p>
+              </div>
+
+              {/* Confidence */}
+              <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-gray-400 uppercase">Confidenza nel piano</span>
+                  <span className="text-sm font-bold text-purple-400">{result.confidence}%</span>
+                </div>
+                <div className="w-full h-2 bg-[#2A2A2A] rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-purple-500 to-emerald-500 transition-all"
+                    style={{ width: `${result.confidence}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="flex items-center gap-2 text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+              <Info className="w-4 h-4 shrink-0" />
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-[#2A2A2A] shrink-0 flex gap-3">
+          <button
+            type="button"
+            onClick={() => { onClose(); if (result) onDone(); }}
+            className="flex-1 py-3 rounded-lg bg-[#121212] border border-[#2A2A2A] text-gray-400 hover:text-white transition-colors text-sm font-medium"
+          >
+            {result ? "Chiudi" : "Annulla"}
+          </button>
+          {!result && !loading && (
+            <button
+              type="button"
+              onClick={handleEvaluate}
+              disabled={loading}
+              className="flex-1 py-3 rounded-lg bg-purple-500 hover:bg-purple-400 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <Timer className="w-4 h-4" />
+              Valuta e Ricalibra
             </button>
           )}
         </div>
@@ -514,6 +742,7 @@ export function TrainingGrid() {
   const [previousView, setPreviousView] = useState<'Week' | 'Month' | 'Year' | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showAdaptModal, setShowAdaptModal] = useState(false);
+  const [showTestModal, setShowTestModal] = useState(false);
 
   const goToDay = (date: Date, fromView: 'Week' | 'Month' | 'Year') => {
     setCurrentDate(date);
@@ -839,6 +1068,16 @@ export function TrainingGrid() {
           {hasPlan && (
             <button
               type="button"
+              onClick={() => setShowTestModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-sm font-medium rounded-lg transition-colors"
+            >
+              <Timer className="w-4 h-4" />
+              Test
+            </button>
+          )}
+          {hasPlan && (
+            <button
+              type="button"
               onClick={() => setShowAdaptModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-sm font-medium rounded-lg transition-colors"
             >
@@ -922,6 +1161,14 @@ export function TrainingGrid() {
         <AdaptPlanModal
           onClose={() => setShowAdaptModal(false)}
           onDone={() => { setShowAdaptModal(false); refetchPlan(); }}
+        />
+      )}
+
+      {/* Test Modal */}
+      {showTestModal && (
+        <EvaluateTestModal
+          onClose={() => setShowTestModal(false)}
+          onDone={() => { setShowTestModal(false); refetchPlan(); }}
         />
       )}
     </div>

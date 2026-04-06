@@ -1306,6 +1306,130 @@ async def generate_training_plan(request: Request):
     }
 
 
+@app.post("/api/training-plan/evaluate-test")
+async def evaluate_test(request: Request):
+    """Evaluate a performance test and recalibrate the training plan.
+
+    The athlete runs a test (e.g., 3km time trial or 5km race pace test).
+    The new VDOT from the test is compared with the current plan VDOT.
+    If the test shows improvement → plan becomes more aggressive.
+    If the test shows decline → plan becomes more conservative.
+
+    Scientific basis:
+    - Daniels (2013): VDOT from time trials is the most accurate fitness indicator
+    - Test should be >= 3km for reliable VO2max estimation
+    - Recalibration uses the same progression logic as plan generation
+    """
+    body = await request.json()
+    test_distance_km = float(body.get("test_distance_km", 0))
+    test_time_str = str(body.get("test_time", ""))
+    test_date = body.get("test_date", dt.date.today().isoformat())
+
+    if test_distance_km < 3:
+        return JSONResponse({"error": "test_too_short", "message": "Il test deve essere almeno 3km per una stima VDOT affidabile."}, status_code=400)
+
+    test_time_min = _parse_time_str(test_time_str)
+    if not test_time_min or test_time_min <= 0:
+        return JSONResponse({"error": "invalid_time", "message": "Formato tempo non valido. Usa mm:ss o h:mm:ss."}, status_code=400)
+
+    athlete_id = await _get_athlete_id()
+    q = {"athlete_id": athlete_id} if athlete_id else {}
+
+    # Calculate VDOT from test
+    test_vdot = _time_to_vdot(test_distance_km, test_time_min)
+    if not test_vdot:
+        return JSONResponse({"error": "vdot_calc_failed", "message": "Impossibile calcolare il VDOT dal test."}, status_code=400)
+
+    test_vdot = round(min(test_vdot, 55.0), 1)
+
+    # Get current plan info
+    profile = await db.profile.find_one(q)
+    current_plan_vdot = profile.get("plan_target_vdot") if profile else None
+    current_plan_vdot = current_plan_vdot or 40.0
+
+    # Determine recalibration direction
+    vdot_change = round(test_vdot - current_plan_vdot, 1)
+    direction = "improved" if vdot_change > 0 else "declined" if vdot_change < 0 else "unchanged"
+
+    # Calculate new target VDOT based on test
+    # If test VDOT is higher, we can be more aggressive
+    # If test VDOT is lower, we should be more conservative
+    if direction == "improved":
+        # Test shows improvement → use test VDOT as new baseline, add small buffer
+        new_target_vdot = round(min(test_vdot + 0.5, 55.0), 1)
+        confidence = min(95, 70 + int(abs(vdot_change) * 10))
+    elif direction == "declined":
+        # Test shows decline → be conservative, use test VDOT as ceiling
+        new_target_vdot = round(max(test_vdot - 0.5, 25.0), 1)
+        confidence = min(90, 60 + int(abs(vdot_change) * 8))
+    else:
+        new_target_vdot = current_plan_vdot
+        confidence = 80
+
+    # Get current plan weeks
+    all_weeks = await db.training_plan.find(q).sort("week_number", 1).to_list(100)
+    weeks_remaining = len([w for w in all_weeks if w.get("week_start", "") >= dt.date.today().isoformat()])
+
+    # Generate new plan with recalibrated VDOT
+    goal_race = profile.get("plan_goal_race", "5K") if profile else "5K"
+    target_time_str = profile.get("plan_target_time", "") if profile else ""
+    dist_km = RACE_DISTANCES.get(goal_race, 5.0)
+
+    # Fetch all runs for history context
+    all_runs = await db.runs.find(q).sort("date", -1).to_list(None)
+    max_hr = int((profile or {}).get("max_hr", 190))
+    history = _calc_vdot_with_history(all_runs, max_hr, weeks_window=52, goal_dist_km=dist_km)
+
+    # Use test VDOT as the new current VDOT for plan generation
+    effective_current_vdot = test_vdot
+
+    # Generate new plan
+    defaults_km = {"5K": 40.0, "10K": 50.0, "Half Marathon": 60.0, "Marathon": 70.0}
+    raw_max_km = (profile or {}).get("max_weekly_km")
+    max_weekly_km = float(raw_max_km) if raw_max_km else defaults_km.get(goal_race, 55.0)
+
+    new_weeks = _generate_plan_weeks(
+        goal_race, max(8, weeks_remaining), max_weekly_km,
+        effective_current_vdot, new_target_vdot, athlete_id, target_time_str,
+    )
+
+    # Update plan in DB
+    await db.training_plan.delete_many(q)
+    if new_weeks:
+        await db.training_plan.insert_many(new_weeks)
+
+    # Update profile
+    await db.profile.update_one(q, {"$set": {
+        "plan_target_vdot": new_target_vdot,
+        "plan_current_vdot": effective_current_vdot,
+        "last_test_vdot": test_vdot,
+        "last_test_date": test_date,
+        "last_test_distance_km": test_distance_km,
+        "last_test_time": test_time_str,
+    }})
+
+    # Format test result
+    test_pace = _format_pace((test_distance_km * 1000) / (test_time_min * 60))
+
+    return {
+        "ok": True,
+        "test_vdot": test_vdot,
+        "test_pace": test_pace,
+        "previous_plan_vdot": current_plan_vdot,
+        "new_target_vdot": new_target_vdot,
+        "vdot_change": vdot_change,
+        "direction": direction,
+        "confidence": confidence,
+        "weeks_remaining": weeks_remaining,
+        "weeks_regenerated": len(new_weeks),
+        "message": (
+            f"Test {test_distance_km}km in {test_time_str} → VDOT {test_vdot}. "
+            f"{'Miglioramento!' if direction == 'improved' else 'Leggero calo.' if direction == 'declined' else 'Stabile.'} "
+            f"Piano ricalibrato: VDOT target {new_target_vdot}."
+        ),
+    }
+
+
 @app.post("/api/training-plan/adapt")
 async def adapt_training_plan():
     """Auto-adapt the plan using 5 scientific models.

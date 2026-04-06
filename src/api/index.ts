@@ -85,6 +85,25 @@ export const generateTrainingPlan = (data: {
 export const adaptTrainingPlan = () =>
   api.post<AdaptResponse>('/api/training-plan/adapt');
 
+export const evaluateTest = (data: {
+  test_distance_km: number;
+  test_time: string;
+  test_date?: string;
+}) =>
+  api.post<{
+    ok: boolean;
+    test_vdot: number;
+    test_pace: string;
+    previous_plan_vdot: number;
+    new_target_vdot: number;
+    vdot_change: number;
+    direction: 'improved' | 'declined' | 'unchanged';
+    confidence: number;
+    weeks_remaining: number;
+    weeks_regenerated: number;
+    message: string;
+  }>('/api/training-plan/evaluate-test', data);
+
 // ─── FITNESS & FRESHNESS ─────────────────────────────────────────────────────
 export const getFitnessFreshness = () => api.get<FitnessFreshnessResponse>('/api/fitness-freshness');
 export const recalculateFitnessFreshness = () => api.post('/api/fitness-freshness/recalculate');
