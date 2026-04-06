@@ -7,14 +7,18 @@ const vo2Data = [
   { date: 'Oggi', value: 30.3 },
 ];
 
+// Dati reali da Garmin Connect — Soglia anaerobica per la corsa
 const sogliaData = [
-  { date: '01 Nov', pace: 4.71, label: '4:43', bpm: 152, color: '#3B82F6', trend: 'up' },
-  { date: '16 Nov', pace: 4.33, label: '4:20', bpm: 149, color: '#10B981', trend: 'up' },
-  { date: '30 Jan', pace: 5.51, label: '5:31', bpm: 149, color: '#EAB308', trend: 'down' },
-  { date: '14 Feb', pace: 5.31, label: '5:19', bpm: 148, color: '#10B981', trend: 'up' },
-  { date: '01 Mar', pace: 5.25, label: '5:15', bpm: 153, color: '#10B981', trend: 'up' },
-  { date: '16 Mar', pace: 6.61, label: '6:37', bpm: 151, color: '#EAB308', trend: 'down' },
+  { date: 'Mag 25', pace: 4.17, label: '4:10', bpm: 170, color: '#F43F5E', trend: 'down' },
+  { date: 'Giu 25', pace: 4.71, label: '4:43', bpm: 155, color: '#EAB308', trend: 'down' },
+  { date: 'Ott 25', pace: 4.71, label: '4:43', bpm: 155, color: '#3B82F6', trend: 'flat' },
+  { date: 'Nov 25', pace: 4.27, label: '4:16', bpm: 163, color: '#10B981', trend: 'up' },
+  { date: 'Feb 26', pace: 4.71, label: '4:43', bpm: 164, color: '#3B82F6', trend: 'flat' },
+  { date: 'Mar 26', pace: 4.71, label: '4:43', bpm: 166, color: '#F43F5E', trend: 'up' },
 ];
+
+// Ultimo valore reale da Garmin
+const currentThreshold = { bpm: 166, pace: '4:43', paceMin: 4.71 };
 
 const paceData = [
   { date: '03/11', easy: 6.5, tempo: 5.0, fast: 4.0 },
@@ -103,46 +107,22 @@ export function StatsProgress() {
           <span className="text-sm font-bold text-white uppercase tracking-wider">Soglia Anaerobica</span>
         </div>
         
-        <div className="grid grid-cols-3 gap-4 mb-8 text-center">
-          <div className="bg-[#121212] p-4 rounded-2xl border border-[#2A2A2A]">
-            <div className="text-xs text-[#10B981] mb-2 uppercase font-bold">Attuale</div>
-            <div className="flex justify-center gap-4">
-              <div>
-                <Heart className="w-5 h-5 text-[#F43F5E] mx-auto mb-1" />
-                <div className="text-xl font-bold text-white">152</div>
-                <div className="text-xs text-gray-500">bpm</div>
-              </div>
-              <div>
-                <Activity className="w-5 h-5 text-[#3B82F6] mx-auto mb-1" />
-                <div className="text-xl font-bold text-white">5:16</div>
-                <div className="text-xs text-gray-500">/km</div>
-              </div>
-              <div>
-                <Zap className="w-5 h-5 text-[#10B981] mx-auto mb-1" />
-                <div className="text-xl font-bold text-white">85</div>
-                <div className="text-xs text-gray-500">% FC max</div>
-              </div>
+        {/* Current threshold values from Garmin */}
+        <div className="bg-[#121212] p-5 rounded-2xl border border-[#2A2A2A] mb-6">
+          <div className="text-xs text-[#10B981] mb-4 uppercase font-bold text-center">La tua soglia corrente</div>
+          <div className="text-xs text-gray-400 text-center mb-4">In base alle stime più recenti, raggiungi la soglia anaerobica per la corsa a questi livelli.</div>
+          <div className="flex justify-center gap-8">
+            <div className="text-center">
+              <Heart className="w-6 h-6 text-[#F43F5E] mx-auto mb-2" />
+              <div className="text-2xl font-bold text-white">{currentThreshold.bpm}</div>
+              <div className="text-xs text-gray-500">bpm</div>
+              <div className="text-[10px] text-[#F43F5E] mt-1">Frequenza cardiaca</div>
             </div>
-          </div>
-          
-          <div className="bg-[#121212] p-4 rounded-2xl border border-[#2A2A2A] col-span-2">
-            <div className="text-xs text-[#EAB308] mb-2 uppercase font-bold">Pre-Infortunio (Nov 2025)</div>
-            <div className="flex justify-center gap-8">
-              <div>
-                <Heart className="w-5 h-5 text-[#F43F5E] mx-auto mb-1" />
-                <div className="text-xl font-bold text-[#EAB308]">149</div>
-                <div className="text-xs text-gray-500">bpm</div>
-              </div>
-              <div>
-                <Activity className="w-5 h-5 text-[#EAB308] mx-auto mb-1" />
-                <div className="text-xl font-bold text-[#EAB308]">4:20</div>
-                <div className="text-xs text-gray-500">/km</div>
-              </div>
-              <div>
-                <Zap className="w-5 h-5 text-[#EAB308] mx-auto mb-1" />
-                <div className="text-xl font-bold text-[#EAB308]">83</div>
-                <div className="text-xs text-gray-500">% FC max</div>
-              </div>
+            <div className="text-center">
+              <Activity className="w-6 h-6 text-[#3B82F6] mx-auto mb-2" />
+              <div className="text-2xl font-bold text-white">{currentThreshold.pace}</div>
+              <div className="text-xs text-gray-500">/km</div>
+              <div className="text-[10px] text-[#3B82F6] mt-1">Passo</div>
             </div>
           </div>
         </div>

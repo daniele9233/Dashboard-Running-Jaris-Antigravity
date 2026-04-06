@@ -63,11 +63,6 @@ function CustomTooltip({ active, payload }: any) {
             <span className="font-bold text-white">{fmtPace(pt.paceSec)}/km</span>
           </div>
         )}
-        {pt.distKm && (
-          <div className="border-t border-[#1E293B] pt-1 text-gray-500">
-            {pt.distKm.toFixed(1)} km
-          </div>
-        )}
       </div>
     </div>
   );
@@ -82,7 +77,21 @@ function PaceTick({ x, y, payload }: any) {
   );
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// Dati reali da Garmin Connect — Soglia anaerobica corrente
+const GARMIN_THRESHOLD = { bpm: 166, pace: "4:43", paceSec: 283 };
+
+// Dati storici reali da Garmin Connect — Soglia anaerobica per la corsa
+// Estratti dal grafico Garmin: Mag 2025 → Mar 2026
+const GARMIN_THRESHOLD_HISTORY = [
+  { label: "Mag", hr: 170, paceSec: 250 },  // 4:10/km
+  { label: "Giu", hr: 155, paceSec: 283 },  // 4:43/km
+  { label: "Ott", hr: 155, paceSec: 283 },  // 4:43/km
+  { label: "Nov", hr: 163, paceSec: 256 },  // 4:16/km
+  { label: "Feb", hr: 164, paceSec: 283 },  // 4:43/km
+  { label: "Mar", hr: 166, paceSec: 283 },  // 4:43/km
+];
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 interface Props { runs: Run[]; maxHr: number; vdot?: number | null; }
 
@@ -90,63 +99,14 @@ export function AnaerobicThreshold({ runs, maxHr, vdot }: Props) {
   const [timeRange, setTimeRange] = useState<"6m" | "12m" | "all">("all");
 
   const { points, hrMin, hrMax, paceDomain, paceTickValues, tPaceSec } = useMemo(() => {
-    // Filter runs since April 2025, >= 1km (include intervals), with HR data
-    const validRuns = runs
-      .filter(r => {
-        const rd = new Date(r.date);
-        return rd >= new Date("2025-04-01") && r.distance_km >= 1 && r.avg_hr && r.avg_hr > 0;
-      })
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    // Group into 2-month periods
-    const periods: { label: string; runs: typeof validRuns }[] = [];
-    const now = new Date();
-    const startDate = new Date("2025-04-01");
-
-    let current = new Date(startDate);
-    while (current <= now) {
-      const periodEnd = new Date(current);
-      periodEnd.setMonth(periodEnd.getMonth() + 2);
-
-      const periodRuns = validRuns.filter(r => {
-        const rd = new Date(r.date);
-        return rd >= current && rd < periodEnd;
-      });
-
-      if (periodRuns.length > 0) {
-        const label = current.toLocaleDateString("it", { month: "short" }) + "–" +
-          new Date(Math.min(periodEnd.getTime(), now.getTime())).toLocaleDateString("it", { month: "short" });
-        periods.push({ label, runs: periodRuns });
-      }
-
-      current = periodEnd;
-    }
-
-    // For each period, pick the 6 best runs (highest avg_hr = most effort)
-    const points = periods.map(period => {
-      const sorted = [...period.runs].sort((a, b) => (b.avg_hr ?? 0) - (a.avg_hr ?? 0));
-      const best = sorted.slice(0, 6);
-
-      // Average HR and pace of best 6
-      const avgHr = Math.round(best.reduce((s, r) => s + (r.avg_hr ?? 0), 0) / best.length);
-      const paces = best.map(r => parsePaceSec(r.avg_pace)).filter((p): p is number => p !== null);
-      const avgPace = paces.length > 0 ? Math.round(paces.reduce((a, b) => a + b, 0) / paces.length) : 0;
-      const avgDist = best.reduce((s, r) => s + r.distance_km, 0) / best.length;
-
-      return {
-        label: period.label,
-        hr: avgHr,
-        paceSec: avgPace,
-        distKm: avgDist,
-      };
-    });
-
-    // Apply time range filter
-    let filtered = points;
+    // Apply time range filter to Garmin data
+    let filtered: typeof GARMIN_THRESHOLD_HISTORY;
     if (timeRange === "6m") {
-      filtered = points.slice(-3); // last 3 periods = 6 months
+      filtered = GARMIN_THRESHOLD_HISTORY.slice(-3); // Nov, Feb, Mar
     } else if (timeRange === "12m") {
-      filtered = points.slice(-6); // last 6 periods = 12 months
+      filtered = GARMIN_THRESHOLD_HISTORY.slice(-6); // all
+    } else {
+      filtered = GARMIN_THRESHOLD_HISTORY; // all
     }
 
     const hrs = filtered.map(p => p.hr);
@@ -173,12 +133,11 @@ export function AnaerobicThreshold({ runs, maxHr, vdot }: Props) {
       paceTickValues,
       tPaceSec,
     };
-  }, [runs, timeRange, vdot]);
+  }, [timeRange, vdot]);
 
-  const safeMax = maxHr > 0 ? maxHr : 180;
-  const latestPoint = points[points.length - 1];
-  const currentHr = latestPoint?.hr ?? Math.round(safeMax * 0.85);
-  const currentPace = latestPoint?.paceSec ?? 0;
+  // Usa i valori reali da Garmin Connect come soglia corrente
+  const currentHr = GARMIN_THRESHOLD.bpm;
+  const currentPace = GARMIN_THRESHOLD.paceSec;
 
   // Trend: compare first half vs second half
   const trend = (() => {
@@ -203,11 +162,11 @@ export function AnaerobicThreshold({ runs, maxHr, vdot }: Props) {
   return (
     <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 flex flex-col" style={{ minHeight: 320 }}>
 
-      {/* ── Header ── */}
+      {/* ── Header ─ */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[10px] text-text-muted font-semibold tracking-wider uppercase flex items-center gap-1.5">
           Soglia Anaerobica
-          <span className="w-3.5 h-3.5 rounded-full bg-white/10 text-[8px] text-gray-500 flex items-center justify-center cursor-default" title="6 migliori corse ogni 2 mesi (≥1km). FC = media FC, Passo = media passo delle migliori.">?</span>
+          <span className="w-3.5 h-3.5 rounded-full bg-white/10 text-[8px] text-gray-500 flex items-center justify-center cursor-default" title="Dati reali da Garmin Connect">?</span>
         </h3>
         <div className="flex items-center gap-2">
           <div className="flex bg-[#1E1E1E] rounded-md border border-[#2A2A2A] p-0.5">
@@ -264,7 +223,7 @@ export function AnaerobicThreshold({ runs, maxHr, vdot }: Props) {
         <div className="flex-1 min-w-0" style={{ minHeight: 200 }}>
           {points.length === 0 ? (
             <div className="h-full flex items-center justify-center">
-              <p className="text-xs text-gray-600">Nessuna corsa ≥1km da Aprile 2025.</p>
+              <p className="text-xs text-gray-600">Nessun dato disponibile.</p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
@@ -363,7 +322,7 @@ export function AnaerobicThreshold({ runs, maxHr, vdot }: Props) {
           </span>
         )}
         <span className="ml-auto text-[9px] text-gray-500">
-          6 migliori corse / 2 mesi
+          Dati Garmin Connect
         </span>
       </div>
     </div>
