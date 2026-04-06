@@ -193,13 +193,25 @@ interface GenerateResult {
   current_vdot: number;
   target_vdot: number;
   weeks_generated: number;
+  dry_run?: boolean;
+  peak_vdot?: number;
+  peak_date?: string;
+  training_months?: number;
+  weekly_volume?: number;
+  test_vdot?: number | null;
   feasibility: {
     feasible: boolean;
     difficulty: string;
     message: string;
     confidence_pct: number;
-    adjusted_target_vdot?: number;
-    adjusted_time?: string;
+    is_recovery?: boolean;
+    conservative_vdot?: number;
+    conservative_time?: string;
+    conservative_rate?: number;
+    optimistic_vdot?: number;
+    optimistic_time?: string;
+    optimistic_rate?: number;
+    original_target_time?: string;
     suggested_weeks?: number;
   };
   race_predictions: Record<string, string>;
@@ -212,7 +224,10 @@ const TIME_PLACEHOLDERS: Record<string, string> = {
   "Marathon": "es. 4:10:00",
 };
 
+type ModalPhase = 'input' | 'done';
+
 function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const [phase, setPhase] = useState<ModalPhase>('input');
   const [goalRace, setGoalRace] = useState("5K");
   const [weeksToRace, setWeeksToRace] = useState(12);
   const [targetTime, setTargetTime] = useState("");
@@ -228,12 +243,14 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
     setLoading(true);
     setError(null);
     try {
-      const res = await generateTrainingPlan({
+      const params: Parameters<typeof generateTrainingPlan>[0] = {
         goal_race: goalRace,
         weeks_to_race: weeksToRace,
         target_time: targetTime.trim(),
-      } as { goal_race: string; weeks_to_race: number });
+      };
+      const res = await generateTrainingPlan(params);
       setResult(res as unknown as GenerateResult);
+      setPhase('done');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Errore nella generazione del piano.");
     } finally {
@@ -252,20 +269,27 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
 
         {/* Header */}
         <div className="p-6 pb-4 border-b border-[#2A2A2A] shrink-0">
-          <h2 className="text-xl font-bold text-white mb-1">Genera Piano di Allenamento</h2>
-          <p className="text-gray-500 text-sm mb-3">Piano scientifico basato su formula Daniels e progressione VDOT.</p>
-          
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-            <p className="text-[11px] text-blue-300 leading-relaxed">
-              <span className="font-bold uppercase mr-1">Nota:</span>
-              L'Auto-Adattamento è già attivo per il VDOT. Ogni volta che sincronizzi una corsa da Strava, il sistema ricalcola il tuo VDOT e aggiorna automaticamente i passi delle sessioni future. Questo mantiene il piano "tecnicamente" corretto senza alcuno sforzo da parte tua.
-            </p>
-          </div>
+          <h2 className="text-xl font-bold text-white mb-1">
+            'Genera Piano di Allenamento'
+          </h2>
+          <p className="text-gray-500 text-sm mb-3">
+            'Piano scientifico — Daniels VDOT + storia completa dell\'atleta.'
+          </p>
+          {phase === 'input' && (
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+              <p className="text-[11px] text-blue-300 leading-relaxed">
+                <span className="font-bold uppercase mr-1">Auto-Adapt:</span>
+                Ogni sync da Strava ricalcola il tuo VDOT e aggiorna i passi futuri automaticamente.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          {!result ? (
+
+          {/* ── PHASE: INPUT ── */}
+          {phase === 'input' && (
             <>
               {/* Goal Race */}
               <div className="mb-5">
@@ -305,13 +329,10 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
                     {goalRace === "Marathon" || goalRace === "Half Marathon" ? "h:mm:ss" : "mm:ss"}
                   </span>
                 </div>
-                <p className="text-xs text-gray-600 mt-1.5">
-                  Il piano calcolerà il VDOT necessario e costruirà una progressione settimanale per raggiungerlo.
-                </p>
               </div>
 
               {/* Weeks slider */}
-              <div className="mb-6">
+              <div className="mb-5">
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">
                   Settimane alla gara: <span className="text-white font-bold">{weeksToRace}</span>
                 </label>
@@ -327,20 +348,35 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
                 </div>
               </div>
             </>
-          ) : (
-            /* ── Result view ─────────────────────────────────── */
+          )}
+
+
+          {/* ── PHASE: DONE ── */}
+          {phase === 'done' && result && (
             <div className="space-y-4">
               {/* VDOT Summary */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4 text-center">
                   <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">VDOT Attuale</div>
                   <div className="text-3xl font-bold text-white">{result.current_vdot}</div>
+                  {result.test_vdot && <div className="text-[9px] text-[#C0FF00] mt-0.5">calibrato da test</div>}
                 </div>
                 <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4 text-center">
                   <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">VDOT Target</div>
                   <div className="text-3xl font-bold text-[#3B82F6]">{result.target_vdot}</div>
                 </div>
               </div>
+
+              {/* Peak context */}
+              {result.peak_vdot && result.peak_vdot !== result.current_vdot && (
+                <div className="flex items-center gap-2 text-[10px] text-gray-500 bg-[#121212] border border-[#2A2A2A] rounded-lg px-3 py-2">
+                  <span>Picco storico: <strong className="text-[#8B5CF6]">{result.peak_vdot}</strong></span>
+                  {result.peak_date && (
+                    <span>({new Date(result.peak_date).toLocaleDateString('it', { month: 'short', year: 'numeric' })})</span>
+                  )}
+                  {result.feasibility.is_recovery && <span className="text-[#8B5CF6] font-bold">· Recovery Mode</span>}
+                </div>
+              )}
 
               {/* Gap indicator */}
               <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
@@ -356,17 +392,10 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
                     style={{ width: `${Math.min(100, result.feasibility.confidence_pct)}%` }}
                   />
                 </div>
-                <p className={`text-xs mt-2 ${feasColor}`}>
-                  {result.feasibility.message}
-                </p>
-                {result.feasibility.adjusted_time && (
-                  <p className="text-xs text-amber-400 mt-1">
-                    ⚠ Tempo ricalibrato realisticamente: {result.feasibility.adjusted_time}
-                  </p>
-                )}
+                <p className={`text-xs mt-2 ${feasColor}`}>{result.feasibility.message}</p>
               </div>
 
-              {/* Race predictions at target VDOT */}
+              {/* Race predictions */}
               {Object.keys(result.race_predictions).length > 0 && (
                 <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
                   <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
@@ -402,22 +431,24 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
         <div className="p-6 border-t border-[#2A2A2A] shrink-0 flex gap-3">
           <button
             type="button"
-            onClick={() => { onClose(); if (result) onDone(); }}
+            onClick={() => {
+              onClose(); if (phase === 'done') onDone();
+            }}
             className="flex-1 py-3 rounded-lg bg-[#121212] border border-[#2A2A2A] text-gray-400 hover:text-white transition-colors text-sm font-medium"
           >
-            {result ? "Chiudi" : "Annulla"}
+            {phase === 'done' ? 'Chiudi' : 'Annulla'}
           </button>
-          {!result && (
+          {phase === 'input' && (
             <button
               type="button"
               onClick={handleGenerate}
               disabled={loading}
               className="flex-1 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loading ? <span>Generando…</span> : <><Sparkles className="w-4 h-4" /> Genera Piano</>}
+              {loading ? <span>Analizzando…</span> : <><Sparkles className="w-4 h-4" /> Genera Piano</>}
             </button>
           )}
-          {result && (
+          {phase === 'done' && (
             <button
               type="button"
               onClick={() => { onClose(); onDone(); }}

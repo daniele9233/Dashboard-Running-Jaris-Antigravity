@@ -40,22 +40,46 @@ export const getCurrentWeek = () => api.get<TrainingPlanResponse['weeks'][0]>('/
 export const toggleSessionComplete = (weekId: string, sessionIndex: number, completed: boolean) =>
   api.patch('/api/training-plan/session/complete', { week_id: weekId, session_index: sessionIndex, completed });
 
-export const generateTrainingPlan = (data: { goal_race: string; weeks_to_race: number; target_time?: string }) =>
+export const generateTrainingPlan = (data: {
+  goal_race: string;
+  weeks_to_race: number;
+  target_time?: string;
+  plan_mode?: 'conservative' | 'aggressive';
+  test_distance_km?: number;
+  test_time?: string;
+}) =>
   api.post<{
     ok: boolean;
+    dry_run?: boolean;
     weeks_generated: number;
     current_vdot: number;
     target_vdot: number;
+    peak_vdot?: number;
+    peak_date?: string;
+    training_months?: number;
+    weekly_volume?: number;
+    test_vdot?: number | null;
     feasibility: {
       feasible: boolean;
       difficulty: string;
       message: string;
       confidence_pct: number;
-      adjusted_target_vdot?: number;
-      adjusted_time?: string;
+      is_recovery?: boolean;
+      conservative_vdot?: number;
+      conservative_time?: string;
+      conservative_rate?: number;
+      optimistic_vdot?: number;
+      optimistic_time?: string;
+      optimistic_rate?: number;
+      original_target_time?: string;
       suggested_weeks?: number;
+      suggested_months?: number;
+      suggested_timeframe?: string;
     };
     race_predictions: Record<string, string>;
+    suggested_weeks?: number;
+    suggested_months?: number;
+    suggested_timeframe?: string;
   }>('/api/training-plan/generate', data);
 
 export const adaptTrainingPlan = () =>

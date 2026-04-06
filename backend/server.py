@@ -762,40 +762,86 @@ def _parse_time_str(ts: str) -> Optional[float]:
     return None
 
 
-def _assess_feasibility(current_vdot: float, target_vdot: float, weeks: int) -> dict:
-    """Assess if the VDOT gap is achievable in the given weeks.
+def _assess_feasibility(current_vdot: float, target_vdot: float, weeks: int,
+                         peak_vdot: float = None, dist_km: float = 5.0) -> dict:
+    """Assess feasibility with history-aware progression rates.
 
-    Research basis (Daniels 2013, Pfitzinger 2015):
-    - Well-trained amateur: ~0.3–0.8 VDOT / mesocycle (3–4 weeks)
-    - Beginner with room to grow: up to 1.0 VDOT / mesocycle
-    - Diminishing returns above VDOT ~50
-    - Realistic maximum: ~0.25 VDOT / week sustained over 12–24 weeks
+    Scientific basis:
+    - Daniels (2013): 0.3–0.8 VDOT/mesocycle for new gains in trained amateurs
+    - Mujika & Padilla (2000): VO2max detraining reversal is 1.5–2× faster
+      than initial gains due to preserved capillarization and mitochondrial
+      density ("muscle memory", Staron et al. 1991)
+    - Pfitzinger (2015): diminishing returns above VDOT ~50
+
+    Recovery vs New Territory:
+      If target ≤ athlete's historical peak, faster rates apply because the
+      cardiovascular and neuromuscular adaptations were previously achieved.
+      - Recovery conservative: 0.8 VDOT/mesocycle
+      - Recovery optimistic:  1.2 VDOT/mesocycle
+      - New-gains conservative: 0.5 VDOT/mesocycle
+      - New-gains optimistic:   0.8 VDOT/mesocycle
     """
     gap = target_vdot - current_vdot
-    mesocycles = weeks / 3.5  # average mesocycle length
+    mesocycles = weeks / 3.5
 
-    # Conservative estimate: 0.5 VDOT per mesocycle average
-    max_gain_conservative = mesocycles * 0.5
-    # Optimistic: 0.8 per mesocycle
-    max_gain_optimistic = mesocycles * 0.8
+    # Determine if athlete is recovering to a previous level
+    is_recovery = (peak_vdot is not None
+                   and target_vdot <= peak_vdot
+                   and peak_vdot > current_vdot)
+
+    if is_recovery:
+        conservative_rate = 0.8
+        optimistic_rate = 1.2
+    else:
+        conservative_rate = 0.5
+        optimistic_rate = 0.8
+
+    max_conservative = mesocycles * conservative_rate
+    max_optimistic = mesocycles * optimistic_rate
+
+    # Always compute both paths so the frontend can offer a choice
+    conservative_vdot = round(min(target_vdot, current_vdot + max_conservative), 2)
+    optimistic_vdot = round(min(target_vdot, current_vdot + max_optimistic), 2)
+    conservative_time = _vdot_to_race_time(conservative_vdot, dist_km)
+    optimistic_time = _vdot_to_race_time(optimistic_vdot, dist_km)
+    original_time = _vdot_to_race_time(target_vdot, dist_km)
+
+    base = {
+        "conservative_vdot": conservative_vdot,
+        "conservative_time": conservative_time,
+        "conservative_rate": conservative_rate,
+        "optimistic_vdot": optimistic_vdot,
+        "optimistic_time": optimistic_time,
+        "optimistic_rate": optimistic_rate,
+        "original_target_time": original_time,
+        "is_recovery": is_recovery,
+    }
 
     if gap <= 0:
-        return {"feasible": True, "difficulty": "already_there",
+        return {**base, "feasible": True, "difficulty": "already_there",
                 "message": f"Il tuo VDOT attuale ({current_vdot}) è già sufficiente per l'obiettivo ({target_vdot}). Piano di mantenimento.",
                 "confidence_pct": 95}
-    elif gap <= max_gain_conservative:
-        return {"feasible": True, "difficulty": "realistic",
-                "message": f"Obiettivo realistico: +{gap:.1f} VDOT in {weeks} settimane ({gap/mesocycles:.1f}/mesociclo). Progressione standard Daniels.",
-                "confidence_pct": 80}
-    elif gap <= max_gain_optimistic:
-        return {"feasible": True, "difficulty": "challenging",
-                "message": f"Obiettivo ambizioso: +{gap:.1f} VDOT in {weeks} settimane ({gap/mesocycles:.1f}/mesociclo). Richiede costanza totale.",
-                "confidence_pct": 55}
+    elif gap <= max_conservative:
+        msg = (f"Obiettivo realistico: +{gap:.1f} VDOT in {weeks} settimane "
+               f"({gap/mesocycles:.1f}/mesociclo). ")
+        msg += ("Recupero verso livello precedente — progressione accelerata."
+                if is_recovery else "Progressione standard Daniels.")
+        return {**base, "feasible": True, "difficulty": "realistic",
+                "message": msg, "confidence_pct": 80}
+    elif gap <= max_optimistic:
+        msg = (f"Obiettivo ambizioso: +{gap:.1f} VDOT in {weeks} settimane "
+               f"({gap/mesocycles:.1f}/mesociclo). ")
+        msg += ("Recupero aggressivo — richiede costanza e disciplina."
+                if is_recovery else "Richiede costanza totale e zero interruzioni.")
+        return {**base, "feasible": True, "difficulty": "challenging",
+                "message": msg, "confidence_pct": 55}
     else:
-        suggested_weeks = int(math.ceil(gap / 0.5 * 3.5))
-        return {"feasible": False, "difficulty": "unrealistic",
-                "message": f"Gap troppo alto: +{gap:.1f} VDOT in {weeks} sett. Servirebbero ~{suggested_weeks} settimane. Obiettivo ricalibrato.",
-                "confidence_pct": 20, "suggested_weeks": suggested_weeks}
+        suggested_weeks = int(math.ceil(gap / conservative_rate * 3.5))
+        msg = (f"Gap di +{gap:.1f} VDOT in {weeks} settimane. "
+               f"Scegli tra piano conservativo o aggressivo.")
+        return {**base, "feasible": False, "difficulty": "unrealistic",
+                "message": msg, "confidence_pct": 20,
+                "suggested_weeks": suggested_weeks}
 
 
 def _build_vdot_progression(current: float, target: float, weeks_total: int,
@@ -1120,16 +1166,26 @@ def _generate_plan_weeks(goal_race: str, weeks_total: int, max_weekly_km: float,
 
 @app.post("/api/training-plan/generate")
 async def generate_training_plan(request: Request):
-    """Generate a goal-driven training plan.
+    """Generate a goal-driven training plan with history-aware calibration.
 
-    Required: goal_race, weeks_to_race, target_time (mm:ss or h:mm:ss).
-    The plan is built around the VDOT gap between current fitness and goal.
-    Each week has its own VDOT target and Daniels paces.
+    Flow:
+    1. Compute current VDOT (from recent runs or optional test input)
+    2. Compute peak VDOT (all-time best — for recovery detection)
+    3. Assess feasibility with history-aware rates
+    4. If NOT feasible AND no plan_mode → dry_run (return assessment only)
+    5. If feasible OR plan_mode chosen → generate full plan
+
+    Optional params:
+    - plan_mode: "conservative" | "aggressive" — pick path when goal is infeasible
+    - test_distance_km + test_time: manual test to override auto-VDOT
     """
     body = await request.json()
     goal_race = body.get("goal_race", "Half Marathon")
     weeks_to_race = int(body.get("weeks_to_race", 16))
     target_time_str = str(body.get("target_time", ""))
+    plan_mode = body.get("plan_mode")              # None | "conservative" | "aggressive"
+    test_distance_km = body.get("test_distance_km") # optional test calibration
+    test_time_str = body.get("test_time")            # optional test time
 
     athlete_id = await _get_athlete_id()
     q = {"athlete_id": athlete_id} if athlete_id else {}
@@ -1142,11 +1198,21 @@ async def generate_training_plan(request: Request):
     raw_max_km = (profile or {}).get("max_weekly_km")
     max_weekly_km = float(raw_max_km) if raw_max_km else defaults_km.get(goal_race, 55.0)
 
-    # ── Current VDOT from real runs ──────────────────────────────────────────
-    current_vdot = _calc_vdot(runs, max_hr)
-    if not current_vdot:
-        # Fallback estimate from recent run paces
-        current_vdot = 30.0  # conservative beginner estimate
+    # ── FULL history analysis — fetch ALL runs from DB, not just last 500 ─────
+    all_runs = await db.runs.find(q).sort("date", -1).to_list(None)
+    history = _calc_vdot_with_history(all_runs, max_hr, weeks_window=52)  # 1 year window for accurate avg
+    current_vdot = history["current"] or 30.0
+    peak_vdot = history["peak"] or current_vdot
+
+    # ── Optional test calibration ────────────────────────────────────────────
+    test_vdot = None
+    if test_distance_km and test_time_str:
+        test_time_min = _parse_time_str(str(test_time_str))
+        if test_time_min and test_time_min > 0:
+            tv = _time_to_vdot(float(test_distance_km), test_time_min)
+            if tv:
+                test_vdot = round(min(tv, 55.0), 1)
+                current_vdot = test_vdot  # override with test result
 
     # ── Target VDOT from goal time ───────────────────────────────────────────
     dist_km = RACE_DISTANCES.get(goal_race, 5.0)
@@ -1155,52 +1221,87 @@ async def generate_training_plan(request: Request):
     if target_time_min and target_time_min > 0:
         target_vdot = _time_to_vdot(dist_km, target_time_min)
         if not target_vdot:
-            target_vdot = current_vdot  # fallback
+            target_vdot = current_vdot
     else:
-        # No target time → maintain + 2 VDOT improvement
         target_vdot = current_vdot + 2.0
 
-    target_vdot = round(min(target_vdot, 75.0), 2)  # cap at elite level
+    target_vdot = round(min(target_vdot, 75.0), 2)
+    original_target_vdot = target_vdot
 
-    # ── Feasibility assessment ───────────────────────────────────────────────
-    feasibility = _assess_feasibility(current_vdot, target_vdot, weeks_to_race)
+    # ── Feasibility with history context ─────────────────────────────────────
+    feasibility = _assess_feasibility(
+        current_vdot, target_vdot, weeks_to_race,
+        peak_vdot=peak_vdot, dist_km=dist_km,
+    )
 
-    # If unrealistic, cap target VDOT to max achievable
-    if not feasibility["feasible"]:
-        mesocycles = weeks_to_race / 3.5
-        max_achievable = current_vdot + mesocycles * 0.5
-        target_vdot = round(min(target_vdot, max_achievable), 2)
-        # Recalculate the adjusted race prediction
-        adjusted_time = _vdot_to_race_time(target_vdot, dist_km)
-        feasibility["adjusted_target_vdot"] = target_vdot
-        feasibility["adjusted_time"] = adjusted_time
+    # ── ALWAYS generate the plan with the user's requested goal ──────────────
+    # No target reduction — the user's goal is respected even if unrealistic
+    # The feasibility assessment provides informative context only
+    suggested_weeks = max(8, min(weeks_to_race, 32))
+    suggested_months = round(suggested_weeks / 4.345, 1)  # weeks → months
+
+    # ── Apply plan_mode ONLY if user explicitly requests an easier path ──────
+    effective_target_vdot = target_vdot
+    if not feasibility["feasible"] and plan_mode:
+        if plan_mode == "aggressive":
+            effective_target_vdot = feasibility["optimistic_vdot"]
+        else:
+            effective_target_vdot = feasibility["conservative_vdot"]
+
+    # ── Calculate suggested weeks/months to reach the FULL user goal ─────────
+    gap = original_target_vdot - current_vdot
+    if gap > 0 and feasibility.get("conservative_rate"):
+        rate_opt = feasibility["conservative_rate"] if feasibility.get("is_recovery") else 0.5
+        weeks_needed = int(math.ceil(gap / rate_opt * 3.5))
+        months_needed = round(weeks_needed / 4.345, 1)
+        feasibility["suggested_weeks"] = weeks_needed
+        feasibility["suggested_months"] = months_needed
 
     # ── Generate the plan ────────────────────────────────────────────────────
     weeks = _generate_plan_weeks(
-        goal_race, weeks_to_race, max_weekly_km,
-        current_vdot, target_vdot, athlete_id, target_time_str,
+        goal_race, suggested_weeks, max_weekly_km,
+        current_vdot, effective_target_vdot, athlete_id, target_time_str,
     )
 
     await db.training_plan.delete_many(q)
     if weeks:
         await db.training_plan.insert_many(weeks)
 
-    # Store goal metadata on profile
     await db.profile.update_one(q, {"$set": {
         "plan_goal_race": goal_race,
         "plan_target_time": target_time_str,
-        "plan_target_vdot": target_vdot,
+        "plan_target_vdot": effective_target_vdot,
         "plan_current_vdot": current_vdot,
-        "plan_weeks": weeks_to_race,
+        "plan_weeks": suggested_weeks,
     }})
+
+    # Format suggested timeframe in Italian
+    if feasibility.get("suggested_weeks"):
+        w = feasibility["suggested_weeks"]
+        m = feasibility.get("suggested_months", 0)
+        if w <= 4:
+            feasibility["suggested_timeframe"] = f"{w} settimane"
+        elif m < 2:
+            feasibility["suggested_timeframe"] = f"{w} settimane"
+        else:
+            feasibility["suggested_timeframe"] = f"circa {m} mesi ({w} settimane)"
 
     return {
         "ok": True,
+        "dry_run": False,
         "weeks_generated": len(weeks),
         "current_vdot": current_vdot,
-        "target_vdot": target_vdot,
+        "target_vdot": effective_target_vdot,
+        "peak_vdot": peak_vdot,
+        "peak_date": history["peak_date"],
+        "training_months": history["training_months"],
+        "weekly_volume": history["weekly_volume"],
+        "test_vdot": test_vdot,
         "feasibility": feasibility,
-        "race_predictions": _predict_race(target_vdot),
+        "race_predictions": _predict_race(effective_target_vdot),
+        "suggested_weeks": feasibility.get("suggested_weeks"),
+        "suggested_months": feasibility.get("suggested_months"),
+        "suggested_timeframe": feasibility.get("suggested_timeframe"),
     }
 
 
@@ -1656,73 +1757,116 @@ async def recalculate_fitness_freshness():
 #  ANALYTICS
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def _vdot_from_run(r: dict, max_hr: int = 190) -> Optional[float]:
+    """Calculate VDOT from a single run using Daniels' VO2 formula (2013).
+
+    VO2 = -4.60 + 0.182258·v + 0.000104·v²  (v in m/min)
+    %max = 0.8 + 0.1894393·e^(-0.012778·t) + 0.2989558·e^(-0.1932605·t)
+    VDOT = VO2 / %max
+    """
+    dist = r.get("distance_km", 0)
+    if dist < 3 or dist > 42.5:
+        return None
+    pace_str = r.get("avg_pace", "")
+    if not pace_str or ":" not in pace_str:
+        return None
+    try:
+        parts = pace_str.split(":")
+        pace_s = int(parts[0]) * 60 + int(parts[1])
+    except (ValueError, IndexError):
+        return None
+    if pace_s < 150 or pace_s > 540:
+        return None
+    duration_min = r.get("duration_minutes", 0) or 0
+    if duration_min < 5:
+        return None
+    avg_hr = r.get("avg_hr")
+    if avg_hr and avg_hr < 0.80 * max_hr:
+        return None
+    speed_mpm = 60000 / pace_s
+    vo2 = -4.60 + 0.182258 * speed_mpm + 0.000104 * speed_mpm ** 2
+    pct_max = (0.8 + 0.1894393 * math.exp(-0.012778 * duration_min)
+               + 0.2989558 * math.exp(-0.1932605 * duration_min))
+    return vo2 / pct_max if pct_max > 0 else None
+
+
 def _calc_vdot(runs: list, max_hr: int = 190, weeks_window: int = 8) -> Optional[float]:
-    """Estimate VDOT from best validated run using Daniels' formula (Jack Daniels 2003).
+    """Estimate current VDOT (backward compat wrapper)."""
+    h = _calc_vdot_with_history(runs, max_hr, weeks_window)
+    return h["current"]
 
-    Uses a recency-weighted window to reflect current fitness, not historical peaks.
 
-    Strategy (3 passes — always returns the most recent valid signal):
-    1. Last `weeks_window` weeks (default 8): captures current form post-injury/break
-    2. Last 16 weeks fallback: if no valid runs in window
-    3. All-time fallback: last resort only
+def _calc_vdot_with_history(runs: list, max_hr: int = 190,
+                             weeks_window: int = 8) -> dict:
+    """Full athlete history analysis for training plan calibration.
 
-    Validation rules:
-    - Distance 4–21 km
-    - Pace 2:30–9:00/km (150–540 sec/km)
-    - HR >= 85% of max_hr (if available)
-    - Duration >= 5 min
-    - Cap VDOT at 55 (amateur runner)
+    Returns:
+        current  — VDOT from best recent run (8w → 16w → all-time fallback)
+        peak     — All-time best VDOT
+        peak_date — Date of peak performance
+        training_months — Running history length in months
+        weekly_volume — Avg km/week in last 8 weeks
+
+    Scientific basis:
+    - Daniels (2013): VDOT tables, %VO2max duration curves
+    - Mujika & Padilla (2000): detraining reversal rates
+    - Staron et al. (1991): muscle memory / repeated bout effect
     """
     import datetime as _dt
 
-    def _best_from(run_list: list) -> Optional[float]:
-        best = None
-        for r in run_list:
-            dist = r.get("distance_km", 0)
-            if dist < 4 or dist > 21:
-                continue
-            pace_str = r.get("avg_pace", "")
-            if not pace_str or ":" not in pace_str:
-                continue
-            try:
-                parts = pace_str.split(":")
-                pace_s = int(parts[0]) * 60 + int(parts[1])
-            except (ValueError, IndexError):
-                continue
-            if pace_s < 150 or pace_s > 540:
-                continue
-            duration_min = r.get("duration_minutes", 0) or 0
-            if duration_min < 5:
-                continue
-            avg_hr = r.get("avg_hr")
-            if avg_hr and avg_hr < 0.85 * max_hr:
-                continue
-            speed_mpm = 60000 / pace_s
-            vo2 = -4.60 + 0.182258 * speed_mpm + 0.000104 * speed_mpm ** 2
-            pct_max = 0.8 + 0.1894393 * math.exp(-0.012778 * duration_min) + 0.2989558 * math.exp(-0.1932605 * duration_min)
-            if pct_max > 0:
-                vdot = vo2 / pct_max
-                if best is None or vdot > best:
-                    best = vdot
-        return round(min(best, 55.0), 1) if best else None
+    run_vdots = []
+    for r in runs:
+        v = _vdot_from_run(r, max_hr)
+        if v:
+            run_vdots.append((r, min(v, 55.0)))
 
-    cutoff_primary = (_dt.date.today() - _dt.timedelta(weeks=weeks_window)).isoformat()
-    cutoff_extended = (_dt.date.today() - _dt.timedelta(weeks=16)).isoformat()
+    if not run_vdots:
+        return {"current": None, "peak": None, "peak_date": None,
+                "training_months": 0, "weekly_volume": 0}
 
-    # Pass 1 — last `weeks_window` weeks (current fitness)
-    recent = [r for r in runs if r.get("date", "") >= cutoff_primary]
-    result = _best_from(recent)
-    if result:
-        return result
+    cutoff_8w = (_dt.date.today() - _dt.timedelta(weeks=weeks_window)).isoformat()
+    cutoff_16w = (_dt.date.today() - _dt.timedelta(weeks=16)).isoformat()
 
-    # Pass 2 — last 16 weeks (medium-term)
-    medium = [r for r in runs if r.get("date", "") >= cutoff_extended]
-    result = _best_from(medium)
-    if result:
-        return result
+    recent_8 = [(r, v) for r, v in run_vdots if r.get("date", "") >= cutoff_8w]
+    recent_16 = [(r, v) for r, v in run_vdots if r.get("date", "") >= cutoff_16w]
 
-    # Pass 3 — all-time fallback (should rarely trigger)
-    return _best_from(runs)
+    # Current: best from narrowest window available
+    if recent_8:
+        current = max(v for _, v in recent_8)
+    elif recent_16:
+        current = max(v for _, v in recent_16)
+    else:
+        current = max(v for _, v in run_vdots)
+    current = round(current, 1)
+
+    # Peak: all-time best
+    peak_run, peak_val = max(run_vdots, key=lambda x: x[1])
+    peak = round(peak_val, 1)
+    peak_date = peak_run.get("date", "")
+
+    # Training age (months from first to latest valid run)
+    dates = sorted(r.get("date", "") for r, _ in run_vdots)
+    training_months = 0
+    if len(dates) >= 2:
+        try:
+            first = _dt.date.fromisoformat(dates[0])
+            last = _dt.date.fromisoformat(dates[-1])
+            training_months = max(1, (last - first).days // 30)
+        except ValueError:
+            pass
+
+    # Recent weekly volume (avg km in last 8 weeks)
+    recent_runs = [r for r in runs if r.get("date", "") >= cutoff_8w]
+    recent_km = sum(r.get("distance_km", 0) for r in recent_runs)
+    weekly_volume = round(recent_km / max(1, weeks_window), 1)
+
+    return {
+        "current": current,
+        "peak": peak,
+        "peak_date": peak_date,
+        "training_months": training_months,
+        "weekly_volume": weekly_volume,
+    }
 
 
 def _vdot_to_race_time(vdot: float, dist_km: float) -> Optional[str]:
