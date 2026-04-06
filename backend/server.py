@@ -1200,9 +1200,16 @@ async def generate_training_plan(request: Request):
 
     # ── FULL history analysis — fetch ALL runs from DB, not just last 500 ─────
     all_runs = await db.runs.find(q).sort("date", -1).to_list(None)
-    history = _calc_vdot_with_history(all_runs, max_hr, weeks_window=52)  # 1 year window for accurate avg
+    dist_km = RACE_DISTANCES.get(goal_race, 5.0)
+    history = _calc_vdot_with_history(all_runs, max_hr, weeks_window=52, goal_dist_km=dist_km)
     current_vdot = history["current"] or 30.0
     peak_vdot = history["peak"] or current_vdot
+    race_specific_vdot = history.get("race_specific_vdot")
+
+    # Use race-specific VDOT if available (more reliable for the target distance)
+    if race_specific_vdot and race_specific_vdot < current_vdot:
+        # Race-specific VDOT is lower → use it (more conservative, more accurate)
+        current_vdot = race_specific_vdot
 
     # ── Optional test calibration ────────────────────────────────────────────
     test_vdot = None
@@ -1797,7 +1804,8 @@ def _calc_vdot(runs: list, max_hr: int = 190, weeks_window: int = 8) -> Optional
 
 
 def _calc_vdot_with_history(runs: list, max_hr: int = 190,
-                             weeks_window: int = 8) -> dict:
+                             weeks_window: int = 8,
+                             goal_dist_km: float = 0) -> dict:
     """Full athlete history analysis for training plan calibration.
 
     Returns:
@@ -1806,11 +1814,13 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
         peak_date — Date of peak performance
         training_months — Running history length in months
         weekly_volume — Avg km/week in last 8 weeks
+        race_specific_vdot — VDOT from runs closest to goal distance (more reliable)
 
     Scientific basis:
     - Daniels (2013): VDOT tables, %VO2max duration curves
     - Mujika & Padilla (2000): detraining reversal rates
     - Staron et al. (1991): muscle memory / repeated bout effect
+    - Daniels principle: VDOT from runs >= 70% of race distance is most reliable
     """
     import datetime as _dt
 
@@ -1822,13 +1832,28 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
 
     if not run_vdots:
         return {"current": None, "peak": None, "peak_date": None,
-                "training_months": 0, "weekly_volume": 0}
+                "training_months": 0, "weekly_volume": 0, "race_specific_vdot": None}
 
     cutoff_8w = (_dt.date.today() - _dt.timedelta(weeks=weeks_window)).isoformat()
     cutoff_16w = (_dt.date.today() - _dt.timedelta(weeks=16)).isoformat()
 
     recent_8 = [(r, v) for r, v in run_vdots if r.get("date", "") >= cutoff_8w]
     recent_16 = [(r, v) for r, v in run_vdots if r.get("date", "") >= cutoff_16w]
+
+    # ── Race-specific VDOT: only runs >= 70% of goal distance ────────────────
+    # Daniels (2013): VDOT from runs close to race distance is most predictive
+    race_specific_vdot = None
+    if goal_dist_km > 0:
+        min_dist = goal_dist_km * 0.70  # 70% threshold
+        race_runs = [(r, v) for r, v in run_vdots if r.get("distance_km", 0) >= min_dist]
+        if race_runs:
+            # Use best VDOT from race-distance runs in last 16 weeks
+            race_recent = [(r, v) for r, v in race_runs if r.get("date", "") >= cutoff_16w]
+            if race_recent:
+                race_specific_vdot = round(max(v for _, v in race_recent), 1)
+            else:
+                # Fallback to all-time best from race-distance runs
+                race_specific_vdot = round(max(v for _, v in race_runs), 1)
 
     # Current: best from narrowest window available
     if recent_8:
@@ -1866,6 +1891,7 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
         "peak_date": peak_date,
         "training_months": training_months,
         "weekly_volume": weekly_volume,
+        "race_specific_vdot": race_specific_vdot,
     }
 
 
