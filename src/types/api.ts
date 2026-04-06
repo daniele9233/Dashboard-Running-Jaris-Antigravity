@@ -69,6 +69,11 @@ export interface Run {
   polyline: string | null;
   start_latlng: [number, number] | null;
   plan_feedback: PlanFeedback | null;
+  // Garmin Running Dynamics (from FIT files)
+  avg_vertical_oscillation: number | null;  // cm
+  avg_vertical_ratio: number | null;        // %
+  avg_ground_contact_time: number | null;   // ms
+  avg_stride_length: number | null;         // m
 }
 
 export interface RunsResponse {

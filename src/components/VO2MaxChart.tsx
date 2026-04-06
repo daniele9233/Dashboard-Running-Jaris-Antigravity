@@ -47,7 +47,9 @@ function vdotLabel(v: number): string {
 // ─── Build monthly VDOT history ───────────────────────────────────────────────
 function buildHistory(runs: Run[]) {
   const now = new Date();
-  return Array.from({ length: 12 }, (_, i) => {
+
+  // Step 1 — raw best VDOT per month
+  const raw = Array.from({ length: 12 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
     const monthRuns = runs.filter((r) => {
       const rd = new Date(r.date);
@@ -56,7 +58,13 @@ function buildHistory(runs: Run[]) {
     let best: number | null = null;
     for (const r of monthRuns) {
       if (r.distance_km < 5) continue;
-      if (r.duration_minutes / r.distance_km > 6.0) continue; // ritmo facile — non usare per VDOT
+      // If HR available, require >= 80% effort; otherwise stricter pace (≤ 5:45)
+      const paceMinKm = r.duration_minutes / r.distance_km;
+      if (r.avg_hr_pct !== null && r.avg_hr_pct !== undefined) {
+        if (r.avg_hr_pct < 0.80) continue; // corsa facile con HR disponibile
+      } else {
+        if (paceMinKm > 5.75) continue; // senza HR, escludi ritmi troppo lenti
+      }
       const v = estimateVdot(r.distance_km, r.duration_minutes);
       if (v !== null && (best === null || v > best)) best = v;
     }
@@ -65,6 +73,15 @@ function buildHistory(runs: Run[]) {
       vdot: best,
     };
   });
+
+  // Step 2 — drop outlier dips: if a month's VDOT is < 87% of all-time peak,
+  // the runner wasn't racing that month — treat as null and forward-fill
+  const peak = Math.max(...raw.map(r => r.vdot ?? 0));
+  const floor = peak * 0.87;
+  return raw.map(r => ({
+    ...r,
+    vdot: r.vdot !== null && r.vdot >= floor ? r.vdot : null,
+  }));
 }
 
 // ─── T-Pace (soglia) da VDOT ─────────────────────────────────────────────────

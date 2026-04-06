@@ -86,7 +86,7 @@ function parseTime(t: string): number | null {
 // ─── Monthly VDOT history ─────────────────────────────────────────────────────
 function buildMonthlyVdot(runs: Run[]): { name: string; vdot: number | null }[] {
   const now = new Date();
-  return Array.from({ length: 12 }, (_, i) => {
+  const raw = Array.from({ length: 12 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
     const monthRuns = runs.filter((r) => {
       const rd = new Date(r.date);
@@ -94,11 +94,21 @@ function buildMonthlyVdot(runs: Run[]): { name: string; vdot: number | null }[] 
     });
     let best: number | null = null;
     for (const r of monthRuns) {
+      const paceMinKm = r.duration_minutes / r.distance_km;
+      if (r.avg_hr_pct !== null && r.avg_hr_pct !== undefined) {
+        if (r.avg_hr_pct < 0.80) continue;
+      } else {
+        if (paceMinKm > 5.75) continue;
+      }
       const v = estimateVdot(r.distance_km, r.duration_minutes);
       if (v !== null && (best === null || v > best)) best = v;
     }
     return { name: d.toLocaleString("it", { month: "short" }).toUpperCase(), vdot: best };
   });
+  // Drop outlier dips: months below 87% of peak are "coasting" months, not fitness drops
+  const peak = Math.max(...raw.map(r => r.vdot ?? 0));
+  const floor = peak * 0.87;
+  return raw.map(r => ({ ...r, vdot: r.vdot !== null && r.vdot >= floor ? r.vdot : null }));
 }
 
 // ─── Race config ──────────────────────────────────────────────────────────────

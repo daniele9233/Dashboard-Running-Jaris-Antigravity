@@ -19,7 +19,8 @@ import { useApi } from '../hooks/useApi';
 import { getRuns, syncGarminAll } from '../api';
 import type { GarminSyncResult } from '../api';
 import type { Run, RunsResponse } from '../types/api';
-import { useState, useRef, useCallback, useEffect, type ReactNode } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo, type ReactNode } from 'react';
+import { computeDrift, driftLabel } from '../utils/cardiacDrift';
 import { Map, Marker, NavigationControl } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { MapRef } from 'react-map-gl/mapbox';
@@ -138,6 +139,18 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
 
   const runs: Run[] = data?.runs ?? [];
   const runsWithCoords = runs.filter(r => r.start_latlng && r.start_latlng.length === 2);
+
+  // Pre-compute cardiac drift for all runs (only steady-pace runs qualify)
+  const driftMap = useMemo(() => {
+    const record: Record<string, ReturnType<typeof computeDrift>> = {};
+    for (const run of runs) {
+      if (run.distance_km >= 4 && (run.splits ?? []).length >= 4) {
+        const d = computeDrift(run);
+        if (d) record[run.id] = d;
+      }
+    }
+    return record;
+  }, [runs]);
   const lastRunWithCoords = runsWithCoords[0] ?? null; // runs are newest-first
 
   // Center fallback
@@ -440,6 +453,9 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                 || `${typeLabel} ${run.distance_km.toFixed(1)} km`
               : `${typeLabel} ${run.distance_km.toFixed(1)} km`;
 
+            const drift = driftMap[run.id] ?? null;
+            const driftCfg = drift ? driftLabel(drift.drift) : null;
+
             return (
               <motion.div
                 key={run.id}
@@ -513,6 +529,25 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                     <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">hr</span>
                     <span className="text-sm font-black italic text-rose-400">{run.avg_hr ?? '—'}</span>
                   </div>
+
+                  {/* Cardiac drift — only for steady-pace runs */}
+                  {drift && driftCfg && (
+                    <>
+                      <div className="w-px h-8 self-center bg-white/5" />
+                      <div className="flex flex-col items-center" title={`Deriva cardiaca: Prima metà ${drift.hr1} bpm → Seconda metà ${drift.hr2} bpm`}>
+                        <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">drift</span>
+                        <span className="text-sm font-black italic" style={{ color: driftCfg.color }}>
+                          {drift.drift >= 0 ? "+" : ""}{drift.drift.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">1ª→2ª</span>
+                        <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap">
+                          {drift.hr1}<span className="text-gray-600">→</span><span style={{ color: driftCfg.color }}>{drift.hr2}</span>
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Arrow → opens detail */}
