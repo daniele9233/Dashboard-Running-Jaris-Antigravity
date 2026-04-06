@@ -258,6 +258,26 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
     }
   };
 
+  const handleChoose = async (mode: 'conservative' | 'aggressive') => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params: Parameters<typeof generateTrainingPlan>[0] = {
+        goal_race: goalRace,
+        weeks_to_race: weeksToRace,
+        target_time: targetTime.trim(),
+        plan_mode: mode,
+      };
+      const res = await generateTrainingPlan(params);
+      setResult(res as unknown as GenerateResult);
+      setPhase('done');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Errore nella generazione del piano.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const feasColor = result?.feasibility.difficulty === "already_there" ? "text-[#10B981]"
     : result?.feasibility.difficulty === "realistic" ? "text-[#3B82F6]"
     : result?.feasibility.difficulty === "challenging" ? "text-amber-400"
@@ -412,6 +432,72 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
                         </span>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Choice cards when infeasible */}
+              {!result.feasibility.feasible && (
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-400 text-center">Scegli come procedere:</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Conservative */}
+                    <button
+                      type="button"
+                      onClick={() => handleChoose('conservative')}
+                      disabled={loading}
+                      className="bg-[#121212] border border-emerald-500/20 rounded-xl p-4 text-left hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all group disabled:opacity-50"
+                    >
+                      <div className="text-[9px] text-emerald-400 uppercase tracking-wider font-bold mb-2">
+                        Piano Conservativo
+                      </div>
+                      <div className="text-2xl font-black text-white mb-1">
+                        {result.feasibility.conservative_time ?? '—'}
+                      </div>
+                      <div className="text-xs text-gray-500 mb-3">
+                        VDOT {result.feasibility.conservative_vdot}
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-[10px] text-gray-500">
+                          <span className="text-emerald-400 font-bold">{result.feasibility.conservative_rate}</span> VDOT/mesociclo
+                        </div>
+                        <div className="text-[10px] text-gray-500">
+                          80% probabilità di successo
+                        </div>
+                      </div>
+                      <div className="mt-3 text-[10px] font-bold text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        Genera questo piano →
+                      </div>
+                    </button>
+
+                    {/* Aggressive */}
+                    <button
+                      type="button"
+                      onClick={() => handleChoose('aggressive')}
+                      disabled={loading}
+                      className="bg-[#121212] border border-amber-500/20 rounded-xl p-4 text-left hover:border-amber-500/50 hover:bg-amber-500/5 transition-all group disabled:opacity-50"
+                    >
+                      <div className="text-[9px] text-amber-400 uppercase tracking-wider font-bold mb-2">
+                        Piano Aggressivo
+                      </div>
+                      <div className="text-2xl font-black text-white mb-1">
+                        {result.feasibility.optimistic_time ?? '—'}
+                      </div>
+                      <div className="text-xs text-gray-500 mb-3">
+                        VDOT {result.feasibility.optimistic_vdot}
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-[10px] text-gray-500">
+                          <span className="text-amber-400 font-bold">{result.feasibility.optimistic_rate}</span> VDOT/mesociclo
+                        </div>
+                        <div className="text-[10px] text-gray-500">
+                          55% probabilità di successo
+                        </div>
+                      </div>
+                      <div className="mt-3 text-[10px] font-bold text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        Genera questo piano →
+                      </div>
+                    </button>
                   </div>
                 </div>
               )}
