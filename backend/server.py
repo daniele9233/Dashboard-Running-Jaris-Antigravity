@@ -4175,3 +4175,100 @@ async def delete_garmin_csv_data(doc_id: str):
         return {"ok": True}
     except Exception:
         return JSONResponse({"error": "invalid_id"}, status_code=400)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  GCT ANALYSIS — Ground Contact Time by month and pace zone
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/garmin/gct-analysis")
+async def get_gct_analysis():
+    """Analyze Ground Contact Time from Garmin CSV data.
+    
+    Returns monthly averages grouped by pace zone:
+    - pace_530: pace >= 5:30/km (slower)
+    - pace_500: pace 5:00-5:29/km (medium)
+    - pace_445: pace < 4:45/km (faster)
+    
+    Only includes runs >= 400m with valid GCT data.
+    """
+    athlete_id = await _get_athlete_id()
+    if not athlete_id:
+        return JSONResponse({"error": "not_authenticated"}, status_code=401)
+
+    # Fetch all Garmin CSV data for this athlete
+    cursor = db.garmin_csv_data.find({
+        "athlete_id": athlete_id,
+        "avg_ground_contact_time_ms": {"$ne": None},
+        "distance_km": {"$gte": 0.4},  # Filter runs < 400m
+    }).sort("date", 1)
+    
+    docs = await cursor.to_list(2000)
+    
+    if not docs:
+        return {"monthly": [], "summary": {"total_runs": 0, "avg_gct": None}}
+    
+    # Group by month and pace zone
+    monthly_data: dict = {}  # "YYYY-MM" -> {pace_zone: {gct_values: [], count: int}}
+    
+    for doc in docs:
+        gct = doc.get("avg_ground_contact_time_ms")
+        pace_sec = doc.get("avg_pace_sec")
+        date_str = doc.get("date", "")
+        
+        if not gct or not pace_sec or not date_str:
+            continue
+        
+        # Extract year-month
+        year_month = date_str[:7]  # "2026-04"
+        if year_month not in monthly_data:
+            monthly_data[year_month] = {
+                "pace_530": {"values": [], "count": 0},
+                "pace_500": {"values": [], "count": 0},
+                "pace_445": {"values": [], "count": 0},
+            }
+        
+        # Classify pace zone
+        if pace_sec >= 330:  # >= 5:30/km
+            zone = "pace_530"
+        elif pace_sec >= 300:  # 5:00-5:29/km
+            zone = "pace_500"
+        else:  # < 4:45/km (285 sec)
+            zone = "pace_445"
+        
+        monthly_data[year_month][zone]["values"].append(gct)
+        monthly_data[year_month][zone]["count"] += 1
+    
+    # Build result: average GCT per month per zone
+    result = []
+    all_gct_values = []
+    
+    for ym in sorted(monthly_data.keys()):
+        zones = monthly_data[ym]
+        row = {"month": ym}
+        
+        for zone in ["pace_530", "pace_500", "pace_445"]:
+            values = zones[zone]["values"]
+            if values:
+                avg = round(sum(values) / len(values), 1)
+                row[zone] = avg
+                all_gct_values.extend(values)
+            else:
+                row[zone] = None
+        
+        result.append(row)
+    
+    overall_avg = round(sum(all_gct_values) / len(all_gct_values), 1) if all_gct_values else None
+    
+    return {
+        "monthly": result,
+        "summary": {
+            "total_runs": len(docs),
+            "avg_gct": overall_avg,
+            "zones": {
+                "pace_530": {"label": "≥ 5:30/km", "color": "#3B82F6"},
+                "pace_500": {"label": "5:00-5:29/km", "color": "#10B981"},
+                "pace_445": {"label": "< 4:45/km", "color": "#F43F5E"},
+            }
+        }
+    }

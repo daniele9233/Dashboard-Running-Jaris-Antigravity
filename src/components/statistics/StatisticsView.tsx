@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { StatsDrift } from './StatsDrift';
 import { BadgesGrid } from '../BadgesGrid';
 import { useApi } from '../../hooks/useApi';
-import { getAnalytics, getVdotPaces, getRuns } from '../../api';
-import type { AnalyticsResponse, VdotPacesResponse, RunsResponse } from '../../types/api';
+import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis } from '../../api';
+import type { AnalyticsResponse, VdotPacesResponse, RunsResponse, GctAnalysisResponse } from '../../types/api';
 import { 
   Activity, 
   Zap, 
@@ -200,6 +200,7 @@ export function StatisticsView() {
   const { data: analyticsData } = useApi<AnalyticsResponse>(getAnalytics);
   const { data: vdotData } = useApi<VdotPacesResponse>(getVdotPaces);
   const { data: runsData } = useApi<RunsResponse>(getRuns);
+  const { data: gctData } = useApi<GctAnalysisResponse>(getGctAnalysis);
 
   const runs = runsData?.runs ?? [];
   const vdot = vdotData?.vdot ?? null;
@@ -827,6 +828,129 @@ export function StatisticsView() {
 
             {/* Deriva Cardiaca */}
             <StatsDrift runs={runs} />
+
+            {/* Ground Contact Time Analysis */}
+            {gctData && gctData.monthly.length > 0 && (
+              <div className="bg-[#111111] border border-[#222] rounded-3xl p-8">
+                <div className="flex items-center gap-3 mb-8">
+                  <Zap className="w-6 h-6 text-[#8B5CF6]" />
+                  <div>
+                    <h2 className="text-xl font-black tracking-widest uppercase italic">Tempo Contatto Suolo (GCT)</h2>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">
+                      Media mensile per fascia di pace · {gctData.summary.total_runs} corse analizzate
+                      {gctData.summary.avg_gct && ` · GCT medio: ${gctData.summary.avg_gct} ms`}
+                    </p>
+                  </div>
+                </div>
+                <div className="h-72 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={gctData.monthly}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                      <XAxis 
+                        dataKey="month" 
+                        stroke="#444" 
+                        fontSize={10} 
+                        tickLine={false} 
+                        axisLine={false}
+                        tickFormatter={(v) => {
+                          const [y, m] = v.split('-');
+                          const months = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+                          return `${months[parseInt(m) - 1]} '${y.slice(2)}`;
+                        }}
+                      />
+                      <YAxis 
+                        stroke="#444" 
+                        fontSize={10} 
+                        tickLine={false} 
+                        axisLine={false}
+                        domain={['dataMin - 10', 'dataMax + 10']}
+                        tickFormatter={(v) => `${v}ms`}
+                      />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#111', border: '1px solid #222', borderRadius: '12px' }}
+                        formatter={(value: any, name: string) => {
+                          if (value === null || value === undefined) return ['N/D', ''];
+                          const zoneLabels: Record<string, string> = {
+                            pace_530: '≥ 5:30/km',
+                            pace_500: '5:00-5:29/km',
+                            pace_445: '< 4:45/km',
+                          };
+                          return [`${value} ms`, zoneLabels[name] || name];
+                        }}
+                        labelFormatter={(label) => {
+                          const [y, m] = label.split('-');
+                          const months = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+                          return `${months[parseInt(m) - 1]} ${y}`;
+                        }}
+                      />
+                      <Legend 
+                        formatter={(value: string) => {
+                          const labels: Record<string, string> = {
+                            pace_530: '≥ 5:30/km',
+                            pace_500: '5:00-5:29/km',
+                            pace_445: '< 4:45/km',
+                          };
+                          return labels[value] || value;
+                        }}
+                        wrapperStyle={{ fontSize: '11px', fontWeight: 700 }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="pace_530" 
+                        stroke="#3B82F6" 
+                        strokeWidth={3} 
+                        dot={{ r: 5, fill: '#3B82F6' }}
+                        name="pace_530"
+                        connectNulls={false}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="pace_500" 
+                        stroke="#10B981" 
+                        strokeWidth={3} 
+                        dot={{ r: 5, fill: '#10B981' }}
+                        name="pace_500"
+                        connectNulls={false}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="pace_445" 
+                        stroke="#F43F5E" 
+                        strokeWidth={3} 
+                        dot={{ r: 5, fill: '#F43F5E' }}
+                        name="pace_445"
+                        connectNulls={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-4">
+                  {[
+                    { key: 'pace_530', label: '≥ 5:30/km', color: '#3B82F6' },
+                    { key: 'pace_500', label: '5:00-5:29/km', color: '#10B981' },
+                    { key: 'pace_445', label: '< 4:45/km', color: '#F43F5E' },
+                  ].map(({ key, label, color }) => {
+                    const values = gctData.monthly.map(m => m[key as keyof typeof m]).filter((v): v is number => v !== null);
+                    const avg = values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null;
+                    const min = values.length > 0 ? Math.min(...values) : null;
+                    const max = values.length > 0 ? Math.max(...values) : null;
+                    return (
+                      <div key={key} className="bg-[#181818] border border-[#2A2A2A] rounded-xl p-4 text-center">
+                        <div className="text-[9px] font-black uppercase tracking-widest mb-2" style={{ color }}>{label}</div>
+                        {avg !== null ? (
+                          <>
+                            <div className="text-2xl font-black italic text-white">{avg}<span className="text-xs text-gray-500 font-normal ml-1">ms</span></div>
+                            <div className="text-[9px] text-gray-500 mt-1">min {min}ms · max {max}ms</div>
+                          </>
+                        ) : (
+                          <div className="text-sm text-gray-600 font-bold">N/D</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

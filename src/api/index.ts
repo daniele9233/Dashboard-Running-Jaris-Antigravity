@@ -166,6 +166,8 @@ export const saveGarminToken = (tokenDump: string) => api.post<{ ok: boolean; me
 export const importGarminCsv = (runs: Array<Record<string, string>>) => api.post<GarminCsvImportResult>('/api/garmin/csv-import', { runs });
 export const getGarminCsvData = () => api.get<{ data: GarminCsvData[]; count: number }>('/api/garmin/csv-data');
 export const deleteGarminCsvData = (docId: string) => api.delete<{ ok: boolean }>(`/api/garmin/csv-data/${docId}`);
+export interface GctAnalysisResponse { monthly: { month: string; pace_530: number | null; pace_500: number | null; pace_445: number | null }[]; summary: { total_runs: number; avg_gct: number | null; zones: Record<string, { label: string; color: string }> }; }
+export const getGctAnalysis = () => api.get<GctAnalysisResponse>('/api/garmin/gct-analysis');
 
 // ─── AI ──────────────────────────────────────────────────────────────────────
 export const analyzeRun = (runId: string) =>
