@@ -12,12 +12,14 @@ import {
   Globe,
   Navigation,
   Layers,
+  Upload,
+  X,
+  Database,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
 import { useApi } from '../hooks/useApi';
-import { getRuns, syncGarminAll, getGarminStatus, saveGarminToken, exchangeGarminTicket, getGarminAuthUrl } from '../api';
-import type { GarminSyncResult } from '../api';
+import { getRuns, importGarminCsv } from '../api';
 import type { Run, RunsResponse } from '../types/api';
 import { useState, useRef, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import { computeDrift, driftLabel } from '../utils/cardiacDrift';
@@ -125,14 +127,17 @@ interface ActivitiesViewProps {
 
 export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
   const { data, loading, error } = useApi<RunsResponse>(getRuns);
-  const [garminState, setGarminState] = useState<'idle' | 'connecting' | 'syncing' | 'done' | 'error'>('idle');
-  const [garminResult, setGarminResult] = useState<GarminSyncResult | null>(null);
-  const [garminForce, setGarminForce] = useState(false);
-  const [garminConnected, setGarminConnected] = useState(false);
   const [hoveredRunId, setHoveredRunId] = useState<string | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [mapViewMode, setMapViewMode] = useState<MapViewMode>('all-zoomed');
   const [mapReady, setMapReady] = useState(false);
+  const [showGarminImport, setShowGarminImport] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvParsing, setCsvParsing] = useState(false);
+  const [csvImporting, setCsvImporting] = useState(false);
+  const [csvResult, setCsvResult] = useState<{ success: boolean; message: string; imported: number; skipped: number } | null>(null);
+  const [parsedRuns, setParsedRuns] = useState<Array<Record<string, string>>>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const mapRef = useRef<MapRef>(null);
   const rafRef = useRef<number | null>(null);
@@ -157,62 +162,6 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
   // Center fallback
   const initialLng = lastRunWithCoords ? lastRunWithCoords.start_latlng![1] : 12.49;
   const initialLat = lastRunWithCoords ? lastRunWithCoords.start_latlng![0] : 41.89;
-
-  // ── Garmin auth via popup ──────────────────────────────────────────────────
-  async function handleGarminAuth() {
-    setGarminState('connecting');
-    try {
-      const { auth_url, service } = await getGarminAuthUrl();
-      
-      // Open Garmin SSO in popup
-      const popup = window.open(auth_url, 'garmin-auth', 'width=500,height=600,scrollbars=yes');
-      if (!popup) {
-        throw new Error('Popup blocked — enable popups for this site');
-      }
-
-      // Listen for message from popup
-      const handleMessage = async (event: MessageEvent) => {
-        if (event.origin !== window.location.origin) return;
-        
-        if (event.data?.type === 'garmin-auth') {
-          window.removeEventListener('message', handleMessage);
-          try {
-            await exchangeGarminTicket(event.data.ticket, event.data.service);
-            setGarminConnected(true);
-            setGarminState('done');
-            // Auto-sync after auth
-            await handleGarminSync(false);
-          } catch (e: any) {
-            let msg = e?.message ?? 'Unknown error';
-            try { const parsed = JSON.parse(msg); msg = parsed.detail ?? parsed.error ?? msg; } catch {}
-            setGarminResult({ ok: false, hr_updated: 0, dynamics_updated: 0, updated: 0, skipped: 0, skipped_no_match: 0, skipped_complete: 0, total_garmin_runs: 0, errors: [msg] });
-            setGarminState('error');
-          }
-        }
-      };
-      
-      window.addEventListener('message', handleMessage);
-    } catch (e: any) {
-      setGarminResult({ ok: false, hr_updated: 0, dynamics_updated: 0, updated: 0, skipped: 0, skipped_no_match: 0, skipped_complete: 0, total_garmin_runs: 0, errors: [e?.message ?? 'Auth failed'] });
-      setGarminState('error');
-    }
-  }
-
-  // ── Garmin sync (login diretto, niente popup) ───────────────────────────────
-  async function handleGarminSync(force = false) {
-    setGarminState('syncing');
-    setGarminResult(null);
-    try {
-      const res = await syncGarminAll(force);
-      setGarminResult(res);
-      setGarminState('done');
-    } catch (e: any) {
-      let msg = e?.message ?? 'Unknown error';
-      try { const parsed = JSON.parse(msg); msg = parsed.detail ?? parsed.error ?? msg; } catch {}
-      setGarminResult({ ok: false, hr_updated: 0, dynamics_updated: 0, updated: 0, skipped: 0, skipped_no_match: 0, skipped_complete: 0, total_garmin_runs: 0, errors: [msg] });
-      setGarminState('error');
-    }
-  }
 
   // ── Rotation helpers ───────────────────────────────────────────────────────
   const stopRotation = useCallback(() => {
@@ -355,6 +304,97 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
     ? [lastRunWithCoords]
     : runsWithCoords;
 
+  // ── Garmin CSV Import ─────────────────────────────────────────────────────
+  function parseGarminCsv(text: string): Array<Record<string, string>> {
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return [];
+    
+    // Parse header
+    const header = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+    const runs: Array<Record<string, string>> = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values: string[] = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (const char of lines[i]) {
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          values.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      values.push(current.trim());
+      
+      const row: Record<string, string> = {};
+      header.forEach((h, idx) => {
+        row[h] = (values[idx] || '').replace(/^"|"$/g, '');
+      });
+      runs.push(row);
+    }
+    return runs;
+  }
+
+  async function handleCsvFile(file: File) {
+    setCsvParsing(true);
+    setCsvResult(null);
+    try {
+      const text = await file.text();
+      const runs = parseGarminCsv(text);
+      
+      if (runs.length === 0) {
+        setCsvResult({ success: false, message: 'Nessuna corsa trovata nel file CSV.', imported: 0, skipped: 0 });
+        return;
+      }
+      
+      setParsedRuns(runs);
+      setCsvFile(file);
+      setCsvResult({ success: true, message: `${runs.length} corse trovate nel file "${file.name}". Pronto per l'import.`, imported: 0, skipped: 0 });
+    } catch (e: any) {
+      setCsvResult({ success: false, message: `Errore parsing CSV: ${e?.message ?? 'Errore sconosciuto'}`, imported: 0, skipped: 0 });
+    }
+    setCsvParsing(false);
+  }
+
+  async function handleImportToDatabase() {
+    if (parsedRuns.length === 0) return;
+    setCsvImporting(true);
+    setCsvResult(null);
+    try {
+      const result = await importGarminCsv(parsedRuns);
+      setCsvResult({
+        success: true,
+        message: `Importazione completata! ${result.imported} corse salvate nella collezione "garmin_csv_data". ${result.skipped} saltate.`,
+        imported: result.imported,
+        skipped: result.skipped,
+      });
+      setParsedRuns([]);
+      setCsvFile(null);
+    } catch (e: any) {
+      setCsvResult({
+        success: false,
+        message: `Errore durante l'importazione: ${e?.message ?? 'Errore sconosciuto'}`,
+        imported: 0,
+        skipped: 0,
+      });
+    }
+    setCsvImporting(false);
+  }
+
+  function resetCsvImport() {
+    setCsvFile(null);
+    setCsvResult(null);
+    setParsedRuns([]);
+    setShowGarminImport(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }
+
   return (
     <div className="flex-1 flex overflow-hidden bg-[#050505]" style={{ height: '100%' }}>
 
@@ -389,7 +429,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
             </div>
           </div>
 
-          {/* Counts + Garmin */}
+          {/* Counts + Garmin Import */}
           <div className="flex flex-wrap items-center gap-2 mt-3">
             <div className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2">
               <Calendar className="w-3.5 h-3.5 text-[#C0FF00]" />
@@ -398,86 +438,15 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
               </span>
             </div>
 
-            {/* Connect Garmin button (when no token) */}
+            {/* Garmin Import button */}
             <button
-              onClick={() => handleGarminAuth()}
-              disabled={garminState === 'connecting'}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[#3B82F6]/30 text-[#3B82F6] bg-[#3B82F6]/5 hover:bg-[#3B82F6]/10 transition-all"
-              title="Connetti il tuo account Garmin per scaricare Running Dynamics"
+              onClick={() => setShowGarminImport(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[#8B5CF6]/30 text-[#8B5CF6] bg-[#8B5CF6]/5 hover:bg-[#8B5CF6]/10 transition-all"
+              title="Importa manualmente il file CSV Garmin"
             >
-              {garminState === 'connecting' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Watch className="w-3.5 h-3.5" />}
-              {garminState === 'connecting' ? 'Connessione...' : 'Connetti Garmin'}
+              <Database className="w-3.5 h-3.5" />
+              Garmin Import
             </button>
-
-            {/* Sync button */}
-            <button
-              onClick={() => handleGarminSync(false)}
-              disabled={garminState === 'syncing' || garminState === 'connecting'}
-              className={cn(
-                'flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all',
-                garminState === 'done'   ? 'bg-[#00FFAA]/10 border-[#00FFAA]/30 text-[#00FFAA]'
-                : garminState === 'error' ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
-                : 'bg-[#0A0A0A] border-white/10 text-gray-400 hover:border-[#00FFAA]/30 hover:text-[#00FFAA]'
-              )}
-            >
-              {garminState === 'syncing' ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                : garminState === 'done'  ? <CheckCircle2 className="w-3.5 h-3.5" />
-                : <Watch className="w-3.5 h-3.5" />}
-              {garminState === 'syncing' ? 'Sync...' : 'Garmin Sync'}
-            </button>
-
-            {/* Force re-sync button */}
-            {(garminState === 'idle' || garminState === 'done' || garminState === 'error') && (
-              <button
-                onClick={() => handleGarminSync(true)}
-                disabled={garminState === 'syncing'}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-[#F59E0B]/30 text-[#F59E0B] bg-[#F59E0B]/5 hover:bg-[#F59E0B]/10 transition-all"
-                title="Forza ri-sincronizzazione di tutti i dati (ignora quelli già presenti)"
-              >
-                <Watch className="w-3 h-3" />
-                Forza
-              </button>
-            )}
-
-            {/* Result feedback */}
-            {garminState === 'done' && garminResult && (
-              <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-2 text-[10px]">
-                  {garminResult.hr_updated > 0 && (
-                    <span className="text-[#00FFAA] font-bold">♥ {garminResult.hr_updated} HR</span>
-                  )}
-                  {garminResult.dynamics_updated > 0 && (
-                    <span className="text-[#3B82F6] font-bold">⚡ {garminResult.dynamics_updated} dynamics</span>
-                  )}
-                  {garminResult.hr_updated === 0 && garminResult.dynamics_updated === 0 && (
-                    <span className="text-gray-500">Nessun dato nuovo</span>
-                  )}
-                  {garminResult.skipped_no_match > 0 && (
-                    <span className="text-[#F59E0B]">{garminResult.skipped_no_match} no-match</span>
-                  )}
-                </div>
-                {garminResult.errors.length > 0 && (
-                  <span
-                    className="text-[9px] text-rose-400 cursor-help"
-                    title={garminResult.errors.join('\n')}
-                  >
-                    {garminResult.errors.length} errore/i (hover per dettagli)
-                  </span>
-                )}
-              </div>
-            )}
-            {garminState === 'error' && garminResult && garminResult.errors.length > 0 && (
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] text-rose-400 font-medium" title={garminResult.errors.join('\n')}>
-                  {garminResult.errors[0].slice(0, 60)}
-                </span>
-                {garminResult.errors[0].includes('rate-limit') || garminResult.errors[0].includes('rate limit') || garminResult.errors[0].includes('429') ? (
-                  <div className="text-[9px] text-amber-400/80 bg-amber-500/5 border border-amber-500/20 rounded-lg px-2 py-1">
-                    ⏳ Rate-limit Garmin: aspetta 15-30 min oppure usa lo script <code className="text-amber-300 font-mono">garth_generate_token.py</code> per salvare un token manuale
-                  </div>
-                ) : null}
-              </div>
-            )}
           </div>
           <p className="text-gray-600 text-[10px] font-medium mt-2 uppercase tracking-widest">
             Corse Strava · Clicca card per volare · Freccia per dettaglio
@@ -775,6 +744,157 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
           </div>
         )}
       </div>
+
+      {/* ── Garmin CSV Import Modal ──────────────────────────────────────── */}
+      {showGarminImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-full max-w-lg mx-4 bg-[#0A0F1A] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#8B5CF6]/15 flex items-center justify-center">
+                  <Database className="w-4 h-4 text-[#8B5CF6]" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-white uppercase tracking-tight">Garmin CSV Import</h2>
+                  <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Upload manuale → collezione separata</p>
+                </div>
+              </div>
+              <button
+                onClick={resetCsvImport}
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-4">
+              {/* Info box */}
+              <div className="bg-[#8B5CF6]/5 border border-[#8B5CF6]/20 rounded-xl px-4 py-3">
+                <p className="text-[11px] text-gray-300 leading-relaxed">
+                  <span className="text-[#8B5CF6] font-bold">ℹ️ Come funziona:</span> Carica il file CSV esportato da Garmin Connect. 
+                  I dati verranno salvati nella collezione <code className="text-[#8B5CF6] font-mono">garmin_csv_data</code> senza modificare le tue corse Strava.
+                  Include: Running Dynamics, HR, Cadenza, Potenza, ecc.
+                </p>
+              </div>
+
+              {/* Drop zone / File input */}
+              {!csvFile && (
+                <label
+                  htmlFor="garmin-csv-upload"
+                  className={cn(
+                    'flex flex-col items-center justify-center border-2 border-dashed rounded-xl py-10 px-4 cursor-pointer transition-all',
+                    csvParsing
+                      ? 'border-[#8B5CF6]/30 bg-[#8B5CF6]/5'
+                      : 'border-white/10 hover:border-[#8B5CF6]/30 hover:bg-white/[0.02]'
+                  )}
+                >
+                  {csvParsing ? (
+                    <>
+                      <Loader2 className="w-8 h-8 text-[#8B5CF6] animate-spin mb-3" />
+                      <span className="text-sm font-bold text-gray-300">Parsing CSV...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-8 h-8 text-gray-500 mb-3" />
+                      <span className="text-sm font-bold text-gray-300">Trascina il file CSV qui</span>
+                      <span className="text-[10px] text-gray-500 mt-1">oppure clicca per selezionare</span>
+                      <span className="text-[9px] text-gray-600 mt-2">File Garmin Connect export (.csv)</span>
+                    </>
+                  )}
+                  <input
+                    id="garmin-csv-upload"
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleCsvFile(f);
+                    }}
+                    disabled={csvParsing}
+                  />
+                </label>
+              )}
+
+              {/* File selected */}
+              {csvFile && !csvParsing && (
+                <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-[#8B5CF6]/15 flex items-center justify-center flex-shrink-0">
+                    <Database className="w-4 h-4 text-[#8B5CF6]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-white truncate">{csvFile.name}</p>
+                    <p className="text-[10px] text-gray-500">{(csvFile.size / 1024).toFixed(1)} KB</p>
+                  </div>
+                  <button
+                    onClick={() => { setCsvFile(null); setParsedRuns([]); setCsvResult(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                    className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {/* Result message */}
+              {csvResult && (
+                <div className={cn(
+                  'rounded-xl px-4 py-3 border',
+                  csvResult.success
+                    ? 'bg-emerald-500/5 border-emerald-500/20'
+                    : 'bg-rose-500/5 border-rose-500/20'
+                )}>
+                  <p className={cn(
+                    'text-sm font-bold',
+                    csvResult.success ? 'text-emerald-400' : 'text-rose-400'
+                  )}>
+                    {csvResult.message}
+                  </p>
+                </div>
+              )}
+
+              {/* Import button */}
+              {parsedRuns.length > 0 && (
+                <button
+                  onClick={handleImportToDatabase}
+                  disabled={csvImporting}
+                  className="w-full py-3 rounded-xl bg-[#8B5CF6]/20 hover:bg-[#8B5CF6]/30 text-[#8B5CF6] text-sm font-black uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {csvImporting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Importazione in corso...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      Importa {parsedRuns.length} corse nel database
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-3 border-t border-white/5 flex items-center justify-between">
+              <p className="text-[9px] text-gray-600 font-medium uppercase tracking-wider">
+                Collezione: garmin_csv_data · Nessuna modifica alle corse Strava
+              </p>
+              <button
+                onClick={resetCsvImport}
+                className="text-[10px] text-gray-500 hover:text-white font-bold uppercase tracking-wider transition-colors"
+              >
+                Chiudi
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

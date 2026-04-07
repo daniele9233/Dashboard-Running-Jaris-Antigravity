@@ -3934,3 +3934,244 @@ async def jarvis_chat(request: Request):
 
     # Return result (Frontend will fallback to browser TTS if audio is missing)
     return result
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  GARMIN CSV IMPORT — Manual upload (COLLEZIONE SEPARATA, NON MODIFICA RUNS)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _parse_garmin_pace(pace_str: str) -> Optional[float]:
+    """Parse pace string like '5:59' or '4:37' into seconds per km."""
+    if not pace_str or pace_str == "--":
+        return None
+    try:
+        parts = pace_str.strip().split(":")
+        if len(parts) == 2:
+            return int(parts[0]) * 60 + int(parts[1])
+    except (ValueError, IndexError):
+        pass
+    return None
+
+
+def _parse_garmin_time(time_str: str) -> Optional[float]:
+    """Parse time string like '00:35:58' or '01:14:33' into minutes."""
+    if not time_str or time_str == "--":
+        return None
+    try:
+        parts = time_str.strip().split(":")
+        if len(parts) == 3:
+            return int(parts[0]) * 60 + int(parts[1]) + int(parts[2]) / 60.0
+        elif len(parts) == 2:
+            return int(parts[0]) + int(parts[1]) / 60.0
+    except (ValueError, IndexError):
+        pass
+    return None
+
+
+def _parse_garmin_number(val: str) -> Optional[float]:
+    """Parse a number string, handling '--' and commas."""
+    if not val or val == "--":
+        return None
+    try:
+        return float(val.replace(",", ""))
+    except (ValueError, TypeError):
+        return None
+
+
+def _parse_garmin_int(val: str) -> Optional[int]:
+    """Parse an integer string, handling '--'."""
+    if not val or val == "--":
+        return None
+    try:
+        return int(float(val.replace(",", "")))
+    except (ValueError, TypeError):
+        return None
+
+
+@app.post("/api/garmin/csv-import")
+async def garmin_csv_import(request: Request):
+    """Import Garmin CSV data into a SEPARATE collection (garmin_csv_data).
+    
+    This does NOT modify the runs collection. Data is stored as-is for
+    future use (charts, analysis, etc.).
+    
+    Body: { "runs": [ {csv_row_data}, ... ] }
+    """
+    athlete_id = await _get_athlete_id()
+    if not athlete_id:
+        return JSONResponse({"error": "not_authenticated"}, status_code=401)
+
+    body = await request.json()
+    runs_data = body.get("runs", [])
+    
+    if not runs_data:
+        return JSONResponse({"error": "no_runs_provided"}, status_code=400)
+
+    imported = 0
+    skipped = 0
+    errors = []
+
+    for row in runs_data:
+        try:
+            # Extract fields from CSV row
+            titolo = row.get("Titolo", "").strip()
+            data_str = row.get("Data", "").strip()
+            distanza_km = _parse_garmin_number(row.get("Distanza", ""))
+            calorie = _parse_garmin_int(row.get("Calorie", ""))
+            tempo_str = row.get("Tempo", "").strip()
+            fc_media = _parse_garmin_int(row.get("FC Media", ""))
+            fc_max = _parse_garmin_int(row.get("FC max", ""))
+            passo_medio_str = row.get("Passo medio", "").strip()
+            passo_migliore_str = row.get("Passo migliore", "").strip()
+            ascesa = _parse_garmin_number(row.get("Ascesa totale", ""))
+            discesa = _parse_garmin_number(row.get("Discesa totale", ""))
+            cadenza_media = _parse_garmin_number(row.get("Cadenza di corsa media", ""))
+            cadenza_max = _parse_garmin_number(row.get("Cadenza di corsa max", ""))
+            oscillazione_verticale = _parse_garmin_number(row.get("Oscillazione verticale media", ""))
+            tempo_contatto = _parse_garmin_number(row.get("Tempo medio di contatto con il suolo", ""))
+            lunghezza_passo = _parse_garmin_number(row.get("Lunghezza media passo", ""))
+            rapporto_verticale = _parse_garmin_number(row.get("Rapporto verticale medio", ""))
+            quota_min = _parse_garmin_number(row.get("Quota minima", ""))
+            quota_max = _parse_garmin_number(row.get("Quota massima", ""))
+            tempo_movimento = row.get("Tempo in movimento", "").strip()
+            tempo_trascorso = row.get("Tempo trascorso", "").strip()
+            prp_medio = _parse_garmin_number(row.get("PRP medio", ""))
+            potenza_media = _parse_garmin_number(row.get("Potenza media", ""))
+            potenza_max = _parse_garmin_number(row.get("Potenza max", ""))
+            consumo_body_battery = _parse_garmin_number(row.get("Consumo Body Battery", ""))
+            temperatura_min = _parse_garmin_number(row.get("Temperatura min", ""))
+            temperatura_max = _parse_garmin_number(row.get("Temperatura max", ""))
+            te_aerobico = _parse_garmin_number(row.get("TE aerobico", ""))
+            passi = _parse_garmin_int(row.get("Passi", ""))
+            numero_lap = _parse_garmin_int(row.get("Numero di Lap", ""))
+            tempo_lap_migliore = row.get("Tempo Lap migliore", "").strip()
+            freq_resp_media = _parse_garmin_int(row.get("Frequenza respiratoria media", ""))
+            freq_resp_min = _parse_garmin_int(row.get("Frequenza respiratoria minima", ""))
+            freq_resp_max = _parse_garmin_int(row.get("Frequenza respiratoria massima", ""))
+
+            # Validate required fields
+            if not data_str or not distanza_km or distanza_km < 0.1:
+                skipped += 1
+                continue
+
+            # Parse date - Garmin format: "2026-04-06 08:07:47"
+            date_part = data_str.split(" ")[0] if " " in data_str else data_str
+            try:
+                dt.datetime.strptime(date_part, "%Y-%m-%d")
+            except ValueError:
+                errors.append(f"Data non valida: {data_str}")
+                skipped += 1
+                continue
+
+            # Parse duration
+            duration_minutes = _parse_garmin_time(tempo_str)
+            if not duration_minutes:
+                duration_minutes = _parse_garmin_time(tempo_movimento)
+            if not duration_minutes:
+                duration_minutes = _parse_garmin_time(tempo_trascorso)
+
+            # Parse pace
+            pace_sec = _parse_garmin_pace(passo_medio_str)
+            avg_pace = f"{int(pace_sec // 60)}:{int(pace_sec % 60):02d}" if pace_sec else None
+
+            # Build document for garmin_csv_data collection
+            doc = {
+                "athlete_id": athlete_id,
+                "source": "garmin_csv_import",
+                "imported_at": dt.datetime.now().isoformat(),
+                # Core fields
+                "titolo": titolo if titolo else None,
+                "date": date_part,
+                "distance_km": distanza_km,
+                "duration_minutes": duration_minutes,
+                "avg_pace": avg_pace,
+                "avg_pace_sec": pace_sec,
+                # Heart rate
+                "avg_hr": fc_media,
+                "max_hr": fc_max,
+                # Running dynamics (Garmin)
+                "avg_vertical_oscillation_cm": oscillazione_verticale,
+                "avg_vertical_ratio_pct": rapporto_verticale,
+                "avg_ground_contact_time_ms": tempo_contatto,
+                "avg_stride_length_m": lunghezza_passo,
+                # Cadence
+                "avg_cadence_spm": round(cadenza_media / 2) if cadenza_media else None,
+                "max_cadence_spm": round(cadenza_max / 2) if cadenza_max else None,
+                # Elevation
+                "elevation_gain_m": ascesa,
+                "elevation_loss_m": discesa,
+                "min_elevation_m": quota_min,
+                "max_elevation_m": quota_max,
+                # Power
+                "avg_power_w": potenza_media,
+                "max_power_w": potenza_max,
+                # Additional Garmin fields
+                "calories": calorie,
+                "best_pace_sec": _parse_garmin_pace(passo_migliore_str),
+                "steps": passi,
+                "body_battery_consumed": consumo_body_battery,
+                "temp_min_c": temperatura_min,
+                "temp_max_c": temperatura_max,
+                "te_aerobico": te_aerobico,
+                "prp_medio": prp_medio,
+                "laps": numero_lap,
+                "best_lap_time": tempo_lap_migliore if tempo_lap_migliore else None,
+                "avg_resp_rate": freq_resp_media,
+                "min_resp_rate": freq_resp_min,
+                "max_resp_rate": freq_resp_max,
+                # Raw data (all original fields)
+                "raw": row,
+            }
+
+            # Insert into garmin_csv_data (no upsert — always insert new)
+            await db.garmin_csv_data.insert_one(doc)
+            imported += 1
+
+        except Exception as e:
+            errors.append(f"Errore riga {imported + skipped + 1}: {str(e)}")
+            continue
+
+    return {
+        "ok": True,
+        "imported": imported,
+        "skipped": skipped,
+        "total_received": len(runs_data),
+        "collection": "garmin_csv_data",
+        "errors": errors[:10],
+    }
+
+
+@app.get("/api/garmin/csv-data")
+async def get_garmin_csv_data():
+    """Retrieve all Garmin CSV imported data for the current athlete."""
+    athlete_id = await _get_athlete_id()
+    if not athlete_id:
+        return JSONResponse({"error": "not_authenticated"}, status_code=401)
+
+    cursor = db.garmin_csv_data.find({"athlete_id": athlete_id}).sort("date", -1)
+    docs = await cursor.to_list(1000)
+    
+    # Convert _id to string
+    for doc in docs:
+        if "_id" in doc:
+            doc["id"] = str(doc["_id"])
+            del doc["_id"]
+
+    return {"data": docs, "count": len(docs)}
+
+
+@app.delete("/api/garmin/csv-data/{doc_id}")
+async def delete_garmin_csv_data(doc_id: str):
+    """Delete a specific Garmin CSV import document."""
+    athlete_id = await _get_athlete_id()
+    if not athlete_id:
+        return JSONResponse({"error": "not_authenticated"}, status_code=401)
+
+    from bson import ObjectId
+    try:
+        result = await db.garmin_csv_data.delete_one({"_id": ObjectId(doc_id), "athlete_id": athlete_id})
+        if result.deleted_count == 0:
+            return JSONResponse({"error": "not_found"}, status_code=404)
+        return {"ok": True}
+    except Exception:
+        return JSONResponse({"error": "invalid_id"}, status_code=400)
