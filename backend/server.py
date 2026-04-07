@@ -3325,13 +3325,15 @@ async def backfill_dynamics(limit: int = 20):
 #  GARMIN CONNECT — Running Dynamics via FIT download
 # ═══════════════════════════════════════════════════════════════════════════════
 
-async def _garmin_login():
+async def _garmin_login(timeout: float = 30.0):
     """Login to Garmin Connect e restituisce un client autenticato.
 
     Strategia (python-garminconnect):
     1. Prova token salvato in MongoDB (garth auto-refresh se scaduto)
     2. Se fallisce → login diretto con email/password (niente SSO popup!)
     3. Salva il nuovo token in MongoDB per riuso futuro
+
+    Timeout: secondi massimi per ogni operazione (default 30s).
     """
     from garminconnect import Garmin
     import garth
@@ -3340,21 +3342,34 @@ async def _garmin_login():
         raise ValueError("GARMIN_EMAIL / GARMIN_PASSWORD non impostati in .env")
 
     # ── 1) Prova token salvato ────────────────────────────────────────────────
+    print("[GARMIN] Controllo token salvato...")
     saved = await db.garmin_tokens.find_one({"email": GARMIN_EMAIL})
     if saved and saved.get("token_dump"):
+        print("[GARMIN] Token trovato, provo smoke test...")
         try:
             garth_client = garth.Client()
             garth_client.loads(saved["token_dump"])
             client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
             client.garth = garth_client
+
+            # Smoke test con timeout
+            async def _smoke_test():
+                return await asyncio.to_thread(client.get_activities, 0, 1)
+
             try:
-                client.get_activities(0, 1)  # smoke test — garth auto-refresh
+                await asyncio.wait_for(_smoke_test(), timeout=timeout)
+                print("[GARMIN] Smoke test OK con token salvato")
+            except asyncio.TimeoutError:
+                raise ValueError(f"Garmin smoke test timeout dopo {timeout}s — connessione lenta o down")
             except Exception as smoke_err:
                 err_str = str(smoke_err)
                 if "429" in err_str or "Too Many Requests" in err_str:
                     print("[GARMIN] Smoke test 429, token comunque valido")
                     return client
+                if "timeout" in err_str.lower() or "timed out" in err_str.lower():
+                    raise ValueError(f"Garmin smoke test timeout: {smoke_err}")
                 raise
+
             # Salva token aggiornato
             try:
                 new_dump = client.garth.dumps()
@@ -3368,14 +3383,28 @@ async def _garmin_login():
                 pass
             print("[GARMIN] Login via token salvato OK")
             return client
+        except asyncio.TimeoutError:
+            raise ValueError(f"Garmin operazione timeout dopo {timeout}s")
+        except ValueError:
+            raise  # Re-raise ValueError (già formattato)
         except Exception as e:
             print(f"[GARMIN] Token salvato non valido: {e} → login con credenziali")
 
     # ── 2) Login diretto con email/password (garminconnect) ───────────────────
     print(f"[GARMIN] Login diretto con {GARMIN_EMAIL}...")
     client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
+
+    async def _do_login():
+        return await asyncio.to_thread(client.login)
+
     try:
-        await asyncio.to_thread(client.login)
+        await asyncio.wait_for(_do_login(), timeout=timeout)
+        print("[GARMIN] Login diretto OK")
+    except asyncio.TimeoutError:
+        raise ValueError(
+            f"Garmin login timeout dopo {timeout}s. "
+            f"Provare tra 15-30 minuti o usare lo script garth_generate_token.py"
+        )
     except Exception as login_err:
         err_str = str(login_err)
         if "429" in err_str or "Too Many Requests" in err_str:
@@ -3383,6 +3412,8 @@ async def _garmin_login():
                 "Garmin rate-limit — troppi tentativi di login. "
                 "Aspetta 15-30 minuti e riprova, oppure usa garth_generate_token.py"
             )
+        if "timeout" in err_str.lower() or "timed out" in err_str.lower():
+            raise ValueError(f"Garmin login timeout: {login_err}")
         raise ValueError(f"Login Garmin fallito: {login_err}")
 
     # Salva token per riuso futuro
@@ -3393,7 +3424,7 @@ async def _garmin_login():
             {"$set": {"email": GARMIN_EMAIL, "token_dump": token_dump}},
             upsert=True,
         )
-        print("[GARMIN] Login diretto OK — token salvato in MongoDB")
+        print("[GARMIN] Token salvato in MongoDB")
     except Exception as save_err:
         print(f"[GARMIN] Token login OK ma salvataggio fallito: {save_err}")
 
