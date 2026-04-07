@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Map, { Source, Layer } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { Award, Clock, Activity, Zap, Calendar, Edit3, Share2, RefreshCw, Link2, X, Check, Heart, ChevronRight, Upload, Camera } from "lucide-react";
+import { Award, Clock, Activity, Zap, Calendar, Edit3, Share2, RefreshCw, Link2, X, Check, Heart, ChevronRight, Upload, Camera, Bot } from "lucide-react";
 import { useApi } from "../hooks/useApi";
 import { getProfile, updateProfile, getStravaAuthUrl, syncStrava, getBestEfforts, getHeatmap, getRuns } from "../api";
 import type { Profile, BestEffort, Run } from "../types/api";
@@ -76,6 +76,23 @@ function heatmapGlow(km: number) {
   if (km < 10) return "shadow-[0_0_6px_rgba(16,185,129,0.25)]";
   if (km < 20) return "shadow-[0_0_8px_rgba(16,185,129,0.35)]";
   return "shadow-[0_0_10px_rgba(52,211,153,0.5)]";
+}
+
+// Colori per tipo di corsa nella heatmap
+function runTypeColor(runType: string | undefined, km: number) {
+  if (km === 0) return "bg-[#1A1A1A]";
+  const t = (runType || "").toLowerCase();
+  if (t.includes("ripet") || t.includes("interval")) return "bg-[#EF4444]";       // Rosso - Ripetute
+  if (t.includes("tempo") || t.includes("soglia")) return "bg-[#F59E0B]";         // Arancione - Tempo/Soglia
+  if (t.includes("lungo") || t.includes("long")) return "bg-[#3B82F6]";           // Blu - Lungo
+  if (t.includes("recup") || t.includes("recovery")) return "bg-[#A855F7]";       // Viola - Recupero
+  if (t.includes("easy") || t.includes("lento")) return "bg-[#10B981]";           // Verde - Easy
+  if (t.includes("gara") || t.includes("race") || t.includes("test")) return "bg-[#EC4899]"; // Rosa - Gara/Test
+  // Default basato su km
+  if (km < 5) return "bg-[#064E3B]";
+  if (km < 10) return "bg-[#047857]";
+  if (km < 20) return "bg-[#10B981]";
+  return "bg-[#34D399]";
 }
 
 
@@ -513,6 +530,7 @@ export function ProfileView() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [rulePeriod, setRulePeriod] = useState<7 | 14>(7);
+  const [jarvisEnabled, setJarvisEnabled] = useState(false);
 
   const activeProfile = profile ?? profileData;
   const lastRun = useMemo(() => {
@@ -1005,6 +1023,36 @@ export function ProfileView() {
 
         {/* Right Column */}
         <div className="space-y-8">
+          {/* Jarvis AI Toggle */}
+          <div className="bg-gradient-to-br from-[#181818] to-[#141414] border border-[#2A2A2A] rounded-2xl p-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#C0FF00]/5 rounded-full blur-3xl pointer-events-none" />
+            <div className="flex items-center gap-3 mb-4 relative">
+              <div className="w-10 h-10 rounded-xl bg-[#C0FF00]/10 flex items-center justify-center">
+                <Bot className="w-5 h-5 text-[#C0FF00]" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white">Jarvis AI</h2>
+                <p className="text-xs text-gray-500">Assistente vocale</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setJarvisEnabled(!jarvisEnabled)}
+              className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+                jarvisEnabled
+                  ? "bg-[#C0FF00]/15 border border-[#C0FF00]/30 text-[#C0FF00] hover:bg-[#C0FF00]/25"
+                  : "bg-[#1E1E1E] border border-[#2A2A2A] text-gray-400 hover:text-white hover:border-[#C0FF00]/30"
+              }`}
+            >
+              <Bot className="w-4 h-4" />
+              {jarvisEnabled ? "Jarvis Attivo ✓" : "Attiva Jarvis"}
+            </button>
+            {jarvisEnabled && (
+              <p className="text-[10px] text-gray-500 mt-3 text-center">
+                Clicca di nuovo per disattivare. L'orb apparirà sulla dashboard.
+              </p>
+            )}
+          </div>
+
           {/* Strava Integration */}
           <div className="bg-[#181818] border border-[#2A2A2A] rounded-2xl p-6">
             <div className="flex items-center gap-3 mb-5">
