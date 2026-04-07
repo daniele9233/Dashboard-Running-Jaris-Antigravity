@@ -563,10 +563,7 @@ export function ProfileView() {
   const allRuns = runsData?.runs ?? [];
 
   const heatmapGrid = useMemo(() => {
-    if (heatmapData?.heatmap && heatmapData.heatmap.length > 0) {
-      return buildHeatmapGrid(heatmapData.heatmap, 24);
-    }
-    // Fallback: costruisci da allRuns con run_type
+    // Usa allRuns (backend classifica già con run_type: easy, tempo, intervals, long, recovery)
     const runsMap: Record<string, { date: string; km: number; runType: string }> = {};
     for (const r of (runsData?.runs ?? [])) {
       const d = r.date?.slice(0, 10);
@@ -575,14 +572,13 @@ export function ProfileView() {
           runsMap[d] = { date: d, km: 0, runType: '' };
         }
         runsMap[d].km += (r.distance_km || 0);
-        if (r.run_type) {
-          runsMap[d].runType = r.run_type;
-        }
+        // _classify_run restituisce: "long", "intervals", "tempo", "recovery", "easy"
+        runsMap[d].runType = r.run_type || runsMap[d].runType;
       }
     }
     const fallback = Object.values(runsMap);
     return buildHeatmapGrid(fallback, 24);
-  }, [heatmapData, runsData]);
+  }, [runsData]);
   const zones = useMemo(() => getZones(), [maxHr]);
 
   const handleStravaConnect = async () => {
