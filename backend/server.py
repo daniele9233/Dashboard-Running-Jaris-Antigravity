@@ -982,6 +982,56 @@ def _tp_quality_session(phase: str, goal: str, dist_km: float,
             f"Corsa leggera {round(dist_km, 1)} km @ {ep}/km. Gambe fresche per la gara.", ep)
 
 
+def _tp_secondary_quality_session(phase: str, goal: str, dist_km: float,
+                                   paces: dict, week_vdot: float) -> tuple:
+    """Return (type, title, description, pace) for a SECONDARY quality session (Thursday).
+
+    This session complements the main quality session (Tuesday) without overloading.
+    Daniels' principle: never two hard days in a row, keep it lighter than main session.
+    """
+    ep = paces.get("easy") or "6:00"
+    mp = paces.get("marathon") or "5:20"
+    tp = paces.get("threshold") or "5:00"
+    ip = paces.get("interval") or "4:30"
+    rp = paces.get("repetition") or "4:10"
+
+    if phase == "Base Aerobica":
+        # Base phase: progressive run with some pickups, not truly "quality"
+        return ("easy", "Corsa Progressiva + Allunghi",
+                f"Corsa facile {round(dist_km, 1)} km @ {ep}/km. Ultimi 3 km più veloci (passo {mp}/km) "
+                f"+ 4×80 m progressivi finali. Obiettivo: mantenere reattività delle gambe senza stress.", ep)
+
+    if phase == "Sviluppo":
+        # Short tempo intervals at slightly above threshold — builds speed endurance
+        return ("tempo", "Tempo Intervals Corti",
+                f"2 km warm-up @ {ep}/km · 3×6 min @ {tp}/km (soglia) con 2 min recupero jog · "
+                f"2 km defaticamento. Totale 20 min di lavoro di soglia. VDOT: {week_vdot}.", tp)
+
+    if phase == "Intensità":
+        # Short VO2max intervals — quick, sharp, not exhausting
+        return ("intervals", "Ripetute Brevi VO₂max",
+                f"2 km warm-up @ {ep}/km · 8×400 m @ {ip}/km con 60 s jog recupero · "
+                f"2 km defaticamento. Obiettivo: stimolare il massimo consumo d'ossigeno. VDOT: {week_vdot}.", ip)
+
+    if phase == "Specifico":
+        # Race pace intervals — shorter than main session, focus on form
+        race_pace = _vdot_to_race_time(week_vdot, RACE_DISTANCES.get(goal, 5.0))
+        rp_str = race_pace or tp
+        return ("intervals", "Race Pace Intervals",
+                f"2 km warm-up @ {ep}/km · 4×800 m a ritmo gara (target {rp_str}) con 90 s recupero · "
+                f"2 km defaticamento. Lavoro sulla tecnica e memoria del ritmo gara. VDOT: {week_vdot}.", ip)
+
+    if phase == "Taper":
+        # Light strides only — keep legs sharp, no fatigue
+        return ("easy", "Easy + 4×100 m Strides",
+                f"Corsa facile {round(dist_km, 1)} km @ {ep}/km con 4×100 m progressivi. "
+                f"Gambe fresche in vista della gara. VDOT = {week_vdot}.", ep)
+
+    # Gara week: minimal activation
+    return ("easy", "Activazione Leggera",
+            f"Corsa leggera {round(dist_km, 1)} km @ {ep}/km. No allunghi — conserva energie per la gara.", ep)
+
+
 def _tp_build_sessions(week_start, week_km: float, phase: str, goal: str,
                        paces: dict, week_vdot: float) -> list:
     """Build 7-day session list for a training week."""
@@ -1020,8 +1070,10 @@ def _tp_build_sessions(week_start, week_km: float, phase: str, goal: str,
 
         dist_km = round(week_km * dist_map[day_offset], 1)
 
-        if day_offset == 1:  # Tuesday = quality session
+        if day_offset == 1:  # Tuesday = MAIN quality session
             s_type, title, desc, pace = _tp_quality_session(phase, goal, dist_km, paces, week_vdot)
+        elif day_offset == 3:  # Thursday = SECONDARY quality session (shorter intervals/tempo)
+            s_type, title, desc, pace = _tp_secondary_quality_session(phase, goal, dist_km, paces, week_vdot)
         elif day_offset == 5:  # Saturday = long run
             s_type, title, pace = "long", "Corsa Lunga", ep
             desc = (f"Corsa lunga {dist_km} km a passo {ep}/km. Sforzo 5–6/10. "
@@ -1063,9 +1115,17 @@ def _generate_plan_weeks(goal_race: str, weeks_total: int, max_weekly_km: float,
 
     # ── Periodization: phase allocation (Daniels 4-phase model adapted) ──────
     if weeks_total <= 10:
+        # For short plans (≤10 weeks), maximize quality sessions.
+        # Every week should have at least 1 quality session except taper/race.
+        # Base: 1-2 weeks (build aerobic foundation quickly)
+        # Sviluppo: 1 week (threshold work)
+        # Intensità: 3-4 weeks (VO2max intervals — most important for 5K)
+        # Specifico: 1 week (race pace practice)
+        # Taper: 1 week
+        # Gara: 1 week
         raw_phases = [
-            ("Base Aerobica", 0.30), ("Intensità", 0.40),
-            ("Taper", 0.20), ("Gara", 0.10),
+            ("Base Aerobica", 0.15), ("Sviluppo", 0.10), ("Intensità", 0.45),
+            ("Specifico", 0.15), ("Taper", 0.10), ("Gara", 0.05),
         ]
     elif weeks_total <= 16:
         raw_phases = [
@@ -1933,12 +1993,6 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
         training_months — Running history length in months
         weekly_volume — Avg km/week in last 8 weeks
         race_specific_vdot — VDOT from runs closest to goal distance (more reliable)
-
-    Scientific basis:
-    - Daniels (2013): VDOT tables, %VO2max duration curves
-    - Mujika & Padilla (2000): detraining reversal rates
-    - Staron et al. (1991): muscle memory / repeated bout effect
-    - Daniels principle: VDOT from runs >= 70% of race distance is most reliable
     """
     import datetime as _dt
 
@@ -1959,18 +2013,15 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
     recent_16 = [(r, v) for r, v in run_vdots if r.get("date", "") >= cutoff_16w]
 
     # ── Race-specific VDOT: only runs >= 70% of goal distance ────────────────
-    # Daniels (2013): VDOT from runs close to race distance is most predictive
     race_specific_vdot = None
     if goal_dist_km > 0:
-        min_dist = goal_dist_km * 0.70  # 70% threshold
+        min_dist = goal_dist_km * 0.70
         race_runs = [(r, v) for r, v in run_vdots if r.get("distance_km", 0) >= min_dist]
         if race_runs:
-            # Use best VDOT from race-distance runs in last 16 weeks
             race_recent = [(r, v) for r, v in race_runs if r.get("date", "") >= cutoff_16w]
             if race_recent:
                 race_specific_vdot = round(max(v for _, v in race_recent), 1)
             else:
-                # Fallback to all-time best from race-distance runs
                 race_specific_vdot = round(max(v for _, v in race_runs), 1)
 
     # Current: best from narrowest window available
@@ -1987,7 +2038,7 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
     peak = round(peak_val, 1)
     peak_date = peak_run.get("date", "")
 
-    # Training age (months from first to latest valid run)
+    # Training age
     dates = sorted(r.get("date", "") for r, _ in run_vdots)
     training_months = 0
     if len(dates) >= 2:
@@ -1998,7 +2049,7 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
         except ValueError:
             pass
 
-    # Recent weekly volume (avg km in last 8 weeks)
+    # Recent weekly volume
     recent_runs = [r for r in runs if r.get("date", "") >= cutoff_8w]
     recent_km = sum(r.get("distance_km", 0) for r in recent_runs)
     weekly_volume = round(recent_km / max(1, weeks_window), 1)
@@ -3392,6 +3443,30 @@ async def garmin_save_token(request: Request):
     return {"ok": True, "message": "Token salvato — Garmin Sync ora funzionerà senza login."}
 
 
+@app.post("/api/garmin/login")
+async def garmin_login_direct():
+    """Direct login to Garmin Connect without downloading any activities.
+    
+    Use this when you need to authenticate but can't use the SSO popup.
+    This uses the same _garmin_login() function as sync, but without fetching data.
+    If you're rate-limited, use garth_generate_token.py instead.
+    """
+    try:
+        await _garmin_login()
+        return {"ok": True, "message": "Login effettuato — puoi usare Garmin Sync ora"}
+    except Exception as e:
+        err_str = str(e)
+        if "rate-limit" in err_str or "429" in err_str:
+            return JSONResponse({
+                "error": "rate_limited",
+                "detail": err_str,
+            }, status_code=429)
+        return JSONResponse({
+            "error": "login_failed",
+            "detail": err_str,
+        }, status_code=400)
+
+
 @app.get("/api/garmin/auth-start")
 async def garmin_auth_start(frontend_origin: str = Query(...)):
     """Return the Garmin SSO URL the frontend should open in a popup.
@@ -3435,7 +3510,7 @@ async def garmin_exchange_ticket(request: Request):
         import httpx as _httpx
         from garminconnect import Garmin
 
-        async with _httpx.AsyncClient(timeout=10) as hc:
+        async with _httpx.AsyncClient(timeout=15) as hc:
             cr = (await hc.get("https://thegarth.s3.amazonaws.com/oauth_consumer.json")).json()
         consumer_key    = cr["consumer_key"]
         consumer_secret = cr["consumer_secret"]
@@ -3448,9 +3523,13 @@ async def garmin_exchange_ticket(request: Request):
             f"&accepts-mfa-tokens=true"
         )
 
-        from requests_oauthlib import OAuth1Session
-        oauth1_sess = OAuth1Session(consumer_key, client_secret=consumer_secret)
-        resp = oauth1_sess.get(preauth_url)
+        # Run synchronous OAuth1 request in a thread to avoid blocking the event loop
+        def _do_oauth1():
+            from requests_oauthlib import OAuth1Session
+            sess = OAuth1Session(consumer_key, client_secret=consumer_secret)
+            return sess.get(preauth_url, timeout=30)
+        
+        resp = await asyncio.to_thread(_do_oauth1)
         if resp.status_code == 429:
             return JSONResponse({
                 "error": "garmin_rate_limited",
