@@ -42,21 +42,31 @@ const SLOW_MAX_HR = 146;
 
 // ─── HEATMAP ─────────────────────────────────────────────────────────────────
 
-function buildHeatmapGrid(data: { date: string; km: number }[], weeksBack = 24) {
+interface HeatmapDay {
+  date: string;
+  km: number;
+  runType?: string;
+}
+
+function buildHeatmapGrid(data: HeatmapDay[], weeksBack = 24) {
   const today = new Date();
   const dayOfWeek = today.getDay();
   const latestSun = new Date(today);
   latestSun.setDate(today.getDate() - dayOfWeek);
-  const map: Record<string, number> = {};
-  for (const d of data) map[d.date] = d.km;
-  const grid: { date: string; km: number }[][] = [];
+  const map: Record<string, { km: number; runType: string }> = {};
+  for (const d of data) {
+    if (!map[d.date]) map[d.date] = { km: 0, runType: '' };
+    map[d.date].km = d.km;
+    if (d.runType) map[d.date].runType = d.runType;
+  }
+  const grid: HeatmapDay[][] = [];
   for (let w = weeksBack - 1; w >= 0; w--) {
-    const week: { date: string; km: number }[] = [];
+    const week: HeatmapDay[] = [];
     for (let d = 0; d < 7; d++) {
       const dt = new Date(latestSun);
       dt.setDate(latestSun.getDate() - w * 7 + d);
       const iso = dt.toISOString().slice(0, 10);
-      week.push({ date: iso, km: map[iso] ?? 0 });
+      week.push({ date: iso, km: map[iso]?.km ?? 0, runType: map[iso]?.runType ?? '' });
     }
     grid.push(week);
   }
@@ -739,8 +749,8 @@ export function ProfileView() {
                         {week.map((day, di) => (
                           <div
                             key={di}
-                            className={`aspect-square min-w-[10px] rounded-[3px] ${heatmapColor(day.km)} ${heatmapGlow(day.km)} transition-all duration-200 hover:scale-[1.5] hover:z-10 hover:ring-1 hover:ring-white/40 cursor-pointer`}
-                            title={day.km > 0 ? `${day.date}: ${day.km.toFixed(1)} km` : day.date}
+                            className={`aspect-square min-w-[10px] rounded-[3px] ${runTypeColor(day.runType, day.km)} ${heatmapGlow(day.km)} transition-all duration-200 hover:scale-[1.5] hover:z-10 hover:ring-1 hover:ring-white/40 cursor-pointer`}
+                            title={day.km > 0 ? `${day.date}: ${day.km.toFixed(1)} km${day.runType ? ` (${day.runType})` : ''}` : day.date}
                           />
                         ))}
                       </div>
