@@ -5,6 +5,7 @@
 
 import { useEffect } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { JarvisProvider, useJarvisContext } from "./context/JarvisContext";
 import { Sidebar } from "./components/Sidebar";
 import { DashboardView } from "./components/DashboardView";
 import { TrainingView } from "./components/TrainingView";
@@ -41,7 +42,8 @@ const NAV_ITEMS = [
   { path: "/profile",     label: "PROFILE"    },
 ];
 
-export default function App() {
+function AppContent() {
+  const { JarvisPortal } = useJarvisContext();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -69,6 +71,7 @@ export default function App() {
 
   return (
     <>
+    {JarvisPortal}
     <div className="w-full h-screen bg-[#050505] flex overflow-hidden text-white font-sans">
       <Sidebar activeView={activeSegment} onViewChange={(id) => navigate(id === "dashboard" ? "/" : `/${id}`)} />
 
@@ -137,5 +140,13 @@ export default function App() {
       </div>
     </div>
     </>
+  );
+}
+
+export default function App() {
+  return (
+    <JarvisProvider>
+      <AppContent />
+    </JarvisProvider>
   );
 }

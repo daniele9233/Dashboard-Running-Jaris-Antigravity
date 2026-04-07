@@ -5,6 +5,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { Award, Clock, Activity, Zap, Calendar, Edit3, Share2, RefreshCw, Link2, X, Check, Heart, ChevronRight, Upload, Camera, Bot } from "lucide-react";
 import { useApi } from "../hooks/useApi";
 import { getProfile, updateProfile, getStravaAuthUrl, syncStrava, getBestEfforts, getHeatmap, getRuns } from "../api";
+import { useJarvisContext } from "../context/JarvisContext";
 import type { Profile, BestEffort, Run } from "../types/api";
 
 // ─── POLYLINE DECODER ────────────────────────────────────────────────────────
@@ -530,7 +531,7 @@ export function ProfileView() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [rulePeriod, setRulePeriod] = useState<7 | 14>(7);
-  const [jarvisEnabled, setJarvisEnabled] = useState(false);
+  const { enabled: jarvisEnabled, setEnabled: setJarvisEnabled } = useJarvisContext();
 
   const activeProfile = profile ?? profileData;
   const lastRun = useMemo(() => {
@@ -552,17 +553,24 @@ export function ProfileView() {
   const allRuns = runsData?.runs ?? [];
 
   const heatmapGrid = useMemo(() => {
-    // Usa dati API se disponibili, altrimenti costruisci da allRuns
     if (heatmapData?.heatmap && heatmapData.heatmap.length > 0) {
       return buildHeatmapGrid(heatmapData.heatmap, 24);
     }
-    // Fallback: costruisci da allRuns
-    const runsMap: Record<string, number> = {};
+    // Fallback: costruisci da allRuns con run_type
+    const runsMap: Record<string, { date: string; km: number; runType: string }> = {};
     for (const r of (runsData?.runs ?? [])) {
       const d = r.date?.slice(0, 10);
-      if (d) runsMap[d] = (runsMap[d] || 0) + (r.distance_km || 0);
+      if (d) {
+        if (!runsMap[d]) {
+          runsMap[d] = { date: d, km: 0, runType: '' };
+        }
+        runsMap[d].km += (r.distance_km || 0);
+        if (r.run_type) {
+          runsMap[d].runType = r.run_type;
+        }
+      }
     }
-    const fallback = Object.entries(runsMap).map(([date, km]) => ({ date, km }));
+    const fallback = Object.values(runsMap);
     return buildHeatmapGrid(fallback, 24);
   }, [heatmapData, runsData]);
   const zones = useMemo(() => getZones(), [maxHr]);
