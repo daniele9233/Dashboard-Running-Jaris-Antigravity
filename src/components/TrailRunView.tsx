@@ -72,6 +72,13 @@ function computeBearing(a: [number, number, number], b: [number, number, number]
   return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
 }
 
+// ─── Smooth angle interpolation (shortest arc, frame-rate independent) ────────
+function lerpAngle(from: number, to: number, t: number): number {
+  let diff = ((to - from) % 360 + 360) % 360;
+  if (diff > 180) diff -= 360; // shortest arc
+  return from + diff * t;
+}
+
 // ─── Slope color ─────────────────────────────────────────────────────────────
 function gradeColor(g: number): string {
   if (g > 14) return '#ef4444';
@@ -200,6 +207,7 @@ export function TrailRunView({ onClose }: TrailRunViewProps) {
   const lastTsRef = useRef<number | null>(null);
   const playingRef = useRef(false);
   const simSpeedRef = useRef(simSpeed);
+  const smoothBearingRef = useRef(SIM_DATA[0].bearing); // lerped bearing for camera
 
   useEffect(() => { simSpeedRef.current = simSpeed; }, [simSpeed]);
   useEffect(() => { playingRef.current = playing; }, [playing]);
@@ -211,6 +219,7 @@ export function TrailRunView({ onClose }: TrailRunViewProps) {
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
     lastTsRef.current = null;
     simRef.current = { wpIdx: 0, pct: 0, elapsedSec: 0 };
+    smoothBearingRef.current = SIM_DATA[0].bearing;
     setRunnerPos({ lng: WP[0][0], lat: WP[0][1], elev: WP[0][2] });
     setCurrentTelemetry({ wpIdx: 0, pct: 0, elapsedSec: 0, hr: 145, grade: 0, paceSec: 420, kmDone: 0, dPlusSoFar: 0, finished: false });
     // Fly to start
@@ -281,14 +290,23 @@ export function TrailRunView({ onClose }: TrailRunViewProps) {
         dPlusSoFar, finished: isFinished,
       });
 
-      // Chase-cam: follow runner
+      // Chase-cam: smooth follow
       const map = mapRef.current?.getMap();
       if (map) {
-        map.jumpTo({
+        // Lerp bearing toward target — frame-rate independent (exponential decay)
+        const targetBearing = isFinished ? smoothBearingRef.current : seg.bearing;
+        const bearingLerpT = 1 - Math.exp(-6 * dt); // ~0.09 at 60fps, smooth rotation
+        smoothBearingRef.current = lerpAngle(smoothBearingRef.current, targetBearing, bearingLerpT);
+
+        // Adaptive ease duration: short at high speed to avoid lag, longer at low speed
+        const easeDur = Math.max(20, Math.min(140, 1400 / simSpeedRef.current));
+        map.easeTo({
           center: [lng, lat],
           zoom: 15.5,
           pitch: 65,
-          bearing: isFinished ? map.getBearing() : seg.bearing,
+          bearing: smoothBearingRef.current,
+          duration: easeDur,
+          easing: (t: number) => t, // linear — RAF controls the interpolation
         });
       }
 
@@ -384,7 +402,7 @@ export function TrailRunView({ onClose }: TrailRunViewProps) {
   const trailLineLayer: LayerProps = {
     id: 'trail-slope',
     type: 'line',
-    paint: { 'line-color': ['get', 'color'], 'line-width': 4.5, 'line-opacity': 0.95 },
+    paint: { 'line-color': ['get', 'color'], 'line-width': 6, 'line-opacity': 1 },
     layout: { 'line-cap': 'round', 'line-join': 'round' },
   };
 
@@ -611,7 +629,7 @@ export function TrailRunView({ onClose }: TrailRunViewProps) {
             <Map
               ref={mapRef}
               mapboxAccessToken={MAPBOX_TOKEN}
-              mapStyle="mapbox://styles/mapbox/outdoors-v12"
+              mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
               initialViewState={{ longitude: 12.7175, latitude: 41.769, zoom: 13, pitch: 55, bearing: -25 }}
               style={{ width: '100%', height: '100%' }}
               onLoad={handleMapLoad}
@@ -622,9 +640,9 @@ export function TrailRunView({ onClose }: TrailRunViewProps) {
             >
               {viewMode === 'map' && <NavigationControl position="top-right" />}
 
-              {/* Trail shadow */}
+              {/* Trail shadow/halo — thick black outline for contrast on satellite */}
               <Source id="trail-bg" type="geojson" data={{ type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: WP.map(p => [p[0], p[1]]) } }] }}>
-                <Layer id="trail-shadow" type="line" paint={{ 'line-color': '#000', 'line-width': 7, 'line-opacity': 0.4 }} layout={{ 'line-cap': 'round', 'line-join': 'round' }} beforeId="trail-slope" />
+                <Layer id="trail-shadow" type="line" paint={{ 'line-color': '#000', 'line-width': 10, 'line-opacity': 0.55 }} layout={{ 'line-cap': 'round', 'line-join': 'round' }} beforeId="trail-slope" />
               </Source>
 
               {/* Slope-colored trail */}
