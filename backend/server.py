@@ -1945,12 +1945,18 @@ async def recalculate_fitness_freshness():
 def _vdot_from_run(r: dict, max_hr: int = 190) -> Optional[float]:
     """Calculate VDOT from a single run using Daniels' VO2 formula (2013).
 
+    Per il PRD (RF-VDOT-01):
+    - Input: migliore prestazione su distanze 4-21km
+    - Validazione: distanza >= 4km, FC >= 85% FCmax, passo 2:30-9:00/km
+    - Cap: VDOT max 55
+
     VO2 = -4.60 + 0.182258·v + 0.000104·v²  (v in m/min)
     %max = 0.8 + 0.1894393·e^(-0.012778·t) + 0.2989558·e^(-0.1932605·t)
     VDOT = VO2 / %max
     """
     dist = r.get("distance_km", 0)
-    if dist < 3 or dist > 42.5:
+    # PRD: distanza >= 4km (non 3km) per VDOT affidabile
+    if dist < 4 or dist > 21:
         return None
     pace_str = r.get("avg_pace", "")
     if not pace_str or ":" not in pace_str:
@@ -1960,13 +1966,16 @@ def _vdot_from_run(r: dict, max_hr: int = 190) -> Optional[float]:
         pace_s = int(parts[0]) * 60 + int(parts[1])
     except (ValueError, IndexError):
         return None
+    # PRD: passo 2:30-9:00/km (150-540 sec/km)
     if pace_s < 150 or pace_s > 540:
         return None
     duration_min = r.get("duration_minutes", 0) or 0
-    if duration_min < 5:
+    # Minimo 10 minuti per VDOT affidabile (corse brevi distorcono)
+    if duration_min < 10:
         return None
     avg_hr = r.get("avg_hr")
-    if avg_hr and avg_hr < 0.80 * max_hr:
+    # PRD: FC >= 85% FCmax (non 80%) — solo sforzi significativi
+    if avg_hr and avg_hr < 0.85 * max_hr:
         return None
     speed_mpm = 60000 / pace_s
     vo2 = -4.60 + 0.182258 * speed_mpm + 0.000104 * speed_mpm ** 2
@@ -2013,25 +2022,37 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
     recent_16 = [(r, v) for r, v in run_vdots if r.get("date", "") >= cutoff_16w]
 
     # ── Race-specific VDOT: only runs >= 70% of goal distance ────────────────
+    # Use _top_avg() for consistency with current VDOT calculation
     race_specific_vdot = None
     if goal_dist_km > 0:
         min_dist = goal_dist_km * 0.70
         race_runs = [(r, v) for r, v in run_vdots if r.get("distance_km", 0) >= min_dist]
         if race_runs:
             race_recent = [(r, v) for r, v in race_runs if r.get("date", "") >= cutoff_16w]
-            if race_recent:
-                race_specific_vdot = round(max(v for _, v in race_recent), 1)
+            if race_recent and len(race_recent) >= 2:
+                race_specific_vdot = round(_top_avg([v for _, v in race_recent], n=3), 1)
+            elif len(race_runs) >= 2:
+                race_specific_vdot = round(_top_avg([v for _, v in race_runs], n=3), 1)
             else:
+                # Fallback to single best if not enough runs
                 race_specific_vdot = round(max(v for _, v in race_runs), 1)
 
-    # Current: best from narrowest window available
-    if recent_8:
-        current = max(v for _, v in recent_8)
-    elif recent_16:
-        current = max(v for _, v in recent_16)
+    # Current: average of top-3 recent VDOT values (more robust than single max).
+    # A single GPS glitch or short fast run should not inflate the VDOT.
+    def _top_avg(values, n=3):
+        sorted_vals = sorted(values, reverse=True)
+        top = sorted_vals[:n]
+        return sum(top) / len(top) if top else None
+
+    if recent_8 and len(recent_8) >= 2:
+        current = _top_avg([v for _, v in recent_8], n=3)
+    elif recent_16 and len(recent_16) >= 2:
+        current = _top_avg([v for _, v in recent_16], n=3)
+    elif run_vdots and len(run_vdots) >= 2:
+        current = _top_avg([v for _, v in run_vdots], n=3)
     else:
-        current = max(v for _, v in run_vdots)
-    current = round(current, 1)
+        current = max(v for _, v in run_vdots) if run_vdots else None
+    current = round(current, 1) if current else None
 
     # Peak: all-time best
     peak_run, peak_val = max(run_vdots, key=lambda x: x[1])
