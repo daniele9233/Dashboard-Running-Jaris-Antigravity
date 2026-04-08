@@ -2104,8 +2104,13 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
     recent_8 = [(r, v) for r, v in run_vdots if r.get("date", "") >= cutoff_8w]
     recent_16 = [(r, v) for r, v in run_vdots if r.get("date", "") >= cutoff_16w]
 
+    # Helper: average of top-N values (more robust than single max)
+    def _top_avg(values, n=3):
+        sorted_vals = sorted(values, reverse=True)
+        top = sorted_vals[:n]
+        return sum(top) / len(top) if top else None
+
     # ── Race-specific VDOT: only runs >= 70% of goal distance ────────────────
-    # Use _top_avg() for consistency with current VDOT calculation
     race_specific_vdot = None
     if goal_dist_km > 0:
         min_dist = goal_dist_km * 0.70
@@ -2117,15 +2122,9 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
             elif len(race_runs) >= 2:
                 race_specific_vdot = round(_top_avg([v for _, v in race_runs], n=3), 1)
             else:
-                # Fallback to single best if not enough runs
                 race_specific_vdot = round(max(v for _, v in race_runs), 1)
 
-    # Current: average of top-3 recent VDOT values (more robust than single max).
-    # A single GPS glitch or short fast run should not inflate the VDOT.
-    def _top_avg(values, n=3):
-        sorted_vals = sorted(values, reverse=True)
-        top = sorted_vals[:n]
-        return sum(top) / len(top) if top else None
+    # Current: average of top-3 recent VDOT values
 
     if recent_8 and len(recent_8) >= 2:
         current = _top_avg([v for _, v in recent_8], n=3)
