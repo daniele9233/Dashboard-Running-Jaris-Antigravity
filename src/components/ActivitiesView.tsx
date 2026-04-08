@@ -15,9 +15,11 @@ import {
   Upload,
   X,
   Database,
+  Mountain,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
+import { TrailRunView } from './TrailRunView';
 import { useApi } from '../hooks/useApi';
 import { getRuns, importGarminCsv } from '../api';
 import type { Run, RunsResponse } from '../types/api';
@@ -28,6 +30,35 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import type { MapRef } from 'react-map-gl/mapbox';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
+
+// ── Demo trail run (premium showcase) ────────────────────────────────────────
+const DEMO_TRAIL_RUN: Run = {
+  id: '__demo_trail__',
+  date: '2026-04-06',
+  distance_km: 12.4,
+  duration_minutes: 148,
+  avg_pace: '11:56',
+  avg_hr: 158,
+  max_hr: 178,
+  avg_hr_pct: 0.87,
+  max_hr_pct: 0.98,
+  run_type: 'trail',
+  notes: 'Monte Cavo Loop — Castelli Romani',
+  location: 'Rocca di Papa, RM',
+  strava_id: null,
+  avg_cadence: 168,
+  elevation_gain: 624,
+  splits: [],
+  polyline: null,
+  start_latlng: [41.7619, 12.7136],
+  plan_feedback: null,
+  avg_vertical_oscillation: null,
+  avg_vertical_ratio: null,
+  avg_ground_contact_time: null,
+  avg_stride_length: null,
+  is_treadmill: false,
+  name: 'Monte Cavo Loop Trail',
+};
 
 type RunType = 'Easy' | 'Tempo' | 'Intervals' | 'Long' | 'Recovery' | string;
 type MapViewMode = 'world' | 'last-run' | 'all-zoomed';
@@ -132,6 +163,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
   const [mapViewMode, setMapViewMode] = useState<MapViewMode>('all-zoomed');
   const [mapReady, setMapReady] = useState(false);
   const [showGarminImport, setShowGarminImport] = useState(false);
+  const [showTrailView, setShowTrailView] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvParsing, setCsvParsing] = useState(false);
   const [csvImporting, setCsvImporting] = useState(false);
@@ -144,12 +176,13 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
   const rotationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const runs: Run[] = data?.runs ?? [];
-  const runsWithCoords = runs.filter(r => r.start_latlng && r.start_latlng.length === 2);
+  const allRuns: Run[] = [DEMO_TRAIL_RUN, ...runs];
+  const runsWithCoords = allRuns.filter(r => r.start_latlng && r.start_latlng.length === 2);
 
   // Pre-compute cardiac drift for all runs (only steady-pace runs qualify)
   const driftMap = useMemo(() => {
     const record: Record<string, ReturnType<typeof computeDrift>> = {};
-    for (const run of runs) {
+    for (const run of allRuns) {
       // Escludi tapis roulant dal drift (nessun GPS, splits non affidabili)
       if (!run.is_treadmill && run.distance_km >= 4 && (run.splits ?? []).length >= 4) {
         const d = computeDrift(run);
@@ -157,7 +190,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
       }
     }
     return record;
-  }, [runs]);
+  }, [allRuns]);
   const lastRunWithCoords = runsWithCoords[0] ?? null; // runs are newest-first
 
   // Center fallback
@@ -272,18 +305,18 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
 
   // Auto-apply view when map becomes ready and data arrives
   useEffect(() => {
-    if (mapReady && runs.length > 0) {
-      applyViewMode(mapViewMode, runs);
+    if (mapReady && allRuns.length > 0) {
+      applyViewMode(mapViewMode, allRuns);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapReady, runs.length]);
+  }, [mapReady, allRuns.length]);
 
   // ── Switch view mode ───────────────────────────────────────────────────────
   const switchViewMode = useCallback((mode: MapViewMode) => {
     setMapViewMode(mode);
     setSelectedRunId(null);
-    applyViewMode(mode, runs);
-  }, [applyViewMode, runs]);
+    applyViewMode(mode, allRuns);
+  }, [applyViewMode, allRuns]);
 
   // ── Click on run card / marker ────────────────────────────────────────────
   const handleRunClick = useCallback((run: Run) => {
@@ -435,7 +468,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
             <div className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2">
               <Calendar className="w-3.5 h-3.5 text-[#C0FF00]" />
               <span className="text-xs font-bold text-gray-400">
-                {loading ? '...' : `${runs.length} corse`}
+                {loading ? '...' : `${allRuns.length} corse`}
               </span>
             </div>
 
@@ -470,7 +503,93 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
             </div>
           )}
 
-          {!loading && runs.map((run, index) => {
+          {!loading && allRuns.map((run, index) => {
+            // ── Special: Demo Trail Run card ────────────────────────────────
+            if (run.id === '__demo_trail__') {
+              const isHovered = hoveredRunId === '__demo_trail__';
+              return (
+                <motion.div
+                  key="__demo_trail__"
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0 }}
+                  onMouseEnter={() => setHoveredRunId('__demo_trail__')}
+                  onMouseLeave={() => setHoveredRunId(null)}
+                  onClick={() => handleRunClick(run)}
+                  className={cn(
+                    'w-full backdrop-blur-xl border p-4 rounded-2xl flex items-center gap-4 transition-all group relative cursor-pointer overflow-hidden',
+                    isHovered
+                      ? 'border-[#F97316]/60 bg-[#F97316]/[0.06] shadow-[0_0_32px_rgba(249,115,22,0.12)]'
+                      : 'border-[#F97316]/30 bg-[#0F172A]/60 shadow-[0_0_16px_rgba(249,115,22,0.06)]'
+                  )}
+                >
+                  {/* shimmer glow bg */}
+                  <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-[#F97316]/5 to-transparent" />
+
+                  {/* TRAIL PREMIUM badge — top right */}
+                  <div className="absolute top-2 right-2 flex items-center gap-1 bg-[#F97316]/20 border border-[#F97316]/40 px-1.5 py-0.5 rounded-md">
+                    <Mountain className="w-2.5 h-2.5 text-[#F97316]" />
+                    <span className="text-[7px] font-black uppercase tracking-widest text-[#F97316]">Trail Premium</span>
+                  </div>
+
+                  {/* Icon */}
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-xl flex-shrink-0 bg-[#F97316]/20 text-[#F97316] transition-transform" style={{ transform: isHovered ? 'scale(1.1)' : 'scale(1)' }}>
+                    <Mountain className="w-7 h-7" />
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <h3 className="text-sm font-black italic tracking-tight truncate text-[#F97316]">
+                        Monte Cavo Loop
+                      </h3>
+                      <span className="px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest flex-shrink-0 bg-[#F97316]/20 text-[#F97316]">
+                        Trail
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-500 text-[10px] font-bold uppercase tracking-wider">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-2.5 h-2.5" />06 apr 2026
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-2.5 h-2.5 flex-shrink-0" />Rocca di Papa, RM
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="flex gap-4 border-x border-[#F97316]/10 px-4 flex-shrink-0">
+                    <div className="flex flex-col items-center">
+                      <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">km</span>
+                      <span className="text-sm font-black italic text-white">12.4</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">D+</span>
+                      <span className="text-sm font-black italic text-[#F97316]">624m</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">hr</span>
+                      <span className="text-sm font-black italic text-rose-400">158</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">tempo</span>
+                      <span className="text-sm font-black italic text-white">2:28</span>
+                    </div>
+                  </div>
+
+                  {/* Arrow → opens TrailRunView */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowTrailView(true); }}
+                    className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all bg-[#F97316]/20 text-[#F97316] hover:bg-[#F97316] hover:text-black"
+                    title="Apri dettaglio trail premium"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </motion.div>
+              );
+            }
+
+            // ── Regular run card ────────────────────────────────────────────
             const typeLabel = getRunTypeLabel(run.run_type);
             const { bg, text, icon } = getTypeStyle(typeLabel);
             const isHovered = hoveredRunId === run.id;
@@ -697,7 +816,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
 
         {/* ── Bottom info panel (selected run) ─────────────────────────── */}
         {selectedRunId && (() => {
-          const run = runs.find(r => r.id === selectedRunId);
+          const run = allRuns.find(r => r.id === selectedRunId);
           if (!run) return null;
           const typeLabel = getRunTypeLabel(run.run_type);
           const { bg, text } = getTypeStyle(typeLabel);
@@ -750,6 +869,13 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
           </div>
         )}
       </div>
+
+      {/* ── Trail Run Premium Overlay ───────────────────────────────────── */}
+      <AnimatePresence>
+        {showTrailView && (
+          <TrailRunView onClose={() => setShowTrailView(false)} />
+        )}
+      </AnimatePresence>
 
       {/* ── Garmin CSV Import Modal ──────────────────────────────────────── */}
       {showGarminImport && (
