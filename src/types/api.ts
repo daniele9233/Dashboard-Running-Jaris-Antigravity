@@ -74,6 +74,9 @@ export interface Run {
   avg_vertical_ratio: number | null;        // %
   avg_ground_contact_time: number | null;   // ms
   avg_stride_length: number | null;         // m
+  // Indoor/treadmill flag — excluded from all statistics
+  is_treadmill: boolean | null;
+  name: string | null;
 }
 
 export interface RunsResponse {

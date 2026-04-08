@@ -150,7 +150,8 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
   const driftMap = useMemo(() => {
     const record: Record<string, ReturnType<typeof computeDrift>> = {};
     for (const run of runs) {
-      if (run.distance_km >= 4 && (run.splits ?? []).length >= 4) {
+      // Escludi tapis roulant dal drift (nessun GPS, splits non affidabili)
+      if (!run.is_treadmill && run.distance_km >= 4 && (run.splits ?? []).length >= 4) {
         const d = computeDrift(run);
         if (d) record[run.id] = d;
       }
@@ -529,6 +530,11 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                     <span className={cn('px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest flex-shrink-0', bg, text)}>
                       {typeLabel}
                     </span>
+                    {run.is_treadmill && (
+                      <span className="px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest flex-shrink-0 bg-slate-700/60 text-slate-400" title="Tapis roulant — escluso dalle statistiche">
+                        🏃 tapis
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 text-gray-500 text-[10px] font-bold uppercase tracking-wider">
                     <span className="flex items-center gap-1">

@@ -106,6 +106,7 @@ export function AnaerobicThreshold({ runs, maxHr, vdot }: Props) {
 
       const monthRuns = runs.filter(r => {
         if (!r.date) return false;
+        if (r.is_treadmill) return false; // escludi tapis roulant
         const rd = new Date(r.date);
         return (
           rd.getFullYear() === yr &&

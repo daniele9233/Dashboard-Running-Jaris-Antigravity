@@ -454,9 +454,13 @@ async def strava_sync():
             except Exception as e:
                 print(f"[FIT-Download] Error for {strava_id}: {e}")
 
+            # Detect treadmill: Strava sets trainer=True for indoor/treadmill activities
+            is_treadmill = bool(act.get("trainer", False))
+
             run_doc = {
                 "athlete_id": athlete_id,
                 "strava_id": strava_id,
+                "name": act.get("name", ""),
                 "date": date_str,
                 "distance_km": distance_km,
                 "duration_minutes": duration_min,
@@ -466,6 +470,7 @@ async def strava_sync():
                 "avg_hr_pct": round((avg_hr / max_hr_profile) * 100) if avg_hr else None,
                 "max_hr_pct": round((max_hr / max_hr_profile) * 100) if max_hr else None,
                 "run_type": _classify_run({"distance_km": distance_km, "avg_pace": avg_pace}),
+                "is_treadmill": is_treadmill,
                 "notes": f"Importata da Strava: {act.get('name', '')}",
                 "location": act.get("location_city") or act.get("timezone", "").split("/")[-1],
                 "avg_cadence": act.get("average_cadence"),
@@ -1341,18 +1346,16 @@ async def generate_training_plan(request: Request):
     raw_max_km = (profile or {}).get("max_weekly_km")
     max_weekly_km = float(raw_max_km) if raw_max_km else defaults_km.get(goal_race, 55.0)
 
-    # ── FULL history analysis — fetch ALL runs from DB, not just last 500 ─────
-    all_runs = await db.runs.find(q).sort("date", -1).to_list(None)
+    # ── FULL history analysis — escludi tapis roulant da VDOT ─────────────────
+    q_gps = {**q, "is_treadmill": {"$ne": True}}
+    all_runs = await db.runs.find(q_gps).sort("date", -1).to_list(None)
     dist_km = RACE_DISTANCES.get(goal_race, 5.0)
     history = _calc_vdot_with_history(all_runs, max_hr, weeks_window=52, goal_dist_km=dist_km)
+    # current_vdot is ALWAYS the same regardless of goal distance —
+    # it's derived from best recent runs (all qualifying distances).
+    # race_specific_vdot was causing different VDOT per distance → removed.
     current_vdot = history["current"] or 30.0
     peak_vdot = history["peak"] or current_vdot
-    race_specific_vdot = history.get("race_specific_vdot")
-
-    # Use race-specific VDOT if available (more reliable for the target distance)
-    if race_specific_vdot and race_specific_vdot < current_vdot:
-        # Race-specific VDOT is lower → use it (more conservative, more accurate)
-        current_vdot = race_specific_vdot
 
     # ── Optional test calibration ────────────────────────────────────────────
     test_vdot = None
@@ -2037,6 +2040,9 @@ def _vdot_from_run(r: dict, max_hr: int = 190) -> Optional[float]:
     %max = 0.8 + 0.1894393·e^(-0.012778·t) + 0.2989558·e^(-0.1932605·t)
     VDOT = VO2 / %max
     """
+    # Tapis roulant: escludi da tutte le metriche (nessun GPS, passo non affidabile)
+    if r.get("is_treadmill"):
+        return None
     dist = r.get("distance_km", 0)
     # PRD: distanza >= 4km (non 3km) per VDOT affidabile
     if dist < 4 or dist > 21:
@@ -2350,7 +2356,9 @@ def _vdot_from_best_efforts(efforts: list) -> Optional[float]:
 async def get_analytics():
     athlete_id = await _get_athlete_id()
     q = {"athlete_id": athlete_id} if athlete_id else {}
-    runs = await db.runs.find(q).sort("date", -1).to_list(500)
+    # Escludi tapis roulant da tutte le metriche (nessun GPS, passo non calibrato)
+    q_stats = {**q, "is_treadmill": {"$ne": True}}
+    runs = await db.runs.find(q_stats).sort("date", -1).to_list(500)
     profile = await db.profile.find_one(q)
     max_hr = int(profile.get("max_hr", 190)) if profile else 190
 
@@ -2413,7 +2421,9 @@ async def get_prediction_history():
 async def get_vdot_paces():
     athlete_id = await _get_athlete_id()
     q = {"athlete_id": athlete_id} if athlete_id else {}
-    runs = await db.runs.find(q).sort("date", -1).to_list(500)
+    # Escludi tapis roulant da VDOT e paces
+    q_stats = {**q, "is_treadmill": {"$ne": True}}
+    runs = await db.runs.find(q_stats).sort("date", -1).to_list(500)
     profile = await db.profile.find_one(q)
     max_hr = int(profile.get("max_hr", 190)) if profile else 190
     vdot = _calc_vdot(runs, max_hr)

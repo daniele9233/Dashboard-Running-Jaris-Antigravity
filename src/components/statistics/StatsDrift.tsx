@@ -244,7 +244,7 @@ export function StatsDrift({ runs }: { runs: Run[] }) {
 
   const results = useMemo(() => {
     return runs
-      .filter(r => r.distance_km >= 4 && (r.splits ?? []).length >= 4)
+      .filter(r => !r.is_treadmill && r.distance_km >= 4 && (r.splits ?? []).length >= 4)
       .sort((a, b) => b.date.localeCompare(a.date))
       .map(computeDrift)
       .filter((d): d is DriftResult => d !== null);
