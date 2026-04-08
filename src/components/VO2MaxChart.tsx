@@ -74,14 +74,9 @@ function buildHistory(runs: Run[]) {
     };
   });
 
-  // Step 2 — drop outlier dips: if a month's VDOT is < 87% of all-time peak,
-  // the runner wasn't racing that month — treat as null and forward-fill
-  const peak = Math.max(...raw.map(r => r.vdot ?? 0));
-  const floor = peak * 0.87;
-  return raw.map(r => ({
-    ...r,
-    vdot: r.vdot !== null && r.vdot >= floor ? r.vdot : null,
-  }));
+  // Step 2 — keep all months with qualifying runs (no artificial floor).
+  // Forward-fill handles gaps when athlete had no qualifying runs that month.
+  return raw;
 }
 
 // ─── T-Pace (soglia) da VDOT ─────────────────────────────────────────────────
@@ -191,14 +186,23 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
     return arr;
   }, [history]);
 
-  const displayVdot = vdot ?? filledHistory[filledHistory.length - 1]?.vdot ?? null;
+  // Force the last month's point to match the real current VDOT from API
+  // so gauge and chart always agree.
+  const filledWithCurrent = useMemo(() => {
+    if (!vdot || filledHistory.length === 0) return filledHistory;
+    const arr = [...filledHistory];
+    arr[arr.length - 1] = { ...arr[arr.length - 1], vdot };
+    return arr;
+  }, [filledHistory, vdot]);
+
+  const displayVdot = vdot ?? filledWithCurrent[filledWithCurrent.length - 1]?.vdot ?? null;
   const color = displayVdot ? vdotColor(displayVdot) : "#94A3B8";
   const label = displayVdot ? vdotLabel(displayVdot) : "—";
   const tPace = displayVdot ? calcTPace(displayVdot) : null;
 
   // Trend vs 3 months ago
-  const recent = filledHistory[filledHistory.length - 1]?.vdot;
-  const older = filledHistory[filledHistory.length - 4]?.vdot;
+  const recent = filledWithCurrent[filledWithCurrent.length - 1]?.vdot;
+  const older = filledWithCurrent[filledWithCurrent.length - 4]?.vdot;
   const trend = recent != null && older != null ? parseFloat((recent - older).toFixed(1)) : null;
 
   return (
@@ -249,7 +253,7 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
           </div>
           <div className="flex-1" style={{ minHeight: 140 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={filledHistory} margin={{ top: 8, right: 8, left: -28, bottom: 0 }}>
+              <AreaChart data={filledWithCurrent} margin={{ top: 8, right: 8, left: -28, bottom: 0 }}>
                 <defs>
                   <linearGradient id="vo2Grad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={color} stopOpacity={0.3} />
