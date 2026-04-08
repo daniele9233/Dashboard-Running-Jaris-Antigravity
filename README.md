@@ -6,9 +6,16 @@
 
 - [x] **Activities — Drift per corsa**: colonne **DRIFT** e **1ª→2ª** aggiunte su ogni card corsa nell'elenco attività. Colorazione per zona (verde/blu/arancione/rosso). Solo per corse a passo costante con dati split HR.
 
-## Todo
+- [x] **Training Plan — Riscrittura completa**: logica scientifica riscritta da zero.
+  - **VDOT con storia completa**: analisi picco storico + VDOT attuale + training age + volume settimanale.
+  - **Recovery Mode**: se il target è dentro il picco storico, tassi accelerati (Mujika & Padilla 2000, muscle memory).
+  - **Due opzioni**: se il goal non è fattibile, l'utente sceglie tra Piano Conservativo (0.5 VDOT/meso) e Piano Aggressivo (0.8 VDOT/meso) — nessun ricalcolo automatico.
+  - **Test pre-piano**: input opzionale di distanza + tempo test per calibrare il VDOT con precisione.
+  - **Esercizi forza/prehab/pliometrici**: ogni sessione include esercizi specifici per fase — clamshell, Nordic curl, A-skip, drop jump, eccentric heel drops, etc. (Beattie 2017, Lauersen 2014, Saunders 2006).
+  - **Auto-adattamento**: il piano si aggiorna automaticamente ad ogni sync Strava (ACWR, TSB, VDOT drift, compliance, taper).
+  - **Richiede deploy backend su Render** per essere attivo.
 
-- [ ] **Training Plan — Test pre-piano**: prima di generare il piano, far eseguire un test di corsa (es. 3 km) per valutare il livello attuale reale. Usare il risultato del test per calibrare VDOT e costruire il piano di conseguenza. Rivedere tutta la logica di generazione piano.
+## Todo
 
 - [ ] **Gamification — Badge & Trofei**: implementare sistema badge con 100+ trofei in 8 categorie: Milestone distanza, Costanza, Miglioramenti, Allenamento, Mezza maratona, Scienza, Velocità lampo, Fun & Speciali. Vedi specifica completa in chat.
 

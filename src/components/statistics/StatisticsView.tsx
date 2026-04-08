@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { StatsDrift } from './StatsDrift';
 import { BadgesGrid } from '../BadgesGrid';
 import { useApi } from '../../hooks/useApi';
-import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis } from '../../api';
-import type { AnalyticsResponse, VdotPacesResponse, RunsResponse, GctAnalysisResponse } from '../../types/api';
+import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, type GctAnalysisResponse } from '../../api';
+import type { AnalyticsResponse, VdotPacesResponse, RunsResponse } from '../../types/api';
 import { 
   Activity, 
   Zap, 

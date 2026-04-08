@@ -1032,6 +1032,75 @@ def _tp_secondary_quality_session(phase: str, goal: str, dist_km: float,
             f"Corsa leggera {round(dist_km, 1)} km @ {ep}/km. No allunghi — conserva energie per la gara.", ep)
 
 
+def _tp_strength_exercises(phase: str, day_type: str, week_in_phase: int = 0) -> list:
+    """Generate phase-appropriate strength, prehab, and plyometric exercises.
+
+    Scientific basis:
+    - Beattie et al. (2017): heavy resistance training improves running economy
+    - Lauersen et al. (2014): strength training reduces injury risk by 68%
+    - Saunders et al. (2006): plyometrics improve 3K running economy by 4.1%
+    - Fredericson & Moore (2005): hip abductor weakness linked to ITBS/knee injury
+    """
+    # Core exercises — every phase, always useful
+    prehab = [
+        {"name": "Clamshell", "sets": 3, "reps": "15/lato", "note": "Banda elastica sopra ginocchia. Previene ITBS."},
+        {"name": "Single-Leg Glute Bridge", "sets": 3, "reps": "12/lato", "note": "Attivazione gluteo medio. Stabilità bacino."},
+        {"name": "Eccentric Heel Drop", "sets": 3, "reps": "15/lato", "note": "Prevenzione tendinopatia achillea (Alfredson protocol)."},
+        {"name": "Dead Bug", "sets": 3, "reps": "10/lato", "note": "Core anti-estensione. Stabilità lombare."},
+    ]
+
+    strength_base = [
+        {"name": "Squat a corpo libero", "sets": 3, "reps": 15, "note": "Forza base quadricipite e glutei."},
+        {"name": "Affondo camminato", "sets": 3, "reps": "10/lato", "note": "Forza unilaterale + equilibrio."},
+        {"name": "Calf Raise (tallone rialzato)", "sets": 3, "reps": 20, "note": "Rinforzo tricipite surale. Previene fascite."},
+        {"name": "Step-Up su rialzo", "sets": 3, "reps": "10/lato", "note": "Simula fase di spinta della corsa."},
+    ]
+
+    strength_heavy = [
+        {"name": "Bulgarian Split Squat", "sets": 3, "reps": "8/lato", "note": "Forza massima unilaterale (Beattie 2017)."},
+        {"name": "Single-Leg Deadlift", "sets": 3, "reps": "10/lato", "note": "Catena posteriore + propriocezione."},
+        {"name": "Calf Raise Eccentrico", "sets": 3, "reps": "12/lato", "note": "Carico eccentrico, previene lesioni Achille."},
+        {"name": "Nordic Hamstring Curl", "sets": 3, "reps": 6, "note": "Prevenzione infortuni ischio-crurali (van der Horst 2015)."},
+    ]
+
+    plyo = [
+        {"name": "A-Skip", "sets": 3, "reps": "20 m", "note": "Coordinazione neuromuscolare + elasticità tendine."},
+        {"name": "Single-Leg Hop (avanti)", "sets": 3, "reps": "8/lato", "note": "Potenza specifica per la corsa."},
+        {"name": "Drop Jump (gradino 20 cm)", "sets": 3, "reps": 8, "note": "Ciclo stiramento-accorciamento (Saunders 2006)."},
+        {"name": "Bounding", "sets": 3, "reps": "30 m", "note": "Forza reattiva + ampiezza falcata."},
+    ]
+
+    if day_type == "rest":
+        # Rest day: full strength session (prehab + strength)
+        if phase == "Base Aerobica":
+            return prehab + strength_base
+        elif phase in ("Sviluppo", "Intensità"):
+            return prehab + strength_heavy
+        elif phase == "Specifico":
+            return prehab[:2] + strength_heavy[:2] + plyo[:2]
+        else:  # Taper / Gara
+            return prehab[:2]  # minimal maintenance
+
+    elif day_type == "easy":
+        # Easy run day: light prehab post-run
+        if phase in ("Base Aerobica", "Sviluppo"):
+            return prehab[:2] + [{"name": "Calf Raise", "sets": 2, "reps": 15, "note": "Post-corsa, rinforzo base."}]
+        elif phase == "Intensità":
+            return prehab[:2] + plyo[:1]  # light plyo
+        else:
+            return prehab[:1]  # minimal
+
+    elif day_type == "long":
+        # Long run day: mobility only
+        return [
+            {"name": "Foam Rolling (IT band + polpacci)", "sets": 1, "reps": "60 s/lato", "note": "Recupero post-lungo."},
+            {"name": "Pigeon Stretch", "sets": 1, "reps": "45 s/lato", "note": "Mobilità anca."},
+        ]
+
+    # Quality session days: no strength (focus on running)
+    return []
+
+
 def _tp_build_sessions(week_start, week_km: float, phase: str, goal: str,
                        paces: dict, week_vdot: float) -> list:
     """Build 7-day session list for a training week."""
@@ -1054,17 +1123,22 @@ def _tp_build_sessions(week_start, week_km: float, phase: str, goal: str,
         session_date = week_start + timedelta(days=day_offset)
 
         if day_offset not in dist_map:
+            exercises = _tp_strength_exercises(phase, "rest")
+            rest_desc = "Giorno di riposo. Recupero attivo: stretching, foam rolling o camminata."
+            if exercises:
+                rest_desc += " Sessione di forza/prehab consigliata."
             sessions.append({
                 "day": day_names[day_offset],
                 "date": session_date.isoformat(),
                 "type": "rest",
-                "title": "Riposo",
-                "description": "Giorno di riposo. Recupero attivo: stretching, foam rolling o camminata.",
+                "title": "Riposo + Forza" if exercises else "Riposo",
+                "description": rest_desc,
                 "target_distance_km": 0,
                 "target_pace": None,
                 "target_duration_min": None,
                 "completed": False,
                 "run_id": None,
+                "strength_exercises": exercises,
             })
             continue
 
@@ -1089,6 +1163,14 @@ def _tp_build_sessions(week_start, week_km: float, phase: str, goal: str,
         except Exception:
             dur = None
 
+        # Assign strength exercises based on session type
+        if s_type == "long":
+            exercises = _tp_strength_exercises(phase, "long")
+        elif s_type == "easy":
+            exercises = _tp_strength_exercises(phase, "easy")
+        else:
+            exercises = []  # quality days: focus on running
+
         sessions.append({
             "day": day_names[day_offset],
             "date": session_date.isoformat(),
@@ -1100,6 +1182,7 @@ def _tp_build_sessions(week_start, week_km: float, phase: str, goal: str,
             "target_duration_min": dur,
             "completed": False,
             "run_id": None,
+            "strength_exercises": exercises,
         })
 
     return sessions

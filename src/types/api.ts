@@ -82,6 +82,13 @@ export interface RunsResponse {
 
 // ─── TRAINING PLAN ───────────────────────────────────────────────────────────
 
+export interface StrengthExercise {
+  name: string;
+  sets: number;
+  reps: string | number;
+  note?: string;
+}
+
 export interface Session {
   day: string;
   date: string;
@@ -93,6 +100,7 @@ export interface Session {
   target_duration_min: number | null;
   completed: boolean;
   run_id: string | null;
+  strength_exercises?: StrengthExercise[];
 }
 
 export interface TrainingWeek {

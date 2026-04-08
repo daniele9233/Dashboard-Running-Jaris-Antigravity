@@ -970,15 +970,73 @@ export function TrainingGrid() {
                   ))}
                 </div>
               )}
+
+              {/* Strength / Prehab Exercises */}
+              {session?.strength_exercises && session.strength_exercises.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-[#2A2A2A]">
+                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <span className="w-5 h-5 rounded bg-[#8B5CF6]/15 flex items-center justify-center text-[#8B5CF6] text-[10px]">💪</span>
+                    Forza & Prevenzione
+                  </h4>
+                  <div className="grid gap-2">
+                    {session.strength_exercises.map((ex, i) => (
+                      <div key={i} className="flex items-center justify-between bg-[#1E1E1E] px-4 py-2.5 rounded-lg border border-[#2A2A2A]">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm text-gray-200 font-medium">{ex.name}</span>
+                          {ex.note && <span className="text-[10px] text-gray-600 ml-2">{ex.note}</span>}
+                        </div>
+                        <span className="text-xs text-gray-500 font-mono ml-3 shrink-0">
+                          {ex.sets}×{ex.reps}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-24 bg-[#121212] rounded-xl border border-[#2A2A2A] border-dashed">
-              <div className="w-20 h-20 rounded-full bg-[#1E1E1E] flex items-center justify-center mb-6 border border-[#2A2A2A]">
-                <span className="text-4xl">☕</span>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-300">Giorno di Riposo</h3>
-              <p className="text-gray-500 mt-2 text-lg">Recupero e ricarica delle energie.</p>
-            </div>
+            (() => {
+              // Rest day — may have strength exercises
+              const restSession = session;
+              const restExercises = restSession?.strength_exercises ?? [];
+              return (
+                <div className="bg-[#121212] rounded-xl border border-[#2A2A2A] border-dashed">
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="w-20 h-20 rounded-full bg-[#1E1E1E] flex items-center justify-center mb-6 border border-[#2A2A2A]">
+                      <span className="text-4xl">{restExercises.length > 0 ? '💪' : '☕'}</span>
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-300">
+                      {restExercises.length > 0 ? 'Riposo + Forza' : 'Giorno di Riposo'}
+                    </h3>
+                    <p className="text-gray-500 mt-2 text-lg">
+                      {restExercises.length > 0 ? 'Recupero attivo con sessione di forza e prevenzione.' : 'Recupero e ricarica delle energie.'}
+                    </p>
+                  </div>
+
+                  {restExercises.length > 0 && (
+                    <div className="px-8 pb-8">
+                      <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span className="w-5 h-5 rounded bg-[#8B5CF6]/15 flex items-center justify-center text-[#8B5CF6] text-[10px]">💪</span>
+                        Sessione Forza & Prevenzione Infortuni
+                      </h4>
+                      <div className="grid gap-2">
+                        {restExercises.map((ex, i) => (
+                          <div key={i} className="flex items-center justify-between bg-[#1E1E1E] px-4 py-2.5 rounded-lg border border-[#2A2A2A]">
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm text-gray-200 font-medium">{ex.name}</span>
+                              {ex.note && <span className="text-[10px] text-gray-600 ml-2">{ex.note}</span>}
+                            </div>
+                            <span className="text-xs text-gray-500 font-mono ml-3 shrink-0">
+                              {ex.sets}×{ex.reps}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()
           )}
         </div>
       </div>
