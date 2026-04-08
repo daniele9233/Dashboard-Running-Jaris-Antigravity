@@ -207,7 +207,13 @@ export function TrailRunView({ onClose }: TrailRunViewProps) {
   const lastTsRef = useRef<number | null>(null);
   const playingRef = useRef(false);
   const simSpeedRef = useRef(simSpeed);
-  const smoothBearingRef = useRef(SIM_DATA[0].bearing); // lerped bearing for camera
+  const smoothBearingRef = useRef(SIM_DATA[0].bearing);
+  // Lerped HUD values — avoid instant jumps at segment boundaries
+  const displayHrRef = useRef(145);
+  const displayGradeRef = useRef(0);
+  const displayPaceRef = useRef(420);
+  // Frame counter — throttle React setState to ~30fps, map runs at 60fps
+  const frameCountRef = useRef(0);
 
   useEffect(() => { simSpeedRef.current = simSpeed; }, [simSpeed]);
   useEffect(() => { playingRef.current = playing; }, [playing]);
@@ -220,6 +226,13 @@ export function TrailRunView({ onClose }: TrailRunViewProps) {
     lastTsRef.current = null;
     simRef.current = { wpIdx: 0, pct: 0, elapsedSec: 0 };
     smoothBearingRef.current = SIM_DATA[0].bearing;
+    displayHrRef.current = 145;
+    displayGradeRef.current = 0;
+    displayPaceRef.current = 420;
+    frameCountRef.current = 0;
+    // Clear covered trail source
+    const m = mapRef.current?.getMap();
+    (m?.getSource('trail-covered') as any)?.setData?.({ type: 'FeatureCollection', features: [] });
     setRunnerPos({ lng: WP[0][0], lat: WP[0][1], elev: WP[0][2] });
     setCurrentTelemetry({ wpIdx: 0, pct: 0, elapsedSec: 0, hr: 145, grade: 0, paceSec: 420, kmDone: 0, dPlusSoFar: 0, finished: false });
     // Fly to start
@@ -282,31 +295,48 @@ export function TrailRunView({ onClose }: TrailRunViewProps) {
       const kmDone = parseFloat(Math.min(rawKm, TOTAL_KM).toFixed(2));
       const dPlusSoFar = Math.round((CUM_GAIN[safeIdx] ?? 0) + Math.max(seg.dElev * safePct, 0));
 
-      setRunnerPos({ lng, lat, elev });
-      setCurrentTelemetry({
-        wpIdx: safeIdx, pct: safePct, elapsedSec,
-        hr: seg.hr, grade: parseFloat(seg.grade.toFixed(1)),
-        paceSec: seg.paceSec, kmDone: parseFloat(kmDone.toString()),
-        dPlusSoFar, finished: isFinished,
-      });
+      // ── Lerp HUD values (smooth transitions at segment boundaries) ─────────
+      const lerpK = 1 - Math.exp(-5 * dt); // ~0.077 per frame at 60fps
+      displayHrRef.current += (seg.hr - displayHrRef.current) * lerpK;
+      displayGradeRef.current += (seg.grade - displayGradeRef.current) * lerpK;
+      displayPaceRef.current += (seg.paceSec - displayPaceRef.current) * lerpK;
 
-      // Chase-cam: smooth follow
+      // ── Chase-cam: jumpTo with lerped bearing (no easeTo conflicts) ──────────
       const map = mapRef.current?.getMap();
       if (map) {
-        // Lerp bearing toward target — frame-rate independent (exponential decay)
         const targetBearing = isFinished ? smoothBearingRef.current : seg.bearing;
-        const bearingLerpT = 1 - Math.exp(-6 * dt); // ~0.09 at 60fps, smooth rotation
-        smoothBearingRef.current = lerpAngle(smoothBearingRef.current, targetBearing, bearingLerpT);
+        smoothBearingRef.current = lerpAngle(smoothBearingRef.current, targetBearing,
+          1 - Math.exp(-6 * dt));
+        map.jumpTo({ center: [lng, lat], zoom: 15.5, pitch: 65, bearing: smoothBearingRef.current });
+      }
 
-        // Adaptive ease duration: short at high speed to avoid lag, longer at low speed
-        const easeDur = Math.max(20, Math.min(140, 1400 / simSpeedRef.current));
-        map.easeTo({
-          center: [lng, lat],
-          zoom: 15.5,
-          pitch: 65,
-          bearing: smoothBearingRef.current,
-          duration: easeDur,
-          easing: (t: number) => t, // linear — RAF controls the interpolation
+      // ── Update covered trail GeoJSON directly — bypass React to avoid flicker ─
+      if (map) {
+        const src = map.getSource('trail-covered') as any;
+        if (src?.setData) {
+          const coords: [number, number][] = [];
+          for (let i = 0; i <= safeIdx && i < WP.length; i++) coords.push([WP[i][0], WP[i][1]]);
+          if (!isFinished && safePct > 0) coords.push([lng, lat]);
+          src.setData({
+            type: 'FeatureCollection',
+            features: coords.length > 1
+              ? [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } }]
+              : [],
+          });
+        }
+      }
+
+      // ── Throttle React state to every 2 frames (~30fps) ─────────────────────
+      frameCountRef.current++;
+      if (frameCountRef.current % 2 === 0) {
+        setRunnerPos({ lng, lat, elev });
+        setCurrentTelemetry({
+          wpIdx: safeIdx, pct: safePct, elapsedSec,
+          hr: Math.round(displayHrRef.current),
+          grade: parseFloat(displayGradeRef.current.toFixed(1)),
+          paceSec: Math.round(displayPaceRef.current),
+          kmDone: parseFloat(kmDone.toString()),
+          dPlusSoFar, finished: isFinished,
         });
       }
 
@@ -354,27 +384,8 @@ export function TrailRunView({ onClose }: TrailRunViewProps) {
     }),
   }), []);
 
-  // Completed trail (covered segment in telemetry)
-  const coveredFeatures = useMemo(() => {
-    const { wpIdx, pct } = currentTelemetry;
-    const coords: [number, number][] = [];
-    for (let i = 0; i <= wpIdx && i < WP.length; i++) {
-      coords.push([WP[i][0], WP[i][1]]);
-    }
-    if (wpIdx < SIM_DATA.length && pct > 0) {
-      const ptA = WP[wpIdx];
-      const ptB = WP[wpIdx + 1] ?? WP[wpIdx];
-      coords.push([ptA[0] + (ptB[0] - ptA[0]) * pct, ptA[1] + (ptB[1] - ptA[1]) * pct]);
-    }
-    return {
-      type: 'FeatureCollection' as const,
-      features: coords.length > 1 ? [{
-        type: 'Feature' as const,
-        properties: {},
-        geometry: { type: 'LineString' as const, coordinates: coords },
-      }] : [],
-    };
-  }, [currentTelemetry]);
+  // NOTE: covered trail GeoJSON is updated directly via map.getSource().setData()
+  // in the RAF loop — no useMemo or React state to avoid per-frame re-renders
 
   // ── Map bounds ──────────────────────────────────────────────────────────────
   const bounds = useMemo(() => {
@@ -391,6 +402,19 @@ export function TrailRunView({ onClose }: TrailRunViewProps) {
       map.addSource('mapbox-dem', { type: 'raster-dem', url: 'mapbox://mapbox.mapbox-terrain-dem-v1', tileSize: 512, maxzoom: 14 });
     }
     map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.8 });
+
+    // Add covered trail source/layer imperatively — never touched by React
+    if (!map.getSource('trail-covered')) {
+      map.addSource('trail-covered', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      map.addLayer({
+        id: 'trail-covered-glow',
+        type: 'line',
+        source: 'trail-covered',
+        paint: { 'line-color': '#C0FF00', 'line-width': 5, 'line-opacity': 0.88 },
+        layout: { 'line-cap': 'round', 'line-join': 'round', 'visibility': 'visible' },
+      });
+    }
+
     setMapLoaded(true);
     if (viewMode === 'map') {
       map.fitBounds([[bounds.minLng, bounds.minLat], [bounds.maxLng, bounds.maxLat]], { padding: 60, pitch: 55, bearing: -25, duration: 2000 });
@@ -650,17 +674,7 @@ export function TrailRunView({ onClose }: TrailRunViewProps) {
                 <Layer {...trailLineLayer} />
               </Source>
 
-              {/* Covered trail (telemetry mode — bright white glow) */}
-              {viewMode === 'telemetry' && currentTelemetry.kmDone > 0 && (
-                <Source id="trail-covered" type="geojson" data={coveredFeatures}>
-                  <Layer
-                    id="trail-covered-glow"
-                    type="line"
-                    paint={{ 'line-color': '#C0FF00', 'line-width': 5, 'line-opacity': 0.85 }}
-                    layout={{ 'line-cap': 'round', 'line-join': 'round' }}
-                  />
-                </Source>
-              )}
+              {/* covered trail is managed imperatively via handleMapLoad + RAF setData — no JSX Source needed */}
 
               {/* Markers (map mode only) */}
               {viewMode === 'map' && (
