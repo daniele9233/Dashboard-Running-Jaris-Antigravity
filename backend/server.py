@@ -1350,7 +1350,7 @@ async def generate_training_plan(request: Request):
     q_gps = {**q, "is_treadmill": {"$ne": True}}
     all_runs = await db.runs.find(q_gps).sort("date", -1).to_list(None)
     dist_km = RACE_DISTANCES.get(goal_race, 5.0)
-    history = _calc_vdot_with_history(all_runs, max_hr, weeks_window=52, goal_dist_km=dist_km)
+    history = _calc_vdot_with_history(all_runs, max_hr, weeks_window=8, goal_dist_km=dist_km)
     # current_vdot is ALWAYS the same regardless of goal distance —
     # it's derived from best recent runs (all qualifying distances).
     # race_specific_vdot was causing different VDOT per distance → removed.
@@ -1524,7 +1524,7 @@ async def evaluate_test(request: Request):
     # Fetch all runs for history context
     all_runs = await db.runs.find(q).sort("date", -1).to_list(None)
     max_hr = int((profile or {}).get("max_hr", 190))
-    history = _calc_vdot_with_history(all_runs, max_hr, weeks_window=52, goal_dist_km=dist_km)
+    history = _calc_vdot_with_history(all_runs, max_hr, weeks_window=8, goal_dist_km=dist_km)
 
     # Use test VDOT as the new current VDOT for plan generation
     effective_current_vdot = test_vdot

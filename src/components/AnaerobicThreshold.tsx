@@ -113,7 +113,7 @@ export function AnaerobicThreshold({ runs, maxHr, vdot }: Props) {
           rd.getMonth() === mo &&
           (r.distance_km ?? 0) >= 3 &&
           (r.avg_hr ?? 0) > 80 &&
-          r.pace
+          r.avg_pace
         );
       });
 
@@ -121,7 +121,7 @@ export function AnaerobicThreshold({ runs, maxHr, vdot }: Props) {
 
       // Best run = highest avg HR (best aerobic effort that month)
       const best = monthRuns.reduce((a, b) => ((a.avg_hr ?? 0) >= (b.avg_hr ?? 0) ? a : b));
-      const paceSec = parsePaceSec(best.pace ?? "");
+      const paceSec = parsePaceSec(best.avg_pace ?? "");
       if (!paceSec) continue;
 
       monthPoints.push({
