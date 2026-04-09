@@ -844,8 +844,12 @@ def _assess_feasibility(current_vdot: float, target_vdot: float, weeks: int,
         suggested_weeks = int(math.ceil(gap / conservative_rate * 3.5))
         msg = (f"Gap di +{gap:.1f} VDOT in {weeks} settimane. "
                f"Scegli tra piano conservativo o aggressivo.")
+        # Confidence scales with how far over the optimistic ceiling you are:
+        # at the edge (gap == max_optimistic) → ~50%; twice the gap → ~25%
+        raw_conf = int(round(55 * max_optimistic / gap))
+        confidence = max(5, min(raw_conf, 49))   # clamp [5, 49]
         return {**base, "feasible": False, "difficulty": "unrealistic",
-                "message": msg, "confidence_pct": 20,
+                "message": msg, "confidence_pct": confidence,
                 "suggested_weeks": suggested_weeks}
 
 
@@ -1297,7 +1301,8 @@ def _tp_build_sessions(week_start, week_km: float, phase: str, goal: str,
 
 def _generate_plan_weeks(goal_race: str, weeks_total: int, max_weekly_km: float,
                           current_vdot: float, target_vdot: float,
-                          athlete_id, target_time_str: str) -> list:
+                          athlete_id, target_time_str: str,
+                          start_date_str: str = None) -> list:
     """Generate goal-driven periodized plan with weekly VDOT progression."""
     from datetime import date, timedelta
 
@@ -1343,9 +1348,18 @@ def _generate_plan_weeks(goal_race: str, weeks_total: int, max_weekly_km: float,
     start_km = max(15.0, max_weekly_km * 0.55)
     current_km = start_km
 
-    today = date.today()
-    days_ahead = (7 - today.weekday()) % 7 or 7
-    start_date = today + timedelta(days=days_ahead)
+    # Use caller-provided start date if valid, otherwise next Monday
+    if start_date_str:
+        try:
+            start_date = date.fromisoformat(start_date_str)
+        except ValueError:
+            start_date = None
+    else:
+        start_date = None
+    if start_date is None:
+        today = date.today()
+        days_ahead = (7 - today.weekday()) % 7 or 7
+        start_date = today + timedelta(days=days_ahead)
 
     phase_descs = {
         "Base Aerobica": "Costruzione della base aerobica. Corse facili e progressive per sviluppare capillari e mitocondri.",
@@ -1436,6 +1450,7 @@ async def generate_training_plan(request: Request):
     plan_mode = body.get("plan_mode")              # None | "conservative" | "aggressive"
     test_distance_km = body.get("test_distance_km") # optional test calibration
     test_time_str = body.get("test_time")            # optional test time
+    start_date_str = body.get("start_date") or None  # user-chosen start date (ISO)
 
     athlete_id = await _get_athlete_id()
     q = {"athlete_id": athlete_id} if athlete_id else {}
@@ -1510,6 +1525,7 @@ async def generate_training_plan(request: Request):
     weeks = _generate_plan_weeks(
         goal_race, suggested_weeks, max_weekly_km,
         current_vdot, effective_target_vdot, athlete_id, target_time_str,
+        start_date_str=start_date_str,
     )
 
     await db.training_plan.delete_many(q)

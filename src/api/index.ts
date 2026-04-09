@@ -47,6 +47,7 @@ export const generateTrainingPlan = (data: {
   plan_mode?: 'conservative' | 'aggressive';
   test_distance_km?: number;
   test_time?: string;
+  start_date?: string;       // ISO date YYYY-MM-DD — user-chosen plan start
 }) =>
   api.post<{
     ok: boolean;

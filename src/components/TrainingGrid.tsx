@@ -472,6 +472,14 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
   const [goalRace, setGoalRace] = useState("5K");
   const [weeksToRace, setWeeksToRace] = useState(12);
   const [targetTime, setTargetTime] = useState("");
+  const [startDate, setStartDate] = useState(() => {
+    // Default: next Monday
+    const today = new Date();
+    const daysUntilMonday = (8 - today.getDay()) % 7 || 7;
+    const nextMonday = new Date(today);
+    nextMonday.setDate(today.getDate() + daysUntilMonday);
+    return nextMonday.toISOString().slice(0, 10);
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerateResult | null>(null);
@@ -488,6 +496,7 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
         goal_race: goalRace,
         weeks_to_race: weeksToRace,
         target_time: targetTime.trim(),
+        start_date: startDate,
       };
       const res = await generateTrainingPlan(params);
       setResult(res as unknown as GenerateResult);
@@ -508,6 +517,7 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
         weeks_to_race: weeksToRace,
         target_time: targetTime.trim(),
         plan_mode: mode,
+        start_date: startDate,
       };
       const res = await generateTrainingPlan(params);
       setResult(res as unknown as GenerateResult);
@@ -607,6 +617,23 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
                   <span>8 sett.</span>
                   <span>24 sett.</span>
                 </div>
+              </div>
+
+              {/* Start Date */}
+              <div className="mb-5">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">
+                  Data di inizio piano
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  min={new Date().toISOString().slice(0, 10)}
+                  className="w-full bg-[#121212] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white focus:border-[#3B82F6] focus:outline-none transition-colors [color-scheme:dark]"
+                />
+                <p className="text-[11px] text-gray-600 mt-1.5">
+                  Di default: prossimo lunedì. Puoi scegliere qualsiasi giorno.
+                </p>
               </div>
             </>
           )}
