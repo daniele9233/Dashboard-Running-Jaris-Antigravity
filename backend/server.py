@@ -1038,71 +1038,173 @@ def _tp_secondary_quality_session(phase: str, goal: str, dist_km: float,
 
 
 def _tp_strength_exercises(phase: str, day_type: str, week_in_phase: int = 0) -> list:
-    """Generate phase-appropriate strength, prehab, and plyometric exercises.
+    """Generate phase-appropriate strength & plyometric exercises for runners.
 
-    Scientific basis:
-    - Beattie et al. (2017): heavy resistance training improves running economy
-    - Lauersen et al. (2014): strength training reduces injury risk by 68%
-    - Saunders et al. (2006): plyometrics improve 3K running economy by 4.1%
-    - Fredericson & Moore (2005): hip abductor weakness linked to ITBS/knee injury
+    Scientific periodization:
+    - BASE:      Heavy strength (max force foundation) + low-intensity SSC
+    - SVILUPPO:  Heavy strength (maintenance) + moderate plyometrics
+    - INTENSITÀ: High-intensity plyometrics + strength maintenance
+    - SPECIFICO: Race-specific plyometrics, reduced volume
+    - TAPER:     Neuromuscular activation only
+
+    References:
+    - Beattie et al. (2017): heavy resistance → running economy +2-8%
+    - Saunders et al. (2006): plyometrics → 3K economy +4.1%
+    - Lauersen et al. (2014): strength training → injury risk -68%
+    - Blagrove et al. (2018): resistance training for endurance runners
+    - Barnes & Kilding (2015): running economy determinants
+    - Rønnestad & Mujika (2014): heavy strength for endurance performance
     """
-    # Core exercises — every phase, always useful
+
+    # ── Prehab (sempre, ogni fase) ────────────────────────────────────────────
     prehab = [
-        {"name": "Clamshell", "sets": 3, "reps": "15/lato", "note": "Banda elastica sopra ginocchia. Previene ITBS."},
-        {"name": "Single-Leg Glute Bridge", "sets": 3, "reps": "12/lato", "note": "Attivazione gluteo medio. Stabilità bacino."},
-        {"name": "Eccentric Heel Drop", "sets": 3, "reps": "15/lato", "note": "Prevenzione tendinopatia achillea (Alfredson protocol)."},
-        {"name": "Dead Bug", "sets": 3, "reps": "10/lato", "note": "Core anti-estensione. Stabilità lombare."},
+        {"name": "Eccentric Heel Drop – Alfredson", "sets": 3, "reps": "15/lato",
+         "note": "Ginocchio esteso + flesso. Protocollo gold-standard tendinopatia achillea."},
+        {"name": "Clamshell con banda elastica", "sets": 3, "reps": "15/lato",
+         "note": "Gluteo medio. Previene ITBS e sindrome patellofemorale."},
+        {"name": "Single-Leg Glute Bridge", "sets": 3, "reps": "12/lato",
+         "note": "Stabilizzazione bacino. Riduce asimmetrie che causano infortuni."},
     ]
 
-    strength_base = [
-        {"name": "Squat a corpo libero", "sets": 3, "reps": 15, "note": "Forza base quadricipite e glutei."},
-        {"name": "Affondo camminato", "sets": 3, "reps": "10/lato", "note": "Forza unilaterale + equilibrio."},
-        {"name": "Calf Raise (tallone rialzato)", "sets": 3, "reps": 20, "note": "Rinforzo tricipite surale. Previene fascite."},
-        {"name": "Step-Up su rialzo", "sets": 3, "reps": "10/lato", "note": "Simula fase di spinta della corsa."},
+    # ── Core (stabilità lombo-pelvica durante la corsa) ───────────────────────
+    core = [
+        {"name": "Dead Bug", "sets": 3, "reps": "10/lato",
+         "note": "Core anti-estensione. Stabilità lombare in fase di volo."},
+        {"name": "Copenhagen Plank", "sets": 3, "reps": "8/lato",
+         "note": "Adduttori + core laterale. Previene pubalgia nei runner."},
+        {"name": "Plank con alzata gamba alternata", "sets": 3, "reps": "10/lato",
+         "note": "Integrazione core-glutei. Simula stabilità in singolo appoggio."},
     ]
 
+    core_light = [
+        {"name": "Dead Bug", "sets": 2, "reps": "8/lato",
+         "note": "Attivazione core. Mantenimento forza senza accumulo fatica."},
+        {"name": "Plank", "sets": 2, "reps": "30 s",
+         "note": "Stabilità lombare. Volume ridotto per rispettare il recupero."},
+    ]
+
+    # ── Heavy Strength — Fase BASE e SVILUPPO ────────────────────────────────
+    # Beattie 2017: max force è il predittore principale di economia di corsa
     strength_heavy = [
-        {"name": "Bulgarian Split Squat", "sets": 3, "reps": "8/lato", "note": "Forza massima unilaterale (Beattie 2017)."},
-        {"name": "Single-Leg Deadlift", "sets": 3, "reps": "10/lato", "note": "Catena posteriore + propriocezione."},
-        {"name": "Calf Raise Eccentrico", "sets": 3, "reps": "12/lato", "note": "Carico eccentrico, previene lesioni Achille."},
-        {"name": "Nordic Hamstring Curl", "sets": 3, "reps": 6, "note": "Prevenzione infortuni ischio-crurali (van der Horst 2015)."},
+        {"name": "Bulgarian Split Squat", "sets": 4, "reps": "6/lato",
+         "note": "Carico pesante (zaino/manubri). Recupero 2-3 min. Forza max unilaterale → economia corsa (Beattie 2017)."},
+        {"name": "Single-Leg Romanian Deadlift", "sets": 3, "reps": "8/lato",
+         "note": "Bilanciere o manubri. Catena posteriore + propriocezione caviglia. Previene infortuni ischio-crurali."},
+        {"name": "Calf Raise Monopodalico Pesante", "sets": 4, "reps": "10/lato",
+         "note": "Con zaino o manubrio. Stiffness tendine Achille = componente chiave economia corsa."},
+        {"name": "Nordic Hamstring Curl", "sets": 3, "reps": 5,
+         "note": "Forza eccentrica ischio-crurali. Riduce infortuni muscolari del 51% (van der Horst 2015)."},
     ]
 
-    plyo = [
-        {"name": "A-Skip", "sets": 3, "reps": "20 m", "note": "Coordinazione neuromuscolare + elasticità tendine."},
-        {"name": "Single-Leg Hop (avanti)", "sets": 3, "reps": "8/lato", "note": "Potenza specifica per la corsa."},
-        {"name": "Drop Jump (gradino 20 cm)", "sets": 3, "reps": 8, "note": "Ciclo stiramento-accorciamento (Saunders 2006)."},
-        {"name": "Bounding", "sets": 3, "reps": "30 m", "note": "Forza reattiva + ampiezza falcata."},
+    # Versione mantenimento forza (Intensità / Specifico)
+    strength_maintenance = [
+        {"name": "Bulgarian Split Squat", "sets": 3, "reps": "6/lato",
+         "note": "Mantenimento forza. Volume ridotto, intensità invariata (principio Rønnestad 2014)."},
+        {"name": "Single-Leg Romanian Deadlift", "sets": 3, "reps": "8/lato",
+         "note": "Catena posteriore. Volume ridotto ma qualità invariata."},
+        {"name": "Calf Raise Monopodalico Pesante", "sets": 3, "reps": "8/lato",
+         "note": "Mantenimento stiffness Achille pre-gara."},
     ]
+
+    # ── Plyometrics BASSA intensità — Fase BASE ───────────────────────────────
+    # Introduzione SSC per adattare tendini e SNC prima dei carichi alti
+    plyo_low = [
+        {"name": "Pogo Jumps", "sets": 3, "reps": "20 rip",
+         "note": "Caviglie rigide, contatto minimo. Carica ciclo stiramento-accorciamento. Base di tutto."},
+        {"name": "Single Leg Hops sul posto", "sets": 3, "reps": "10/lato",
+         "note": "Forza reattiva unilaterale. Stiffness caviglia specifica per la corsa."},
+        {"name": "Sprint in Salita 6-8%", "sets": 6, "reps": "10 s",
+         "note": "Recupero 90 s camminata. Potenza neuromuscolare a basso impatto articolare."},
+    ]
+
+    # ── Plyometrics MEDIA intensità — Fase SVILUPPO ───────────────────────────
+    # Conversione forza → potenza reattiva
+    plyo_moderate = [
+        {"name": "Box Jump (40-50 cm)", "sets": 4, "reps": 6,
+         "note": "Massima esplosività nella spinta. Atterraggio morbido. RFD (Rate of Force Development)."},
+        {"name": "Bounding – Corsa Balzata", "sets": 4, "reps": "30 m",
+         "note": "Forza reattiva orizzontale. Ampiezza falcata. Recupero 3 min completo."},
+        {"name": "Single Leg Hops in avanti", "sets": 3, "reps": "8/lato",
+         "note": "Potenza propulsiva unilaterale specifica per la corsa."},
+        {"name": "Sprint in Salita 6-8%", "sets": 8, "reps": "15 s",
+         "note": "Recupero 2 min. Forma perfetta. Frequenza elevata."},
+    ]
+
+    # ── Plyometrics ALTA intensità — Fase INTENSITÀ ───────────────────────────
+    # SSC avanzato: massimizzazione economia corsa (Saunders 2006 +4.1%)
+    plyo_high = [
+        {"name": "Depth Jump / Drop Jump (40 cm)", "sets": 4, "reps": 6,
+         "note": "Rimbalzo IMMEDIATO, RSI >1.5. Massimo SSC. +4.1% economia 3K (Saunders 2006). 3 min recupero."},
+        {"name": "Pogo Jumps Monopodalici", "sets": 3, "reps": "10/lato",
+         "note": "Stiffness Achille + RFD unilaterale avanzato. Contatto < 150 ms."},
+        {"name": "Hopping su un piede", "sets": 3, "reps": "15 m/lato",
+         "note": "Potenza reattiva unilaterale massima. Contatto terra < 200 ms."},
+        {"name": "Bounding progressivo", "sets": 4, "reps": "40 m",
+         "note": "Massima spinta + frequenza di falcata. Simula sforzo neuromuscolare di gara."},
+        {"name": "Sprint in Salita 8%", "sets": 6, "reps": "20 s",
+         "note": "Recupero 3 min completo. Potenza massima, forma impeccabile."},
+    ]
+
+    # ── Plyometrics TAPER — attivazione pre-gara ──────────────────────────────
+    plyo_activation = [
+        {"name": "Pogo Jumps", "sets": 2, "reps": "15 rip",
+         "note": "Priming neuromuscolare. Mantiene stiffness senza accumulare fatica."},
+        {"name": "Sprint in Salita", "sets": 4, "reps": "8 s",
+         "note": "Attivazione SNC pre-gara. Recupero completo tra le ripetizioni."},
+    ]
+
+    # ── Assegnazione per fase e tipo giornata ─────────────────────────────────
 
     if day_type == "rest":
-        # Rest day: full strength session (prehab + strength)
+        # Giorno riposo = sessione forza completa (il giorno migliore per stimolo intenso)
         if phase == "Base Aerobica":
-            return prehab + strength_base
-        elif phase in ("Sviluppo", "Intensità"):
-            return prehab + strength_heavy
+            # Fondamenta: max force + SSC base + prehab + core
+            return prehab + strength_heavy + plyo_low + core
+
+        elif phase == "Sviluppo":
+            # Conversione: heavy strength + plyometrics moderate
+            return prehab[:2] + strength_heavy + plyo_moderate + core
+
+        elif phase == "Intensità":
+            # Peak SSC + mantenimento forza: volume forza ridotto, qualità plyo alta
+            return prehab[:1] + strength_maintenance + plyo_high + core
+
         elif phase == "Specifico":
-            return prehab[:2] + strength_heavy[:2] + plyo[:2]
+            # Riduzione volume, mantenimento qualità
+            return prehab[:1] + strength_maintenance[:2] + plyo_moderate[:2] + core_light
+
         else:  # Taper / Gara
-            return prehab[:2]  # minimal maintenance
+            return prehab[:1] + plyo_activation + core_light
 
     elif day_type == "easy":
-        # Easy run day: light prehab post-run
+        # Post corsa facile: attivazione leggera, non stimolo nuovo
         if phase in ("Base Aerobica", "Sviluppo"):
-            return prehab[:2] + [{"name": "Calf Raise", "sets": 2, "reps": 15, "note": "Post-corsa, rinforzo base."}]
+            return [
+                {"name": "Pogo Jumps", "sets": 2, "reps": "15 rip",
+                 "note": "Post-corsa. Mantiene SSC senza affaticare. 5 min dopo il rientro."},
+                {"name": "Calf Raise Monopodalico", "sets": 2, "reps": "12/lato",
+                 "note": "A corpo libero post-corsa. Rinforzo Achille di mantenimento."},
+            ] + prehab[:2] + core_light
         elif phase == "Intensità":
-            return prehab[:2] + plyo[:1]  # light plyo
+            return prehab[:2] + [
+                {"name": "Pogo Jumps", "sets": 2, "reps": "12 rip",
+                 "note": "Priming SSC leggero. Non superare la fatica della seduta di qualità."},
+            ] + core_light
         else:
-            return prehab[:1]  # minimal
+            return prehab[:1] + core_light
 
     elif day_type == "long":
-        # Long run day: mobility only
+        # Lungo = solo mobilità e recupero (niente forza, non compromettere il lungo)
         return [
-            {"name": "Foam Rolling (IT band + polpacci)", "sets": 1, "reps": "60 s/lato", "note": "Recupero post-lungo."},
-            {"name": "Pigeon Stretch", "sets": 1, "reps": "45 s/lato", "note": "Mobilità anca."},
+            {"name": "Foam Rolling (polpacci + IT band + plantare)", "sets": 1, "reps": "90 s/zona",
+             "note": "Pre o post lungo. Recupero tessuti molli e fascia plantare."},
+            {"name": "Pigeon Stretch", "sets": 1, "reps": "60 s/lato",
+             "note": "Mobilità anca post-lungo. Previene rigidità piriforme."},
+            {"name": "Eccentric Calf Stretch su gradino", "sets": 1, "reps": "45 s/lato",
+             "note": "Mantiene elasticità gastrocnemio e soleo post-volume."},
         ]
 
-    # Quality session days: no strength (focus on running)
+    # Giorni qualità (Mar/Gio): nessuna forza — la corsa è lo stimolo principale
     return []
 
 
