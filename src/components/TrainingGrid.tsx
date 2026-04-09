@@ -11,6 +11,7 @@ const SESSION_COLORS: Record<string, string> = {
   tempo:     "#F97316",
   long:      "#10B981",
   rest:      "transparent",
+  strength:  "#0EA5E9",   // sky-blue — riposo attivo con forza
 };
 
 interface SessionDisplay {
@@ -22,7 +23,19 @@ interface SessionDisplay {
 }
 
 function toDisplay(session: Session | undefined): SessionDisplay | null {
-  if (!session || session.type === "rest") return null;
+  if (!session) return null;
+  // Rest day with strength exercises → show as "strength" day
+  if (session.type === "rest") {
+    const hasStrength = (session.strength_exercises?.length ?? 0) > 0;
+    if (!hasStrength) return null;
+    return {
+      color: SESSION_COLORS.strength,
+      title: "Riposo + Forza",
+      details: [`${session.strength_exercises!.length} esercizi`],
+      completed: session.completed,
+      description: "Recupero attivo con sessione di forza e prevenzione.",
+    };
+  }
   const color = SESSION_COLORS[session.type] ?? "#6B7280";
   const details: string[] = [];
   if (session.target_distance_km) details.push(`${session.target_distance_km} km`);
@@ -1203,6 +1216,24 @@ export function TrainingGrid() {
           {view === 'Week' && renderWeekView()}
           {view === 'Day' && renderDayView()}
           {view === 'Year' && renderYearView()}
+          {/* Legend */}
+          {hasPlan && (
+            <div className="flex flex-wrap items-center gap-4 mt-6 pt-4 border-t border-[#2A2A2A]">
+              {([
+                { color: SESSION_COLORS.easy,      label: 'Easy / Recovery' },
+                { color: SESSION_COLORS.tempo,     label: 'Tempo' },
+                { color: SESSION_COLORS.intervals, label: 'Intervals' },
+                { color: SESSION_COLORS.long,      label: 'Long Run' },
+                { color: SESSION_COLORS.strength,  label: 'Riposo + Forza' },
+                { color: '#2A2A2A',                label: 'Riposo', opacity: 0.3 },
+              ] as const).map(({ color, label, opacity }) => (
+                <div key={label} className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: color, opacity: (opacity as number | undefined) ?? 0.9 }} />
+                  <span className="text-xs text-gray-500">{label}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
