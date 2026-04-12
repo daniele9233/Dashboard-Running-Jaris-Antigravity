@@ -23,7 +23,10 @@
       "Bash(git -C d:/webapp-antiG diff --stat HEAD)",
       "Bash(git -C d:/webapp-antiG push origin main)",
       "Bash(python -c \"import py_compile; py_compile.compile\\(''server.py''\\); print\\(''OK''\\)\")",
-      "Bash(pip show:*)"
+      "Bash(pip show:*)",
+      "Bash(claude mcp:*)",
+      "Bash(caveman --help)",
+      "Bash(claude plugin:*)"
     ]
   }
 }
