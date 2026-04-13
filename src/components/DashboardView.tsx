@@ -388,7 +388,7 @@ export function DashboardView() {
 
   return (
     <main className="flex-1 overflow-y-auto custom-scrollbar">
-      <div className="p-6 max-w-[2200px] mx-auto space-y-6">
+      <div className="px-14 py-6 max-w-[2200px] mx-auto space-y-6">
 
         {/* Header */}
         {dashLoading && <div className="h-10 bg-white/5 rounded-xl animate-pulse" />}
@@ -421,33 +421,29 @@ export function DashboardView() {
                 <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-2">LIVE BIO-FEED</div>
                 <h2 className="text-white text-4xl font-black tracking-tighter italic">Status of Form</h2>
               </div>
-              <div className="flex items-center gap-3">
-                {/* Mini sparkline Status nel tempo */}
-                {sparklinePoints.hasData && (
-                  <svg width="99" height="32" viewBox="0 0 99 32" className="opacity-70">
-                    <polyline points={sparklinePoints.pts} fill="none" stroke={faticaColor}
-                      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                      style={{ filter: `drop-shadow(0 0 4px ${faticaColor}88)` }} />
-                  </svg>
-                )}
-                <div
-                  className="px-3 py-1 rounded-full text-xs font-black tracking-wide flex items-center gap-2"
-                  style={{
-                    color: faticaColor,
-                    backgroundColor: faticaColor + "18",
-                    border: `1px solid ${faticaColor}35`,
-                  }}
-                >
-                  <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: faticaColor }} />
-                  {status.label}
-                </div>
+              <div
+                className="px-3 py-1 rounded-full text-xs font-black tracking-wide flex items-center gap-2"
+                style={{
+                  color: faticaColor,
+                  backgroundColor: faticaColor + "18",
+                  border: `1px solid ${faticaColor}35`,
+                }}
+              >
+                <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: faticaColor }} />
+                {status.label}
               </div>
             </div>
 
             <div className="flex items-center justify-center gap-12 flex-1">
               {/* Gauge */}
               <div className="relative w-56 h-56 flex-shrink-0">
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100" overflow="visible">
+                  <defs>
+                    <filter id="gauge-glow" x="-50%" y="-50%" width="200%" height="200%">
+                      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+                      <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                    </filter>
+                  </defs>
                   <circle cx="50" cy="50" r="40" stroke="#222" strokeWidth="9" fill="none" />
                   <circle
                     cx="50" cy="50" r="40"
@@ -457,7 +453,7 @@ export function DashboardView() {
                     strokeDasharray="251.2"
                     strokeDashoffset={gaugeOffset}
                     strokeLinecap="round"
-                    style={{ filter: `drop-shadow(0 0 12px ${faticaColor}) drop-shadow(0 0 4px ${faticaColor})` }}
+                    filter="url(#gauge-glow)"
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
