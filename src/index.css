@@ -49,3 +49,10 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #334155;
 }
+
+
+/* Hide Mapbox UI chrome */
+.mapboxgl-ctrl-logo,
+.mapboxgl-ctrl-attrib,
+.mapboxgl-ctrl-bottom-left,
+.mapboxgl-ctrl-bottom-right { display: none !important; }

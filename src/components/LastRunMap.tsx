@@ -173,6 +173,10 @@ export function LastRunMap({ run }: LastRunMapProps) {
         interactive={true}
         style={{ width: "100%", height: "100%" }}
         attributionControl={false}
+        onLoad={(e) => {
+          // Activate dusk lighting preset for 3D buildings effect
+          try { (e.target as any).setConfigProperty('basemap', 'lightPreset', 'dusk'); } catch {}
+        }}
       >
         {/* Glow effect (background thicker line) */}
         {routeGeoJson && (

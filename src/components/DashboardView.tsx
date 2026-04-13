@@ -458,15 +458,10 @@ export function DashboardView() {
                 </div>
               </div>
 
-              <div className="col-span-2 flex flex-col gap-5">
-                {/* Map */}
-                <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl overflow-hidden relative flex-1 min-h-[220px]">
-                  <div className="absolute inset-0">
-                    <LastRunMap run={lastRun} />
-                  </div>
+              <div className="col-span-2 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl overflow-hidden relative">
+                <div className="absolute inset-0">
+                  <LastRunMap run={lastRun} />
                 </div>
-                {/* Next Optimal Session */}
-                <NextOptimalSessionWidget tsb={tsb} atl={atl} ctl={ctl} />
               </div>
             </div>
           </div>
@@ -536,6 +531,9 @@ export function DashboardView() {
                 </div>
               </div>
             )}
+
+            {/* Next Optimal Session */}
+            <NextOptimalSessionWidget tsb={tsb} atl={atl} ctl={ctl} />
 
             {/* Adaptation Summary */}
             <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6">
