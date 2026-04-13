@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import Map, { Source, Layer, Marker } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import polylineDecode from "@mapbox/polyline";
@@ -27,6 +27,13 @@ function formatDuration(minutes: number): string {
 }
 
 export function LastRunMap({ run }: LastRunMapProps) {
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const handleMapLoad = useCallback((e: any) => {
+    const map = e.target;
+    map.setConfigProperty('basemap', 'lightPreset', 'dusk');
+    setMapLoaded(true);
+  }, []);
+
   const { routeGeoJson, bounds, startCoord } = useMemo(() => {
     if (!run?.polyline && !run?.start_latlng) {
       return { routeGeoJson: null, bounds: null, startCoord: null };
@@ -35,7 +42,7 @@ export function LastRunMap({ run }: LastRunMapProps) {
     let coordinates: [number, number][] = [];
 
     if (run.polyline) {
-      const decoded = polylineDecode.decode(run.polyline); // [[lat, lng], ...]
+      const decoded = polylineDecode.decode(run.polyline);
       coordinates = decoded.map(([lat, lng]) => [lng, lat] as [number, number]);
     } else if (run.start_latlng) {
       const [lat, lng] = run.start_latlng;
@@ -49,7 +56,7 @@ export function LastRunMap({ run }: LastRunMapProps) {
     const padLng = Math.max((Math.max(...lngs) - Math.min(...lngs)) * 0.3, 0.003);
     const padLat = Math.max((Math.max(...lats) - Math.min(...lats)) * 0.3, 0.003);
 
-    const bounds: [[number, number], [number, number]] = [
+    const mapBounds: [[number, number], [number, number]] = [
       [Math.min(...lngs) - padLng, Math.min(...lats) - padLat],
       [Math.max(...lngs) + padLng, Math.max(...lats) + padLat],
     ];
@@ -73,7 +80,7 @@ export function LastRunMap({ run }: LastRunMapProps) {
 
     return {
       routeGeoJson,
-      bounds,
+      bounds: mapBounds,
       startCoord: coordinates[0],
     };
   }, [run]);
@@ -89,12 +96,10 @@ export function LastRunMap({ run }: LastRunMapProps) {
     );
   }
 
-  // No GPS data — show styled info card
   if (!bounds) {
     return (
       <div className="relative rounded-3xl overflow-hidden h-full min-h-[300px]"
            style={{ background: "linear-gradient(135deg, #0f1923 0%, #1a2535 100%)" }}>
-        {/* Grid overlay */}
         <svg className="absolute inset-0 w-full h-full opacity-5" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -103,16 +108,13 @@ export function LastRunMap({ run }: LastRunMapProps) {
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
         </svg>
-        {/* Label */}
         <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1 flex items-center gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full bg-[#C0FF00] animate-pulse" />
           <span className="text-[10px] font-bold text-[#C0FF00] uppercase tracking-wider">Ultima Corsa</span>
         </div>
-        {/* No GPS badge */}
         <div className="absolute top-3 right-3 bg-white/5 border border-white/10 rounded-lg px-2 py-1">
           <span className="text-[10px] text-gray-500 uppercase tracking-wider">No GPS</span>
         </div>
-        {/* Center stats */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
             <div className="text-[#C0FF00] text-6xl font-black tracking-tight">
@@ -121,7 +123,6 @@ export function LastRunMap({ run }: LastRunMapProps) {
             <div className="text-gray-500 text-sm font-black tracking-widest mt-1">KM</div>
           </div>
         </div>
-        {/* Bottom bar */}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-4 py-3">
           <div className="flex items-end justify-between">
             <div>
@@ -160,13 +161,12 @@ export function LastRunMap({ run }: LastRunMapProps) {
 
   return (
     <div className="relative rounded-3xl overflow-hidden h-full border border-white/[0.04]">
-      {/* Map */}
       <Map
         mapboxAccessToken={MAPBOX_TOKEN}
         mapStyle="mapbox://styles/mapbox/standard"
         initialViewState={{
-          longitude: startCoord ? startCoord[0] : bounds![0][0],
-          latitude:  startCoord ? startCoord[1] : bounds![0][1],
+          longitude: startCoord ? startCoord[0] : bounds[0][0],
+          latitude:  startCoord ? startCoord[1] : bounds[0][1],
           zoom: 17,
           pitch: 62,
           bearing: -17,
@@ -174,13 +174,9 @@ export function LastRunMap({ run }: LastRunMapProps) {
         interactive={true}
         style={{ width: "100%", height: "100%" }}
         attributionControl={false}
-        onLoad={(e) => {
-          // Activate dusk lighting preset for 3D buildings effect
-          try { (e.target as any).setConfigProperty('basemap', 'lightPreset', 'dusk'); } catch {}
-        }}
+        onLoad={handleMapLoad}
       >
-        {/* Glow effect (background thicker line) */}
-        {routeGeoJson && (
+        {mapLoaded && routeGeoJson && (
           <Source type="geojson" data={routeGeoJson}>
             <Layer
               id="route-glow"
@@ -206,21 +202,18 @@ export function LastRunMap({ run }: LastRunMapProps) {
           </Source>
         )}
 
-        {/* Start marker */}
-        {startCoord && (
+        {mapLoaded && startCoord && (
           <Marker longitude={startCoord[0]} latitude={startCoord[1]} anchor="center">
             <div className="w-3 h-3 rounded-full bg-[#C0FF00] border-2 border-black shadow-lg" />
           </Marker>
         )}
       </Map>
 
-      {/* Top-left: label */}
       <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1 flex items-center gap-1.5">
         <div className="w-1.5 h-1.5 rounded-full bg-[#C0FF00] animate-pulse" />
         <span className="text-[10px] font-bold text-[#C0FF00] uppercase tracking-wider">Ultima Corsa</span>
       </div>
 
-      {/* Bottom overlay: run stats */}
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-4 py-3">
         <div className="flex items-end justify-between">
           <div>

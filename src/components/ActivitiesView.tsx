@@ -305,9 +305,16 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
 
   // Auto-apply view when map becomes ready and data arrives
   useEffect(() => {
-    if (mapReady && allRuns.length > 0) {
-      applyViewMode(mapViewMode, allRuns);
-    }
+    if (!mapReady || allRuns.length === 0) return;
+    // Usa setTimeout per assicurarsi che la mappa sia pronta
+    const timer = setTimeout(() => {
+      try {
+        applyViewMode(mapViewMode, allRuns);
+      } catch (err) {
+        console.warn('Error applying view mode:', err);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady, allRuns.length]);
 
@@ -327,7 +334,9 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
     const map = mapRef.current?.getMap();
     if (!map) return;
     (map as any).flyTo({ center: [lng, lat], zoom: 16.5, pitch: 65, duration: 2000, essential: true });
-    rotationTimeoutRef.current = setTimeout(() => startRotation(), 2200);
+    rotationTimeoutRef.current = setTimeout(() => {
+      if (map.isStyleLoaded()) startRotation();
+    }, 2200);
   }, [stopRotation, startRotation]);
 
   // ── Map interaction stops rotation ────────────────────────────────────────

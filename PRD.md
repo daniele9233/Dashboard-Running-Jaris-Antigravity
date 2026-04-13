@@ -99,13 +99,15 @@ weekly_reports    — Report settimanali AI
 
 ### 3.3 Dashboard
 
-**RF-DASH-01**: La dashboard mostra dati reali:
-- Sessione di oggi (dal piano di allenamento)
-- Stats rapide: km settimanali, km totali, passo target, VDOT
-- Grafico km ultime 12 settimane (barre colorate per fase)
-- Corse recenti (ultime 3-5)
-- Countdown alla prossima gara
-- Barra progresso settimana (sessioni completate / totale)
+**RF-DASH-01**: La dashboard mostra dati reali — IMPLEMENTATO (v2 CSS Grid):
+- Layout CSS Grid `grid-cols-12`, `max-w-[1600px]`, nessuna sidebar fissa
+- Status of Form: gauge PEAK SCORE (TSB-based readiness 0-100), TSB, EFFICIENCY
+- VO2 Max (VDOT), Fatigue ATL, Hall of Fame PB (5K/10K/HM), Countdown gara D/H/M
+- 4 metric card: SOGLIA ANAEROBICA, LACTATE THRESHOLD, AVG PACE, DERIVA CARDIACA
+- Grafico KM con toggle 7G/MESE/ANNO (dati reali da tutti i runs sincronizzati)
+- Mappa ultima corsa: Mapbox standard dusk 3D, pitch 60°, zoom 17 su startCoord; placeholder no-GPS per tapis roulant
+- Next Session, Next Optimal Session (arc timer recovery TSB), Adaptation Summary (CTL/ATL/TSB bars)
+- Performance History: ultimi 7 runs, click → dettaglio attività, TE SCORE colonnna
 
 **RF-DASH-02**: Vista "Activities" con layout split-screen:
 - Lista attività scrollabile indipendente (sinistra)

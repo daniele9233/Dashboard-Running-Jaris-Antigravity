@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { JarvisProvider, useJarvisContext } from "./context/JarvisContext";
 import { Sidebar } from "./components/Sidebar";
 import { DashboardView } from "./components/DashboardView";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { TrainingView } from "./components/TrainingView";
 import { ProfileView } from "./components/ProfileView";
 import { StatisticsView } from "./components/statistics/StatisticsView";
@@ -123,19 +124,27 @@ function AppContent() {
 
         {/* Route Content */}
         <div className="flex-1 flex flex-col overflow-hidden relative">
-          <Routes>
-            <Route path="/"                 element={<DashboardView />} />
-            <Route path="/activities"       element={<ActivitiesView onSelectRun={(id) => navigate(`/activities/${id}`)} />} />
-            <Route path="/activities/:runId" element={<RoutesViewWrapper />} />
-            <Route path="/training"         element={<TrainingView />} />
-            <Route path="/runner-dna"       element={<RunnerDnaView />} />
-            <Route path="/statistics"       element={<StatisticsView />} />
-            <Route path="/profile"          element={<ProfileView />} />
-            <Route path="/recovery"         element={<ComingSoonView label="Recovery" />} />
-            <Route path="/biometrics"       element={<ComingSoonView label="Biometrics" />} />
-            <Route path="/insights"         element={<ComingSoonView label="Insights" />} />
-            <Route path="*"                 element={<ComingSoonView label="Page not found" />} />
-          </Routes>
+          <ErrorBoundary resetKey={location.pathname}>
+            <Suspense fallback={
+              <div className="flex-1 flex items-center justify-center">
+                <div className="w-10 h-10 border-2 border-[#C0FF00] border-t-transparent rounded-full animate-spin" />
+              </div>
+            }>
+              <Routes>
+                <Route path="/"                 element={<DashboardView />} />
+                <Route path="/activities"       element={<ActivitiesView onSelectRun={(id) => navigate(`/activities/${id}`)} />} />
+                <Route path="/activities/:runId" element={<RoutesViewWrapper />} />
+                <Route path="/training"         element={<TrainingView />} />
+                <Route path="/runner-dna"       element={<RunnerDnaView />} />
+                <Route path="/statistics"       element={<StatisticsView />} />
+                <Route path="/profile"          element={<ProfileView />} />
+                <Route path="/recovery"         element={<ComingSoonView label="Recovery" />} />
+                <Route path="/biometrics"       element={<ComingSoonView label="Biometrics" />} />
+                <Route path="/insights"         element={<ComingSoonView label="Insights" />} />
+                <Route path="*"                 element={<ComingSoonView label="Page not found" />} />
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
         </div>
       </div>
     </div>

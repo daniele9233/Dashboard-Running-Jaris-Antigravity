@@ -139,6 +139,14 @@ export function JarvisOverlay() {
     dispatch({ type: 'WAKE_WORD' });
   }, []);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // Speech synthesis cleanup
+      window.speechSynthesis?.cancel();
+    };
+  }, []);
+
   const { transcript, response, orbState, browserSupported, startListening, analyser } = useJarvis({
     onAction: handleAction,
     onOrbStateChange: handleOrbStateChange,

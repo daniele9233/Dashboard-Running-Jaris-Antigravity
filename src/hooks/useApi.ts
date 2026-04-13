@@ -13,21 +13,28 @@ export function useApi<T>(fn: () => Promise<T>): ApiState<T> {
   const [error, setError] = useState<string | null>(null);
 
   const fetch = useCallback(() => {
+    let cancelled = false;
     setLoading(true);
     setError(null);
     fn()
       .then((res) => {
-        setData(res);
-        setLoading(false);
+        if (!cancelled) {
+          setData(res);
+          setLoading(false);
+        }
       })
       .catch((err: Error) => {
-        setError(err.message);
-        setLoading(false);
+        if (!cancelled) {
+          setError(err.message);
+          setLoading(false);
+        }
       });
+    return () => { cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    fetch();
+    const cleanup = fetch();
+    return cleanup;
   }, [fetch]);
 
   return { data, loading, error, refetch: fetch };
