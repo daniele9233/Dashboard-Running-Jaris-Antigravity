@@ -1,8 +1,39 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Wind, TrendingDown, Activity, Target, Timer, Zap, Flame, Shield, Trophy,
+  Wind, TrendingDown, Activity, Target, Timer, Zap, Flame, Shield, Trophy, Info,
 } from "lucide-react";
+
+// ─── Info Tooltip ─────────────────────────────────────────────────────────────
+function InfoTooltip({ title, lines }: { title: string; lines: string[] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  return (
+    <div className="relative inline-flex" ref={ref}>
+      <button
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        className="text-[#555] hover:text-[#A0A0A0] transition-colors focus:outline-none"
+      >
+        <Info size={13} />
+      </button>
+      {open && (
+        <div className="absolute z-50 bottom-full right-0 mb-2 w-64 bg-[#111] border border-white/10 rounded-2xl p-4 shadow-2xl pointer-events-none">
+          <div className="text-[#C0FF00] text-[10px] font-black tracking-widest mb-2">{title}</div>
+          <ul className="space-y-1.5">
+            {lines.map((l, i) => (
+              <li key={i} className="text-[#A0A0A0] text-[10px] leading-relaxed flex gap-1.5">
+                <span className="text-[#555] shrink-0">·</span>{l}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
 import { LastRunMap } from "./LastRunMap";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useApi } from "../hooks/useApi";
@@ -419,7 +450,18 @@ export function DashboardView() {
             <div className="flex justify-between items-start mb-6">
               <div>
                 <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-2">LIVE BIO-FEED</div>
-                <h2 className="text-white text-4xl font-black tracking-tighter italic">Status of Form</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-white text-4xl font-black tracking-tighter italic">Status of Form</h2>
+                  <InfoTooltip title="STATUS OF FORM — TSB" lines={[
+                    "TSB (Training Stress Balance) = CTL − ATL. Misura equilibrio carico/recupero.",
+                    "TSB > +10: Fresco — picco prestativo. Ideale pre-gara.",
+                    "TSB −5 → +10: Neutro — zona di mantenimento.",
+                    "TSB −20 → −5: Affaticato — adattamento in corso.",
+                    "TSB < −20: Sovraccarico — rischio infortuni.",
+                    "PEAK SCORE = 50 + TSB×3, scala 0-100.",
+                    "Modello Banister 1975, costanti Coggan 2003."
+                  ]} />
+                </div>
               </div>
               <div
                 className="px-3 py-1 rounded-full text-xs font-black tracking-wide flex items-center gap-2"
@@ -560,7 +602,17 @@ export function DashboardView() {
               </div>
             </div>
             <div>
-              <div className="text-black/60 text-xs font-black tracking-widest mb-2">FATIGUE (ATL)</div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-black/60 text-xs font-black tracking-widest">FATIGUE (ATL)</span>
+                <InfoTooltip title="FATIGUE — ATL" lines={[
+                  "ATL (Acute Training Load) = carico ultimi 7 giorni. Media mobile esponenziale.",
+                  "ATL > 80: HIGH RISK — recupero insufficiente.",
+                  "ATL 30-80: MODERATE — zona di sviluppo.",
+                  "ATL < 30: LOW — fresco, carico sostenibile.",
+                  "Formula TRIMP (Lucia): durata × HR_reserve × fattore esponenziale.",
+                  "Aumenta dopo ogni allenamento intenso, decade in ~7 giorni."
+                ]} />
+              </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-black text-5xl font-black tracking-tight">
                   {atl > 0 ? atl.toFixed(1) : "—"}
