@@ -374,7 +374,7 @@ export function DashboardView() {
 
   return (
     <main className="flex-1 overflow-y-auto custom-scrollbar">
-      <div className="p-6 max-w-[1600px] mx-auto space-y-6">
+      <div className="p-6 max-w-[2200px] mx-auto space-y-6">
 
         {/* Header */}
         {dashLoading && <div className="h-10 bg-white/5 rounded-xl animate-pulse" />}
@@ -420,32 +420,38 @@ export function DashboardView() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between flex-1">
+            <div className="flex items-center justify-center gap-12 flex-1">
+              {/* Gauge */}
               <div className="relative w-56 h-56 flex-shrink-0">
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                   <circle cx="50" cy="50" r="40" stroke="#333" strokeWidth="8" fill="none" />
                   <circle
                     cx="50" cy="50" r="40"
-                    stroke={faticaColor}
+                    stroke={status.color}
                     strokeWidth="8"
                     fill="none"
                     strokeDasharray="251.2"
                     strokeDashoffset={gaugeOffset}
                     strokeLinecap="round"
-                    style={{ filter: `drop-shadow(0 0 8px ${faticaColor}66)` }}
+                    style={{ filter: `drop-shadow(0 0 8px ${status.color}66)` }}
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-5xl font-black" style={{ color: faticaColor }}>
+                  <span className="text-5xl font-black" style={{ color: status.color }}>
                     {readiness !== null ? readiness.toFixed(0) : "—"}
                   </span>
                   <span className="text-[#A0A0A0] text-xs font-black tracking-widest mt-1">PEAK SCORE</span>
                 </div>
               </div>
-              <div className="text-right flex flex-col gap-6">
+
+              {/* Divider */}
+              <div className="w-px self-stretch bg-white/[0.06]" />
+
+              {/* Stats col 1: TSB + Efficiency */}
+              <div className="flex flex-col gap-6">
                 <div>
                   <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-1">TSB</div>
-                  <div className="text-3xl font-black" style={{ color: faticaColor }}>
+                  <div className="text-3xl font-black" style={{ color: status.color }}>
                     {tsb !== null ? (tsb >= 0 ? "+" : "") + tsb.toFixed(1) : "—"}
                   </div>
                 </div>
@@ -453,6 +459,25 @@ export function DashboardView() {
                   <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-1">EFFICIENCY</div>
                   <div className="text-white text-3xl font-black">
                     {efficiency !== null ? efficiency.toFixed(1) + "%" : "—"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="w-px self-stretch bg-white/[0.06]" />
+
+              {/* Stats col 2: CTL + ATL */}
+              <div className="flex flex-col gap-6">
+                <div>
+                  <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-1">CTL</div>
+                  <div className="text-white text-3xl font-black">
+                    {ctl > 0 ? ctl.toFixed(0) : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-1">ATL</div>
+                  <div className="text-white text-3xl font-black">
+                    {atl > 0 ? atl.toFixed(0) : "—"}
                   </div>
                 </div>
               </div>
@@ -628,7 +653,7 @@ export function DashboardView() {
           </div>
 
           {/* ── Weekly KM Chart — col-span-5 ── */}
-          <div className="col-span-5 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 flex flex-col min-h-[340px]">
+          <div className="col-span-5 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 flex flex-col h-[420px]">
             <div className="flex items-center justify-between mb-2">
               <div>
                 <div className="text-[#A0A0A0] text-xs font-black tracking-widest">
@@ -655,8 +680,8 @@ export function DashboardView() {
                 ))}
               </div>
             </div>
-            <div className="h-[240px]">
-              <ResponsiveContainer width="100%" height={240}>
+            <div className="flex-1 min-h-0">
+              <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
                   <XAxis dataKey="day" stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
@@ -676,7 +701,7 @@ export function DashboardView() {
           </div>
 
           {/* ── Last Run Map — col-span-4 ── */}
-          <div className="col-span-4 rounded-3xl overflow-hidden relative min-h-[340px]">
+          <div className="col-span-4 rounded-3xl overflow-hidden relative h-[420px]">
             <div className="absolute inset-0">
               <LastRunMap run={lastRun} />
             </div>
