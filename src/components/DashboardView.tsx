@@ -8,11 +8,15 @@ import { useApi } from "../hooks/useApi";
 import { getDashboard, getRuns, getAnalytics } from "../api";
 import type { DashboardResponse, RunsResponse, AnalyticsResponse, Run } from "../types/api";
 
-function daysUntil(dateStr: string): number {
+function timeUntil(dateStr: string): { days: number; hours: number; minutes: number } | null {
   const target = new Date(dateStr);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Math.max(0, Math.ceil((target.getTime() - today.getTime()) / 86400000));
+  const now = new Date();
+  const diff = target.getTime() - now.getTime();
+  if (diff <= 0) return null;
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const minutes = Math.floor((diff % 3600000) / 60000);
+  return { days, hours, minutes };
 }
 
 function parsePaceToSecs(pace: string): number {
@@ -106,15 +110,41 @@ export function DashboardView() {
   const ltHr = Math.round(maxHr * 0.87); // LT1
 
   const raceDate = profile?.race_date;
-  const daysToRace = raceDate ? daysUntil(raceDate) : null;
+  const timeToRace = raceDate ? timeUntil(raceDate) : null;
+  const daysToRace = timeToRace?.days ?? null;
 
   const weekProgress = dashData?.week_progress;
   const nextSession = dashData?.next_session;
+
+  // Efficiency: TSB-based aerobic efficiency score (Coggan 2003 adaptation)
+  const efficiency = tsb !== null
+    ? Math.max(70, Math.min(100, 85 + tsb * 1.05))
+    : null;
 
   // Adaptation bars
   const neuroBar = Math.min(100, ctl);
   const metaboBar = Math.min(100, atl);
   const struttBar = tsb !== null ? Math.min(100, Math.max(0, 50 + tsb * 2)) : 0;
+
+  // Cardiac drift from last qualifying run (needs splits)
+  const lastDrift = useMemo(() => {
+    const qualifying = runs.find(r =>
+      r.distance_km >= 4 &&
+      r.splits.length >= 4 &&
+      r.splits.some(s => s.hr && s.hr > 80)
+    );
+    if (!qualifying) return null;
+    const splits = qualifying.splits.filter(
+      s => s.hr && s.hr > 80 && s.pace && s.pace.includes(":")
+    );
+    if (splits.length < 4) return null;
+    const mid = Math.floor(splits.length / 2);
+    const avgHr = (arr: typeof splits) => arr.reduce((s, x) => s + (x.hr ?? 0), 0) / arr.length;
+    const hr1 = avgHr(splits.slice(0, mid));
+    const hr2 = avgHr(splits.slice(mid));
+    if (!hr1) return null;
+    return Math.round(((hr2 - hr1) / hr1) * 1000) / 10;
+  }, [runs]);
 
   const recentRuns = runs.slice(0, 3);
   const lastRun = dashData?.last_run ?? runs[0] ?? null;
@@ -189,7 +219,7 @@ export function DashboardView() {
                       <span className="text-5xl font-black" style={{ color: status.color }}>
                         {readiness !== null ? readiness.toFixed(0) : "—"}
                       </span>
-                      <span className="text-[#A0A0A0] text-xs font-black tracking-widest mt-1">READINESS</span>
+                      <span className="text-[#A0A0A0] text-xs font-black tracking-widest mt-1">PEAK SCORE</span>
                     </div>
                   </div>
 
@@ -201,8 +231,10 @@ export function DashboardView() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-1">CTL (FITNESS)</div>
-                      <div className="text-white text-3xl font-black">{ctl > 0 ? ctl.toFixed(0) : "—"}</div>
+                      <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-1">EFFICIENCY</div>
+                      <div className="text-white text-3xl font-black">
+                        {efficiency !== null ? efficiency.toFixed(1) + "%" : "—"}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -295,24 +327,20 @@ export function DashboardView() {
               </div>
 
               <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 flex flex-col justify-between">
-                <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">KM QUESTA SETTIMANA</div>
+                <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">DERIVA CARDIACA</div>
                 <div className="flex items-baseline gap-2 mb-4">
                   <span className="text-white text-3xl font-black">
-                    {weekProgress
-                      ? weekProgress.done_km.toFixed(1)
-                      : weeklyData.reduce((s, d) => s + d.km, 0).toFixed(1)}
+                    {lastDrift !== null ? (lastDrift >= 0 ? "+" : "") + lastDrift.toFixed(1) : "--"}
                   </span>
-                  <span className="text-[#A0A0A0] text-xs">km</span>
+                  <span className="text-[#A0A0A0] text-xs">%</span>
                 </div>
                 <div className="flex gap-1 h-1.5 mt-auto">
-                  {[...Array(6)].map((_, i) => (
-                    <div
-                      key={i}
-                      className={`flex-1 rounded-full ${
-                        i < Math.round((weekProgress?.pct ?? 0) / 16.67) ? "bg-[#C0FF00]" : "bg-[#333]"
-                      }`}
-                    />
-                  ))}
+                  {[...Array(6)].map((_, i) => {
+                    const driftPct = lastDrift !== null ? Math.abs(lastDrift) : 0;
+                    const filled = Math.round(Math.min(6, driftPct / 2));
+                    const color = driftPct < 3.5 ? "#C0FF00" : driftPct < 5 ? "#F59E0B" : "#F43F5E";
+                    return <div key={i} className={`flex-1 rounded-full`} style={{ backgroundColor: i < filled ? color : "#333" }} />;
+                  })}
                 </div>
               </div>
             </div>
@@ -321,7 +349,7 @@ export function DashboardView() {
             <div className="grid grid-cols-5 gap-5 items-stretch">
               <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 flex flex-col">
                 <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-6">
-                  KILOMETRAGGIO SETTIMANA CORRENTE
+                  KILOMETRAGGIO SETTIMANALE
                 </div>
                 <div className="flex-1 min-h-[280px]">
                   <ResponsiveContainer width="100%" height="100%">
@@ -362,11 +390,21 @@ export function DashboardView() {
                 </span>
               </div>
               <div className="flex items-baseline gap-1 mb-6">
-                {daysToRace !== null ? (
-                  <>
-                    <span className="text-white text-5xl font-black">{daysToRace}</span>
-                    <span className="text-[#A0A0A0] text-sm font-black ml-2">GIORNI</span>
-                  </>
+                {timeToRace !== null ? (
+                  <div className="flex items-baseline gap-3">
+                    <div className="text-center">
+                      <span className="text-white text-5xl font-black">{timeToRace.days}</span>
+                      <div className="text-[#A0A0A0] text-[9px] font-black tracking-widest mt-0.5">D</div>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-white text-5xl font-black">{timeToRace.hours}</span>
+                      <div className="text-[#A0A0A0] text-[9px] font-black tracking-widest mt-0.5">H</div>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-white text-5xl font-black">{timeToRace.minutes}</span>
+                      <div className="text-[#A0A0A0] text-[9px] font-black tracking-widest mt-0.5">M</div>
+                    </div>
+                  </div>
                 ) : (
                   <span className="text-[#A0A0A0] text-2xl font-black">—</span>
                 )}

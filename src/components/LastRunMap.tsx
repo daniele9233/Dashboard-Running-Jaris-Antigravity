@@ -80,69 +80,132 @@ export function LastRunMap({ run }: LastRunMapProps) {
 
   if (!run) {
     return (
-      <div className="bg-bg-card border border-[#1E293B] rounded-xl flex items-center justify-center h-full">
-        <div className="text-center text-text-muted">
-          <MapPin className="w-8 h-8 mx-auto mb-2 opacity-30" />
-          <p className="text-xs">Sincronizza corse per vedere la mappa</p>
+      <div className="rounded-3xl overflow-hidden h-full bg-[#0F172A] flex items-center justify-center">
+        <div className="text-center text-gray-600">
+          <MapPin className="w-8 h-8 mx-auto mb-2 opacity-20" />
+          <p className="text-xs">Nessuna corsa</p>
+        </div>
+      </div>
+    );
+  }
+
+  // No GPS data — show styled info card
+  if (!bounds) {
+    return (
+      <div className="relative rounded-3xl overflow-hidden h-full min-h-[300px]"
+           style={{ background: "linear-gradient(135deg, #0f1923 0%, #1a2535 100%)" }}>
+        {/* Grid overlay */}
+        <svg className="absolute inset-0 w-full h-full opacity-5" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#C0FF00" strokeWidth="0.5"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)" />
+        </svg>
+        {/* Label */}
+        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1 flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#C0FF00] animate-pulse" />
+          <span className="text-[10px] font-bold text-[#C0FF00] uppercase tracking-wider">Ultima Corsa</span>
+        </div>
+        {/* No GPS badge */}
+        <div className="absolute top-3 right-3 bg-white/5 border border-white/10 rounded-lg px-2 py-1">
+          <span className="text-[10px] text-gray-500 uppercase tracking-wider">No GPS</span>
+        </div>
+        {/* Center stats */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-[#C0FF00] text-6xl font-black tracking-tight">
+              {run.distance_km.toFixed(1)}
+            </div>
+            <div className="text-gray-500 text-sm font-black tracking-widest mt-1">KM</div>
+          </div>
+        </div>
+        {/* Bottom bar */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-4 py-3">
+          <div className="flex items-end justify-between">
+            <div>
+              <div className="text-[10px] text-gray-500 mb-1">
+                {new Date(run.date).toLocaleDateString("it", { day: "numeric", month: "short", year: "numeric" })}
+                {run.location && <span className="ml-2 text-gray-600">· {run.location}</span>}
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5">
+                  <Zap className="w-3 h-3 text-[#14B8A6]" />
+                  <span className="text-[#14B8A6] font-bold text-sm">{run.avg_pace}/km</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-3 h-3 text-gray-500" />
+                  <span className="text-gray-500 text-xs">{formatDuration(run.duration_minutes)}</span>
+                </div>
+                {run.avg_hr && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-rose-400 text-xs">♥</span>
+                    <span className="text-rose-400 text-xs font-bold">{run.avg_hr} bpm</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            {run.elevation_gain > 0 && (
+              <div className="text-right">
+                <div className="text-[9px] text-gray-600 uppercase tracking-wider">Dislivello</div>
+                <div className="text-white text-sm font-bold">+{run.elevation_gain}m</div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="relative rounded-xl overflow-hidden h-full border border-[#1E293B]">
+    <div className="relative rounded-3xl overflow-hidden h-full border border-white/[0.04]">
       {/* Map */}
-      {bounds ? (
-        <Map
-          mapboxAccessToken={MAPBOX_TOKEN}
-          mapStyle="mapbox://styles/mapbox/dark-v11"
-          initialViewState={{
-            bounds,
-            fitBoundsOptions: { padding: 32, maxZoom: 16 },
-          }}
-          interactive={false}
-          style={{ width: "100%", height: "100%" }}
-          attributionControl={false}
-        >
-          {/* Glow effect (background thicker line) */}
-          {routeGeoJson && (
-            <Source type="geojson" data={routeGeoJson}>
-              <Layer
-                id="route-glow"
-                type="line"
-                paint={{
-                  "line-color": "#C0FF00",
-                  "line-width": 8,
-                  "line-opacity": 0.2,
-                  "line-blur": 4,
-                }}
-                layout={{ "line-cap": "round", "line-join": "round" }}
-              />
-              <Layer
-                id="route-line"
-                type="line"
-                paint={{
-                  "line-color": "#C0FF00",
-                  "line-width": 3,
-                  "line-opacity": 0.95,
-                }}
-                layout={{ "line-cap": "round", "line-join": "round" }}
-              />
-            </Source>
-          )}
+      <Map
+        mapboxAccessToken={MAPBOX_TOKEN}
+        mapStyle="mapbox://styles/mapbox/dark-v11"
+        initialViewState={{
+          bounds,
+          fitBoundsOptions: { padding: 32, maxZoom: 16 },
+        }}
+        interactive={false}
+        style={{ width: "100%", height: "100%" }}
+        attributionControl={false}
+      >
+        {/* Glow effect (background thicker line) */}
+        {routeGeoJson && (
+          <Source type="geojson" data={routeGeoJson}>
+            <Layer
+              id="route-glow"
+              type="line"
+              paint={{
+                "line-color": "#C0FF00",
+                "line-width": 8,
+                "line-opacity": 0.2,
+                "line-blur": 4,
+              }}
+              layout={{ "line-cap": "round", "line-join": "round" }}
+            />
+            <Layer
+              id="route-line"
+              type="line"
+              paint={{
+                "line-color": "#C0FF00",
+                "line-width": 3,
+                "line-opacity": 0.95,
+              }}
+              layout={{ "line-cap": "round", "line-join": "round" }}
+            />
+          </Source>
+        )}
 
-          {/* Start marker */}
-          {startCoord && (
-            <Marker longitude={startCoord[0]} latitude={startCoord[1]} anchor="center">
-              <div className="w-3 h-3 rounded-full bg-[#C0FF00] border-2 border-black shadow-lg" />
-            </Marker>
-          )}
-        </Map>
-      ) : (
-        <div className="w-full h-full bg-[#0F172A] flex items-center justify-center">
-          <MapPin className="w-6 h-6 text-text-muted" />
-        </div>
-      )}
+        {/* Start marker */}
+        {startCoord && (
+          <Marker longitude={startCoord[0]} latitude={startCoord[1]} anchor="center">
+            <div className="w-3 h-3 rounded-full bg-[#C0FF00] border-2 border-black shadow-lg" />
+          </Marker>
+        )}
+      </Map>
 
       {/* Top-left: label */}
       <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1 flex items-center gap-1.5">
