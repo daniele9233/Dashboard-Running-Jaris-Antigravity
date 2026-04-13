@@ -27,6 +27,8 @@
   - **Auto-adattamento**: il piano si aggiorna automaticamente ad ogni sync Strava (ACWR, TSB, VDOT drift, compliance, taper).
   - **Richiede deploy backend su Render** per essere attivo.
 
+- [x] **Statistics — Analytics Pro**: eliminato tab "Carico & Rischio". Uniti "Dashboard" + "Performance" in unico tab "Analytics Pro". 3 tab totali: Analytics Pro, Biologia & Futuro, Badge. Layout identico alla dashboard (card #111111, bordi #1E1E1E, accent #C0FF00). SectionLabel per separare macro-sezioni. `InfoTooltip` (ⓘ) su ogni grafico. Tutti i chart dinamici da Strava: KPI grid, FitnessFreshness, Volume+Zone, VDOT, Race Predictions, Zone Daniels, MainChart, VO2MaxChart, Paces Trend, Cadenza, Soglia Anaerobica, Deriva Cardiaca, GCT, Dislivello.
+
 ## Todo
 
 - [ ] **Gamification — Badge & Trofei**: implementare sistema badge con 100+ trofei in 8 categorie: Milestone distanza, Costanza, Miglioramenti, Allenamento, Mezza maratona, Scienza, Velocità lampo, Fun & Speciali. Vedi specifica completa in chat.
