@@ -1,13 +1,31 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Wind, TrendingDown, Activity, Target, Timer, Zap, Flame, Shield,
+  Wind, TrendingDown, Activity, Target, Timer, Zap, Flame, Shield, Trophy,
 } from "lucide-react";
 import { LastRunMap } from "./LastRunMap";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useApi } from "../hooks/useApi";
 import { getDashboard, getRuns, getAnalytics } from "../api";
 import type { DashboardResponse, RunsResponse, AnalyticsResponse, Run } from "../types/api";
+
+function fmtPbTime(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = Math.floor(minutes % 60);
+  const s = Math.round((minutes * 60) % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+function bestPbTime(runs: Run[], minKm: number, maxKm: number): string {
+  const target = (minKm + maxKm) / 2;
+  const c = runs.filter(r => !r.is_treadmill && r.distance_km >= minKm && r.distance_km <= maxKm && r.duration_minutes > 0);
+  if (!c.length) return '—';
+  const best = c.reduce((b, r) => {
+    const pace = r.duration_minutes / r.distance_km;
+    return pace < b.duration_minutes / b.distance_km ? r : b;
+  });
+  return fmtPbTime((best.duration_minutes / best.distance_km) * target);
+}
 
 function timeUntil(dateStr: string): { days: number; hours: number; minutes: number } | null {
   const target = new Date(dateStr);
@@ -138,6 +156,7 @@ export function DashboardView() {
   const { data: analyticsData } = useApi<AnalyticsResponse>(getAnalytics);
 
   const navigate = useNavigate();
+  const [chartPeriod, setChartPeriod] = useState<'7d' | 'month' | 'year'>('7d');
   const runs = runsData?.runs ?? [];
   const vdot = analyticsData?.vdot ?? null;
 
@@ -164,23 +183,41 @@ export function DashboardView() {
   const faticaLabel = atl > 80 ? "HIGH RISK" : atl > 50 ? "MODERATE" : "LOW RISK";
   const faticaColor = atl > 80 ? "#F43F5E" : atl > 50 ? "#F59E0B" : "#C0FF00";
 
-  // Weekly km chart — ultimi 7 giorni rolling (sempre mostra dati recenti)
-  const weeklyData = useMemo(() => {
+  // Chart data — supports 7d, month, year periods
+  const chartData = useMemo(() => {
     const toLocal = (d: Date) =>
       `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const now = new Date();
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(now);
-      d.setDate(now.getDate() - (6 - i));
-      const ds = toLocal(d);
-      const km = runs
-        .filter(r => r.date.slice(0, 10) === ds)
-        .reduce((s, r) => s + r.distance_km, 0);
-      const label = d.toLocaleDateString("it", { weekday: "short" })
-        .replace(".", "").slice(0, 3);
-      return { day: label, km: Math.round(km * 10) / 10 };
-    });
-  }, [runs]);
+    if (chartPeriod === '7d') {
+      const now = new Date();
+      return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(now);
+        d.setDate(now.getDate() - (6 - i));
+        const ds = toLocal(d);
+        const km = runs.filter(r => r.date.slice(0,10) === ds).reduce((s, r) => s + r.distance_km, 0);
+        const label = d.toLocaleDateString('it', { weekday: 'short' }).replace('.','').slice(0,3);
+        return { day: label, km: Math.round(km*10)/10 };
+      });
+    } else if (chartPeriod === 'month') {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const days = new Date(year, month+1, 0).getDate();
+      return Array.from({ length: days }, (_, i) => {
+        const day = i + 1;
+        const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const km = runs.filter(r => r.date.slice(0,10) === ds).reduce((s, r) => s + r.distance_km, 0);
+        return { day: String(day), km: Math.round(km*10)/10 };
+      });
+    } else {
+      const year = new Date().getFullYear();
+      const months = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+      return months.map((label, i) => {
+        const prefix = `${year}-${String(i+1).padStart(2,'0')}`;
+        const km = runs.filter(r => r.date.slice(0,7) === prefix).reduce((s, r) => s + r.distance_km, 0);
+        return { day: label, km: Math.round(km*10)/10 };
+      });
+    }
+  }, [runs, chartPeriod]);
 
   // Avg pace from last 5 runs
   const avgPace = useMemo(() => {
@@ -238,7 +275,7 @@ export function DashboardView() {
 
   return (
     <main className="flex-1 overflow-y-auto custom-scrollbar">
-      <div className="p-8 w-full max-w-[1600px] mx-auto space-y-5">
+      <div className="p-6 w-full space-y-5">
 
         {/* Header */}
         {dashLoading && <div className="h-10 bg-white/5 rounded-xl animate-pulse" />}
@@ -435,12 +472,27 @@ export function DashboardView() {
             {/* Row 3: Weekly chart + Last Run map */}
             <div className="grid grid-cols-5 gap-5 items-stretch">
               <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 flex flex-col">
-                <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-6">
-                  KILOMETRAGGIO SETTIMANALE
+                <div className="flex items-center justify-between mb-6">
+                  <div className="text-[#A0A0A0] text-xs font-black tracking-widest">
+                    {chartPeriod === '7d' ? 'ULTIMI 7 GIORNI' : chartPeriod === 'month' ? 'MESE CORRENTE' : 'ANNO CORRENTE'}
+                  </div>
+                  <div className="flex bg-[#111] rounded-lg border border-white/[0.06] p-0.5">
+                    {(['7d','month','year'] as const).map(p => (
+                      <button
+                        key={p}
+                        onClick={() => setChartPeriod(p)}
+                        className={`px-3 py-1 rounded-md text-[10px] font-black tracking-wider transition-all ${
+                          chartPeriod === p ? 'bg-[#C0FF00] text-black' : 'text-gray-500 hover:text-white'
+                        }`}
+                      >
+                        {p === '7d' ? '7G' : p === 'month' ? 'MESE' : 'ANNO'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="flex-1 min-h-[280px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={weeklyData}>
+                    <BarChart data={chartData}>
                       <XAxis dataKey="day" stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
                       <YAxis stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
                       <Tooltip
@@ -468,6 +520,25 @@ export function DashboardView() {
 
           {/* ── Right Sidebar ── */}
           <div className="w-[300px] shrink-0 space-y-5">
+            {/* Hall of Fame */}
+            <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Trophy className="text-[#C0FF00]" size={14} />
+                <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest">HALL OF FAME</span>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { label: '5K',  time: bestPbTime(gpsRuns, 4.5, 5.5)  },
+                  { label: '10K', time: bestPbTime(gpsRuns, 9.0, 11.0) },
+                  { label: 'HM',  time: bestPbTime(gpsRuns, 19.0, 22.5)},
+                ].map(({ label, time }) => (
+                  <div key={label} className="flex items-center justify-between">
+                    <span className="text-[#A0A0A0] text-sm">{label}</span>
+                    <span className="text-white text-sm font-black">{time}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
             {/* Target Card */}
             <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6">
               <div className="flex items-center gap-2 mb-4">

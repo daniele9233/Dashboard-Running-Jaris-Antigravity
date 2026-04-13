@@ -166,8 +166,8 @@ export function LastRunMap({ run }: LastRunMapProps) {
         mapStyle="mapbox://styles/mapbox/standard"
         initialViewState={{
           bounds,
-          fitBoundsOptions: { padding: 40, maxZoom: 16 },
-          pitch: 45,
+          fitBoundsOptions: { padding: 20, maxZoom: 17.5 },
+          pitch: 60,
           bearing: -17,
         }}
         interactive={true}
