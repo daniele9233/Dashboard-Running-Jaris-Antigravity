@@ -87,7 +87,7 @@ export function DashboardView() {
       d.setDate(now.getDate() - (6 - i));
       const ds = toLocal(d);
       const km = runs
-        .filter(r => !r.is_treadmill && r.date.slice(0, 10) === ds)
+        .filter(r => r.date.slice(0, 10) === ds)
         .reduce((s, r) => s + r.distance_km, 0);
       const label = d.toLocaleDateString("it", { weekday: "short" })
         .replace(".", "").slice(0, 3);
