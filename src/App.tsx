@@ -8,7 +8,6 @@ import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { JarvisProvider, useJarvisContext } from "./context/JarvisContext";
 import { Sidebar } from "./components/Sidebar";
 import { DashboardView } from "./components/DashboardView";
-import { DashboardV2Preview } from "./components/DashboardV2Preview";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { TrainingView } from "./components/TrainingView";
 import { ProfileView } from "./components/ProfileView";
@@ -133,7 +132,6 @@ function AppContent() {
             }>
               <Routes>
                 <Route path="/"                 element={<DashboardView />} />
-                <Route path="/v2"               element={<DashboardV2Preview />} />
                 <Route path="/activities"       element={<ActivitiesView onSelectRun={(id) => navigate(`/activities/${id}`)} />} />
                 <Route path="/activities/:runId" element={<RoutesViewWrapper />} />
                 <Route path="/training"         element={<TrainingView />} />

@@ -26,7 +26,17 @@
       "Bash(pip show:*)",
       "Bash(claude mcp:*)",
       "Bash(caveman --help)",
-      "Bash(claude plugin:*)"
+      "Bash(claude plugin:*)",
+      "Bash(npx vite:*)",
+      "Bash(git show:*)",
+      "Read(//tmp/**)",
+      "Bash(git -C D:/webapp-antiG show HEAD:src/components/ErrorBoundary.tsx)",
+      "Bash(curl -s http://localhost:8000/api/runs)",
+      "Bash(python3 -c \" import json,sys data = json.load\\(sys.stdin\\) runs = data.get\\('runs', []\\) for r in runs: if not r.get\\('is_treadmill'\\): print\\(f\\\\\"{r['date']} | {r['distance_km']:.1f}km | pace:{r.get\\('avg_pace','?'\\)} | dur:{r.get\\('duration_minutes',0\\):.0f}min | type:{r.get\\('run_type','?'\\)}\\\\\"\\)\")",
+      "Bash(python3 -c ':*)",
+      "Bash(curl -s \"http://localhost:8000/api/runs\")",
+      "Bash(node -e ':*)",
+      "Bash(curl -v \"http://localhost:8000/api/runs\")"
     ]
   }
 }
