@@ -97,7 +97,7 @@ export function DashboardView() {
 
   // Avg pace from last 5 runs
   const avgPace = useMemo(() => {
-    const recent = runs.slice(0, 5).filter((r) => r.avg_pace && parsePaceToSecs(r.avg_pace) > 100);
+    const recent = runs.slice(0, 5).filter((r) => !r.is_treadmill && r.avg_pace && parsePaceToSecs(r.avg_pace) > 100);
     if (!recent.length) return "--";
     const avg = recent.reduce((sum, r) => sum + parsePaceToSecs(r.avg_pace), 0) / recent.length;
     return secsToPaceStr(avg);
@@ -519,7 +519,11 @@ export function DashboardView() {
               </div>
               <div className="space-y-2">
                 {recentRuns.map((run: Run) => {
-                  const teRaw = run.avg_hr_pct != null ? run.avg_hr_pct * 5 : null;
+                  // avg_hr_pct may be 0-1 (decimal) or 0-100 (integer) — normalize
+                  const hrPct = run.avg_hr_pct != null
+                    ? (run.avg_hr_pct > 1 ? run.avg_hr_pct / 100 : run.avg_hr_pct)
+                    : null;
+                  const teRaw = hrPct !== null ? hrPct * 5 : null;
                   const teLabel =
                     teRaw === null ? "—"
                     : teRaw >= 4 ? "HIGHLY AEROBIC"
