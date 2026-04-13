@@ -5,6 +5,7 @@ import { MainChart } from '../MainChart';
 import { AnaerobicThreshold } from '../AnaerobicThreshold';
 import { VO2MaxChart } from '../VO2MaxChart';
 import { FitnessFreshness } from '../FitnessFreshness';
+import { AnalyticsV2 } from './AnalyticsV2';
 import { useApi } from '../../hooks/useApi';
 import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, getDashboard, type GctAnalysisResponse } from '../../api';
 import type { AnalyticsResponse, VdotPacesResponse, RunsResponse, DashboardResponse } from '../../types/api';
@@ -26,7 +27,8 @@ import {
   Briefcase,
   Info,
   TrendingDown,
-  Trophy
+  Trophy,
+  Radar
 } from 'lucide-react';
 import {
   AreaChart,
@@ -314,6 +316,7 @@ export function StatisticsView() {
 
   const tabs = [
     { id: 'analytics', label: 'Analytics Pro', icon: LayoutGrid },
+    { id: 'analyticsv2', label: 'Analytics Pro V2', icon: Radar },
     { id: 'biology',   label: 'Biologia & Futuro', icon: FlaskConical },
     { id: 'badges',    label: 'Badge', icon: Star },
   ];
@@ -1321,6 +1324,13 @@ export function StatisticsView() {
             </Card>
 
           </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════
+            ANALYTICS PRO V2 TAB
+        ════════════════════════════════════════════════════ */}
+        {activeTab === 'analyticsv2' && (
+          <AnalyticsV2 vdot={vdot} zoneDistribution={zoneDistribution} />
         )}
 
         {/* ════════════════════════════════════════════════════
