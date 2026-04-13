@@ -165,9 +165,10 @@ export function LastRunMap({ run }: LastRunMapProps) {
         mapboxAccessToken={MAPBOX_TOKEN}
         mapStyle="mapbox://styles/mapbox/standard"
         initialViewState={{
-          bounds,
-          fitBoundsOptions: { padding: 20, maxZoom: 17.5 },
-          pitch: 60,
+          longitude: startCoord ? startCoord[0] : bounds![0][0],
+          latitude:  startCoord ? startCoord[1] : bounds![0][1],
+          zoom: 17,
+          pitch: 62,
           bearing: -17,
         }}
         interactive={true}
