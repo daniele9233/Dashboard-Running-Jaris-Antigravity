@@ -79,12 +79,13 @@ export function DashboardView() {
 
   // Weekly km chart — ultimi 7 giorni rolling (sempre mostra dati recenti)
   const weeklyData = useMemo(() => {
+    const toLocal = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const now = new Date();
-    now.setHours(23, 59, 59, 999);
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(now);
       d.setDate(now.getDate() - (6 - i));
-      const ds = d.toISOString().slice(0, 10);
+      const ds = toLocal(d);
       const km = runs
         .filter(r => !r.is_treadmill && r.date.slice(0, 10) === ds)
         .reduce((s, r) => s + r.distance_km, 0);
@@ -145,7 +146,7 @@ export function DashboardView() {
   }, [runs]);
 
   const gpsRuns = runs.filter(r => !r.is_treadmill);
-  const recentRuns = runs.slice(0, 3);
+  const recentRuns = runs.slice(0, 7);
   const lastRun = gpsRuns[0] ?? null;
 
   return (
@@ -508,34 +509,52 @@ export function DashboardView() {
             </div>
 
             <div className="w-full">
-              <div className="grid grid-cols-6 text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4 px-4">
+              <div className="grid grid-cols-7 text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4 px-4">
                 <div className="col-span-2">TIPO</div>
                 <div>DATA</div>
                 <div>DURATA</div>
                 <div>AVG PACE</div>
-                <div className="text-right">KM</div>
+                <div>TE SCORE</div>
+                <div className="text-right">STATUS</div>
               </div>
               <div className="space-y-2">
-                {recentRuns.map((run: Run) => (
-                  <div
-                    key={run.id}
-                    onClick={() => navigate("/activities")}
-                    className="grid grid-cols-6 items-center bg-[#111] rounded-2xl p-4 cursor-pointer hover:bg-[#1a1a1a] hover:border hover:border-white/10 transition-all"
-                  >
-                    <div className="col-span-2 flex items-center gap-3">
-                      <Activity className="text-[#C0FF00]" size={18} />
-                      <span className="text-white font-black text-sm">{run.name || run.run_type || "Run"}</span>
+                {recentRuns.map((run: Run) => {
+                  const teRaw = run.avg_hr_pct != null ? run.avg_hr_pct * 5 : null;
+                  const teLabel =
+                    teRaw === null ? "—"
+                    : teRaw >= 4 ? "HIGHLY AEROBIC"
+                    : teRaw >= 3 ? "AEROBIC"
+                    : teRaw >= 2 ? "RECOVERY"
+                    : "—";
+                  const teColor =
+                    teRaw === null ? "#A0A0A0"
+                    : teRaw >= 4 ? "#C0FF00"
+                    : teRaw >= 3 ? "#60A5FA"
+                    : "#A0A0A0";
+                  return (
+                    <div
+                      key={run.id}
+                      onClick={() => navigate(`/activities/${run.id}`)}
+                      className="grid grid-cols-7 items-center bg-[#111] rounded-2xl p-4 cursor-pointer hover:bg-[#1a1a1a] hover:border hover:border-white/10 transition-all"
+                    >
+                      <div className="col-span-2 flex items-center gap-3">
+                        <Activity className="text-[#C0FF00]" size={18} />
+                        <span className="text-white font-black text-sm">{run.name || run.run_type || "Run"}</span>
+                      </div>
+                      <div className="text-[#A0A0A0] text-sm">
+                        {new Date(run.date).toLocaleDateString("it", { day: "numeric", month: "short" })}
+                      </div>
+                      <div className="text-white font-black text-sm">{formatDuration(run.duration_minutes)}</div>
+                      <div className="text-[#A0A0A0] text-sm">{run.avg_pace}/km</div>
+                      <div className="text-xs font-black" style={{ color: teColor }}>
+                        {teRaw !== null ? teRaw.toFixed(1) + " · " : ""}{teLabel}
+                      </div>
+                      <div className="text-right text-[#C0FF00] font-black text-xs">
+                        ● VERIFIED
+                      </div>
                     </div>
-                    <div className="text-[#A0A0A0] text-sm">
-                      {new Date(run.date).toLocaleDateString("it", { day: "numeric", month: "short" })}
-                    </div>
-                    <div className="text-white font-black text-sm">{formatDuration(run.duration_minutes)}</div>
-                    <div className="text-[#A0A0A0] text-sm">{run.avg_pace}/km</div>
-                    <div className="text-right text-[#C0FF00] font-black text-sm">
-                      {run.distance_km.toFixed(1)}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

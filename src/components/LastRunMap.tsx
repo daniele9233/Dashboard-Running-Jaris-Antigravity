@@ -168,7 +168,7 @@ export function LastRunMap({ run }: LastRunMapProps) {
           bounds,
           fitBoundsOptions: { padding: 32, maxZoom: 16 },
         }}
-        interactive={false}
+        interactive={true}
         style={{ width: "100%", height: "100%" }}
         attributionControl={false}
       >
