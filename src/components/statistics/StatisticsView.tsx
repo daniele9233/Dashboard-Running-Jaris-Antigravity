@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { StatsDrift } from './StatsDrift';
 import { BadgesGrid } from '../BadgesGrid';
+import { MainChart } from '../MainChart';
+import { AnaerobicThreshold } from '../AnaerobicThreshold';
+import { VO2MaxChart } from '../VO2MaxChart';
+import { FitnessFreshness } from '../FitnessFreshness';
 import { useApi } from '../../hooks/useApi';
-import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, type GctAnalysisResponse } from '../../api';
-import type { AnalyticsResponse, VdotPacesResponse, RunsResponse } from '../../types/api';
+import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, getDashboard, type GctAnalysisResponse } from '../../api';
+import type { AnalyticsResponse, VdotPacesResponse, RunsResponse, DashboardResponse } from '../../types/api';
 import { 
   Activity, 
   Zap, 
@@ -201,6 +205,7 @@ export function StatisticsView() {
   const { data: vdotData } = useApi<VdotPacesResponse>(getVdotPaces);
   const { data: runsData } = useApi<RunsResponse>(getRuns);
   const { data: gctData } = useApi<GctAnalysisResponse>(getGctAnalysis);
+  const { data: dashData } = useApi<DashboardResponse>(getDashboard);
 
   const runs = runsData?.runs ?? [];
   const vdot = vdotData?.vdot ?? null;
@@ -208,6 +213,9 @@ export function StatisticsView() {
   const paces = vdotData?.paces ?? {};
   const racePredictions = vdotData?.race_predictions ?? analyticsData?.race_predictions ?? {};
   const zoneDistribution = analyticsData?.zone_distribution ?? [];
+
+  const ffHistory = dashData?.fitness_freshness ?? [];
+  const prevCtl = ffHistory.length >= 2 ? ffHistory[ffHistory.length - 2].ctl : null;
 
   // ── Monthly elevation gain from runs ─────────────────────────────────────
   const elevationData = React.useMemo(() => {
@@ -619,6 +627,39 @@ export function StatisticsView() {
                   Nessun dato di dislivello disponibile
                 </div>
               )}
+            </div>
+
+            {/* ── Grafici spostati dalla Dashboard ── */}
+            <div className="space-y-8 mt-4">
+              <div className="text-[10px] text-gray-600 font-black tracking-[0.3em] uppercase mb-2">ANALISI AVANZATA</div>
+
+              {/* Volume + VO2Max */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="min-h-[400px]">
+                  <MainChart runs={runs} />
+                </div>
+                <div className="min-h-[400px]">
+                  <VO2MaxChart runs={runs} vdot={vdot} />
+                </div>
+              </div>
+
+              {/* Soglia Anaerobica */}
+              <div>
+                <AnaerobicThreshold
+                  runs={runs}
+                  maxHr={dashData?.profile?.max_hr ?? 180}
+                  vdot={vdot}
+                />
+              </div>
+
+              {/* Fitness & Freshness */}
+              <div>
+                <FitnessFreshness
+                  fitnessFreshness={ffHistory}
+                  currentFf={dashData?.current_ff ?? null}
+                  prevCtl={prevCtl}
+                />
+              </div>
             </div>
           </div>
         )}
