@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Wind, TrendingDown, Activity, Target, Timer, Zap, Flame,
+  Wind, TrendingDown, Activity, Target, Timer, Zap, Flame, Shield,
 } from "lucide-react";
 import { LastRunMap } from "./LastRunMap";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -42,6 +42,93 @@ function formatDuration(minutes: number): string {
   const m = Math.floor(minutes % 60);
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m`;
+}
+
+// ─── Next Optimal Session Widget ─────────────────────────────────────────────
+function NextOptimalSessionWidget({ tsb, atl, ctl }: { tsb: number | null; atl: number; ctl: number }) {
+  const { hoursUntil, pct } = useMemo(() => {
+    if (tsb === null || tsb >= -5) return { hoursUntil: 0, pct: 1 };
+    // Daily TSB improvement without training:
+    // ATL decays at 1/7 day constant, CTL at 1/42 — net TSB gain per hour
+    const dailyGain = atl * (1 - Math.exp(-1 / 7)) - ctl * (1 - Math.exp(-1 / 42));
+    const gap = -5 - tsb; // how much TSB needs to rise
+    const hours = Math.max(0, Math.round((gap / Math.max(dailyGain, 0.1)) * 24));
+    // Total hours needed from -15 baseline (rough scale for arc)
+    const totalHours = Math.round(((-5 - (-15)) / Math.max(dailyGain, 0.1)) * 24);
+    const recovered = Math.max(0, 1 - hours / Math.max(totalHours, 1));
+    return { hoursUntil: hours, pct: recovered };
+  }, [tsb, atl, ctl]);
+
+  const isReady = hoursUntil === 0;
+  const h = Math.floor(hoursUntil);
+  const m = Math.round((hoursUntil - h) * 60);
+  const arcColor = isReady ? "#C0FF00" : pct > 0.6 ? "#C0FF00" : pct > 0.3 ? "#F59E0B" : "#F43F5E";
+  const circ = 2 * Math.PI * 38;
+  const offset = circ * (1 - pct);
+
+  return (
+    <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-5 flex flex-col">
+      <div className="flex items-center gap-2 mb-3">
+        <Timer className="text-orange-400" size={13} />
+        <span className="text-[#A0A0A0] text-[9px] font-black tracking-widest uppercase">Next Optimal Session</span>
+      </div>
+
+      <div className="flex items-center gap-5 flex-1">
+        {/* Arc timer */}
+        <div className="relative w-[90px] h-[90px] shrink-0">
+          <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="38" stroke="#2a2a2a" strokeWidth="7" fill="none" />
+            <circle
+              cx="50" cy="50" r="38"
+              stroke={arcColor}
+              strokeWidth="7"
+              fill="none"
+              strokeDasharray={`${circ}`}
+              strokeDashoffset={offset}
+              strokeLinecap="round"
+              style={{ filter: `drop-shadow(0 0 6px ${arcColor}88)` }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            {isReady ? (
+              <span className="text-[#C0FF00] text-xs font-black">NOW</span>
+            ) : (
+              <>
+                <span className="text-white font-black font-mono text-lg leading-none">
+                  {String(h).padStart(2, '0')}:{String(m).padStart(2, '0')}
+                </span>
+                <span className="text-[#666] text-[8px] font-black mt-0.5">H : M</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <Shield size={11} className="text-orange-400 shrink-0" />
+            <span className="text-orange-400 text-[9px] font-black tracking-widest uppercase">Injury Prevention Buffer</span>
+          </div>
+          <div className="text-white text-xs font-black mb-1">
+            {isReady ? "Pronto ad allenarti" : `Ottimale tra ~${h}h`}
+          </div>
+          <div className="text-[#666] text-[9px] leading-relaxed">
+            {isReady
+              ? "TSB in zona neutrale. Allenamento consigliato."
+              : `TSB ${tsb?.toFixed(1)} → recupero in corso. Attendi per ridurre rischio infortuni.`}
+          </div>
+          {/* Recovery bar */}
+          <div className="mt-2 h-1 bg-[#2a2a2a] rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all"
+              style={{ width: `${Math.round(pct * 100)}%`, backgroundColor: arcColor }}
+            />
+          </div>
+          <div className="text-[#555] text-[8px] mt-0.5">{Math.round(pct * 100)}% recuperato</div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function DashboardView() {
@@ -371,10 +458,15 @@ export function DashboardView() {
                 </div>
               </div>
 
-              <div className="col-span-2 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl overflow-hidden relative min-h-[320px]">
-                <div className="absolute inset-0">
-                  <LastRunMap run={lastRun} />
+              <div className="col-span-2 flex flex-col gap-5">
+                {/* Map */}
+                <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl overflow-hidden relative flex-1 min-h-[220px]">
+                  <div className="absolute inset-0">
+                    <LastRunMap run={lastRun} />
+                  </div>
                 </div>
+                {/* Next Optimal Session */}
+                <NextOptimalSessionWidget tsb={tsb} atl={atl} ctl={ctl} />
               </div>
             </div>
           </div>

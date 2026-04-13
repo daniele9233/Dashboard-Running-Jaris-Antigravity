@@ -163,10 +163,12 @@ export function LastRunMap({ run }: LastRunMapProps) {
       {/* Map */}
       <Map
         mapboxAccessToken={MAPBOX_TOKEN}
-        mapStyle="mapbox://styles/mapbox/dark-v11"
+        mapStyle="mapbox://styles/mapbox/standard"
         initialViewState={{
           bounds,
-          fitBoundsOptions: { padding: 32, maxZoom: 16 },
+          fitBoundsOptions: { padding: 40, maxZoom: 16 },
+          pitch: 45,
+          bearing: -17,
         }}
         interactive={true}
         style={{ width: "100%", height: "100%" }}
