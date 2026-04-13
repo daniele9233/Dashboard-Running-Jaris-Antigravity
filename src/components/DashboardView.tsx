@@ -398,10 +398,10 @@ export function DashboardView() {
           </div>
         )}
 
-        <div className="grid grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-12 gap-6">
 
           {/* ── Status of Form — col 1-6, row 1-2 ── */}
-          <div className="col-span-6 row-span-2 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 relative overflow-hidden flex flex-col">
+          <div className="col-span-6 row-span-2 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 relative overflow-hidden flex flex-col justify-between">
             <div className="flex justify-between items-start mb-6">
               <div>
                 <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-2">LIVE BIO-FEED</div>
@@ -460,7 +460,7 @@ export function DashboardView() {
           </div>
 
           {/* ── VO2 Max — col 7-9, row 1 ── */}
-          <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] border-t-4 border-t-[#C0FF00] rounded-3xl p-6 flex flex-col justify-between min-h-[185px]">
+          <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] border-t-4 border-t-[#C0FF00] rounded-3xl p-6 flex flex-col justify-between">
             <div className="flex justify-between items-start">
               <Wind className="text-[#C0FF00]" size={24} />
               <div className="bg-white/10 text-[#A0A0A0] px-2 py-1 rounded text-[10px] font-black tracking-widest">
@@ -479,7 +479,7 @@ export function DashboardView() {
           </div>
 
           {/* ── Hall of Fame — col 10-12, row 1 ── */}
-          <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col justify-between min-h-[185px]">
+          <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col justify-between">
             <div className="flex items-center gap-2 mb-3">
               <Trophy className="text-[#C0FF00]" size={14} />
               <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest">HALL OF FAME</span>
@@ -505,7 +505,7 @@ export function DashboardView() {
 
           {/* ── Fatigue ATL — col 7-9, row 2 ── */}
           <div
-            className="col-span-3 rounded-3xl p-6 flex flex-col justify-between min-h-[185px]"
+            className="col-span-3 rounded-3xl p-6 flex flex-col justify-between"
             style={{ backgroundColor: faticaColor }}
           >
             <div className="flex justify-between items-start">
@@ -526,7 +526,7 @@ export function DashboardView() {
           </div>
 
           {/* ── Target / Countdown — col 10-12, row 2 ── */}
-          <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col justify-between min-h-[185px]">
+          <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col justify-between">
             <div className="flex items-center gap-2 mb-3">
               <Target className="text-[#C0FF00]" size={16} />
               <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase truncate">
