@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Wind, TrendingDown, Activity, Target, Timer, Zap, Flame,
 } from "lucide-react";
@@ -49,6 +50,7 @@ export function DashboardView() {
   const { data: runsData } = useApi<RunsResponse>(getRuns);
   const { data: analyticsData } = useApi<AnalyticsResponse>(getAnalytics);
 
+  const navigate = useNavigate();
   const runs = runsData?.runs ?? [];
   const vdot = analyticsData?.vdot ?? null;
 
@@ -75,25 +77,21 @@ export function DashboardView() {
   const faticaLabel = atl > 80 ? "HIGH RISK" : atl > 50 ? "MODERATE" : "LOW RISK";
   const faticaColor = atl > 80 ? "#F43F5E" : atl > 50 ? "#F59E0B" : "#C0FF00";
 
-  // Weekly km chart (current week Mon-Sun)
+  // Weekly km chart — ultimi 7 giorni rolling (sempre mostra dati recenti)
   const weeklyData = useMemo(() => {
-    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     const now = new Date();
-    const weekStart = new Date(now);
-    const dow = now.getDay();
-    const diff = dow === 0 ? 6 : dow - 1;
-    weekStart.setDate(now.getDate() - diff);
-    weekStart.setHours(0, 0, 0, 0);
-
-    const dayKm: number[] = [0, 0, 0, 0, 0, 0, 0];
-    runs.forEach((r) => {
-      const rd = new Date(r.date);
-      const diffDays = Math.floor((rd.getTime() - weekStart.getTime()) / 86400000);
-      if (diffDays >= 0 && diffDays < 7) {
-        dayKm[diffDays] += r.distance_km;
-      }
+    now.setHours(23, 59, 59, 999);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(now);
+      d.setDate(now.getDate() - (6 - i));
+      const ds = d.toISOString().slice(0, 10);
+      const km = runs
+        .filter(r => !r.is_treadmill && r.date.slice(0, 10) === ds)
+        .reduce((s, r) => s + r.distance_km, 0);
+      const label = d.toLocaleDateString("it", { weekday: "short" })
+        .replace(".", "").slice(0, 3);
+      return { day: label, km: Math.round(km * 10) / 10 };
     });
-    return days.map((day, i) => ({ day, km: Math.round(dayKm[i] * 10) / 10 }));
   }, [runs]);
 
   // Avg pace from last 5 runs
@@ -146,8 +144,9 @@ export function DashboardView() {
     return Math.round(((hr2 - hr1) / hr1) * 1000) / 10;
   }, [runs]);
 
+  const gpsRuns = runs.filter(r => !r.is_treadmill);
   const recentRuns = runs.slice(0, 3);
-  const lastRun = dashData?.last_run ?? runs[0] ?? null;
+  const lastRun = gpsRuns[0] ?? null;
 
   return (
     <main className="flex-1 overflow-y-auto custom-scrollbar">
@@ -518,7 +517,11 @@ export function DashboardView() {
               </div>
               <div className="space-y-2">
                 {recentRuns.map((run: Run) => (
-                  <div key={run.id} className="grid grid-cols-6 items-center bg-[#111] rounded-2xl p-4">
+                  <div
+                    key={run.id}
+                    onClick={() => navigate("/activities")}
+                    className="grid grid-cols-6 items-center bg-[#111] rounded-2xl p-4 cursor-pointer hover:bg-[#1a1a1a] hover:border hover:border-white/10 transition-all"
+                  >
                     <div className="col-span-2 flex items-center gap-3">
                       <Activity className="text-[#C0FF00]" size={18} />
                       <span className="text-white font-black text-sm">{run.name || run.run_type || "Run"}</span>
