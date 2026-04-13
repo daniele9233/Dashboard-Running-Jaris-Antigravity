@@ -237,6 +237,7 @@ export function DashboardView() {
 
   const navigate = useNavigate();
   const [chartPeriod, setChartPeriod] = useState<'7d' | 'month' | 'year'>('year');
+  const [rule8020Period, setRule8020Period] = useState<'7d' | '14d'>('14d');
   const runs = runsData?.runs ?? [];
   const vdot = analyticsData?.vdot ?? null;
 
@@ -255,14 +256,14 @@ export function DashboardView() {
 
   const status =
     tsb === null
-      ? { label: "—" }
+      ? { label: "—",          color: "#64748B" }
       : tsb > 10
-      ? { label: "FRESH" }
+      ? { label: "FRESH",      color: "#C0FF00" }
       : tsb > -5
-      ? { label: "NEUTRAL" }
+      ? { label: "NEUTRAL",    color: "#14B8A6" }
       : tsb > -20
-      ? { label: "FATIGUED" }
-      : { label: "OVERLOADED" };
+      ? { label: "FATIGUED",   color: "#F59E0B" }
+      : { label: "OVERLOADED", color: "#F43F5E" };
 
   const chartData = useMemo(() => {
     const toLocal = (d: Date) =>
@@ -365,6 +366,31 @@ export function DashboardView() {
   const recentRuns = runs.slice(0, 7);
   const lastRun = gpsRuns[0] ?? null;
 
+  // ── Regola 80/20 ──────────────────────────────────────────────────────────
+  const rule8020 = useMemo(() => {
+    const days = rule8020Period === '7d' ? 7 : 14;
+    const cutoff = new Date(Date.now() - days * 86400000);
+    const threshold = maxHr * 0.81; // Z2/Z3 boundary
+    const qualifying = runs.filter(r =>
+      new Date(r.date) >= cutoff && r.avg_hr != null && r.avg_hr > 0 && r.distance_km > 0.3
+    );
+    const slowRuns = qualifying.filter(r => (r.avg_hr ?? 0) < threshold);
+    const fastRuns = qualifying.filter(r => (r.avg_hr ?? 0) >= threshold);
+    const totalKm = qualifying.reduce((s, r) => s + r.distance_km, 0);
+    const slowKm  = slowRuns.reduce((s, r) => s + r.distance_km, 0);
+    const fastKm  = fastRuns.reduce((s, r) => s + r.distance_km, 0);
+    const slowPct = totalKm > 0 ? (slowKm / totalKm) * 100 : 0;
+    const fastPct = totalKm > 0 ? (fastKm / totalKm) * 100 : 0;
+    const warning =
+      totalKm === 0   ? null
+      : slowPct > 90  ? 'Troppe corse lente — aggiungi qualità'
+      : fastPct > 30  ? 'Troppo volume ad alta intensità — rischio infortuni'
+      : null;
+    const positive =
+      !warning && totalKm > 0 ? 'Distribuzione ideale — continua così' : null;
+    return { qualifying, slowKm, fastKm, totalKm, slowPct, fastPct, warning, positive, threshold };
+  }, [runs, maxHr, rule8020Period]);
+
   // Hall of Fame — real PRs from /api/best-efforts (same as Profile)
   const allEfforts = effortsData?.efforts ?? [];
   const hofEfforts = useMemo(() => {
@@ -410,12 +436,12 @@ export function DashboardView() {
               <div
                 className="px-3 py-1 rounded-full text-xs font-black tracking-wide flex items-center gap-2"
                 style={{
-                  color: faticaColor,
-                  backgroundColor: faticaColor + "18",
-                  border: `1px solid ${faticaColor}35`,
+                  color: status.color,
+                  backgroundColor: status.color + "18",
+                  border: `1px solid ${status.color}35`,
                 }}
               >
-                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: faticaColor }} />
+                <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: status.color }} />
                 {status.label}
               </div>
             </div>
@@ -424,16 +450,16 @@ export function DashboardView() {
               {/* Gauge */}
               <div className="relative w-56 h-56 flex-shrink-0">
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="40" stroke="#333" strokeWidth="8" fill="none" />
+                  <circle cx="50" cy="50" r="40" stroke="#222" strokeWidth="9" fill="none" />
                   <circle
                     cx="50" cy="50" r="40"
                     stroke={status.color}
-                    strokeWidth="8"
+                    strokeWidth="9"
                     fill="none"
                     strokeDasharray="251.2"
                     strokeDashoffset={gaugeOffset}
                     strokeLinecap="round"
-                    style={{ filter: `drop-shadow(0 0 8px ${status.color}66)` }}
+                    style={{ filter: `drop-shadow(0 0 12px ${status.color}) drop-shadow(0 0 4px ${status.color})` }}
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -708,32 +734,12 @@ export function DashboardView() {
           </div>
 
           {/* ── Right widgets stack — col-span-3 ── */}
-          <div className="col-span-3 flex flex-col gap-6">
-            {/* Next Session */}
-            {nextSession && (
-              <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <Timer className="text-orange-500" size={16} />
-                  <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">
-                    Next Session
-                  </span>
-                </div>
-                <div className="text-white font-black text-sm mb-1">{nextSession.title}</div>
-                <div className="text-[#A0A0A0] text-xs">
-                  {nextSession.target_distance_km > 0 && `${nextSession.target_distance_km} km`}
-                  {nextSession.target_pace && ` · ${nextSession.target_pace}/km`}
-                </div>
-                <div className="mt-3 text-orange-500 text-[10px] font-black tracking-widest uppercase">
-                  {nextSession.type}
-                </div>
-              </div>
-            )}
-
+          <div className="col-span-3 flex flex-col justify-between gap-6">
             {/* Next Optimal Session */}
             <NextOptimalSessionWidget tsb={tsb} atl={atl} ctl={ctl} runs={runs} faticaColor={faticaColor} />
 
             {/* Adaptation Summary */}
-            <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6">
+            <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex-1 flex flex-col">
               <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase mb-5">
                 Adaptation Summary
               </div>
@@ -781,6 +787,97 @@ export function DashboardView() {
           </div>
 
         </div>{/* end main grid */}
+
+        {/* ── Regola 80/20 — full width ── */}
+        <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <Activity className="text-[#C0FF00]" size={15} />
+                <span className="text-white text-sm font-black tracking-tight">Regola 80/20</span>
+                <span className="text-[#555] text-[10px] font-black">
+                  Lente (Z1-Z2 ≤ {Math.round(rule8020.threshold)} bpm) vs Veloci (Z3-Z5 &gt; {Math.round(rule8020.threshold)} bpm)
+                </span>
+              </div>
+              <div className="text-[#555] text-[10px] font-black">
+                {rule8020.qualifying.length} corse con FC negli ultimi <span className="text-[#A0A0A0] font-black">{rule8020Period === '7d' ? '7' : '14'} giorni</span>
+                {rule8020.totalKm > 0 && ` — ${rule8020.totalKm.toFixed(1)} km totali`}
+              </div>
+            </div>
+            <div className="flex bg-[#111] rounded-lg border border-white/[0.06] p-0.5">
+              {(['7d', '14d'] as const).map(p => (
+                <button key={p} onClick={() => setRule8020Period(p)}
+                  className={`px-3 py-1 rounded-md text-[10px] font-black tracking-wider transition-all ${
+                    rule8020Period === p ? 'bg-[#C0FF00] text-black' : 'text-gray-500 hover:text-white'
+                  }`}>{p === '7d' ? '7g' : '14g'}</button>
+              ))}
+            </div>
+          </div>
+
+          {rule8020.totalKm === 0 ? (
+            <div className="text-[#555] text-xs font-black text-center py-4">Nessuna corsa con dati FC nel periodo</div>
+          ) : (
+            <>
+              {/* Distribution bar */}
+              <div className="flex h-3 rounded-full overflow-hidden mb-3 gap-0.5">
+                <div className="rounded-l-full transition-all" style={{ width: `${rule8020.slowPct}%`, backgroundColor: '#22C55E' }} />
+                <div className="rounded-r-full transition-all" style={{ width: `${rule8020.fastPct}%`, backgroundColor: '#EF4444' }} />
+              </div>
+              <div className="flex justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                  <span className="text-green-400 text-xs font-black">Lente (Z1-Z2)</span>
+                  <span className="text-white text-xs font-black">{rule8020.slowPct.toFixed(0)}%</span>
+                  <span className="text-[#555] text-[10px]">{rule8020.slowKm.toFixed(1)} km</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[#555] text-[10px]">{rule8020.fastKm.toFixed(1)} km</span>
+                  <span className="text-white text-xs font-black">{rule8020.fastPct.toFixed(0)}%</span>
+                  <span className="text-red-400 text-xs font-black">Veloci (Z3-Z5)</span>
+                  <div className="w-2 h-2 rounded-full bg-red-500" />
+                </div>
+              </div>
+
+              {/* Warning / positive banner */}
+              {rule8020.warning && (
+                <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl px-4 py-2.5 mb-4 text-center">
+                  <span className="text-amber-400 text-xs font-black">{rule8020.warning}</span>
+                </div>
+              )}
+              {rule8020.positive && (
+                <div className="bg-[#C0FF00]/8 border border-[#C0FF00]/20 rounded-xl px-4 py-2.5 mb-4 text-center">
+                  <span className="text-[#C0FF00] text-xs font-black">{rule8020.positive}</span>
+                </div>
+              )}
+
+              {/* Run table */}
+              <div className="grid grid-cols-4 text-[#555] text-[9px] font-black tracking-widest mb-2 px-3">
+                <div>DATA</div><div>DISTANZA</div><div>AVG BPM</div><div className="text-right">TIPO</div>
+              </div>
+              <div className="space-y-1 max-h-[180px] overflow-y-auto custom-scrollbar">
+                {rule8020.qualifying.slice(0, 8).map((r) => {
+                  const isFast = (r.avg_hr ?? 0) >= rule8020.threshold;
+                  return (
+                    <div key={r.id}
+                      onClick={() => navigate(`/activities/${r.id}`)}
+                      className="grid grid-cols-4 items-center px-3 py-2 rounded-xl hover:bg-white/[0.03] cursor-pointer transition-all"
+                    >
+                      <span className="text-[#666] text-[11px]">
+                        {new Date(r.date).toLocaleDateString('it', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                      </span>
+                      <span className="text-white text-[11px] font-black">{r.distance_km.toFixed(1)} km</span>
+                      <span className="text-[#A0A0A0] text-[11px]">{r.avg_hr} bpm</span>
+                      <span className={`text-right text-[11px] font-black ${isFast ? 'text-red-400' : 'text-green-400'}`}>
+                        {isFast ? 'Veloce' : 'Lenta'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Session Logs — full width */}
         {recentRuns.length > 0 && (
