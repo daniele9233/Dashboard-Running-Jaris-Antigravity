@@ -1330,7 +1330,7 @@ export function StatisticsView() {
             ANALYTICS PRO V2 TAB
         ════════════════════════════════════════════════════ */}
         {activeTab === 'analyticsv2' && (
-          <AnalyticsV2 vdot={vdot} zoneDistribution={zoneDistribution} gctData={gctData} />
+          <AnalyticsV2 vdot={vdot} zoneDistribution={zoneDistribution} gctData={gctData} runs={runs} />
         )}
 
         {/* ════════════════════════════════════════════════════

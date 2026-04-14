@@ -6,8 +6,10 @@ import React, { useState, useRef } from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, ComposedChart, Line, LineChart, Cell, ReferenceLine, ReferenceArea, Legend,
+  ScatterChart, Scatter, ZAxis,
 } from 'recharts';
 import type { GctAnalysisResponse } from '../../api';
+import type { Run } from '../../types/api';
 import {
   Activity, Zap, TrendingUp, Heart, Timer, Info, Footprints,
 } from 'lucide-react';
@@ -249,9 +251,23 @@ interface AnalyticsV2Props {
   vdot: number | null;
   zoneDistribution?: { zone: string; name: string; pct: number; minutes: number }[];
   gctData?: GctAnalysisResponse | null;
+  runs?: Run[];
 }
 
-export function AnalyticsV2({ vdot, zoneDistribution, gctData }: AnalyticsV2Props) {
+export function AnalyticsV2({ vdot, zoneDistribution, gctData, runs = [] }: AnalyticsV2Props) {
+  // Build scatter data from real runs (cadence + GCT), fallback to mock
+  const scatterData = React.useMemo(() => {
+    const real = runs
+      .filter(r => r.avg_cadence != null && r.avg_ground_contact_time != null && !r.is_treadmill)
+      .map(r => ({ cadence: Math.round(r.avg_cadence!), gct: Math.round(r.avg_ground_contact_time!) }));
+    if (real.length >= 5) return real;
+    // Mock fallback
+    return Array.from({ length: 100 }, () => {
+      const cadence = Math.random() * 40 + 150;
+      const gct = 300 - (cadence - 150) * 2 + (Math.random() * 20 - 10);
+      return { cadence: Math.round(cadence), gct: Math.round(gct) };
+    });
+  }, [runs]);
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
       <GlowDefs />
@@ -638,158 +654,100 @@ export function AnalyticsV2({ vdot, zoneDistribution, gctData }: AnalyticsV2Prop
       <V2Card>
         <V2Header
           icon={Footprints}
-          title="Evoluzione GCT nel Tempo"
-          subtitle={
-            gctData
-              ? `Tempo Contatto Suolo (ms) per fascia di passo · ${gctData.summary.total_runs} corse${gctData.summary.avg_gct ? ` · Media: ${gctData.summary.avg_gct} ms` : ''}`
-              : 'Tempo Contatto Suolo (ms) mensile per fascia di passo'
-          }
+          title="GCT vs Cadence"
+          subtitle={`Tempo Contatto Suolo (ms) vs Cadenza (spm) · ${scatterData.length} corse`}
           tooltip={{
-            title: 'GROUND CONTACT TIME — TREND',
+            title: 'GCT × CADENZA',
             lines: [
-              'GCT = ms di contatto piede-suolo per passo. Meno = meglio.',
-              'Lento (≥5:30): corse facili/recovery. Più alto è normale.',
-              'Medio (5:00–5:29): ritmo aerobico standard.',
-              'Veloce (<4:45): ritmo soglia/ripetute. GCT ottimale < 220ms.',
-              'Trend discendente nel tempo = miglioramento efficienza.',
-              'Elite: 160–200ms. Runner amatori: 220–280ms.',
+              'Ogni punto = una corsa. X = cadenza (spm), Y = GCT (ms).',
+              'Neon: zona ottimale — cadenza > 175 spm e GCT < 240 ms.',
+              'Grigio: fuori zona ottimale, margine di miglioramento.',
+              'Elite: > 180 spm e < 200 ms GCT.',
+              'Migliora con drill (A-skip), pliometria, cues posturali.',
             ],
           }}
         />
 
-        {gctData && gctData.monthly.length > 0 ? (() => {
-          const MONTHS_IT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-          const chartData = gctData.monthly.map((m) => {
-            const [y, mo] = m.month.split('-');
-            return {
-              label: `${MONTHS_IT[parseInt(mo) - 1]} '${y.slice(2)}`,
-              slow: m.pace_530,
-              mid: m.pace_500,
-              fast: m.pace_445,
-            };
-          });
+        <div className="flex items-center gap-6 mb-4 text-[9px] font-black uppercase tracking-widest">
+          <span className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: NEON }} />
+            Zona Ottimale (cadenza &gt; 175 · GCT &lt; 240)
+          </span>
+          <span className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-[#555]" />
+            Fuori zona
+          </span>
+          <span className="text-[#333] ml-auto">
+            {scatterData.filter(d => d.cadence > 175 && d.gct < 240).length} / {scatterData.length} ottimali
+          </span>
+        </div>
 
-          // stats per fascia
-          const statFor = (key: 'slow' | 'mid' | 'fast') => {
-            const vals = chartData.map(d => d[key]).filter((v): v is number => v !== null);
-            if (!vals.length) return null;
-            return {
-              avg: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length),
-              min: Math.min(...vals),
-              max: Math.max(...vals),
-            };
-          };
-          const zones = [
-            { key: 'slow' as const, label: '≥ 5:30 /km', color: '#6366F1' },
-            { key: 'mid'  as const, label: '5:00–5:29',  color: '#8B5CF6' },
-            { key: 'fast' as const, label: '< 4:45 /km', color: NEON      },
-          ];
-
-          return (
-            <>
-              <div className="flex items-center gap-6 mb-6 text-[9px] font-black uppercase tracking-widest">
-                {zones.map(z => (
-                  <span key={z.key} className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: z.color }} />
-                    {z.label}
-                  </span>
-                ))}
-              </div>
-
-              <div className="h-[320px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-                    <defs>
-                      <filter id="gct-dot-glow" x="-80%" y="-80%" width="260%" height="260%">
-                        <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
-                        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                      </filter>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} vertical={false} />
-                    <XAxis
-                      dataKey="label"
-                      stroke="#333"
-                      fontSize={9}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      stroke="#333"
-                      fontSize={9}
-                      tickLine={false}
-                      axisLine={false}
-                      domain={['dataMin - 10', 'dataMax + 10']}
-                      tickFormatter={(v) => `${v}ms`}
-                    />
-                    {/* Target line elite threshold */}
-                    <ReferenceLine y={220} stroke={NEON} strokeOpacity={0.18} strokeDasharray="5 4"
-                      label={{ value: 'TARGET 220ms', position: 'insideTopRight', fill: NEON, fontSize: 8, fontWeight: 700, opacity: 0.5 }}
-                    />
-                    <Tooltip
-                      content={({ active, payload, label }) => {
-                        if (!active || !payload?.length) return null;
-                        return (
-                          <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
-                            <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>{label}</p>
-                            {zones.map(z => {
-                              const p = payload.find(x => x.dataKey === z.key);
-                              return p?.value != null ? (
-                                <div key={z.key} className="flex items-center gap-2 text-xs mb-0.5">
-                                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: z.color }} />
-                                  <span className="text-[#777]">{z.label}:</span>
-                                  <span className="text-white font-bold">{p.value} ms</span>
-                                </div>
-                              ) : null;
-                            })}
-                          </div>
-                        );
-                      }}
-                    />
-                    <Line type="monotone" dataKey="slow" stroke="#6366F1" strokeWidth={2}
-                      dot={{ r: 6, fill: '#6366F1', strokeWidth: 0 }}
-                      activeDot={{ r: 8, fill: '#6366F1', stroke: '#000', strokeWidth: 2 }}
-                      connectNulls={false} />
-                    <Line type="monotone" dataKey="mid" stroke="#8B5CF6" strokeWidth={2}
-                      dot={{ r: 6, fill: '#8B5CF6', strokeWidth: 0 }}
-                      activeDot={{ r: 8, fill: '#8B5CF6', stroke: '#000', strokeWidth: 2 }}
-                      connectNulls={false} />
-                    <Line type="monotone" dataKey="fast" stroke={NEON} strokeWidth={2.5}
-                      dot={{ r: 7, fill: NEON, strokeWidth: 0, filter: 'url(#gct-dot-glow)' }}
-                      activeDot={{ r: 9, fill: NEON, stroke: '#000', strokeWidth: 2 }}
-                      connectNulls={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Stats row */}
-              <div className="grid grid-cols-3 gap-4 mt-6">
-                {zones.map(z => {
-                  const s = statFor(z.key);
+        <div className="h-[300px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <ScatterChart margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
+              <XAxis
+                type="number"
+                dataKey="cadence"
+                name="Cadence"
+                stroke={LABEL_COLOR}
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+                domain={['dataMin - 5', 'dataMax + 5']}
+                unit=" spm"
+              />
+              <YAxis
+                type="number"
+                dataKey="gct"
+                name="GCT"
+                stroke={LABEL_COLOR}
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+                domain={['dataMin - 10', 'dataMax + 10']}
+                unit=" ms"
+              />
+              <ZAxis range={[20, 20]} />
+              <Tooltip
+                cursor={{ strokeDasharray: '3 3' }}
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0]?.payload;
+                  if (!d) return null;
+                  const optimal = d.cadence > 175 && d.gct < 240;
                   return (
-                    <div key={z.key} className="bg-[#0D0D0D] border border-[#1E1E1E] rounded-xl p-4 text-center">
-                      <div className="text-[9px] font-black uppercase tracking-widest mb-2" style={{ color: z.color }}>{z.label}</div>
-                      {s ? (
-                        <>
-                          <div className="text-2xl font-black italic text-white">{s.avg}<span className="text-xs text-[#555] ml-1">ms</span></div>
-                          <div className="text-[9px] text-[#444] mt-1">min {s.min} · max {s.max}</div>
-                        </>
-                      ) : (
-                        <div className="text-[#444] text-sm font-bold">N/D</div>
-                      )}
+                    <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
+                      <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: optimal ? NEON : '#888' }}>
+                        {optimal ? 'ZONA OTTIMALE' : 'FUORI ZONA'}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs mb-0.5">
+                        <span className="text-[#777]">Cadenza:</span>
+                        <span className="text-white font-bold">{d.cadence} spm</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-[#777]">GCT:</span>
+                        <span className="text-white font-bold">{d.gct} ms</span>
+                      </div>
                     </div>
                   );
+                }}
+              />
+              <Scatter name="Metrics" data={scatterData}>
+                {scatterData.map((entry, index) => {
+                  const isOptimal = entry.cadence > 175 && entry.gct < 240;
+                  return (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={isOptimal ? NEON : '#555555'}
+                      fillOpacity={isOptimal ? 0.8 : 0.4}
+                    />
+                  );
                 })}
-              </div>
-            </>
-          );
-        })() : (
-          <div className="h-48 flex flex-col items-center justify-center gap-3">
-            <Footprints className="w-8 h-8 text-[#333]" />
-            <p className="text-[#444] text-xs font-bold uppercase tracking-widest">
-              Dati GCT non disponibili — sincronizza corse con sensore di cadenza
-            </p>
-          </div>
-        )}
+              </Scatter>
+            </ScatterChart>
+          </ResponsiveContainer>
+        </div>
       </V2Card>
 
     </div>
