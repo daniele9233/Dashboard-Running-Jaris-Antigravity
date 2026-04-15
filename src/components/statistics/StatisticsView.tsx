@@ -7,6 +7,7 @@ import { AnaerobicThreshold } from '../AnaerobicThreshold';
 import { VO2MaxChart } from '../VO2MaxChart';
 import { FitnessFreshness } from '../FitnessFreshness';
 import { AnalyticsV2 } from './AnalyticsV2';
+import { AnalyticsV3 } from './AnalyticsV3';
 import { useApi } from '../../hooks/useApi';
 import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, getDashboard, type GctAnalysisResponse } from '../../api';
 import type { AnalyticsResponse, VdotPacesResponse, RunsResponse, DashboardResponse } from '../../types/api';
@@ -235,10 +236,11 @@ export function StatisticsView() {
 
 
   const tabs = [
-    { id: 'analytics', label: t('statistics.analyticsPro'), icon: LayoutGrid },
+    { id: 'analytics',   label: t('statistics.analyticsPro'),  icon: LayoutGrid },
     { id: 'analyticsv2', label: t('statistics.analyticsPro2'), icon: Radar },
-    { id: 'biology',   label: 'Biologia & Futuro', icon: FlaskConical },
-    { id: 'badges',    label: 'Badge', icon: Star },
+    { id: 'analyticsv3', label: 'Analytics Pro V3',            icon: Activity },
+    { id: 'biology',     label: 'Biologia & Futuro',           icon: FlaskConical },
+    { id: 'badges',      label: 'Badge',                       icon: Star },
   ];
 
   return (
@@ -1111,6 +1113,11 @@ export function StatisticsView() {
             thresholdPace={vdotData?.paces?.threshold}
           />
         )}
+
+        {/* ════════════════════════════════════════════════════
+            ANALYTICS PRO V3 TAB
+        ════════════════════════════════════════════════════ */}
+        {activeTab === 'analyticsv3' && <AnalyticsV3 />}
 
         {/* ════════════════════════════════════════════════════
             BIOLOGIA & FUTURO TAB
