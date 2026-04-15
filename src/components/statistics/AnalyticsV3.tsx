@@ -173,98 +173,172 @@ const radarAxes: RadarAxis[] = [
 
 function SpatialForceMap() {
   return (
-    <div
-      className="relative w-full rounded-2xl overflow-hidden"
-      style={{
-        height: 200,
-        background: 'radial-gradient(ellipse at center, #0D1A0D 0%, #050805 60%, #030503 100%)',
-        border: `1px solid ${BORDER}`,
-      }}
-    >
-      {/* Grid lines */}
-      <svg className="absolute inset-0 w-full h-full opacity-20">
-        {Array.from({ length: 8 }, (_, i) => (
-          <line key={`v${i}`} x1={`${(i + 1) * 12.5}%`} y1="0" x2={`${(i + 1) * 12.5}%`} y2="100%" stroke="#2A4A2A" strokeWidth={0.5} />
-        ))}
-        {Array.from({ length: 5 }, (_, i) => (
-          <line key={`h${i}`} x1="0" y1={`${(i + 1) * 16.7}%`} x2="100%" y2={`${(i + 1) * 16.7}%`} stroke="#2A4A2A" strokeWidth={0.5} />
-        ))}
-        {/* Center divider */}
-        <line x1="50%" y1="0" x2="50%" y2="100%" stroke="#2A4A2A" strokeWidth={1} strokeDasharray="4 4" />
-      </svg>
-
-      {/* L label */}
-      <span className="absolute left-4 top-3 text-[10px] font-black tracking-widest" style={{ color: MUTED }}>L</span>
-      {/* R label */}
-      <span className="absolute right-4 top-3 text-[10px] font-black tracking-widest" style={{ color: MUTED }}>R</span>
-
-      {/* Left foot heat blob (green) */}
+    <div className="w-full flex flex-col gap-0">
+      {/* Main map area */}
       <div
-        className="absolute"
+        className="relative w-full rounded-2xl overflow-hidden"
         style={{
-          left: '22%',
-          top: '42%',
-          width: 60,
-          height: 60,
-          transform: 'translate(-50%, -50%)',
-          background: 'radial-gradient(circle, rgba(192,255,0,0.85) 0%, rgba(192,255,0,0.4) 30%, rgba(192,255,0,0.1) 60%, transparent 80%)',
-          borderRadius: '50%',
-          filter: 'blur(4px)',
+          height: 420,
+          background: '#050505',
+          border: `1px solid ${BORDER}`,
         }}
-      />
-      <div
-        className="absolute rounded-full"
-        style={{
-          left: '22%',
-          top: '42%',
-          width: 10,
-          height: 10,
-          transform: 'translate(-50%, -50%)',
-          backgroundColor: NEON,
-          boxShadow: `0 0 12px ${NEON}`,
-        }}
-      />
+      >
+        {/* Subtle grid */}
+        <svg className="absolute inset-0 w-full h-full" style={{ opacity: 0.12 }}>
+          {Array.from({ length: 10 }, (_, i) => (
+            <line key={`v${i}`} x1={`${(i + 1) * 9.09}%`} y1="0" x2={`${(i + 1) * 9.09}%`} y2="100%" stroke="#2A3A2A" strokeWidth={0.5} />
+          ))}
+          {Array.from({ length: 8 }, (_, i) => (
+            <line key={`h${i}`} x1="0" y1={`${(i + 1) * 11.1}%`} x2="100%" y2={`${(i + 1) * 11.1}%`} stroke="#2A3A2A" strokeWidth={0.5} />
+          ))}
+        </svg>
 
-      {/* Right foot heat blob (orange) */}
-      <div
-        className="absolute"
-        style={{
-          left: '72%',
-          top: '54%',
-          width: 70,
-          height: 70,
-          transform: 'translate(-50%, -50%)',
-          background: 'radial-gradient(circle, rgba(249,115,22,0.85) 0%, rgba(249,115,22,0.4) 30%, rgba(249,115,22,0.1) 60%, transparent 80%)',
-          borderRadius: '50%',
-          filter: 'blur(5px)',
-        }}
-      />
-      <div
-        className="absolute rounded-full"
-        style={{
-          left: '72%',
-          top: '54%',
-          width: 10,
-          height: 10,
-          transform: 'translate(-50%, -50%)',
-          backgroundColor: ORANGE,
-          boxShadow: `0 0 12px ${ORANGE}`,
-        }}
-      />
+        {/* Center divider line */}
+        <div
+          className="absolute top-0 bottom-0"
+          style={{ left: '50%', width: 1, background: 'rgba(80,80,80,0.4)', transform: 'translateX(-50%)' }}
+        />
 
-      {/* Force lines */}
-      <svg className="absolute inset-0 w-full h-full">
-        <line x1="22%" y1="42%" x2="50%" y2="50%" stroke={NEON} strokeWidth={0.5} strokeDasharray="3 3" opacity={0.4} />
-        <line x1="72%" y1="54%" x2="50%" y2="50%" stroke={ORANGE} strokeWidth={0.5} strokeDasharray="3 3" opacity={0.4} />
-        <circle cx="50%" cy="50%" r={3} fill="#2A2A2A" stroke={MUTED} strokeWidth={0.5} />
-      </svg>
+        {/* L label */}
+        <span
+          className="absolute font-black italic tracking-wider select-none"
+          style={{ left: '23%', top: '12%', fontSize: 48, color: 'rgba(160,160,160,0.25)', transform: 'translateX(-50%)' }}
+        >L</span>
 
-      {/* Asymmetry label */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-3">
-        <span className="text-[9px] font-black tracking-widest" style={{ color: MUTED }}>ASYMMETRY</span>
-        <span className="text-[11px] font-black" style={{ color: NEON }}>+1.3%</span>
-        <span className="text-[9px] font-black tracking-widest" style={{ color: ORANGE }}>FOOTSTRIKE R</span>
-        <span className="text-[11px] font-black" style={{ color: ORANGE }}>1.08 GRF</span>
+        {/* R label */}
+        <span
+          className="absolute font-black italic tracking-wider select-none"
+          style={{ left: '77%', top: '12%', fontSize: 48, color: 'rgba(160,160,160,0.25)', transform: 'translateX(-50%)' }}
+        >R</span>
+
+        {/* ── Left foot outline ── */}
+        <div
+          className="absolute"
+          style={{
+            left: '12%',
+            top: '18%',
+            width: '30%',
+            height: '58%',
+            borderRadius: 24,
+            border: '1px solid rgba(192,255,0,0.18)',
+            background: 'rgba(192,255,0,0.03)',
+          }}
+        />
+
+        {/* Left glow outer */}
+        <div
+          className="absolute"
+          style={{
+            left: '27%',
+            top: '62%',
+            width: 160,
+            height: 160,
+            transform: 'translate(-50%, -50%)',
+            background: 'radial-gradient(circle, rgba(192,255,0,0.45) 0%, rgba(150,220,0,0.2) 35%, rgba(100,180,0,0.06) 65%, transparent 80%)',
+            borderRadius: '50%',
+            filter: 'blur(8px)',
+          }}
+        />
+        {/* Left glow core */}
+        <div
+          className="absolute"
+          style={{
+            left: '27%',
+            top: '62%',
+            width: 60,
+            height: 60,
+            transform: 'translate(-50%, -50%)',
+            background: 'radial-gradient(circle, #C0FF00 0%, rgba(192,255,0,0.85) 40%, rgba(192,255,0,0.3) 70%, transparent 100%)',
+            borderRadius: 14,
+            filter: 'blur(2px)',
+            boxShadow: `0 0 30px ${NEON}, 0 0 60px rgba(192,255,0,0.3)`,
+          }}
+        />
+
+        {/* ── Right foot outline ── */}
+        <div
+          className="absolute"
+          style={{
+            left: '58%',
+            top: '18%',
+            width: '30%',
+            height: '58%',
+            borderRadius: 24,
+            border: '1px solid rgba(249,115,22,0.18)',
+            background: 'rgba(249,115,22,0.03)',
+          }}
+        />
+
+        {/* Right glow outer */}
+        <div
+          className="absolute"
+          style={{
+            left: '73%',
+            top: '62%',
+            width: 170,
+            height: 170,
+            transform: 'translate(-50%, -50%)',
+            background: 'radial-gradient(circle, rgba(249,115,22,0.45) 0%, rgba(220,100,0,0.2) 35%, rgba(180,70,0,0.06) 65%, transparent 80%)',
+            borderRadius: '50%',
+            filter: 'blur(9px)',
+          }}
+        />
+        {/* Right glow core */}
+        <div
+          className="absolute"
+          style={{
+            left: '73%',
+            top: '62%',
+            width: 64,
+            height: 64,
+            transform: 'translate(-50%, -50%)',
+            background: 'radial-gradient(circle, #FFB347 0%, rgba(249,115,22,0.9) 40%, rgba(249,115,22,0.3) 70%, transparent 100%)',
+            borderRadius: 14,
+            filter: 'blur(2px)',
+            boxShadow: `0 0 30px ${ORANGE}, 0 0 60px rgba(249,115,22,0.3)`,
+          }}
+        />
+
+        {/* Center diamond */}
+        <div
+          className="absolute"
+          style={{
+            left: '50%',
+            top: '50%',
+            width: 18,
+            height: 18,
+            transform: 'translate(-50%, -50%) rotate(45deg)',
+            backgroundColor: NEON,
+            boxShadow: `0 0 16px ${NEON}, 0 0 32px rgba(192,255,0,0.4)`,
+          }}
+        />
+      </div>
+
+      {/* ── Metrics bar below map ── */}
+      <div
+        className="w-full rounded-b-2xl grid grid-cols-2 gap-0"
+        style={{ background: '#0D0D0D', border: `1px solid ${BORDER}`, borderTop: 'none' }}
+      >
+        {/* Pronation Deviation */}
+        <div className="px-6 py-4 border-r" style={{ borderColor: BORDER }}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[9px] font-black tracking-widest" style={{ color: MUTED }}>PRONATION DEVIATION</span>
+            <span className="text-sm font-black" style={{ color: NEON }}>+1.2%</span>
+          </div>
+          <div className="w-full rounded-full overflow-hidden" style={{ height: 3, background: '#1A1A1A' }}>
+            <div className="h-full rounded-full" style={{ width: '35%', background: `linear-gradient(90deg, #4ade80, ${NEON})` }} />
+          </div>
+        </div>
+        {/* Peak Impact Force */}
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[9px] font-black tracking-widest" style={{ color: MUTED }}>PEAK IMPACT FORCE</span>
+            <span className="text-sm font-black" style={{ color: ORANGE }}>3.48 G</span>
+          </div>
+          <div className="w-full rounded-full overflow-hidden" style={{ height: 3, background: '#1A1A1A' }}>
+            <div className="h-full rounded-full" style={{ width: '72%', background: `linear-gradient(90deg, #fb923c, ${ORANGE})` }} />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -331,10 +405,10 @@ export function AnalyticsV3() {
             </p>
             <div className="flex items-center gap-3 mb-4">
               <span className="flex items-center gap-1.5 text-[10px] font-black" style={{ color: MUTED }}>
-                <span className="w-2 h-2 rounded-full inline-block" style={{ background: NEON }} /> OPTIMAL
+                <span className="w-2 h-2 rounded-sm inline-block" style={{ background: NEON }} /> OPTIMAL
               </span>
               <span className="flex items-center gap-1.5 text-[10px] font-black" style={{ color: MUTED }}>
-                <span className="w-2 h-2 rounded-full inline-block" style={{ background: ORANGE }} /> OVERLOAD
+                <span className="w-2 h-2 rounded-sm inline-block" style={{ background: ORANGE }} /> IMBALANCE
               </span>
             </div>
             <SpatialForceMap />
