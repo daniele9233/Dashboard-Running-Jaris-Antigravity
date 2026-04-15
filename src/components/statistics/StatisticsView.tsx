@@ -9,6 +9,7 @@ import { FitnessFreshness } from '../FitnessFreshness';
 import { AnalyticsV2 } from './AnalyticsV2';
 import { AnalyticsV3 } from './AnalyticsV3';
 import { AnalyticsV4 } from './AnalyticsV4';
+import { AnalyticsV5 } from './AnalyticsV5';
 import { useApi } from '../../hooks/useApi';
 import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, getDashboard, type GctAnalysisResponse } from '../../api';
 import type { AnalyticsResponse, VdotPacesResponse, RunsResponse, DashboardResponse } from '../../types/api';
@@ -241,6 +242,7 @@ export function StatisticsView() {
     { id: 'analyticsv2', label: t('statistics.analyticsPro2'), icon: Radar },
     { id: 'analyticsv3', label: 'Analytics Pro V3',            icon: Activity },
     { id: 'analyticsv4', label: 'Analytics Pro V4',            icon: LineChartIcon },
+    { id: 'analyticsv5', label: 'Analytics Pro V5',            icon: TrendingUp },
     { id: 'biology',     label: 'Biologia & Futuro',           icon: FlaskConical },
     { id: 'badges',      label: 'Badge',                       icon: Star },
   ];
@@ -1125,6 +1127,11 @@ export function StatisticsView() {
             ANALYTICS PRO V4 TAB
         ════════════════════════════════════════════════════ */}
         {activeTab === 'analyticsv4' && <AnalyticsV4 />}
+
+        {/* ════════════════════════════════════════════════════
+            ANALYTICS PRO V5 TAB
+        ════════════════════════════════════════════════════ */}
+        {activeTab === 'analyticsv5' && <AnalyticsV5 />}
 
         {/* ════════════════════════════════════════════════════
             BIOLOGIA & FUTURO TAB
