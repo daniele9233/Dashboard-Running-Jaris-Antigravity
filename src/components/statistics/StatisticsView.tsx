@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StatsDrift } from './StatsDrift';
 import { BadgesGrid } from '../BadgesGrid';
 import { MainChart } from '../MainChart';
@@ -133,12 +134,12 @@ const futureTrendData = [
 // ─────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────
-function vdotLevel(v: number): { label: string; color: string } {
-  if (v >= 52) return { label: 'Elite', color: '#C0FF00' };
-  if (v >= 47) return { label: 'Avanzato', color: '#10B981' };
+function vdotLevel(v: number, t: (k: string) => string): { label: string; color: string } {
+  if (v >= 52) return { label: t('statistics.elite'), color: '#C0FF00' };
+  if (v >= 47) return { label: t('statistics.advanced'), color: '#10B981' };
   if (v >= 40) return { label: 'Buono', color: '#3B82F6' };
-  if (v >= 32) return { label: 'Intermedio', color: '#EAB308' };
-  return { label: 'Principiante', color: '#F43F5E' };
+  if (v >= 32) return { label: t('statistics.intermediate'), color: '#EAB308' };
+  return { label: t('statistics.beginner'), color: '#F43F5E' };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -197,6 +198,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────
 export function StatisticsView() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('analytics');
   const { data: analyticsData } = useApi<AnalyticsResponse>(getAnalytics);
   const { data: vdotData } = useApi<VdotPacesResponse>(getVdotPaces);
@@ -206,7 +208,7 @@ export function StatisticsView() {
 
   const runs = runsData?.runs ?? [];
   const vdot = vdotData?.vdot ?? null;
-  const level = vdot ? vdotLevel(vdot) : null;
+  const level = vdot ? vdotLevel(vdot, t) : null;
   const paces = vdotData?.paces ?? {};
   const racePredictions = vdotData?.race_predictions ?? analyticsData?.race_predictions ?? {};
   const zoneDistribution = analyticsData?.zone_distribution ?? [];
@@ -233,8 +235,8 @@ export function StatisticsView() {
 
 
   const tabs = [
-    { id: 'analytics', label: 'Analytics Pro', icon: LayoutGrid },
-    { id: 'analyticsv2', label: 'Analytics Pro V2', icon: Radar },
+    { id: 'analytics', label: t('statistics.analyticsPro'), icon: LayoutGrid },
+    { id: 'analyticsv2', label: t('statistics.analyticsPro2'), icon: Radar },
     { id: 'biology',   label: 'Biologia & Futuro', icon: FlaskConical },
     { id: 'badges',    label: 'Badge', icon: Star },
   ];
@@ -444,7 +446,7 @@ export function StatisticsView() {
                 <CardHeader
                   icon={Heart}
                   iconColor="#F43F5E"
-                  title="Time in Zones"
+                  title={t('statistics.timeInZones')}
                   subtitle="Distribuzione FC"
                   tooltip={{
                     title: 'ZONE FREQUENZA CARDIACA',

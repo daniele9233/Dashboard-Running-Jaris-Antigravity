@@ -24,6 +24,7 @@ import { useApi } from '../hooks/useApi';
 import { getRuns, importGarminCsv } from '../api';
 import type { Run, RunsResponse } from '../types/api';
 import { useState, useRef, useCallback, useEffect, useMemo, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { computeDrift, driftLabel } from '../utils/cardiacDrift';
 import { Map, Marker, NavigationControl } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -157,6 +158,7 @@ interface ActivitiesViewProps {
 }
 
 export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
+  const { t } = useTranslation();
   const { data, loading, error } = useApi<RunsResponse>(getRuns);
   const [hoveredRunId, setHoveredRunId] = useState<string | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -447,7 +449,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
         {/* Header */}
         <header className="px-6 py-6 border-b border-white/5 flex-shrink-0">
           <div className="flex items-center justify-between mb-1.5">
-            <h1 className="text-3xl font-black italic tracking-tighter text-white uppercase">Activities</h1>
+            <h1 className="text-3xl font-black italic tracking-tighter text-white uppercase">{t("activities.title").toUpperCase()}</h1>
 
             {/* ── 3 view-mode buttons ── */}
             <div className="flex items-center gap-2">

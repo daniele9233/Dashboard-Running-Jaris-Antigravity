@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import Map, { Source, Layer } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -530,6 +531,7 @@ function PaceProgressionChart({ pacePoints }: { pacePoints: PacePoint[] }) {
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
 export function ProfileView() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { data: profileData, loading } = useApi<Profile>(getProfile);
   const { data: effortsData } = useApi<{ efforts: BestEffort[] }>(getBestEfforts);
@@ -657,9 +659,9 @@ export function ProfileView() {
           {/* Quick Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: "Km Totali", value: totalKm > 0 ? totalKm.toFixed(0) : "—", unit: "km", icon: Activity, color: "text-[#3B82F6]" },
-              { label: "Corse", value: String(allRuns.length || "—"), unit: "", icon: Zap, color: "text-[#EAB308]" },
-              { label: "FC Max", value: String(maxHr), unit: "bpm", icon: Heart, color: "text-[#F43F5E]" },
+              { label: t("profile.totalKm"), value: totalKm > 0 ? totalKm.toFixed(0) : "—", unit: "km", icon: Activity, color: "text-[#3B82F6]" },
+              { label: t("profile.totalRuns"), value: String(allRuns.length || "—"), unit: "", icon: Zap, color: "text-[#EAB308]" },
+              { label: t("profile.maxHr"), value: String(maxHr), unit: "bpm", icon: Heart, color: "text-[#F43F5E]" },
               { label: "Personal Best", value: String(efforts.length), unit: "distanze", icon: Award, color: "text-[#10B981]" },
             ].map((stat, i) => (
               <div key={i} className="bg-[#181818] border border-[#2A2A2A] rounded-2xl p-5 hover:border-[#3A3A3A] transition-colors">

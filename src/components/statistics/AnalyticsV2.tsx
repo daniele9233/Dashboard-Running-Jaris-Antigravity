@@ -3,6 +3,7 @@
  * Advanced data-viz with neon accents, glow effects, radial gauges
  */
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, ComposedChart, Line, LineChart, Cell, ReferenceLine, ReferenceArea, Legend,
@@ -284,6 +285,7 @@ export function AnalyticsV2({
   vdot, zoneDistribution, gctData, runs = [],
   ffHistory = [], maxHr, thresholdPace,
 }: AnalyticsV2Props) {
+  const { t } = useTranslation();
 
   // ── Scatter: real avg_cadence + avg_ground_contact_time ──────────────
   const scatterData = React.useMemo(() => {
@@ -510,7 +512,7 @@ export function AnalyticsV2({
       <V2Card className="flex flex-col">
         <V2Header
           icon={Activity}
-          title="Performance Management Chart"
+          title={t("statistics.performanceManagementChart")}
           subtitle="Fitness (CTL) · Fatigue (ATL) · Form (TSB) — 90 giorni"
           onExpand={() => setPmcExpanded(true)}
           tooltip={{
@@ -766,7 +768,7 @@ export function AnalyticsV2({
         <V2Card className="col-span-6">
           <V2Header
             icon={TrendingUp}
-            title="Pace Trend"
+            title={t("statistics.paceTrend")}
             subtitle="Passo medio mensile — Y invertita (più basso = più veloce)"
             onExpand={() => setPaceExpanded(true)}
             tooltip={{
@@ -841,7 +843,7 @@ export function AnalyticsV2({
         <V2Card className="col-span-7">
           <V2Header
             icon={Heart}
-            title="Deriva Cardiaca"
+            title={t("statistics.cardiacDrift")}
             subtitle={`${driftRunLabel} — Passo vs FC per km split`}
             onExpand={() => setDriftExpanded(true)}
             tooltip={{
@@ -954,7 +956,7 @@ export function AnalyticsV2({
         <V2Card className="col-span-5">
           <V2Header
             icon={Timer}
-            title="Time in Zones"
+            title={t("statistics.timeInZones")}
             subtitle="Distribuzione tempo per zona FC"
             onExpand={() => setZonesExpanded(true)}
             tooltip={{

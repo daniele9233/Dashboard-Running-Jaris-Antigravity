@@ -5,6 +5,7 @@
 
 import { useEffect, Suspense } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { JarvisProvider, useJarvisContext } from "./context/JarvisContext";
 import { Sidebar } from "./components/Sidebar";
 import { DashboardView } from "./components/DashboardView";
@@ -15,6 +16,7 @@ import { StatisticsView } from "./components/statistics/StatisticsView";
 import { RoutesView } from "./components/RoutesView";
 import { ActivitiesView } from "./components/ActivitiesView";
 import { RunnerDnaView } from "./components/RunnerDnaView";
+import { SettingsControls } from "./components/SettingsControls";
 import { Search, Bell, Settings } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { exchangeStravaCode, syncStrava } from "./api";
@@ -27,26 +29,28 @@ function RoutesViewWrapper() {
 
 // View placeholder per sezioni non ancora implementate
 function ComingSoonView({ label }: { label: string }) {
+  const { t } = useTranslation();
   return (
-    <main className="flex-1 flex items-center justify-center text-gray-500">
-      <p className="text-sm font-black uppercase tracking-widest">{label} — Coming Soon</p>
+    <main className="flex-1 flex items-center justify-center" style={{ color: "var(--app-text-dim)" }}>
+      <p className="text-sm font-black uppercase tracking-widest">{label} — {t("common.comingSoon")}</p>
     </main>
   );
 }
-
-const NAV_ITEMS = [
-  { path: "/",            label: "DASHBOARD"  },
-  { path: "/training",    label: "TRAINING"   },
-  { path: "/activities",  label: "ACTIVITIES" },
-  { path: "/statistics",  label: "STATISTICS" },
-  { path: "/runner-dna",  label: "RUNNER DNA" },
-  { path: "/profile",     label: "PROFILE"    },
-];
 
 function AppContent() {
   const { JarvisPortal } = useJarvisContext();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
+
+  const NAV_ITEMS = [
+    { path: "/",            label: t("nav.dashboard")  },
+    { path: "/training",    label: t("nav.training")   },
+    { path: "/activities",  label: t("nav.activities") },
+    { path: "/statistics",  label: t("nav.statistics") },
+    { path: "/runner-dna",  label: t("nav.runnerDna")  },
+    { path: "/profile",     label: t("nav.profile")    },
+  ];
 
   // Handle Strava OAuth callback: exchange code and sync
   useEffect(() => {
@@ -73,49 +77,90 @@ function AppContent() {
   return (
     <>
     {JarvisPortal}
-    <div className="w-full h-screen bg-[#050505] flex overflow-hidden text-white font-sans">
+    <div
+      className="w-full h-screen flex overflow-hidden font-sans"
+      style={{ backgroundColor: "var(--app-bg)", color: "var(--app-text)" }}
+    >
       <Sidebar activeView={activeSegment} onViewChange={(id) => navigate(id === "dashboard" ? "/" : `/${id}`)} />
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Navigation Bar */}
-        <header className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-[#0A0A0A] z-40">
+        <header
+          className="h-16 border-b flex items-center justify-between px-8 z-40"
+          style={{
+            borderColor: "var(--app-border)",
+            backgroundColor: "var(--app-bg-alt)",
+          }}
+        >
           <div className="flex items-center gap-12">
             <div className="flex items-center gap-2">
-              <span className="text-xl font-black italic tracking-tighter text-[#C0FF00]">METIC LAB</span>
+              <span className="text-xl font-black italic tracking-tighter" style={{ color: "var(--app-accent)" }}>METIC LAB</span>
             </div>
             <nav className="flex items-center gap-8">
-              {NAV_ITEMS.map((item) => (
-                <button
-                  key={item.path}
-                  onClick={() => navigate(item.path)}
-                  className={`text-[10px] font-black tracking-[0.2em] transition-colors ${
-                    isNavActive(item.path) ? "text-[#C0FF00]" : "text-gray-500 hover:text-white"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
+              {NAV_ITEMS.map((item) => {
+                const active = isNavActive(item.path);
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    className="text-[10px] font-black tracking-[0.2em] transition-colors"
+                    style={{ color: active ? "var(--app-accent)" : "var(--app-text-dim)" }}
+                    onMouseEnter={(e) => { if (!active) e.currentTarget.style.color = "var(--app-text)"; }}
+                    onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = "var(--app-text-dim)"; }}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
             </nav>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-5">
             <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#C0FF00] transition-colors" />
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors"
+                style={{ color: "var(--app-text-dim)" }}
+              />
               <input
                 type="text"
-                placeholder="Analyze specific route..."
-                className="bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs font-medium focus:outline-none focus:border-[#C0FF00]/50 w-64 transition-all"
+                placeholder={t("header.search")}
+                className="border rounded-xl pl-10 pr-4 py-2 text-xs font-medium focus:outline-none w-64 transition-all"
+                style={{
+                  backgroundColor: "var(--app-input-bg)",
+                  borderColor: "var(--app-border)",
+                  color: "var(--app-text)",
+                }}
               />
             </div>
+
+            {/* Language + Theme controls */}
+            <SettingsControls />
+
             <div className="flex items-center gap-4">
-              <button className="text-gray-500 hover:text-white transition-colors relative">
+              <button
+                className="transition-colors relative"
+                style={{ color: "var(--app-text-dim)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--app-text)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--app-text-dim)")}
+              >
                 <Bell className="w-5 h-5" />
-                <div className="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full border-2 border-[#0A0A0A]" />
+                <div
+                  className="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full border-2"
+                  style={{ borderColor: "var(--app-bg-alt)" }}
+                />
               </button>
-              <button className="text-gray-500 hover:text-white transition-colors">
+              <button
+                className="transition-colors"
+                style={{ color: "var(--app-text-dim)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--app-text)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--app-text-dim)")}
+              >
                 <Settings className="w-5 h-5" />
               </button>
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 border border-white/20 flex items-center justify-center overflow-hidden">
+              <div
+                className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 border flex items-center justify-center overflow-hidden"
+                style={{ borderColor: "var(--app-border-strong)" }}
+              >
                 <img src="https://picsum.photos/seed/user/100/100" alt="Profile" className="w-full h-full object-cover" />
               </div>
             </div>
@@ -127,7 +172,7 @@ function AppContent() {
           <ErrorBoundary resetKey={location.pathname}>
             <Suspense fallback={
               <div className="flex-1 flex items-center justify-center">
-                <div className="w-10 h-10 border-2 border-[#C0FF00] border-t-transparent rounded-full animate-spin" />
+                <div className="w-10 h-10 border-2 rounded-full animate-spin" style={{ borderColor: "var(--app-accent)", borderTopColor: "transparent" }} />
               </div>
             }>
               <Routes>
@@ -141,7 +186,7 @@ function AppContent() {
                 <Route path="/recovery"         element={<ComingSoonView label="Recovery" />} />
                 <Route path="/biometrics"       element={<ComingSoonView label="Biometrics" />} />
                 <Route path="/insights"         element={<ComingSoonView label="Insights" />} />
-                <Route path="*"                 element={<ComingSoonView label="Page not found" />} />
+                <Route path="*"                 element={<ComingSoonView label={t("common.pageNotFound")} />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>

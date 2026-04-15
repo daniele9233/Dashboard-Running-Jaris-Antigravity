@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import Map, { Source, Layer, NavigationControl, Marker, Popup, MapRef } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
@@ -80,6 +81,7 @@ const GlassPanel = ({ children, className, title, icon: Icon }: any) => (
 // ── Main View ────────────────────────────────────────────────────────────────
 
 export function RoutesView({ runId }: { runId?: string | null }) {
+  const { t } = useTranslation();
   const mapRef = useRef<MapRef>(null);
   const [activeSplit, setActiveSplit] = useState<number | null>(null);
   const [mapMode, setMapMode] = useState<'pace' | 'hr' | 'elevation'>('pace');

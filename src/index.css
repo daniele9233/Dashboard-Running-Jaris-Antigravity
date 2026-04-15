@@ -13,7 +13,7 @@
   --color-text-muted: #475569;
   --color-accent: #2DD4BF;
   --color-accent-dark: #115E59;
-  
+
   --color-chart-purple: #8B5CF6;
   --color-chart-blue: #3B82F6;
   --color-chart-teal: #14B8A6;
@@ -21,12 +21,61 @@
   --color-chart-red: #F43F5E;
 }
 
+/* ─── Theme tokens — switched via [data-theme] on <html> ───────────────── */
+:root,
+html[data-theme="dark"] {
+  --app-bg: #050505;
+  --app-bg-alt: #0A0A0A;
+  --app-card: #1a1a1a;
+  --app-card-alt: #111;
+  --app-card-hover: #1f1f1f;
+  --app-border: rgba(255,255,255,0.06);
+  --app-border-strong: rgba(255,255,255,0.10);
+  --app-text: #FFFFFF;
+  --app-text-muted: #A0A0A0;
+  --app-text-dim: #666;
+  --app-text-faint: #444;
+  --app-accent: #C0FF00;
+  --app-accent-soft: rgba(192,255,0,0.1);
+  --app-divider: rgba(255,255,255,0.04);
+  --app-input-bg: rgba(255,255,255,0.05);
+  --app-scrollbar-thumb: #1E293B;
+  --app-scrollbar-thumb-hover: #334155;
+  --app-tooltip-bg: #0F172A;
+  --app-tooltip-border: #1E293B;
+  --app-grid-line: #1E293B;
+}
+
+html[data-theme="light"] {
+  --app-bg: #F5F7F5;
+  --app-bg-alt: #FFFFFF;
+  --app-card: #FFFFFF;
+  --app-card-alt: #F0F2F0;
+  --app-card-hover: #EAEDEA;
+  --app-border: rgba(0,0,0,0.08);
+  --app-border-strong: rgba(0,0,0,0.14);
+  --app-text: #0A0A0A;
+  --app-text-muted: #4A5158;
+  --app-text-dim: #6B7280;
+  --app-text-faint: #9CA3AF;
+  --app-accent: #6B9A00;           /* darker lime for readability */
+  --app-accent-soft: rgba(107,154,0,0.12);
+  --app-divider: rgba(0,0,0,0.06);
+  --app-input-bg: rgba(0,0,0,0.04);
+  --app-scrollbar-thumb: #CBD5E1;
+  --app-scrollbar-thumb-hover: #94A3B8;
+  --app-tooltip-bg: #FFFFFF;
+  --app-tooltip-border: #E2E8F0;
+  --app-grid-line: #E2E8F0;
+}
+
 body {
-  background-color: var(--color-bg-app);
+  background-color: var(--app-bg);
   min-height: 100vh;
   font-family: var(--font-mono);
-  color: var(--color-text-primary);
+  color: var(--app-text);
   margin: 0;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 #root {
@@ -43,11 +92,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1E293B;
+  background: var(--app-scrollbar-thumb);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: var(--app-scrollbar-thumb-hover);
 }
 
 
@@ -56,3 +105,154 @@ body {
 .mapboxgl-ctrl-attrib,
 .mapboxgl-ctrl-bottom-left,
 .mapboxgl-ctrl-bottom-right { display: none !important; }
+
+/* ─── Theme-aware helper classes ───────────────────────────────────────── */
+.themed-bg { background-color: var(--app-bg); }
+.themed-bg-alt { background-color: var(--app-bg-alt); }
+.themed-card { background-color: var(--app-card); }
+.themed-card-alt { background-color: var(--app-card-alt); }
+.themed-border { border-color: var(--app-border); }
+.themed-border-strong { border-color: var(--app-border-strong); }
+.themed-text { color: var(--app-text); }
+.themed-text-muted { color: var(--app-text-muted); }
+.themed-text-dim { color: var(--app-text-dim); }
+.themed-text-faint { color: var(--app-text-faint); }
+.themed-accent { color: var(--app-accent); }
+.themed-accent-bg { background-color: var(--app-accent); }
+.themed-divider { border-color: var(--app-divider); }
+
+/* Light mode: smooth transitions */
+html[data-theme="light"] *,
+html[data-theme="dark"] * {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}
+/* Exclude heavy-animation elements to prevent jitter */
+html[data-theme="light"] svg *,
+html[data-theme="dark"] svg *,
+.no-theme-transition,
+.no-theme-transition * {
+  transition-property: none !important;
+}
+
+/* ─── Light mode: global overrides for hardcoded dark colors ─────────── */
+/* These escape-selectors match Tailwind arbitrary-value classes */
+html[data-theme="light"] .bg-\[\#050505\],
+html[data-theme="light"] .bg-\[\#0A0A0A\],
+html[data-theme="light"] .bg-\[\#0a0a0a\],
+html[data-theme="light"] .bg-\[\#0D1117\],
+html[data-theme="light"] .bg-\[\#050812\] {
+  background-color: var(--app-bg) !important;
+}
+
+html[data-theme="light"] .bg-\[\#1a1a1a\],
+html[data-theme="light"] .bg-\[\#1A1A1A\],
+html[data-theme="light"] .bg-\[\#1E1E1E\],
+html[data-theme="light"] .bg-\[\#151515\],
+html[data-theme="light"] .bg-\[\#111\],
+html[data-theme="light"] .bg-\[\#111111\] {
+  background-color: var(--app-card) !important;
+}
+
+html[data-theme="light"] .bg-\[\#2a2a2a\],
+html[data-theme="light"] .bg-\[\#2A2A2A\],
+html[data-theme="light"] .bg-\[\#222\],
+html[data-theme="light"] .bg-\[\#1E293B\],
+html[data-theme="light"] .bg-\[\#0F172A\] {
+  background-color: var(--app-card-alt) !important;
+}
+
+html[data-theme="light"] .bg-bg-app,
+html[data-theme="light"] .bg-bg-card,
+html[data-theme="light"] .bg-bg-hover {
+  background-color: var(--app-card) !important;
+}
+
+/* Text color overrides */
+html[data-theme="light"] .text-white,
+html[data-theme="light"] .text-\[\#FFFFFF\],
+html[data-theme="light"] .text-\[\#fff\] {
+  color: var(--app-text) !important;
+}
+
+html[data-theme="light"] .text-\[\#A0A0A0\],
+html[data-theme="light"] .text-\[\#a0a0a0\],
+html[data-theme="light"] .text-\[\#94A3B8\],
+html[data-theme="light"] .text-\[\#64748B\] {
+  color: var(--app-text-muted) !important;
+}
+
+html[data-theme="light"] .text-\[\#666\],
+html[data-theme="light"] .text-\[\#555\],
+html[data-theme="light"] .text-\[\#475569\] {
+  color: var(--app-text-dim) !important;
+}
+
+html[data-theme="light"] .text-\[\#444\],
+html[data-theme="light"] .text-\[\#333\],
+html[data-theme="light"] .text-\[\#334155\] {
+  color: var(--app-text-faint) !important;
+}
+
+html[data-theme="light"] .text-gray-500,
+html[data-theme="light"] .text-gray-400,
+html[data-theme="light"] .text-gray-600 {
+  color: var(--app-text-muted) !important;
+}
+
+html[data-theme="light"] .text-text-primary,
+html[data-theme="light"] .text-text-secondary,
+html[data-theme="light"] .text-text-muted {
+  color: var(--app-text-muted) !important;
+}
+
+/* Border overrides */
+html[data-theme="light"] .border-white\/5,
+html[data-theme="light"] .border-white\/\[0\.06\],
+html[data-theme="light"] .border-white\/10,
+html[data-theme="light"] .border-white\/\[0\.08\],
+html[data-theme="light"] .border-white\/\[0\.10\],
+html[data-theme="light"] .border-white\/20 {
+  border-color: var(--app-border) !important;
+}
+
+html[data-theme="light"] .border-\[\#1E293B\],
+html[data-theme="light"] .border-\[\#1a1a1a\],
+html[data-theme="light"] .border-\[\#2A2A2A\],
+html[data-theme="light"] .border-\[\#334155\],
+html[data-theme="light"] .border-\[\#333\] {
+  border-color: var(--app-border) !important;
+}
+
+/* The neon accent #C0FF00 stays but darkens slightly for readability on light */
+html[data-theme="light"] .text-\[\#C0FF00\],
+html[data-theme="light"] .text-\[\#c0ff00\],
+html[data-theme="light"] .text-\[\#D4FF00\] {
+  color: var(--app-accent) !important;
+}
+
+/* Brand accent neon bar / pills stay vivid but use darker tone in light mode */
+html[data-theme="light"] .bg-\[\#C0FF00\],
+html[data-theme="light"] .bg-\[\#c0ff00\],
+html[data-theme="light"] .bg-\[\#D4FF00\] {
+  background-color: var(--app-accent) !important;
+  color: #000 !important;
+}
+
+/* White/5 backgrounds (subtle overlays) */
+html[data-theme="light"] .bg-white\/5,
+html[data-theme="light"] .bg-white\/\[0\.05\],
+html[data-theme="light"] .bg-white\/\[0\.03\] {
+  background-color: rgba(0,0,0,0.04) !important;
+}
+html[data-theme="light"] .bg-white\/10,
+html[data-theme="light"] .bg-white\/\[0\.08\] {
+  background-color: rgba(0,0,0,0.06) !important;
+}
+
+/* Divider border colors with white/[0.04] pattern */
+html[data-theme="light"] .border-white\/\[0\.04\],
+html[data-theme="light"] .border-white\/\[0\.03\] {
+  border-color: var(--app-divider) !important;
+}

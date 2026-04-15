@@ -1,5 +1,6 @@
 import { useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Wind, TrendingDown, Activity, Target, Timer, Zap, Flame, Shield, Trophy, Info,
 } from "lucide-react";
@@ -109,6 +110,7 @@ function NextOptimalSessionWidget({
   runs: Run[];
   faticaColor: string;
 }) {
+  const { t } = useTranslation();
   const { hoursUntil, pct, recommendation, readyAt } = useMemo(() => {
     const gpsRuns = runs.filter(r => !r.is_treadmill);
     const lastRun = gpsRuns[0] ?? null;
@@ -198,7 +200,7 @@ function NextOptimalSessionWidget({
     <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-5 flex flex-col">
       <div className="flex items-center gap-2 mb-3">
         <Timer style={{ color: faticaColor }} size={13} />
-        <span className="text-[#A0A0A0] text-[9px] font-black tracking-widest uppercase">Next Optimal Session</span>
+        <span className="text-[#A0A0A0] text-[9px] font-black tracking-widest uppercase">{t("dashboard.nextOptimalSession")}</span>
       </div>
 
       <div className="flex items-center gap-5 flex-1">
@@ -235,15 +237,15 @@ function NextOptimalSessionWidget({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-1.5">
             <Shield size={11} className="text-orange-400 shrink-0" />
-            <span className="text-orange-400 text-[9px] font-black tracking-widest uppercase">Injury Prevention Buffer</span>
+            <span className="text-orange-400 text-[9px] font-black tracking-widest uppercase">{t("dashboard.injuryPreventionBuffer")}</span>
           </div>
           <div className="text-white text-xs font-black mb-1">
-            {isReady ? "Ready to train" : readyAtLabel ? `Ready by ${readyAtLabel}` : `~${h}h remaining`}
+            {isReady ? t("dashboard.readyToTrain") : readyAtLabel ? `Ready by ${readyAtLabel}` : `~${h}h remaining`}
           </div>
           <div className="text-[#666] text-[9px] leading-relaxed">
             {isReady
-              ? <>Recommended: <span style={{ color: recColor }} className="font-black">{recLabel}</span></>
-              : `Recovery in progress. Reduce injury risk — wait for full recovery.`}
+              ? <>{t("dashboard.recommended")}: <span style={{ color: recColor }} className="font-black">{recLabel}</span></>
+              : t("dashboard.recoveryInProgress")}
           </div>
           {/* Recovery bar */}
           <div className="mt-2 h-1 bg-[#2a2a2a] rounded-full overflow-hidden">
@@ -252,7 +254,7 @@ function NextOptimalSessionWidget({
               style={{ width: `${Math.round(pct * 100)}%`, backgroundColor: arcColor }}
             />
           </div>
-          <div className="text-[#555] text-[8px] mt-0.5">{Math.round(pct * 100)}% recovered</div>
+          <div className="text-[#555] text-[8px] mt-0.5">{Math.round(pct * 100)}% {t("dashboard.recovered")}</div>
         </div>
       </div>
     </div>
@@ -267,6 +269,7 @@ export function DashboardView() {
   const { data: effortsData } = useApi<{ efforts: BestEffort[] }>(getBestEfforts);
 
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [chartPeriod, setChartPeriod] = useState<'7d' | 'month' | 'year'>('year');
   const runs = runsData?.runs ?? [];
   const vdot = analyticsData?.vdot ?? null;
@@ -431,13 +434,13 @@ export function DashboardView() {
         {dashData && (
           <div className="mb-2">
             <h2 className="text-2xl font-black italic tracking-tight text-white uppercase">
-              Hey, {profile?.name || "Runner"} 👋
+              {t("dashboard.greeting")}, {profile?.name || t("dashboard.runner")} 👋
             </h2>
             <p className="text-sm text-gray-500 font-medium mt-1">
               {profile?.race_goal}
               {raceDate && ` — ${raceDate}`}
               {daysToRace !== null && (
-                <span className="ml-3 text-[#C0FF00] font-black">{daysToRace} days to race</span>
+                <span className="ml-3 text-[#C0FF00] font-black">{t("dashboard.daysToRace", { days: daysToRace })}</span>
               )}
             </p>
           </div>
@@ -451,7 +454,7 @@ export function DashboardView() {
               <div>
                 <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-2">LIVE BIO-FEED</div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-white text-4xl font-black tracking-tighter italic">Status of Form</h2>
+                  <h2 className="text-white text-4xl font-black tracking-tighter italic">{t("dashboard.statusOfForm")}</h2>
                   <InfoTooltip title="STATUS OF FORM — TSB" lines={[
                     "TSB (Training Stress Balance) = CTL − ATL. Misura equilibrio carico/recupero.",
                     "TSB > +10: Fresco — picco prestativo. Ideale pre-gara.",
@@ -472,7 +475,11 @@ export function DashboardView() {
                 }}
               >
                 <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: faticaColor }} />
-                {status.label}
+                {status.label === "FRESH" ? t("dashboard.fresh").toUpperCase()
+                  : status.label === "NEUTRAL" ? t("dashboard.neutral").toUpperCase()
+                  : status.label === "FATIGUED" ? t("dashboard.fatigued").toUpperCase()
+                  : status.label === "OVERLOADED" ? t("dashboard.overloaded").toUpperCase()
+                  : status.label}
               </div>
             </div>
 
@@ -502,7 +509,7 @@ export function DashboardView() {
                   <span className="text-5xl font-black" style={{ color: faticaColor }}>
                     {readiness !== null ? readiness.toFixed(0) : "—"}
                   </span>
-                  <span className="text-[#A0A0A0] text-xs font-black tracking-widest mt-1">PEAK SCORE</span>
+                  <span className="text-[#A0A0A0] text-xs font-black tracking-widest mt-1">{t("dashboard.peakScore").toUpperCase()}</span>
                 </div>
               </div>
 
@@ -551,11 +558,11 @@ export function DashboardView() {
             <div className="flex justify-between items-start">
               <Wind className="text-[#C0FF00]" size={24} />
               <div className="bg-white/10 text-[#A0A0A0] px-2 py-1 rounded text-[10px] font-black tracking-widest">
-                VDOT SCORE
+                {t("dashboard.vdotScore").toUpperCase()}
               </div>
             </div>
             <div>
-              <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-2">VO2 MAX EST.</div>
+              <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-2">{t("dashboard.vo2MaxEst")}</div>
               <div className="flex items-baseline gap-2">
                 <span className="text-white text-5xl font-black tracking-tight">
                   {vdot !== null ? vdot.toFixed(1) : "—"}
@@ -569,7 +576,7 @@ export function DashboardView() {
           <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col justify-between">
             <div className="flex items-center gap-2 mb-3">
               <Trophy className="text-[#C0FF00]" size={14} />
-              <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest">HALL OF FAME</span>
+              <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest">{t("dashboard.hallOfFame").toUpperCase()}</span>
             </div>
             <div className="space-y-3 flex-1 flex flex-col justify-center">
               {[
@@ -603,7 +610,7 @@ export function DashboardView() {
             </div>
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-black/60 text-xs font-black tracking-widest">FATIGUE (ATL)</span>
+                <span className="text-black/60 text-xs font-black tracking-widest">{t("dashboard.fatigueATL").toUpperCase()}</span>
                 <InfoTooltip title="FATIGUE — ATL" lines={[
                   "ATL (Acute Training Load) = carico ultimi 7 giorni. Media mobile esponenziale.",
                   "ATL > 80: HIGH RISK — recupero insufficiente.",
@@ -627,7 +634,7 @@ export function DashboardView() {
             <div className="flex items-center gap-2 mb-3">
               <Target className="text-[#C0FF00]" size={16} />
               <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase truncate">
-                {profile?.race_goal || "No race set"}
+                {profile?.race_goal || t("dashboard.noRaceSet")}
               </span>
             </div>
             <div className="flex-1 flex items-center">
@@ -653,7 +660,7 @@ export function DashboardView() {
             {weekProgress && (
               <div className="mt-3">
                 <div className="flex justify-between text-[10px] font-black tracking-widest mb-2">
-                  <span className="text-[#A0A0A0]">WEEKLY PLAN</span>
+                  <span className="text-[#A0A0A0]">{t("dashboard.weeklyPlan").toUpperCase()}</span>
                   <span className="text-[#C0FF00]">{weekProgress.pct.toFixed(0)}%</span>
                 </div>
                 <div className="h-1.5 bg-[#333] rounded-full overflow-hidden">
@@ -668,7 +675,7 @@ export function DashboardView() {
 
           {/* ── 4 Metric Cards — 3 cols each ── */}
           <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col justify-between">
-            <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">ANAEROBIC THRESHOLD</div>
+            <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">{t("dashboard.anaerobicThreshold").toUpperCase()}</div>
             <div className="flex items-baseline gap-2 mb-4">
               <span className="text-white text-3xl font-black">{atHr}</span>
               <span className="text-[#A0A0A0] text-xs">BPM</span>
@@ -681,7 +688,7 @@ export function DashboardView() {
           </div>
 
           <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col justify-between">
-            <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">LACTATE THRESHOLD</div>
+            <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">{t("dashboard.lactateThreshold").toUpperCase()}</div>
             <div className="flex items-baseline gap-2 mb-4">
               <span className="text-white text-3xl font-black">{ltHr}</span>
               <span className="text-[#A0A0A0] text-xs">BPM</span>
@@ -694,7 +701,7 @@ export function DashboardView() {
           </div>
 
           <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col justify-between">
-            <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">AVG PACE</div>
+            <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">{t("dashboard.avgPace").toUpperCase()}</div>
             <div className="flex items-baseline gap-2 mb-4">
               <span className="text-white text-3xl font-black">{avgPace}</span>
               <span className="text-[#A0A0A0] text-xs">/km</span>
@@ -707,7 +714,7 @@ export function DashboardView() {
           </div>
 
           <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col justify-between">
-            <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">CARDIAC DRIFT</div>
+            <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">{t("dashboard.cardiacDrift").toUpperCase()}</div>
             <div className="flex items-baseline gap-2 mb-4">
               <span className="text-white text-3xl font-black">
                 {lastDrift !== null ? (lastDrift >= 0 ? "+" : "") + lastDrift.toFixed(1) : "--"}
@@ -729,12 +736,12 @@ export function DashboardView() {
             <div className="flex items-center justify-between mb-2">
               <div>
                 <div className="text-[#A0A0A0] text-xs font-black tracking-widest">
-                  {chartPeriod === '7d' ? 'LAST 7 DAYS' : chartPeriod === 'month' ? 'CURRENT MONTH' : 'LAST 12 MONTHS'}
+                  {chartPeriod === '7d' ? t("dashboard.last7Days").toUpperCase() : chartPeriod === 'month' ? t("dashboard.currentMonth").toUpperCase() : t("dashboard.last12Months").toUpperCase()}
                 </div>
                 {chartPeriod === '7d' && (
                   <div className="flex items-baseline gap-1.5 mt-1">
                     <span className="text-[#C0FF00] text-2xl font-black">{weeklyKmTotal.toFixed(1)}</span>
-                    <span className="text-[#A0A0A0] text-xs font-black">KM THIS WEEK</span>
+                    <span className="text-[#A0A0A0] text-xs font-black">{t("dashboard.kmThisWeek").toUpperCase()}</span>
                   </div>
                 )}
               </div>
@@ -787,7 +794,7 @@ export function DashboardView() {
             {/* Adaptation Summary */}
             <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex-1 flex flex-col">
               <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase mb-5">
-                Adaptation Summary
+                {t("dashboard.adaptationSummary")}
               </div>
               <div className="space-y-5">
                 <div>
@@ -838,18 +845,18 @@ export function DashboardView() {
         {recentRuns.length > 0 && (
           <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 w-full">
             <div className="mb-8">
-              <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-2">SESSION LOGS</div>
-              <h2 className="text-white text-2xl font-black tracking-tighter italic">Performance History</h2>
+              <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-2">{t("dashboard.sessionLogs").toUpperCase()}</div>
+              <h2 className="text-white text-2xl font-black tracking-tighter italic">{t("dashboard.performanceHistory")}</h2>
             </div>
 
             <div className="w-full">
               <div className="grid grid-cols-7 text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4 px-4">
-                <div className="col-span-2">TYPE</div>
-                <div>DATE</div>
-                <div>DURATION</div>
-                <div>AVG PACE</div>
-                <div>TE SCORE</div>
-                <div className="text-right">STATUS</div>
+                <div className="col-span-2">{t("dashboard.type")}</div>
+                <div>{t("dashboard.date")}</div>
+                <div>{t("dashboard.duration")}</div>
+                <div>{t("dashboard.avgPace").toUpperCase()}</div>
+                <div>{t("dashboard.teScore")}</div>
+                <div className="text-right">{t("dashboard.status")}</div>
               </div>
               <div className="space-y-2">
                 {recentRuns.map((run: Run) => {
@@ -859,9 +866,9 @@ export function DashboardView() {
                   const teRaw = hrPct !== null ? hrPct * 5 : null;
                   const teLabel =
                     teRaw === null ? "—"
-                    : teRaw >= 4 ? "HIGHLY AEROBIC"
-                    : teRaw >= 3 ? "AEROBIC"
-                    : teRaw >= 2 ? "RECOVERY"
+                    : teRaw >= 4 ? t("dashboard.highlyAerobic").toUpperCase()
+                    : teRaw >= 3 ? t("dashboard.aerobic").toUpperCase()
+                    : teRaw >= 2 ? t("dashboard.recovery").toUpperCase()
                     : "—";
                   const teColor =
                     teRaw === null ? "#A0A0A0"
@@ -887,7 +894,7 @@ export function DashboardView() {
                         {teRaw !== null ? teRaw.toFixed(1) + " · " : ""}{teLabel}
                       </div>
                       <div className="text-right text-[#C0FF00] font-black text-xs">
-                        ● VERIFIED
+                        ● {t("dashboard.verified").toUpperCase()}
                       </div>
                     </div>
                   );

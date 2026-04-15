@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getRunnerDna, clearRunnerDnaCache } from "../api";
 import {
   Dna, BrainCircuit, Trophy, Zap, Target, TrendingUp,
@@ -274,6 +275,7 @@ function DynMetric({
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export function RunnerDnaView() {
+  const { t } = useTranslation();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [regenerating, setRegenerating] = useState(false);
