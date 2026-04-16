@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Activity, RefreshCw } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Activity, Info, RefreshCw } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -12,6 +12,39 @@ import {
 } from "recharts";
 import type { FitnessFreshnessPoint, CurrentFF } from "../types/api";
 import { recalculateFitnessFreshness } from "../api";
+
+function InfoTooltip({ title, lines }: { title: string; lines: string[] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  return (
+    <div className="relative inline-flex shrink-0" ref={ref}>
+      <button
+        type="button"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        className="text-[#64748B] hover:text-white transition-colors focus:outline-none"
+      >
+        <Info size={14} />
+      </button>
+      {open && (
+        <div className="absolute z-50 top-full right-0 mt-2 w-72 bg-[#0D0D0D] border border-white/10 rounded-2xl p-4 shadow-2xl pointer-events-none">
+          <div className="text-[#C0FF00] text-[10px] font-black tracking-widest mb-2">{title}</div>
+          <ul className="space-y-1.5">
+            {lines.map((line, index) => (
+              <li key={index} className="text-[#888] text-[10px] leading-relaxed flex gap-1.5">
+                <span className="text-[#444] shrink-0">·</span>
+                {line}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface FitnessFreshnessProps {
   fitnessFreshness: FitnessFreshnessPoint[];
@@ -187,14 +220,24 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
             Fitness &amp; Freshness
           </h2>
         </div>
-        <button
-          onClick={handleRecalculate}
-          disabled={recalcLoading}
-          className="flex items-center gap-1.5 text-[10px] font-bold text-text-muted hover:text-white border border-white/10 hover:border-white/30 rounded-lg px-3 py-1.5 transition-all disabled:opacity-50"
-        >
-          <RefreshCw className={`w-3 h-3 ${recalcLoading ? "animate-spin" : ""}`} />
-          Ricalcola
-        </button>
+        <div className="flex items-center gap-3">
+          <InfoTooltip
+            title="FITNESS & FRESHNESS"
+            lines={[
+              "CTL/Fitness: carico cronico, rappresenta la condizione costruita nel tempo.",
+              "ATL/Fatigue: carico acuto, indica la fatica degli ultimi giorni.",
+              "TSB/Form: CTL meno ATL. Positivo = fresco, negativo = carico in assorbimento.",
+            ]}
+          />
+          <button
+            onClick={handleRecalculate}
+            disabled={recalcLoading}
+            className="flex items-center gap-1.5 text-[10px] font-bold text-text-muted hover:text-white border border-white/10 hover:border-white/30 rounded-lg px-3 py-1.5 transition-all disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3 h-3 ${recalcLoading ? "animate-spin" : ""}`} />
+            Ricalcola
+          </button>
+        </div>
       </div>
 
       {/* ── KPI Row ── */}

@@ -6,10 +6,6 @@ import { MainChart } from '../MainChart';
 import { AnaerobicThreshold } from '../AnaerobicThreshold';
 import { VO2MaxChart } from '../VO2MaxChart';
 import { FitnessFreshness } from '../FitnessFreshness';
-import { AnalyticsV2 } from './AnalyticsV2';
-import { AnalyticsV3 } from './AnalyticsV3';
-import { AnalyticsV4 } from './AnalyticsV4';
-import { AnalyticsV5 } from './AnalyticsV5';
 import { useApi } from '../../hooks/useApi';
 import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, getDashboard, type GctAnalysisResponse } from '../../api';
 import type { AnalyticsResponse, VdotPacesResponse, RunsResponse, DashboardResponse } from '../../types/api';
@@ -31,8 +27,7 @@ import {
   Briefcase,
   Info,
   TrendingDown,
-  Trophy,
-  Radar
+  Trophy
 } from 'lucide-react';
 import {
   AreaChart,
@@ -87,54 +82,6 @@ function InfoTooltip({ title, lines }: { title: string; lines: string[] }) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// MOCK DATA
-// ─────────────────────────────────────────────────────────────
-const volumeData = [
-  { week: 'W1', distance: 42, duration: 4.1 },
-  { week: 'W2', distance: 48, duration: 4.8 },
-  { week: 'W3', distance: 55, duration: 5.5 },
-  { week: 'W4', distance: 35, duration: 3.2 },
-  { week: 'W5', distance: 60, duration: 6.1 },
-  { week: 'W6', distance: 65, duration: 6.5 },
-  { week: 'W7', distance: 70, duration: 7.2 },
-  { week: 'W8', distance: 40, duration: 4.0 },
-];
-
-const zoneData = [
-  { name: 'Z1 (Recovery)', time: 120, fill: '#64748B' },
-  { name: 'Z2 (Aerobic)', time: 450, fill: '#3B82F6' },
-  { name: 'Z3 (Tempo)', time: 180, fill: '#10B981' },
-  { name: 'Z4 (Threshold)', time: 90, fill: '#EAB308' },
-  { name: 'Z5 (Anaerobic)', time: 30, fill: '#F43F5E' },
-];
-
-const pacesTrendData = [
-  { date: '17/11', easy: 5.40, tempo: 4.50, fast: 4.10 },
-  { date: '26/01', easy: 5.50, tempo: 5.00, fast: 4.30 },
-  { date: '09/02', easy: 5.30, tempo: 4.45, fast: 4.15 },
-  { date: '02/03', easy: 5.20, tempo: 4.35, fast: 4.05 },
-  { date: '16/03', easy: 5.15, tempo: 4.30, fast: 4.00 },
-];
-
-const cadenceMonthlyData = [
-  { month: '04/25', value: 165 },
-  { month: '06/25', value: 170 },
-  { month: '08/25', value: 174 },
-  { month: '10/25', value: 176 },
-  { month: '01/26', value: 174 },
-  { month: '03/26', value: 173 },
-];
-
-const futureTrendData = [
-  { date: '25/3', condizione: 40, affaticamento: 60, forma: -20 },
-  { date: '29/3', condizione: 42, affaticamento: 75, forma: -33 },
-  { date: '1/4', condizione: 45, affaticamento: 40, forma: 5 },
-  { date: '4/4', condizione: 44, affaticamento: 30, forma: 14 },
-  { date: '7/4', condizione: 42, affaticamento: 25, forma: 17 },
-  { date: '9/4', condizione: 40, affaticamento: 20, forma: 20 },
-];
-
-// ─────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────
 function vdotLevel(v: number, t: (k: string) => string): { label: string; color: string } {
@@ -143,6 +90,20 @@ function vdotLevel(v: number, t: (k: string) => string): { label: string; color:
   if (v >= 40) return { label: 'Buono', color: '#3B82F6' };
   if (v >= 32) return { label: t('statistics.intermediate'), color: '#EAB308' };
   return { label: t('statistics.beginner'), color: '#F43F5E' };
+}
+
+function parsePaceToMinutes(pace?: string | null): number | null {
+  if (!pace) return null;
+  const [min, sec = '0'] = pace.split(':').map(Number);
+  if (!Number.isFinite(min) || !Number.isFinite(sec)) return null;
+  return Number((min + sec / 60).toFixed(2));
+}
+
+function runPaceBucket(runType?: string): 'easy' | 'tempo' | 'fast' {
+  const t = (runType ?? '').toLowerCase();
+  if (t.includes('tempo') || t.includes('threshold') || t.includes('soglia')) return 'tempo';
+  if (t.includes('interval') || t.includes('speed') || t.includes('ripetute') || t.includes('race') || t.includes('gara')) return 'fast';
+  return 'easy';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -202,7 +163,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 // ─────────────────────────────────────────────────────────────
 export function StatisticsView() {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState('analytics');
+  const [activeTab, setActiveTab] = useState('load-form');
   const { data: analyticsData } = useApi<AnalyticsResponse>(getAnalytics);
   const { data: vdotData } = useApi<VdotPacesResponse>(getVdotPaces);
   const { data: runsData } = useApi<RunsResponse>(getRuns);
@@ -236,13 +197,90 @@ export function StatisticsView() {
     });
   }, [runs]);
 
+  const volumeData = React.useMemo(() => {
+    const now = new Date();
+    now.setHours(23, 59, 59, 999);
+    return Array.from({ length: 8 }, (_, i) => {
+      const end = new Date(now);
+      end.setDate(now.getDate() - (7 - i) * 7);
+      const start = new Date(end);
+      start.setDate(end.getDate() - 6);
+      start.setHours(0, 0, 0, 0);
+      const weekRuns = runs.filter((run) => {
+        const d = new Date(run.date);
+        return d >= start && d <= end;
+      });
+      return {
+        week: `W${i + 1}`,
+        distance: Number(weekRuns.reduce((sum, run) => sum + (run.distance_km ?? 0), 0).toFixed(1)),
+        duration: Number((weekRuns.reduce((sum, run) => sum + (run.duration_minutes ?? 0), 0) / 60).toFixed(1)),
+      };
+    });
+  }, [runs]);
+
+  const pacesTrendData = React.useMemo(() => {
+    const buckets = new Map<string, { date: Date; easy: number[]; tempo: number[]; fast: number[] }>();
+    runs.forEach((run) => {
+      const pace = parsePaceToMinutes(run.avg_pace);
+      if (pace === null) return;
+      const d = new Date(run.date);
+      const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, '0')}`;
+      if (!buckets.has(key)) {
+        buckets.set(key, { date: new Date(d.getFullYear(), d.getMonth(), 1), easy: [], tempo: [], fast: [] });
+      }
+      buckets.get(key)![runPaceBucket(run.run_type)].push(pace);
+    });
+    return Array.from(buckets.values())
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(-8)
+      .map((bucket) => {
+        const avg = (values: number[]) =>
+          values.length ? Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(2)) : null;
+        return {
+          date: bucket.date.toLocaleDateString('it', { day: '2-digit', month: '2-digit' }),
+          easy: avg(bucket.easy),
+          tempo: avg(bucket.tempo),
+          fast: avg(bucket.fast),
+        };
+      });
+  }, [runs]);
+
+  const cadenceMonthlyData = React.useMemo(() => {
+    const buckets = new Map<string, { date: Date; values: number[] }>();
+    runs.forEach((run) => {
+      if (!run.avg_cadence) return;
+      const d = new Date(run.date);
+      const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, '0')}`;
+      if (!buckets.has(key)) {
+        buckets.set(key, { date: new Date(d.getFullYear(), d.getMonth(), 1), values: [] });
+      }
+      buckets.get(key)!.values.push(run.avg_cadence);
+    });
+    return Array.from(buckets.values())
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(-8)
+      .map((bucket) => ({
+        month: bucket.date.toLocaleDateString('it', { month: '2-digit', year: '2-digit' }),
+        value: Math.round(bucket.values.reduce((sum, value) => sum + value, 0) / bucket.values.length),
+      }));
+  }, [runs]);
+
+  const futureTrendData = React.useMemo(
+    () =>
+      ffHistory.slice(-8).map((point) => ({
+        date: new Date(point.date).toLocaleDateString('it', { day: 'numeric', month: 'numeric' }),
+        condizione: Number(point.ctl.toFixed(1)),
+        affaticamento: Number(point.atl.toFixed(1)),
+        forma: Number(point.tsb.toFixed(1)),
+      })),
+    [ffHistory]
+  );
+
 
   const tabs = [
-    { id: 'analytics',   label: t('statistics.analyticsPro'),  icon: LayoutGrid },
-    { id: 'analyticsv2', label: t('statistics.analyticsPro2'), icon: Radar },
-    { id: 'analyticsv3', label: 'Analytics Pro V3',            icon: Activity },
-    { id: 'analyticsv4', label: 'Analytics Pro V4',            icon: LineChartIcon },
-    { id: 'analyticsv5', label: 'Analytics Pro V5',            icon: TrendingUp },
+    { id: 'load-form',   label: 'Carico & Forma',              icon: LayoutGrid },
+    { id: 'performance', label: 'Performance',                 icon: TrendingUp },
+    { id: 'physiology',  label: 'Fisiologia & Forma Fisica',   icon: Activity },
     { id: 'biology',     label: 'Biologia & Futuro',           icon: FlaskConical },
     { id: 'badges',      label: 'Badge',                       icon: Star },
   ];
@@ -283,12 +321,12 @@ export function StatisticsView() {
         </div>
 
         {/* ════════════════════════════════════════════════════
-            ANALYTICS PRO TAB
+            CARICO & FORMA TAB
         ════════════════════════════════════════════════════ */}
-        {activeTab === 'analytics' && (
+        {activeTab === 'load-form' && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
-            <SectionLabel>CARICO — FITNESS · FATICA · FORMA</SectionLabel>
+            <SectionLabel>CARICO & FORMA — CTL · ATL · TSB</SectionLabel>
 
             {/* ── KPI Grid ── */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -490,29 +528,21 @@ export function StatisticsView() {
                     })}
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {zoneData.map((zone, i) => {
-                      const total = zoneData.reduce((acc, curr) => acc + curr.time, 0);
-                      const percentage = Math.round((zone.time / total) * 100);
-                      return (
-                        <div key={i}>
-                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-1.5">
-                            <span className="text-gray-400">{zone.name}</span>
-                            <span className="text-white">{percentage}%</span>
-                          </div>
-                          <div className="h-1.5 w-full bg-[#0D0D0D] rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all duration-500"
-                              style={{ width: `${percentage}%`, backgroundColor: zone.fill }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div className="h-40 flex items-center justify-center text-center text-xs text-gray-600 font-bold uppercase tracking-widest">
+                    Nessuna distribuzione zone disponibile dalle corse sincronizzate
                   </div>
                 )}
               </Card>
             </div>
+
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════
+            PERFORMANCE TAB
+        ════════════════════════════════════════════════════ */}
+        {activeTab === 'performance' && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
             <SectionLabel>PERFORMANCE — VDOT · PACES · PREVISIONI</SectionLabel>
 
@@ -714,6 +744,15 @@ export function StatisticsView() {
               )}
             </Card>
 
+            {/* ── Anaerobic Threshold / Threshold Pace ── */}
+            <div>
+              <AnaerobicThreshold
+                runs={runs}
+                maxHr={dashData?.profile?.max_hr ?? 180}
+                vdot={vdot}
+              />
+            </div>
+
             <SectionLabel>TREND — KM · VO2MAX · PACES · CADENZA</SectionLabel>
 
             {/* ── MainChart + VO2MaxChart ── */}
@@ -794,7 +833,20 @@ export function StatisticsView() {
                   </ResponsiveContainer>
                 </div>
               </Card>
+            </div>
 
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════
+            FISIOLOGIA & FORMA FISICA TAB
+        ════════════════════════════════════════════════════ */}
+        {activeTab === 'physiology' && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+
+            <SectionLabel>FISIOLOGIA & FORMA FISICA — DERIVA · GCT · CADENZA</SectionLabel>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader
                   icon={Timer}
@@ -849,17 +901,6 @@ export function StatisticsView() {
                   </ResponsiveContainer>
                 </div>
               </Card>
-            </div>
-
-            <SectionLabel>FISIOLOGIA — SOGLIA · DERIVA · GCT · DISLIVELLO</SectionLabel>
-
-            {/* ── Anaerobic Threshold ── */}
-            <div>
-              <AnaerobicThreshold
-                runs={runs}
-                maxHr={dashData?.profile?.max_hr ?? 180}
-                vdot={vdot}
-              />
             </div>
 
             {/* ── Cardiac Drift ── */}
@@ -1102,36 +1143,6 @@ export function StatisticsView() {
 
           </div>
         )}
-
-        {/* ════════════════════════════════════════════════════
-            ANALYTICS PRO V2 TAB
-        ════════════════════════════════════════════════════ */}
-        {activeTab === 'analyticsv2' && (
-          <AnalyticsV2
-            vdot={vdot}
-            zoneDistribution={zoneDistribution}
-            gctData={gctData}
-            runs={runs}
-            ffHistory={ffHistory}
-            maxHr={dashData?.profile?.max_hr}
-            thresholdPace={vdotData?.paces?.threshold}
-          />
-        )}
-
-        {/* ════════════════════════════════════════════════════
-            ANALYTICS PRO V3 TAB
-        ════════════════════════════════════════════════════ */}
-        {activeTab === 'analyticsv3' && <AnalyticsV3 />}
-
-        {/* ════════════════════════════════════════════════════
-            ANALYTICS PRO V4 TAB
-        ════════════════════════════════════════════════════ */}
-        {activeTab === 'analyticsv4' && <AnalyticsV4 />}
-
-        {/* ════════════════════════════════════════════════════
-            ANALYTICS PRO V5 TAB
-        ════════════════════════════════════════════════════ */}
-        {activeTab === 'analyticsv5' && <AnalyticsV5 />}
 
         {/* ════════════════════════════════════════════════════
             BIOLOGIA & FUTURO TAB
