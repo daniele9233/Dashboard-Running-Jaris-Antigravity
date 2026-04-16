@@ -1,15 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 import { StatsDrift } from './StatsDrift';
 import { BadgesGrid } from '../BadgesGrid';
 import { MainChart } from '../MainChart';
 import { AnaerobicThreshold } from '../AnaerobicThreshold';
 import { VO2MaxChart } from '../VO2MaxChart';
 import { FitnessFreshness } from '../FitnessFreshness';
-import { AnalyticsV2 } from './AnalyticsV2';
-import { AnalyticsV3 } from './AnalyticsV3';
-import { AnalyticsV4 } from './AnalyticsV4';
-import { AnalyticsV5 } from './AnalyticsV5';
 import { useApi } from '../../hooks/useApi';
 import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, getDashboard, type GctAnalysisResponse } from '../../api';
 import type { AnalyticsResponse, VdotPacesResponse, RunsResponse, DashboardResponse } from '../../types/api';
@@ -31,8 +26,7 @@ import {
   Briefcase,
   Info,
   TrendingDown,
-  Trophy,
-  Radar
+  Trophy
 } from 'lucide-react';
 import {
   AreaChart,
@@ -137,12 +131,12 @@ const futureTrendData = [
 // ─────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────
-function vdotLevel(v: number, t: (k: string) => string): { label: string; color: string } {
-  if (v >= 52) return { label: t('statistics.elite'), color: '#C0FF00' };
-  if (v >= 47) return { label: t('statistics.advanced'), color: '#10B981' };
+function vdotLevel(v: number): { label: string; color: string } {
+  if (v >= 52) return { label: 'Elite', color: '#C0FF00' };
+  if (v >= 47) return { label: 'Avanzato', color: '#10B981' };
   if (v >= 40) return { label: 'Buono', color: '#3B82F6' };
-  if (v >= 32) return { label: t('statistics.intermediate'), color: '#EAB308' };
-  return { label: t('statistics.beginner'), color: '#F43F5E' };
+  if (v >= 32) return { label: 'Intermedio', color: '#EAB308' };
+  return { label: 'Principiante', color: '#F43F5E' };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -201,7 +195,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────
 export function StatisticsView() {
-  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('analytics');
   const { data: analyticsData } = useApi<AnalyticsResponse>(getAnalytics);
   const { data: vdotData } = useApi<VdotPacesResponse>(getVdotPaces);
@@ -211,7 +204,7 @@ export function StatisticsView() {
 
   const runs = runsData?.runs ?? [];
   const vdot = vdotData?.vdot ?? null;
-  const level = vdot ? vdotLevel(vdot, t) : null;
+  const level = vdot ? vdotLevel(vdot) : null;
   const paces = vdotData?.paces ?? {};
   const racePredictions = vdotData?.race_predictions ?? analyticsData?.race_predictions ?? {};
   const zoneDistribution = analyticsData?.zone_distribution ?? [];
@@ -236,15 +229,93 @@ export function StatisticsView() {
     });
   }, [runs]);
 
+  // ── Avg Pace ──────────────────────────────────────────────
+  const { avgPaceStr, paceMonthData, pacePct, paceMin, paceMax } = React.useMemo(() => {
+    const now = new Date();
+    function parsePaceToSecs(pace: string): number {
+      if (!pace) return 0;
+      const parts = pace.split(':');
+      if (parts.length !== 2) return 0;
+      const m = parseInt(parts[0]);
+      const s = parseInt(parts[1]);
+      if (isNaN(m) || isNaN(s)) return 0;
+      return m * 60 + s;
+    }
+    function secsToPaceStr(secs: number): string {
+      if (secs <= 0) return '--';
+      const m = Math.floor(secs / 60);
+      const s = Math.round(secs % 60);
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+    const monthData: { name: string; value: number }[] = [];
+    let currSecs = 0;
+    let prevSecs = 0;
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthRuns = runs.filter((r) => {
+        const rd = new Date(r.date);
+        return (
+          rd.getFullYear() === d.getFullYear() &&
+          rd.getMonth() === d.getMonth() &&
+          r.avg_pace &&
+          parsePaceToSecs(r.avg_pace) > 100
+        );
+      });
+      const avgSecs =
+        monthRuns.length > 0
+          ? monthRuns.reduce((sum, r) => sum + parsePaceToSecs(r.avg_pace), 0) / monthRuns.length
+          : 0;
+      const decimalMins = avgSecs > 0 ? parseFloat((avgSecs / 60).toFixed(3)) : 0;
+      monthData.push({
+        name: d.toLocaleString('it', { month: 'short' }).toUpperCase(),
+        value: decimalMins,
+      });
+      if (i === 0) currSecs = avgSecs;
+      if (i === 1) prevSecs = avgSecs;
+    }
+    const pct = prevSecs > 0 && currSecs > 0 ? Math.round(((currSecs - prevSecs) / prevSecs) * 100) : null;
+    const values = monthData.map((m) => m.value).filter((v) => v > 0);
+    const minV = values.length > 0 ? Math.min(...values) - 0.3 : 4;
+    const maxV = values.length > 0 ? Math.max(...values) + 0.3 : 7;
+    return { avgPaceStr: secsToPaceStr(currSecs), paceMonthData: monthData, pacePct: pct, paceMin: minV, paceMax: maxV };
+  }, [runs]);
+
+  // ── Elevation stats ───────────────────────────────────────
+  const { thisYearElev, elevPct, elevMonthData, elevMax } = React.useMemo(() => {
+    const now = new Date();
+    const thisYear = now.getFullYear();
+    const lastYear = thisYear - 1;
+    const monthData: { name: string; value: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(thisYear, now.getMonth() - i, 1);
+      const elev = runs
+        .filter((r) => {
+          const rd = new Date(r.date);
+          return rd.getFullYear() === d.getFullYear() && rd.getMonth() === d.getMonth();
+        })
+        .reduce((sum, r) => sum + (r.elevation_gain || 0), 0);
+      monthData.push({ name: d.toLocaleString('it', { month: 'short' }).toUpperCase(), value: Math.round(elev) });
+    }
+    const thisTotal = runs
+      .filter((r) => new Date(r.date).getFullYear() === thisYear)
+      .reduce((sum, r) => sum + (r.elevation_gain || 0), 0);
+    const lastTotal = runs
+      .filter((r) => new Date(r.date).getFullYear() === lastYear)
+      .reduce((sum, r) => sum + (r.elevation_gain || 0), 0);
+    const pct = lastTotal > 0 ? Math.round(((thisTotal - lastTotal) / lastTotal) * 100) : null;
+    const maxV = Math.max(...monthData.map((m) => m.value), 200);
+    return {
+      thisYearElev: Math.round(thisTotal),
+      elevPct: pct,
+      elevMonthData: monthData,
+      elevMax: maxV,
+    };
+  }, [runs]);
 
   const tabs = [
-    { id: 'analytics',   label: t('statistics.analyticsPro'),  icon: LayoutGrid },
-    { id: 'analyticsv2', label: t('statistics.analyticsPro2'), icon: Radar },
-    { id: 'analyticsv3', label: 'Analytics Pro V3',            icon: Activity },
-    { id: 'analyticsv4', label: 'Analytics Pro V4',            icon: LineChartIcon },
-    { id: 'analyticsv5', label: 'Analytics Pro V5',            icon: TrendingUp },
-    { id: 'biology',     label: 'Biologia & Futuro',           icon: FlaskConical },
-    { id: 'badges',      label: 'Badge',                       icon: Star },
+    { id: 'analytics', label: 'Analytics Pro', icon: LayoutGrid },
+    { id: 'biology',   label: 'Biologia & Futuro', icon: FlaskConical },
+    { id: 'badges',    label: 'Badge', icon: Star },
   ];
 
   return (
@@ -279,6 +350,155 @@ export function StatisticsView() {
                 {tab.label.toUpperCase()}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* ── TOP STAT CARDS (always visible) ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Avg Pace */}
+          <div className="bg-[#111111] border border-[#1E1E1E] rounded-2xl p-5 flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-[10px] text-gray-500 font-black tracking-widest mb-1 uppercase">
+                  Avg Pace
+                </h3>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black italic text-white">
+                    {avgPaceStr !== '--' ? `${avgPaceStr} /km` : '--'}
+                  </span>
+                  {pacePct !== null && (
+                    <span
+                      className={`text-xs px-1.5 py-0.5 rounded font-bold ${
+                        pacePct <= 0
+                          ? 'text-[#14B8A6] bg-[#14B8A6]/10'
+                          : 'text-[#F43F5E] bg-[#F43F5E]/10'
+                      }`}
+                    >
+                      {pacePct >= 0 ? '+' : ''}
+                      {pacePct}%
+                    </span>
+                  )}
+                </div>
+              </div>
+              <span className="text-[10px] text-gray-600 font-black tracking-widest">QUEST'ANNO</span>
+            </div>
+            <div className="h-20 w-full mt-auto">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={paceMonthData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="statsPaceGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#F43F5E" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#F43F5E" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="name" hide />
+                  <YAxis domain={[paceMin, paceMax]} hide />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const { name, value } = payload[0].payload as { name: string; value: number };
+                      if (!value) return null;
+                      const secs = value * 60;
+                      const m = Math.floor(secs / 60);
+                      const s = Math.round(secs % 60);
+                      return (
+                        <div className="bg-[#111] border border-[#222] px-3 py-2 rounded-lg text-xs">
+                          <p className="text-gray-400 mb-1">{name}</p>
+                          <p className="text-white font-bold">
+                            {m}:{s.toString().padStart(2, '0')} /km
+                          </p>
+                        </div>
+                      );
+                    }}
+                    cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#F43F5E"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#statsPaceGrad)"
+                    isAnimationActive={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex justify-between mt-2 text-[9px] text-[#333] font-black">
+              {paceMonthData.map((d) => (
+                <span key={d.name}>{d.name}</span>
+              ))}
+            </div>
+          </div>
+
+          {/* Elevation Gain */}
+          <div className="bg-[#111111] border border-[#1E1E1E] rounded-2xl p-5 flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-[10px] text-gray-500 font-black tracking-widest mb-1 uppercase">
+                  Elevation Gain
+                </h3>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black italic text-white">
+                    {thisYearElev > 0 ? `${thisYearElev.toLocaleString('it')} m` : '0 m'}
+                  </span>
+                  {elevPct !== null && (
+                    <span
+                      className={`text-xs px-1.5 py-0.5 rounded font-bold ${
+                        elevPct >= 0
+                          ? 'text-[#14B8A6] bg-[#14B8A6]/10'
+                          : 'text-[#F43F5E] bg-[#F43F5E]/10'
+                      }`}
+                    >
+                      {elevPct >= 0 ? '+' : ''}
+                      {elevPct}%
+                    </span>
+                  )}
+                </div>
+              </div>
+              <span className="text-[10px] text-gray-600 font-black tracking-widest">QUEST'ANNO</span>
+            </div>
+            <div className="h-20 w-full mt-auto">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={elevMonthData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="statsElevGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#14B8A6" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="name" hide />
+                  <YAxis domain={[0, elevMax + 50]} hide />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const { name, value } = payload[0].payload as { name: string; value: number };
+                      return (
+                        <div className="bg-[#111] border border-[#222] px-3 py-2 rounded-lg text-xs">
+                          <p className="text-gray-400 mb-1">{name}</p>
+                          <p className="text-white font-bold">{value.toLocaleString('it')} m</p>
+                        </div>
+                      );
+                    }}
+                    cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#14B8A6"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#statsElevGrad)"
+                    isAnimationActive={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex justify-between mt-2 text-[9px] text-[#333] font-black">
+              {elevMonthData.map((d) => (
+                <span key={d.name}>{d.name}</span>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -452,7 +672,7 @@ export function StatisticsView() {
                 <CardHeader
                   icon={Heart}
                   iconColor="#F43F5E"
-                  title={t('statistics.timeInZones')}
+                  title="Time in Zones"
                   subtitle="Distribuzione FC"
                   tooltip={{
                     title: 'ZONE FREQUENZA CARDIACA',
@@ -1102,36 +1322,6 @@ export function StatisticsView() {
 
           </div>
         )}
-
-        {/* ════════════════════════════════════════════════════
-            ANALYTICS PRO V2 TAB
-        ════════════════════════════════════════════════════ */}
-        {activeTab === 'analyticsv2' && (
-          <AnalyticsV2
-            vdot={vdot}
-            zoneDistribution={zoneDistribution}
-            gctData={gctData}
-            runs={runs}
-            ffHistory={ffHistory}
-            maxHr={dashData?.profile?.max_hr}
-            thresholdPace={vdotData?.paces?.threshold}
-          />
-        )}
-
-        {/* ════════════════════════════════════════════════════
-            ANALYTICS PRO V3 TAB
-        ════════════════════════════════════════════════════ */}
-        {activeTab === 'analyticsv3' && <AnalyticsV3 />}
-
-        {/* ════════════════════════════════════════════════════
-            ANALYTICS PRO V4 TAB
-        ════════════════════════════════════════════════════ */}
-        {activeTab === 'analyticsv4' && <AnalyticsV4 />}
-
-        {/* ════════════════════════════════════════════════════
-            ANALYTICS PRO V5 TAB
-        ════════════════════════════════════════════════════ */}
-        {activeTab === 'analyticsv5' && <AnalyticsV5 />}
 
         {/* ════════════════════════════════════════════════════
             BIOLOGIA & FUTURO TAB
