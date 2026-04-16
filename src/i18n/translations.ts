@@ -177,7 +177,6 @@ export const translations = {
     statistics: {
       title: "Statistiche",
       analyticsPro: "Analytics Pro",
-      analyticsPro2: "Analytics Pro V2",
       performanceManagementChart: "Grafico Gestione Performance",
       anaerobicThresholdTrend: "Trend Soglia Anaerobica",
       vo2MaxTrend: "Trend VO2 Max",
@@ -452,7 +451,6 @@ export const translations = {
     statistics: {
       title: "Statistics",
       analyticsPro: "Analytics Pro",
-      analyticsPro2: "Analytics Pro V2",
       performanceManagementChart: "Performance Management Chart",
       anaerobicThresholdTrend: "Anaerobic Threshold Trend",
       vo2MaxTrend: "VO2 Max Trend",
