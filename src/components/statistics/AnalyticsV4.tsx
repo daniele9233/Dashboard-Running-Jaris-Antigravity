@@ -23,12 +23,12 @@ const PU = '#8B5CF6';
 const RD = '#F43F5E';
 const CY = '#22D3EE';
 const BG = '#080808';
-const S1 = '#111';
+const S1 = '#0E0E0E';
 const S2 = '#161616';
 const S3 = '#1C1C1C';
 const BR = '#222';
 const DM = '#555';
-const MT = '#3A3A3A';
+const MT = '#1E1E1E';
 
 // ─── Shared tiny label ───────────────────────────────────────────────────────
 function Lbl({ children, color = DM }: { children: React.ReactNode; color?: string }) {
@@ -64,9 +64,27 @@ function Bracket({ size = 10, color = N, pos }: { size?: number; color?: string;
 }
 
 // Panel with bracket corners
-function Panel({ children, className = '', style = {} }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
+function Panel({
+  children,
+  className = '',
+  style = {},
+  accent = N,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+  accent?: string;
+}) {
   return (
-    <div className={`relative ${className}`} style={{ background: S1, border: `1px solid ${MT}`, ...style }}>
+    <div
+      className={`relative ${className}`}
+      style={{
+        background: S1,
+        border: `1px solid ${MT}`,
+        borderLeft: `3px solid ${accent}`,
+        ...style,
+      }}
+    >
       <Bracket pos="tl" size={12} />
       <Bracket pos="tr" size={12} />
       <Bracket pos="bl" size={12} />
@@ -176,7 +194,7 @@ const paceZones = [
 
 function KpiTile({ label, value, unit, sub, accent = N }: { label: string; value: string; unit: string; sub: string; accent?: string }) {
   return (
-    <Panel className="p-5 flex flex-col gap-2">
+    <Panel className="p-5 flex flex-col gap-2" accent={accent}>
       <Lbl color={DM}>{label}</Lbl>
       <div className="flex items-baseline gap-1.5 mt-1">
         <span style={{ fontSize: 44, fontWeight: 900, lineHeight: 1, color: '#fff', fontFamily: 'monospace', letterSpacing: '-0.04em' }}>{value}</span>
@@ -240,7 +258,7 @@ function HeatmapCalendar() {
 
 function LactateCurve() {
   return (
-    <Panel className="p-6">
+    <Panel className="p-6" accent={OR}>
       <div className="flex items-center justify-between mb-5">
         <Lbl color={DM}>LACTATE THRESHOLD MODEL</Lbl>
         <Lbl color={OR}>LT2 @ 4:32 MIN/KM</Lbl>
@@ -277,7 +295,7 @@ function LactateCurve() {
 
 function CadenceScatter() {
   return (
-    <Panel className="p-6">
+    <Panel className="p-6" accent={CY}>
       <div className="flex items-center justify-between mb-5">
         <Lbl color={DM}>CADENCE vs SPEED MATRIX</Lbl>
         <Lbl color={CY}>R² = 0.84</Lbl>
@@ -349,7 +367,7 @@ function WeeklyVolume() {
     return { ...w, avg: Math.round(slice.reduce((s, x) => s + x.km, 0) / slice.length) };
   });
   return (
-    <Panel className="p-6" style={{ gridColumn: 'span 2' }}>
+    <Panel className="p-6" style={{ gridColumn: 'span 2' }} accent={N}>
       <div className="flex items-center justify-between mb-5">
         <Lbl color={DM}>26-WEEK VOLUME PROGRESSION + MOVING AVG</Lbl>
         <div className="flex items-center gap-5">
@@ -381,7 +399,7 @@ function WeeklyVolume() {
 
 function PaceZoneBar() {
   return (
-    <Panel className="p-6">
+    <Panel className="p-6" accent={CY}>
       <Lbl color={DM}>PACE ZONE DISTRIBUTION — LAST 90 DAYS</Lbl>
       <div className="mt-5 space-y-3">
         {paceZones.map((z) => (
@@ -425,7 +443,7 @@ function PaceZoneBar() {
 
 function ShoeWearRadar() {
   return (
-    <Panel className="p-6">
+    <Panel className="p-6" accent={OR}>
       <div className="flex items-center justify-between mb-5">
         <Lbl color={DM}>FOOTWEAR WEAR PATTERN</Lbl>
         <div className="flex items-center gap-4">
@@ -454,7 +472,7 @@ function ShoeWearRadar() {
 
 function ElevationHR() {
   return (
-    <Panel className="p-6">
+    <Panel className="p-6" accent={PU}>
       <div className="flex items-center justify-between mb-5">
         <Lbl color={DM}>ELEVATION vs CARDIAC RESPONSE</Lbl>
         <Lbl color={PU}>HR DRIFT: +6 BPM</Lbl>

@@ -251,7 +251,10 @@ export function StatsDrift({ runs }: { runs: Run[] }) {
   }, [runs]);
 
   return (
-    <div className="bg-[#111111] border border-[#1E293B] rounded-2xl p-6">
+    <div
+      className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6"
+      style={{ borderLeft: "3px solid #F43F5E" }}
+    >
       {/* Section header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">

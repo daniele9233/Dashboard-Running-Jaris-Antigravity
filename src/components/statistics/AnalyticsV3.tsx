@@ -14,11 +14,17 @@ import { Activity, Zap, RefreshCw } from 'lucide-react';
 const NEON   = '#C0FF00';
 const ORANGE = '#F97316';
 const BG     = '#0A0A0A';
-const CARD   = '#111111';
+const CARD   = '#0E0E0E';
 const BORDER = '#1E1E1E';
 const GRID   = '#1A1A1A';
 const DIM    = '#444444';
 const MUTED  = '#666666';
+
+const cardStyle = (accent = NEON): React.CSSProperties => ({
+  background: CARD,
+  border: `1px solid ${BORDER}`,
+  borderLeft: `3px solid ${accent}`,
+});
 
 // ─── Mock data ───────────────────────────────────────────────────────────────
 
@@ -371,7 +377,7 @@ export function AnalyticsV3() {
       ══════════════════════════════════════════════════ */}
       <div
         className="rounded-3xl p-0 overflow-hidden"
-        style={{ background: CARD, border: `1px solid ${BORDER}` }}
+        style={cardStyle(NEON)}
       >
         {/* Header bar */}
         <div
@@ -497,7 +503,7 @@ export function AnalyticsV3() {
         {/* Pentagon Radar */}
         <div
           className="rounded-3xl p-8"
-          style={{ background: CARD, border: `1px solid ${BORDER}` }}
+          style={cardStyle(NEON)}
         >
           <div className="flex items-center gap-3 mb-6">
             <Zap className="w-5 h-5" style={{ color: NEON }} />
@@ -524,7 +530,7 @@ export function AnalyticsV3() {
         {/* Efficiency Correlation */}
         <div
           className="rounded-3xl p-8"
-          style={{ background: CARD, border: `1px solid ${BORDER}` }}
+          style={cardStyle(ORANGE)}
         >
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -614,7 +620,7 @@ export function AnalyticsV3() {
       ══════════════════════════════════════════════════ */}
       <div
         className="rounded-3xl p-8"
-        style={{ background: CARD, border: `1px solid ${BORDER}` }}
+        style={cardStyle(NEON)}
       >
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">

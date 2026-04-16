@@ -148,9 +148,24 @@ function vdotLevel(v: number, t: (k: string) => string): { label: string; color:
 // ─────────────────────────────────────────────────────────────
 // CARD WRAPPER
 // ─────────────────────────────────────────────────────────────
-function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+function Card({
+  children,
+  className = '',
+  accent = '#C0FF00',
+}: {
+  children: React.ReactNode;
+  className?: string;
+  accent?: string;
+}) {
   return (
-    <div className={`bg-[#111111] border border-[#1E1E1E] rounded-3xl p-8 ${className}`}>
+    <div
+      className={`rounded-3xl p-8 ${className}`}
+      style={{
+        background: '#0E0E0E',
+        border: '1px solid #1E1E1E',
+        borderLeft: `3px solid ${accent}`,
+      }}
+    >
       {children}
     </div>
   );
@@ -332,7 +347,8 @@ export function StatisticsView() {
               ].map((kpi, i) => (
                 <div
                   key={i}
-                  className="bg-[#111111] border border-[#1E1E1E] rounded-2xl p-6 relative overflow-hidden hover:border-[#2A2A2A] transition-colors"
+                  className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 relative overflow-hidden hover:border-[#2A2A2A] transition-colors"
+                  style={{ borderLeft: `3px solid ${kpi.color}` }}
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div>
@@ -375,7 +391,7 @@ export function StatisticsView() {
 
             {/* ── Volume + Time in Zones ── */}
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              <Card className="xl:col-span-2">
+              <Card className="xl:col-span-2" accent="#3B82F6">
                 <CardHeader
                   icon={BarChart3}
                   iconColor="#3B82F6"
@@ -448,7 +464,7 @@ export function StatisticsView() {
                 </div>
               </Card>
 
-              <Card>
+              <Card accent="#F43F5E">
                 <CardHeader
                   icon={Heart}
                   iconColor="#F43F5E"
@@ -519,7 +535,7 @@ export function StatisticsView() {
             {/* ── VDOT + Race Predictions ── */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* VDOT Dinamico */}
-              <Card className="lg:col-span-4 flex flex-col justify-center">
+              <Card className="lg:col-span-4 flex flex-col justify-center" accent="#3B82F6">
                 <CardHeader
                   icon={Activity}
                   iconColor="#3B82F6"
@@ -607,7 +623,7 @@ export function StatisticsView() {
               </Card>
 
               {/* Race Predictions */}
-              <Card className="lg:col-span-8">
+              <Card className="lg:col-span-8" accent="#F43F5E">
                 <CardHeader
                   icon={Target}
                   iconColor="#F43F5E"
@@ -658,7 +674,7 @@ export function StatisticsView() {
             </div>
 
             {/* ── Daniels Training Zones ── */}
-            <Card>
+            <Card accent="#C0FF00">
               <CardHeader
                 icon={Zap}
                 iconColor="#C0FF00"
@@ -728,7 +744,7 @@ export function StatisticsView() {
 
             {/* ── Paces Trend + Cadenza ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
+              <Card accent="#10B981">
                 <CardHeader
                   icon={TrendingUp}
                   iconColor="#10B981"
@@ -795,7 +811,7 @@ export function StatisticsView() {
                 </div>
               </Card>
 
-              <Card>
+              <Card accent="#3B82F6">
                 <CardHeader
                   icon={Timer}
                   iconColor="#3B82F6"
@@ -867,7 +883,7 @@ export function StatisticsView() {
 
             {/* ── GCT Analysis ── */}
             {gctData && gctData.monthly.length > 0 && (
-              <Card>
+              <Card accent="#8B5CF6">
                 <CardHeader
                   icon={Zap}
                   iconColor="#8B5CF6"
@@ -1017,7 +1033,7 @@ export function StatisticsView() {
             )}
 
             {/* ── Elevation Gain ── */}
-            <Card>
+            <Card accent="#F59E0B">
               <div className="flex items-start justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <TrendingUp className="w-5 h-5 text-[#F59E0B]" />
@@ -1141,7 +1157,7 @@ export function StatisticsView() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Grafico del Futuro */}
-              <Card className="lg:col-span-8">
+              <Card className="lg:col-span-8" accent="#3B82F6">
                 <CardHeader
                   icon={LineChartIcon}
                   iconColor="#3B82F6"
@@ -1210,7 +1226,7 @@ export function StatisticsView() {
               </Card>
 
               {/* Golden Day */}
-              <Card className="lg:col-span-4 flex flex-col items-center justify-center text-center">
+              <Card className="lg:col-span-4 flex flex-col items-center justify-center text-center" accent="#EAB308">
                 <div className="flex items-center gap-2 mb-6 self-stretch">
                   <Star className="w-5 h-5 text-[#EAB308]" />
                   <span className="text-base font-black tracking-widest uppercase italic">
@@ -1257,7 +1273,7 @@ export function StatisticsView() {
 
             {/* Portafoglio Biologico + Spiegazione */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              <Card className="lg:col-span-7">
+              <Card className="lg:col-span-7" accent="#8B5CF6">
                 <CardHeader
                   icon={Briefcase}
                   iconColor="#3B82F6"
@@ -1327,7 +1343,7 @@ export function StatisticsView() {
                 </div>
               </Card>
 
-              <Card className="lg:col-span-5">
+              <Card className="lg:col-span-5" accent="#C0FF00">
                 <CardHeader
                   icon={FlaskConical}
                   iconColor="#10B981"

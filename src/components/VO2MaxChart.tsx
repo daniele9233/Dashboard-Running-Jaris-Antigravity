@@ -206,7 +206,10 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
   const trend = recent != null && older != null ? parseFloat((recent - older).toFixed(1)) : null;
 
   return (
-    <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 flex flex-col" style={{ minHeight: 220 }}>
+    <div
+      className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-xl p-5 flex flex-col"
+      style={{ minHeight: 220, borderLeft: "3px solid #3B82F6" }}
+    >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[10px] text-text-muted font-semibold tracking-wider uppercase">

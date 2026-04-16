@@ -244,7 +244,10 @@ export function MainChart({ runs }: MainChartProps) {
   const barSize = period === "1S" ? 28 : period === "4S" ? 22 : period === "TUTTO" && chartData.length > 24 ? 8 : 14;
 
   return (
-    <div className="bg-bg-card border border-[#1E293B] rounded-xl p-6 flex flex-col h-full">
+    <div
+      className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-xl p-6 flex flex-col h-full"
+      style={{ borderLeft: "3px solid #3B82F6" }}
+    >
       {/* ── Header ── */}
       <div className="flex justify-between items-start mb-6">
         <div>

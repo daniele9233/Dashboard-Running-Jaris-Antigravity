@@ -178,7 +178,10 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
   );
 
   return (
-    <div className="bg-bg-card border border-[#1E293B] rounded-xl p-6">
+    <div
+      className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-xl p-6"
+      style={{ borderLeft: "3px solid #3B82F6" }}
+    >
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">

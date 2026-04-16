@@ -198,7 +198,10 @@ export function AnaerobicThreshold({ runs, maxHr, vdot }: Props) {
   const trendIcon = trend < -5 ? "↑" : trend > 5 ? "↓" : "→";
 
   return (
-    <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 flex flex-col" style={{ minHeight: 320 }}>
+    <div
+      className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-xl p-5 flex flex-col"
+      style={{ minHeight: 320, borderLeft: "3px solid #F43F5E" }}
+    >
 
       {/* ── Header ─ */}
       <div className="flex items-center justify-between mb-4">

@@ -20,8 +20,8 @@ import {
 // ─────────────────────────────────────────────────────────────
 const NEON = '#D4FF00';
 const NEON_DIM = 'rgba(212,255,0,0.15)';
-const CARD_BG = '#1A1A1A';
-const CARD_BORDER = '#2A2A2A';
+const CARD_BG = '#0E0E0E';
+const CARD_BORDER = '#1E1E1E';
 const GRID_COLOR = '#1E1E1E';
 const LABEL_COLOR = '#8E8E93';
 const BG_DARK = '#111111';
@@ -216,10 +216,24 @@ function V2Tooltip({ active, payload, label }: any) {
 // ─────────────────────────────────────────────────────────────
 // V2 CARD
 // ─────────────────────────────────────────────────────────────
-function V2Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+function V2Card({
+  children,
+  className = '',
+  accent = NEON,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  accent?: string;
+}) {
   return (
-    <div className={`bg-[${CARD_BG}] border border-[${CARD_BORDER}] rounded-2xl p-7 relative group ${className}`}
-      style={{ backgroundColor: CARD_BG, borderColor: CARD_BORDER }}>
+    <div
+      className={`rounded-2xl p-7 relative group ${className}`}
+      style={{
+        backgroundColor: CARD_BG,
+        border: `1px solid ${CARD_BORDER}`,
+        borderLeft: `3px solid ${accent}`,
+      }}
+    >
       {children}
     </div>
   );
@@ -563,7 +577,8 @@ export function AnalyticsV2({
 
       {/* AT Trend — right column */}
       <div
-        className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-7 flex flex-col relative group"
+        className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-7 flex flex-col relative group"
+        style={{ borderLeft: `3px solid ${NEON}` }}
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -1143,7 +1158,7 @@ export function AnalyticsV2({
         const improvement = first && last ? first.pace - last.pace : 0;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh' }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh', borderLeft: `3px solid ${NEON}` }}>
 
               {/* Modal header */}
               <div className="flex justify-between items-center mb-6">
@@ -1227,7 +1242,7 @@ export function AnalyticsV2({
         const lastPmc = pmcChartData[pmcChartData.length - 1];
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh' }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh', borderLeft: `3px solid ${NEON}` }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -1294,7 +1309,7 @@ export function AnalyticsV2({
         const trendSecs = paces.length >= 2 ? Math.round((paces[0] - paces[paces.length - 1]) * 60) : null;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh' }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh', borderLeft: `3px solid ${NEON}` }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -1371,7 +1386,7 @@ export function AnalyticsV2({
         const driftPct = first3Hr > 0 ? ((last3Hr - first3Hr) / first3Hr * 100) : 0;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh' }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh', borderLeft: `3px solid ${NEON}` }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -1454,7 +1469,7 @@ export function AnalyticsV2({
         const z2 = zonesChartData.find(z => z.zone === 'Z2');
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh' }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh', borderLeft: `3px solid ${NEON}` }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -1524,7 +1539,7 @@ export function AnalyticsV2({
           ? Math.round(scatterData.reduce((s, d) => s + d.gct, 0) / scatterData.length) : 0;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh' }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh', borderLeft: `3px solid ${NEON}` }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -1601,7 +1616,7 @@ export function AnalyticsV2({
         const tPace = currentVdot ? calcTPaceV2(currentVdot) : null;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh' }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh', borderLeft: `3px solid ${NEON}` }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
