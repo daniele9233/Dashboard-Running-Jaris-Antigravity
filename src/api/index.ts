@@ -14,6 +14,8 @@ import type {
   BestEffortsResponse,
   HeatmapResponse,
   AdaptResponse,
+  ProAnalyticsResponse,
+  GarminCsvLinkResult,
 } from '../types/api';
 
 // ─── PROFILE ────────────────────────────────────────────────────────────────
@@ -112,6 +114,23 @@ export const recalculateFitnessFreshness = () => api.post('/api/fitness-freshnes
 // ─── ANALYTICS ───────────────────────────────────────────────────────────────
 export const getAnalytics = () => api.get<AnalyticsResponse>('/api/analytics');
 
+export const getProAnalytics = (params: {
+  tab?: 'all' | 'load_form' | 'potential_progress' | 'biomechanics';
+  range?: '1M' | '3M' | '6M' | '12M' | 'ALL';
+  resolution?: 'auto' | 'day' | 'week' | 'month';
+  detail?: boolean;
+  chart?: string;
+} = {}) => {
+  const search = new URLSearchParams();
+  if (params.tab) search.set('tab', params.tab);
+  if (params.range) search.set('range', params.range);
+  if (params.resolution) search.set('resolution', params.resolution);
+  if (params.detail !== undefined) search.set('detail', String(params.detail));
+  if (params.chart) search.set('chart', params.chart);
+  const qs = search.toString();
+  return api.get<ProAnalyticsResponse>(`/api/analytics/pro${qs ? `?${qs}` : ''}`);
+};
+
 export const getPredictionHistory = () => api.get<unknown>('/api/prediction-history');
 
 export const getVdotPaces = () => api.get<VdotPacesResponse>('/api/vdot/paces');
@@ -157,7 +176,7 @@ export const getHeatmap = () => api.get<HeatmapResponse>('/api/heatmap');
 // ─── GARMIN ──────────────────────────────────────────────────────────────────
 export const getGarminStatus = () => api.get<{ configured: boolean; email: string | null }>('/api/garmin/status');
 export interface GarminSyncResult { ok: boolean; hr_updated: number; dynamics_updated: number; updated: number; skipped: number; skipped_no_match: number; skipped_complete: number; total_garmin_runs: number; errors: string[]; }
-export interface GarminCsvImportResult { ok: boolean; imported: number; skipped: number; total_received: number; collection: string; errors: string[]; }
+export interface GarminCsvImportResult { ok: boolean; imported: number; skipped: number; duplicates?: number; matched?: number; enriched?: number; unmatched?: number; ambiguous?: number; total_received: number; collection: string; errors: string[]; }
 export interface GarminCsvData { id: string; athlete_id: number; source: string; imported_at: string; date: string; distance_km: number; duration_minutes: number | null; avg_pace: string | null; avg_hr: number | null; max_hr: number | null; avg_vertical_oscillation_cm: number | null; avg_vertical_ratio_pct: number | null; avg_ground_contact_time_ms: number | null; avg_stride_length_m: number | null; avg_cadence_spm: number | null; elevation_gain_m: number | null; elevation_loss_m: number | null; min_elevation_m: number | null; max_elevation_m: number | null; avg_power_w: number | null; max_power_w: number | null; calories: number | null; steps: number | null; raw: Record<string, string>; }
 export const syncGarmin = (limit = 50, force = false) => api.post<GarminSyncResult>(`/api/garmin/sync?limit=${limit}&force=${force}`);
 export const syncGarminAll = (force = false) => api.post<GarminSyncResult>(`/api/garmin/sync-all?force=${force}`);
@@ -165,6 +184,7 @@ export const getGarminAuthUrl = () => api.get<{ auth_url: string; service: strin
 export const exchangeGarminTicket = (ticket: string, service: string) => api.post<{ ok: boolean }>('/api/garmin/exchange-ticket', { ticket, service });
 export const saveGarminToken = (tokenDump: string) => api.post<{ ok: boolean; message: string }>('/api/garmin/save-token', { token_dump: tokenDump });
 export const importGarminCsv = (runs: Array<Record<string, string>>) => api.post<GarminCsvImportResult>('/api/garmin/csv-import', { runs });
+export const linkGarminCsv = () => api.post<GarminCsvLinkResult>('/api/garmin/csv-link');
 export const getGarminCsvData = () => api.get<{ data: GarminCsvData[]; count: number }>('/api/garmin/csv-data');
 export const deleteGarminCsvData = (docId: string) => api.delete<{ ok: boolean }>(`/api/garmin/csv-data/${docId}`);
 export interface GctAnalysisResponse { monthly: { month: string; pace_530: number | null; pace_500: number | null; pace_445: number | null }[]; summary: { total_runs: number; avg_gct: number | null; zones: Record<string, { label: string; color: string }> }; }

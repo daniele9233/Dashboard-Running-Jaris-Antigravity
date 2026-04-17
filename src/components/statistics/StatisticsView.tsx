@@ -11,8 +11,8 @@ import { AnalyticsV4CadenceSpeedMatrix, AnalyticsV4PaceZoneDistribution } from '
 import { AnalyticsV5BestEffortsProgression, AnalyticsV5EffortMatrix, AnalyticsV5PaceDistributionBell } from './AnalyticsV5';
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 import { useApi } from '../../hooks/useApi';
-import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, getDashboard, type GctAnalysisResponse } from '../../api';
-import type { AnalyticsResponse, VdotPacesResponse, RunsResponse, DashboardResponse } from '../../types/api';
+import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, getDashboard, getProAnalytics, linkGarminCsv, type GctAnalysisResponse } from '../../api';
+import type { AnalyticsResponse, VdotPacesResponse, RunsResponse, DashboardResponse, ProAnalyticsResponse, ProAnalyticsChart, GarminCsvLinkResult } from '../../types/api';
 import {
   Activity,
   Zap,
@@ -251,8 +251,15 @@ export function StatisticsView() {
   const { data: runsData } = useApi<RunsResponse>(getRuns);
   const { data: gctData } = useApi<GctAnalysisResponse>(getGctAnalysis);
   const { data: dashData } = useApi<DashboardResponse>(getDashboard);
+  const { data: proData, refetch: refetchProAnalytics } = useApi<ProAnalyticsResponse>(() =>
+    getProAnalytics({ tab: 'all', range: '12M', resolution: 'auto', detail: true })
+  );
 
   const runs = runsData?.runs ?? [];
+  const statsRuns = React.useMemo(
+    () => runs.filter((r) => !r.is_treadmill && (r.has_gps ?? Boolean(r.polyline || r.start_latlng))),
+    [runs]
+  );
   const vdot = vdotData?.vdot ?? null;
   const level = vdot ? vdotLevel(vdot, t) : null;
   const paces = vdotData?.paces ?? {};
@@ -260,13 +267,16 @@ export function StatisticsView() {
   const zoneDistribution = analyticsData?.zone_distribution ?? [];
   const ffHistory = dashData?.fitness_freshness ?? [];
   const prevCtl = ffHistory.length >= 2 ? ffHistory[ffHistory.length - 2].ctl : null;
+  const loadCharts = proData?.sections.load_form?.charts ?? {};
+  const potentialCharts = proData?.sections.potential_progress?.charts ?? {};
+  const biomechCharts = proData?.sections.biomechanics?.charts ?? {};
 
   // ── Monthly elevation from runs ───────────────────────────
   const elevationData = React.useMemo(() => {
     const now = new Date();
     return Array.from({ length: 12 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
-      const elevation = runs
+      const elevation = statsRuns
         .filter((r) => {
           const rd = new Date(r.date);
           return rd.getFullYear() === d.getFullYear() && rd.getMonth() === d.getMonth();
@@ -277,7 +287,7 @@ export function StatisticsView() {
         dislivello: Math.round(elevation),
       };
     });
-  }, [runs]);
+  }, [statsRuns]);
 
 
   const tabs = [
@@ -288,36 +298,58 @@ export function StatisticsView() {
     { id: 'badges',      label: 'Badge',                       icon: Star },
   ];
 
-  const renderPacesTrendChart = () => (
-    <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={pacesTrendData}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
-        <XAxis dataKey="date" stroke="#333" fontSize={10} tickLine={false} axisLine={false} />
-        <YAxis hide domain={[3.5, 6]} reversed />
-        <Tooltip contentStyle={PRO_TOOLTIP_STYLE} />
-        <Legend
-          wrapperStyle={{ fontSize: '10px', fontWeight: 700 }}
-          formatter={(v) => v === 'easy' ? 'Easy' : v === 'tempo' ? 'Tempo' : 'Fast'}
-        />
-        <Line type="monotone" dataKey="easy" stroke={PRO_BLUE} strokeWidth={2} dot={{ r: 4, fill: PRO_BLUE }} />
-        <Line type="monotone" dataKey="tempo" stroke={PRO_PURPLE} strokeWidth={2} dot={{ r: 4, fill: PRO_PURPLE }} />
-        <Line type="monotone" dataKey="fast" stroke={PRO_ACCENT} strokeWidth={2} dot={{ r: 4, fill: PRO_ACCENT }} />
-      </LineChart>
-    </ResponsiveContainer>
+  const noData = (message = 'Dati reali insufficienti') => (
+    <div className="h-full min-h-[180px] flex items-center justify-center text-gray-600 text-sm font-bold uppercase tracking-widest text-center px-6">
+      {message}
+    </div>
   );
 
-  const renderCadenceMonthlyChart = () => (
-    <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={cadenceMonthlyData}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
-        <XAxis dataKey="month" stroke="#333" fontSize={10} tickLine={false} axisLine={false} />
-        <YAxis stroke="#333" fontSize={10} domain={[160, 185]} tickLine={false} axisLine={false} />
-        <Tooltip contentStyle={PRO_TOOLTIP_STYLE} />
-        <ReferenceLine y={180} stroke="#333" strokeDasharray="5 5" />
-        <Line type="monotone" dataKey="value" stroke={PRO_ACCENT} strokeWidth={2} dot={{ r: 5, fill: PRO_ACCENT }} />
-      </LineChart>
-    </ResponsiveContainer>
-  );
+  const renderPacesTrendChart = (fullscreen = false) => {
+    const chart = biomechCharts.paces ?? potentialCharts.trend_passo;
+    const source = fullscreen ? chart?.series_detail : chart?.series_card;
+    const data = (source ?? [])
+      .filter((d) => d.pace)
+      .map((d) => ({ date: String(d.date), pace: Number(d.pace) / 60, paceSec: Number(d.pace), runs: d.runs }));
+    if (!data.length) return noData(chart?.quality?.message ?? 'Passo non disponibile per le corse outdoor GPS');
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
+          <XAxis dataKey="date" stroke="#333" fontSize={10} tickLine={false} axisLine={false} />
+          <YAxis hide domain={['dataMin - 0.15', 'dataMax + 0.15']} reversed />
+          <Tooltip
+            contentStyle={PRO_TOOLTIP_STYLE}
+            formatter={(value: any) => {
+              const sec = Math.round(Number(value) * 60);
+              return [`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} /km`, 'Passo medio'];
+            }}
+          />
+          <Line type="monotone" dataKey="pace" stroke={PRO_ACCENT} strokeWidth={2} dot={{ r: 4, fill: PRO_ACCENT }} />
+        </LineChart>
+      </ResponsiveContainer>
+    );
+  };
+
+  const renderCadenceMonthlyChart = (fullscreen = false) => {
+    const chart = biomechCharts.cadence_monthly;
+    const source = fullscreen ? chart?.series_detail : chart?.series_card;
+    const data = (source ?? [])
+      .filter((d) => d.cadence)
+      .map((d) => ({ date: String(d.date), cadence: Number(d.cadence), runs: d.runs }));
+    if (!data.length) return noData(chart?.quality?.message ?? 'Cadenza reale non disponibile');
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
+          <XAxis dataKey="date" stroke="#333" fontSize={10} tickLine={false} axisLine={false} />
+          <YAxis stroke="#333" fontSize={10} domain={['dataMin - 5', 'dataMax + 5']} tickLine={false} axisLine={false} />
+          <Tooltip contentStyle={PRO_TOOLTIP_STYLE} formatter={(v: any) => [`${Number(v).toFixed(0)} spm`, 'Cadenza']} />
+          <ReferenceLine y={180} stroke="#333" strokeDasharray="5 5" />
+          <Line type="monotone" dataKey="cadence" stroke={PRO_ACCENT} strokeWidth={2} dot={{ r: 5, fill: PRO_ACCENT }} />
+        </LineChart>
+      </ResponsiveContainer>
+    );
+  };
 
   const formatGctMonth = (value: string) => {
     const [y, m] = value.split('-');
@@ -334,12 +366,17 @@ export function StatisticsView() {
     return labels[value] || value;
   };
 
-  const renderGctMonthlyChart = () => (
+  const renderGctMonthlyChart = (fullscreen = false) => {
+    const chart = biomechCharts.gct_monthly;
+    const source = fullscreen ? chart?.series_detail : chart?.series_card;
+    const data = (source?.length ? source : (gctData?.monthly ?? []).map((d) => ({ ...d, date: d.month }))) ?? [];
+    if (!data.length) return noData(chart?.quality?.message ?? 'Importa CSV Garmin e collega la telemetria');
+    return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={gctData?.monthly ?? []}>
+      <LineChart data={data}>
         <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
         <XAxis
-          dataKey="month"
+          dataKey="date"
           stroke="#333"
           fontSize={10}
           tickLine={false}
@@ -371,6 +408,7 @@ export function StatisticsView() {
       </LineChart>
     </ResponsiveContainer>
   );
+  };
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#0A0A0A] text-white p-6 lg:p-10">
@@ -506,12 +544,12 @@ export function StatisticsView() {
                <div>
                  {/* ── MainChart ── */}
                  <div className="h-[420px]">
-                   <MainChart runs={runs} />
+                   <MainChart runs={statsRuns} />
                  </div>
                </div>
                <div>
                  {/* ── Pace Zone Distribution ── */}
-                 <AnalyticsV4PaceZoneDistribution />
+                  <AnalyticsV4PaceZoneDistribution chart={loadCharts.pace_zones} />
                </div>
              </div>
 
@@ -644,7 +682,7 @@ export function StatisticsView() {
              {false && (
              <div>
                <AnaerobicThreshold
-                 runs={runs}
+                 runs={statsRuns}
                  maxHr={dashData?.profile?.max_hr ?? 180}
                  vdot={vdot}
                />
@@ -652,7 +690,7 @@ export function StatisticsView() {
              )}
 
              {/* ── Cardiac Drift ── */}
-             {false && <StatsDrift runs={runs} />}
+             {false && <StatsDrift runs={statsRuns} />}
 
              {/* ── GCT Analysis ── */}
              {false && gctData && gctData.monthly.length > 0 && (
@@ -885,8 +923,8 @@ export function StatisticsView() {
              )}
 
              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-               <AnalyticsV5PaceDistributionBell />
-               <AnalyticsV5EffortMatrix />
+               <AnalyticsV5PaceDistributionBell chart={loadCharts.pace_distribution} />
+               <AnalyticsV5EffortMatrix chart={loadCharts.effort_matrix} />
              </div>
 
           </div>
@@ -901,10 +939,11 @@ export function StatisticsView() {
               vdot={vdot}
               zoneDistribution={zoneDistribution}
               gctData={gctData}
-              runs={runs}
+              runs={statsRuns}
               ffHistory={ffHistory}
               maxHr={dashData?.profile?.max_hr}
               thresholdPace={vdotData?.paces?.threshold}
+              proCharts={potentialCharts}
               hideSections={['pmc', 'drift', 'zones', 'gct']}
             />
             {false && (
@@ -1015,7 +1054,7 @@ export function StatisticsView() {
                 </p>
               )}
             </Card>
-            <AnalyticsV5BestEffortsProgression />
+            <AnalyticsV5BestEffortsProgression chart={potentialCharts.best_efforts_progression} />
           </div>
         )}
 
@@ -1024,7 +1063,11 @@ export function StatisticsView() {
         ════════════════════════════════════════════════════ */}
         {activeTab === 'analyticsv3' && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <AnalyticsV3 />
+            <AnalyticsV3 data={biomechCharts} onTelemetrySync={async () => {
+              const result = await linkGarminCsv();
+              refetchProAnalytics();
+              return result as GarminCsvLinkResult;
+            }} />
             <SectionLabel>BIOMECCANICA — PACES · CADENZA · DERIVA · GCT</SectionLabel>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1076,7 +1119,7 @@ export function StatisticsView() {
               </Card>
             </div>
 
-            <StatsDrift runs={runs} />
+            <StatsDrift runs={statsRuns} />
 
             {gctData && gctData.monthly.length > 0 && (
               <Card accent={PRO_ACCENT} variant="pro" className="group">
@@ -1108,13 +1151,14 @@ export function StatisticsView() {
                 vdot={vdot}
                 zoneDistribution={zoneDistribution}
                 gctData={gctData}
-                runs={runs}
+                runs={statsRuns}
                 ffHistory={ffHistory}
                 maxHr={dashData?.profile?.max_hr}
                 thresholdPace={vdotData?.paces?.threshold}
+                proCharts={biomechCharts}
                 onlySections={['gct']}
               />
-              <AnalyticsV4CadenceSpeedMatrix />
+              <AnalyticsV4CadenceSpeedMatrix chart={biomechCharts.cadence_speed_matrix} />
             </div>
           </div>
         )}
@@ -1391,7 +1435,7 @@ export function StatisticsView() {
             </div>
           }
         >
-          {renderPacesTrendChart()}
+          {renderPacesTrendChart(true)}
         </ChartFullscreenModal>
 
         <ChartFullscreenModal
@@ -1417,7 +1461,7 @@ export function StatisticsView() {
             </div>
           }
         >
-          {renderCadenceMonthlyChart()}
+          {renderCadenceMonthlyChart(true)}
         </ChartFullscreenModal>
 
         <ChartFullscreenModal
@@ -1443,7 +1487,7 @@ export function StatisticsView() {
             </div>
           }
         >
-          {renderGctMonthlyChart()}
+          {renderGctMonthlyChart(true)}
         </ChartFullscreenModal>
 
       </div>

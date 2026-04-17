@@ -10,7 +10,7 @@ import {
   ScatterChart, Scatter, ZAxis,
 } from 'recharts';
 import type { GctAnalysisResponse } from '../../api';
-import type { Run, FitnessFreshnessPoint } from '../../types/api';
+import type { Run, FitnessFreshnessPoint, ProAnalyticsChart } from '../../types/api';
 import {
   Activity, Zap, TrendingUp, Heart, Timer, Info, Footprints, Maximize2, X,
   Target,
@@ -673,6 +673,7 @@ interface AnalyticsV2Props {
   ffHistory?: FitnessFreshnessPoint[];
   maxHr?: number;
   thresholdPace?: string | null;
+  proCharts?: Record<string, ProAnalyticsChart>;
   onlySections?: AnalyticsV2Section[];
   hideSections?: AnalyticsV2Section[];
 }
@@ -696,7 +697,7 @@ function formatPaceStr(dec: number): string {
 
 export function AnalyticsV2({
   vdot, zoneDistribution, gctData, runs = [],
-  ffHistory = [], maxHr, thresholdPace, onlySections, hideSections = [],
+  ffHistory = [], maxHr, thresholdPace, proCharts = {}, onlySections, hideSections = [],
 }: AnalyticsV2Props) {
   const { t } = useTranslation();
   const hasOnlySections = (onlySections?.length ?? 0) > 0;
@@ -707,16 +708,15 @@ export function AnalyticsV2({
 
   // ── Scatter: real avg_cadence + avg_ground_contact_time ──────────────
   const scatterData = React.useMemo(() => {
+    const backend = proCharts.gct_cadence?.series_card?.length ? proCharts.gct_cadence.series_card : proCharts.gct_cadence?.series_detail;
+    if (backend?.length) {
+      return backend.map((p) => ({ cadence: Math.round(Number(p.cadence)), gct: Math.round(Number(p.gct)) }));
+    }
     const real = runs
       .filter(r => r.avg_cadence != null && r.avg_ground_contact_time != null && !r.is_treadmill)
       .map(r => ({ cadence: Math.round(r.avg_cadence!), gct: Math.round(r.avg_ground_contact_time!) }));
-    if (real.length >= 5) return real;
-    return Array.from({ length: 100 }, () => {
-      const cadence = Math.random() * 40 + 150;
-      const gct = 300 - (cadence - 150) * 2 + (Math.random() * 20 - 10);
-      return { cadence: Math.round(cadence), gct: Math.round(gct) };
-    });
-  }, [runs]);
+    return real;
+  }, [runs, proCharts]);
 
   // ── PMC: real ffHistory (last 90 days) ───────────────────────────────
   const pmcChartData = React.useMemo(() => {
@@ -731,11 +731,17 @@ export function AnalyticsV2({
         };
       });
     }
-    return pmcV2;
+    return [];
   }, [ffHistory]);
 
   // ── Pace Trend: monthly avg pace from runs ───────────────────────────
   const paceChartData = React.useMemo(() => {
+    const backend = proCharts.trend_passo?.series_card;
+    if (backend?.length) {
+      return backend
+        .filter((d) => d.pace)
+        .map((d) => ({ month: String(d.date), pace: Math.round((Number(d.pace) / 60) * 100) / 100 }));
+    }
     const now = new Date();
     const data = Array.from({ length: 10 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (9 - i), 1);
@@ -753,8 +759,8 @@ export function AnalyticsV2({
         pace: avgDec > 0 ? Math.round(avgDec * 100) / 100 : null,
       };
     }).filter((d): d is { month: string; pace: number } => d.pace !== null && d.pace > 0);
-    return data.length >= 3 ? data : paceTrendV2;
-  }, [runs]);
+    return data;
+  }, [runs, proCharts]);
 
   // ── Cardiac Drift: splits of most recent long run with HR ────────────
   const { driftChartData, driftRunLabel, driftStartKm } = React.useMemo(() => {
@@ -763,7 +769,7 @@ export function AnalyticsV2({
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 
     if (!suitable) {
-      return { driftChartData: driftV2, driftRunLabel: 'Mock session', driftStartKm: DRIFT_START_KM };
+      return { driftChartData: [], driftRunLabel: 'Dati insufficienti', driftStartKm: DRIFT_START_KM };
     }
     const pts = suitable.splits.slice(0, 15).map(s => ({
       km: `${s.km}`,
@@ -779,8 +785,24 @@ export function AnalyticsV2({
     return { driftChartData: pts, driftRunLabel: label, driftStartKm: driftKm };
   }, [runs]);
 
-  const zonesChartData = zonesV2;
-  const totalZoneMin = zonesV2.reduce((s, z) => s + z.min, 0);
+  const zonesChartData = React.useMemo(() => {
+    const backend = proCharts.pace_zones?.series_card;
+    if (backend?.length) {
+      return backend.map((z) => ({
+        z: String(z.zone ?? ''),
+        label: String(z.name ?? z.zone ?? ''),
+        min: Number(z.km ?? z.minutes ?? 0),
+        pct: Number(z.pct ?? 0),
+      }));
+    }
+    return (zoneDistribution ?? []).map((z) => ({
+      z: z.zone,
+      label: z.name,
+      min: z.minutes,
+      pct: z.pct,
+    }));
+  }, [proCharts, zoneDistribution]);
+  const totalZoneMin = zonesChartData.reduce((s, z) => s + z.min, 0);
 
   // ── AT Gauge: use maxHr + thresholdPace when available ───────────────
   const atHr = maxHr ? Math.round(maxHr * 0.88) : 165;
@@ -805,6 +827,16 @@ export function AnalyticsV2({
   const MONTH_SHORT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 
   const atTrendData = React.useMemo(() => {
+    const backend = proCharts.threshold_progression?.series_card;
+    if (backend?.length) {
+      return backend
+        .filter((d) => d.threshold_pace)
+        .map((d) => ({
+          month: String(d.date),
+          pace: Math.round(Number(d.threshold_pace)),
+          hr: Math.round((maxHr ?? 190) * 0.88),
+        }));
+    }
     const now = new Date();
     const monthly = Array.from({ length: 12 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
@@ -827,23 +859,8 @@ export function AnalyticsV2({
       };
     }).filter((d): d is { month: string; pace: number; hr: number } => d !== null);
 
-    if (monthly.length >= 3) return monthly;
-
-    // Fallback mock: 12 months improving trend
-    let hr = 168; let pace = 310;
-    return Array.from({ length: 12 }, (_, i) => {
-      hr += (Math.random() * 2 - 0.5);
-      pace -= (Math.random() * 3 + 0.5);
-      const now2 = new Date();
-      const d = new Date(now2.getFullYear(), now2.getMonth() - (11 - i), 1);
-      const isCurrentYear2 = d.getFullYear() === now2.getFullYear();
-      return {
-        month: MONTH_SHORT[d.getMonth()] + (isCurrentYear2 ? '' : ` ${String(d.getFullYear()).slice(2)}`),
-        pace: Math.round(pace),
-        hr: Math.round(hr),
-      };
-    });
-  }, [runs, maxHr]);
+    return monthly;
+  }, [runs, maxHr, proCharts]);
 
   // ── VDOT estimator ────────────────────────────────────────────────────
   function estimateVdotV2(distanceKm: number, durationMin: number): number | null {
@@ -907,6 +924,12 @@ export function AnalyticsV2({
   }, [runs, vdot, maxHr]);
 
   const vdotChartData = React.useMemo(() => {
+    const backend = proCharts.vo2_vdot_trend?.series_card;
+    if (backend?.length) {
+      return backend
+        .filter((d) => d.vdot)
+        .map((d) => ({ name: String(d.date), vdot: Number(d.vdot) }));
+    }
     const now = new Date();
     return Array.from({ length: 12 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
@@ -917,7 +940,7 @@ export function AnalyticsV2({
         vdot: vdotHistory[i],
       };
     }).filter((d): d is { name: string; vdot: number } => d.vdot !== null);
-  }, [vdotHistory]);
+  }, [vdotHistory, proCharts]);
 
   const atPanel = React.useMemo(() => {
     const latest = atTrendData[atTrendData.length - 1] ?? null;

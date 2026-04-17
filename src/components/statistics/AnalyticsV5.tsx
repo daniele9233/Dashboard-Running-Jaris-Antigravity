@@ -1,7 +1,7 @@
 /**
- * ANALYTICS PRO V5 — Editorial Running Intelligence
+ * ANALYTICS PRO V5 â€” Editorial Running Intelligence
  * Style: Data-Journal / Left-border panels / Chapter layout / Inverted callouts
- * 12 unique running charts — completely distinct from V1–V4
+ * 12 unique running charts â€” completely distinct from V1â€“V4
  */
 import React, { useMemo, useState } from 'react';
 import {
@@ -11,8 +11,9 @@ import {
   ComposedChart, Legend, LabelList,
 } from 'recharts';
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
+import type { ProAnalyticsChart } from '../../types/api';
 
-// ─── Palette ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const N   = '#C0FF00';
 const N10 = 'rgba(192,255,0,0.10)';
 const N20 = 'rgba(192,255,0,0.20)';
@@ -31,7 +32,7 @@ const DM  = '#444';
 const MT  = '#2A2A2A';
 const MID = '#333';
 
-// ─── Micro helpers ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Micro helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const mono: React.CSSProperties = { fontFamily: 'monospace' };
 const tag  = (txt: string, c = DM) => (
@@ -94,7 +95,7 @@ function Stat({ label, val, c = '#fff' }: { label: string; val: string; c?: stri
   );
 }
 
-// ─── Dark tooltip ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Dark tooltip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function TT({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
@@ -110,36 +111,36 @@ function TT({ active, payload, label }: { active?: boolean; payload?: { name: st
   );
 }
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Mock data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-// 01 — Critical Power Curve (time in seconds → max power W)
+// 01 â€” Critical Power Curve (time in seconds â†’ max power W)
 const cpCurve = [
   {t:'5s',  p:420}, {t:'10s', p:380}, {t:'30s', p:320}, {t:'1m',  p:275},
   {t:'3m',  p:238}, {t:'6m',  p:215}, {t:'10m', p:200}, {t:'20m', p:188},
   {t:'30m', p:182}, {t:'1h',  p:170}, {t:'2h',  p:158},
 ];
 
-// 02 — HRV / RMSSD trend (42 days)
+// 02 â€” HRV / RMSSD trend (42 days)
 const hrv = Array.from({length:42}, (_,i) => ({
   day: i+1,
   rmssd: 42 + Math.sin(i/6)*14 + (Math.random()-0.5)*6,
   baseline: 44,
 }));
 
-// 03 — TRIMP stacked weekly (16 weeks)
+// 03 â€” TRIMP stacked weekly (16 weeks)
 const trimp = Array.from({length:16}, (_,i) => ({
   w: `W${i+1}`,
   aerobic:  Math.round(60 + Math.sin(i/3)*25 + Math.random()*10),
   anaerobic:Math.round(15 + Math.sin(i/2)*8  + Math.random()*5),
 }));
 
-// 04 — Aerobic Decoupling % (last 20 runs)
+// 04 â€” Aerobic Decoupling % (last 20 runs)
 const decouple = Array.from({length:20}, (_,i) => ({
   run: i+1,
   pdc: Math.max(0, 3.5 + Math.sin(i/3)*3 + (Math.random()-0.5)*2),
 }));
 
-// 05 — Elevation silhouette (composite 3 runs)
+// 05 â€” Elevation silhouette (composite 3 runs)
 const elevProfile = Array.from({length:60}, (_,i) => ({
   km: i*0.5,
   runA: 80  + Math.sin(i/8)*120 + Math.sin(i/3)*30 + (i>30 ? -20 : 0),
@@ -147,7 +148,7 @@ const elevProfile = Array.from({length:60}, (_,i) => ({
   runC: 200 + Math.sin(i/6)*180 - (i>45 ? 60 : 0),
 }));
 
-// 06 — Effort bubble (distance, pace, HR → bubble size)
+// 06 â€” Effort bubble (distance, pace, HR â†’ bubble size)
 const bubbles = Array.from({length:28}, () => ({
   dist:  5  + Math.random()*30,
   pace:  4.0 + Math.random()*2,
@@ -155,21 +156,21 @@ const bubbles = Array.from({length:28}, () => ({
   z:     20  + Math.random()*60,
 }));
 
-// 07 — Running Economy index trend (20 sessions)
+// 07 â€” Running Economy index trend (20 sessions)
 const reIndex = Array.from({length:20}, (_,i) => ({
   s: i+1,
   re:   210 + Math.sin(i/4)*18 - i*1.2,
   opt:  200,
 }));
 
-// 08 — Recovery window histogram (hours between sessions)
+// 08 â€” Recovery window histogram (hours between sessions)
 const recovBins = [
   {bin:'<12h', count:3},{bin:'12-18', count:8},{bin:'18-24', count:15},
   {bin:'24-36', count:22},{bin:'36-48', count:18},{bin:'48-72', count:12},
   {bin:'>72h',  count:5},
 ];
 
-// 09 — Seasonal matrix (month × metric, 0..100)
+// 09 â€” Seasonal matrix (month Ã— metric, 0..100)
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const METRICS = ['Volume','Intensity','Consistency','Recovery','Form'];
 const seasonal = METRICS.map(m =>
@@ -182,7 +183,7 @@ const seasonColor = (v: number) => {
   return `rgba(192,255,0,0.90)`;
 };
 
-// 10 — Best Efforts Progression (4 distances over 12 months)
+// 10 â€” Best Efforts Progression (4 distances over 12 months)
 const bestEfforts = Array.from({length:12}, (_,i) => ({
   mo: MONTHS_SHORT[i],
   k5:  Math.round(1200 - i*4  + (Math.random()-0.5)*15),
@@ -190,23 +191,23 @@ const bestEfforts = Array.from({length:12}, (_,i) => ({
   hm:  Math.round(5580 - i*18 + (Math.random()-0.5)*40),
 }));
 
-// 11 — Pace distribution bell (histogram style)
+// 11 â€” Pace distribution bell (histogram style)
 const paceBell = [
   {pace:'3:30-4:00', runs:2}, {pace:'4:00-4:30', runs:8}, {pace:'4:30-5:00', runs:24},
   {pace:'5:00-5:30', runs:31}, {pace:'5:30-6:00', runs:22}, {pace:'6:00-6:30', runs:10},
   {pace:'6:30+',     runs:4},
 ];
 
-// 12 — Load Stress Balance (4 months daily)
+// 12 â€” Load Stress Balance (4 months daily)
 const lsb = Array.from({length:120}, (_,i) => {
   const ctl = 35 + (i/120)*30 + Math.sin(i/14)*5;
   const atl = ctl + Math.sin(i/7)*15 + (Math.random()-0.5)*5;
   return { d: i, ctl: Math.round(ctl), atl: Math.round(atl), tsb: Math.round(ctl-atl) };
 });
 
-// ─── Chart components ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Chart components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-// 01 — Critical Power Curve
+// 01 â€” Critical Power Curve
 function CPCurve() {
   return (
     <LBPanel accent={N} style={{ gridColumn: 'span 2' }}>
@@ -247,11 +248,11 @@ function CPCurve() {
   );
 }
 
-// 02 — HRV trend
+// 02 â€” HRV trend
 function HRVTrend() {
   return (
     <LBPanel accent={CY}>
-      <Chapter n="02" title="HRV — RMSSD Trend" sub="Autonomic nervous system readiness (42 days)" />
+      <Chapter n="02" title="HRV â€” RMSSD Trend" sub="Autonomic nervous system readiness (42 days)" />
       <ResponsiveContainer width="100%" height={160}>
         <ComposedChart data={hrv} margin={{ top:4, right:8, bottom:0, left:-20 }}>
           <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
@@ -267,18 +268,18 @@ function HRVTrend() {
       <div style={{ display:'flex', gap:20, marginTop:12 }}>
         <Stat label="7-day avg" val="46.3 ms" c={CY} />
         <Stat label="30-day avg" val="43.8 ms" c="#fff" />
-        <Stat label="Trend" val="↑ +5.7%" c={N} />
+        <Stat label="Trend" val="â†‘ +5.7%" c={N} />
         <Stat label="Status" val="READY" c={N} />
       </div>
     </LBPanel>
   );
 }
 
-// 03 — TRIMP stacked
+// 03 â€” TRIMP stacked
 function TRIMPChart() {
   return (
     <LBPanel accent={OR} style={{ gridColumn: 'span 2' }}>
-      <Chapter n="03" title="Training Impulse (TRIMP)" sub="Weekly aerobic + anaerobic training load — 16 weeks" />
+      <Chapter n="03" title="Training Impulse (TRIMP)" sub="Weekly aerobic + anaerobic training load â€” 16 weeks" />
       <ResponsiveContainer width="100%" height={180}>
         <BarChart data={trimp} margin={{ top:4, right:8, bottom:0, left:-20 }} barCategoryGap="30%">
           <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
@@ -295,17 +296,17 @@ function TRIMPChart() {
         <Stat label="Peak week"        val="124"    c={N} />
         <Stat label="Aerobic %"        val="79.2%"  c={N} />
         <Stat label="Anaerobic %"      val="20.8%"  c={OR} />
-        <Stat label="Trend 4w"         val="↑ +12%" c={CY} />
+        <Stat label="Trend 4w"         val="â†‘ +12%" c={CY} />
       </div>
     </LBPanel>
   );
 }
 
-// 04 — Aerobic Decoupling
+// 04 â€” Aerobic Decoupling
 function DecouplingChart() {
   return (
     <LBPanel accent={PU}>
-      <Chapter n="04" title="Aerobic Decoupling" sub="Cardiac drift % per long run — optimal < 5%" />
+      <Chapter n="04" title="Aerobic Decoupling" sub="Cardiac drift % per long run â€” optimal < 5%" />
       <ResponsiveContainer width="100%" height={160}>
         <BarChart data={decouple} margin={{ top:4, right:8, bottom:0, left:-20 }}>
           <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
@@ -331,7 +332,7 @@ function DecouplingChart() {
   );
 }
 
-// 05 — Elevation Profile composite
+// 05 â€” Elevation Profile composite
 function ElevProfileChart() {
   return (
     <LBPanel accent={YL} style={{ gridColumn: 'span 2' }}>
@@ -366,10 +367,17 @@ function ElevProfileChart() {
   );
 }
 
-// 06 — Effort bubble chart
-export function AnalyticsV5EffortMatrix() {
+// 06 â€” Effort bubble chart
+export function AnalyticsV5EffortMatrix({ chart }: { chart?: ProAnalyticsChart }) {
   const [expanded, setExpanded] = useState(false);
-  const renderChart = (isExpanded = false) => (
+  const cardData = chart?.series_card ?? [];
+  const detailData = chart?.series_detail?.length ? chart.series_detail : cardData;
+  const renderChart = (isExpanded = false) => {
+    const data = isExpanded ? detailData : cardData;
+    if (!data.length) {
+      return <div style={{ height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:DM, fontSize:11, fontWeight:900, letterSpacing:'0.2em', ...mono }}>DATI REALI INSUFFICIENTI</div>;
+    }
+    return (
     <ResponsiveContainer width="100%" height="100%">
       <ScatterChart margin={{ top: isExpanded ? 20 : 4, right: isExpanded ? 20 : 8, bottom: isExpanded ? 24 : 8, left: isExpanded ? -4 : -16 }}>
         <CartesianGrid strokeDasharray="2 6" stroke={MT} />
@@ -382,21 +390,22 @@ export function AnalyticsV5EffortMatrix() {
           return (
             <div style={{ background:'#040404', border:`1px solid ${MT}`, padding:'8px 12px', ...mono }}>
               <p style={{ color:N, fontSize:10, fontWeight:900 }}>{d.dist.toFixed(1)} km @ {d.pace.toFixed(2)} min/km</p>
-              <p style={{ color:DM, fontSize:9, fontWeight:900 }}>FC: {d.hr.toFixed(0)} bpm</p>
+              <p style={{ color:DM, fontSize:9, fontWeight:900 }}>FC: {d.hr ? d.hr.toFixed(0) : 'N/D'} bpm</p>
             </div>
           );
         }} />
         <ReferenceLine y={4.5} stroke={N} strokeDasharray="4 3" strokeWidth={1} />
-        <Scatter data={bubbles} fill={N} fillOpacity={0.55} />
+        <Scatter data={data} fill={N} fillOpacity={0.55} />
       </ScatterChart>
     </ResponsiveContainer>
   );
+  };
 
   return (
     <>
       <LBPanel accent={N} className="group">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-          <Chapter n="06" title="Matrice degli Sforzi" sub="Distanza � Passo � Frequenza Cardiaca (dimensione bolla = carico FC)" />
+          <Chapter n="06" title="Matrice degli Sforzi" sub="Distanza × Passo × Frequenza Cardiaca (dimensione bolla = carico FC)" />
           <ChartExpandButton onClick={() => setExpanded(true)} />
         </div>
         <div style={{ height: 200 }}>{renderChart(false)}</div>
@@ -405,25 +414,25 @@ export function AnalyticsV5EffortMatrix() {
         open={expanded}
         onClose={() => setExpanded(false)}
         title="Matrice degli Sforzi"
-        subtitle="Distanza � passo � frequenza cardiaca"
+        subtitle="Distanza × passo × frequenza cardiaca"
         accent={N}
-        details={<div style={{ display:'flex', gap:28, marginTop:4 }}><Stat label="Campioni" val={`${bubbles.length}`} c={N} /><Stat label="Threshold ref" val="4.50 /km" c="#fff" /><Stat label="Bubble size" val="Carico FC" c={DM} /></div>}
+        details={<div style={{ display:'flex', gap:28, marginTop:4 }}><Stat label="Campioni" val={`${detailData.length}`} c={N} /><Stat label="Threshold ref" val="4.50 /km" c="#fff" /><Stat label="Bubble size" val="Carico FC" c={DM} /></div>}
       >
         {renderChart(true)}
       </ChartFullscreenModal>
     </>
   );
 }
-// 07 — Running Economy trend
+// 07 â€” Running Economy trend
 function RunningEconomy() {
   return (
     <LBPanel accent={N}>
-      <Chapter n="07" title="Running Economy Index" sub="O₂ cost (ml/kg/km) — lower = better" />
+      <Chapter n="07" title="Running Economy Index" sub="Oâ‚‚ cost (ml/kg/km) â€” lower = better" />
       {/* Big inverted number */}
       <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:16 }}>
         <Callout label="Current RE" value="203" unit="ml/kg/km" />
         <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-          <span style={{ ...mono, fontSize:9, fontWeight:900, color:N, letterSpacing:'0.2em' }}>▼ -3.4% vs 3 months ago</span>
+          <span style={{ ...mono, fontSize:9, fontWeight:900, color:N, letterSpacing:'0.2em' }}>â–¼ -3.4% vs 3 months ago</span>
           <span style={{ ...mono, fontSize:9, fontWeight:900, color:DM, letterSpacing:'0.2em' }}>ELITE TARGET: &lt; 195 ml/kg/km</span>
         </div>
       </div>
@@ -441,7 +450,7 @@ function RunningEconomy() {
   );
 }
 
-// 08 — Recovery histogram
+// 08 â€” Recovery histogram
 function RecoveryHistogram() {
   return (
     <LBPanel accent={CY}>
@@ -462,7 +471,7 @@ function RecoveryHistogram() {
       </ResponsiveContainer>
       <HR />
       <div style={{ display:'flex', gap:20, marginTop:12 }}>
-        <Stat label="Optimal range"   val="24–36 h"  c={N} />
+        <Stat label="Optimal range"   val="24â€“36 h"  c={N} />
         <Stat label="Avg recovery"    val="31.4 h"   c="#fff" />
         <Stat label="Under-recovery"  val="11 cases" c={RD} />
       </div>
@@ -470,11 +479,11 @@ function RecoveryHistogram() {
   );
 }
 
-// 09 — Seasonal Matrix
+// 09 â€” Seasonal Matrix
 function SeasonalMatrix() {
   return (
     <LBPanel accent={OR} style={{ gridColumn:'span 2' }}>
-      <Chapter n="09" title="Seasonal Performance Matrix" sub="Month × Metric heatmap — full year" />
+      <Chapter n="09" title="Seasonal Performance Matrix" sub="Month Ã— Metric heatmap â€” full year" />
       <div style={{ overflowX:'auto' }}>
         <table style={{ borderCollapse:'separate', borderSpacing:3, ...mono }}>
           <thead>
@@ -497,7 +506,7 @@ function SeasonalMatrix() {
                         background: seasonColor(cell.value),
                         display:'flex', alignItems:'center', justifyContent:'center',
                       }}
-                      title={`${cell.month} — ${cell.value}`}
+                      title={`${cell.month} â€” ${cell.value}`}
                     >
                       <span style={{ fontSize:8, fontWeight:900, color:cell.value>70 ? '#000' : '#fff', ...mono }}>{cell.value}</span>
                     </div>
@@ -512,23 +521,33 @@ function SeasonalMatrix() {
       <div style={{ display:'flex', gap:20, marginTop:12 }}>
         <Stat label="Peak month" val="May" c={N} />
         <Stat label="Best metric" val="Consistency" c={N} />
-        <Stat label="Weakest" val="Recovery — Feb" c={OR} />
+        <Stat label="Weakest" val="Recovery â€” Feb" c={OR} />
       </div>
     </LBPanel>
   );
 }
 
-// 10 — Best Efforts Progression
-export function AnalyticsV5BestEffortsProgression() {
+// 10 â€” Best Efforts Progression
+export function AnalyticsV5BestEffortsProgression({ chart }: { chart?: ProAnalyticsChart }) {
   const [expanded, setExpanded] = useState(false);
-  const fmt = (s: number) => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
-  const renderChart = (isExpanded = false) => (
+  const fmt = (s?: number) => s ? `${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}` : '—';
+  const cardData = (chart?.series_card ?? []).map((d) => ({ ...d, mo: d.date }));
+  const detailData = (chart?.series_detail?.length ? chart.series_detail : chart?.series_card ?? []).map((d) => ({ ...d, mo: d.date }));
+  const best5 = Math.min(...detailData.map((d) => Number(d.k5)).filter(Boolean));
+  const best10 = Math.min(...detailData.map((d) => Number(d.k10)).filter(Boolean));
+  const bestHm = Math.min(...detailData.map((d) => Number(d.hm)).filter(Boolean));
+  const renderChart = (isExpanded = false) => {
+    const data = isExpanded ? detailData : cardData;
+    if (!data.length) {
+      return <div style={{ height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:DM, fontSize:11, fontWeight:900, letterSpacing:'0.2em', ...mono }}>DATI REALI INSUFFICIENTI</div>;
+    }
+    return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={bestEfforts} margin={{ top:isExpanded ? 20 : 4, right:isExpanded ? 20 : 8, bottom:isExpanded ? 20 : 0, left:isExpanded ? 0 : -8 }}>
+      <LineChart data={data} margin={{ top:isExpanded ? 20 : 4, right:isExpanded ? 20 : 8, bottom:isExpanded ? 20 : 0, left:isExpanded ? 0 : -8 }}>
         <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
         <XAxis dataKey="mo" tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
-        <YAxis yAxisId="left"  tick={{ fill:DM, fontSize:isExpanded ? 11 : 8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} domain={[1100,1300]} />
-        <YAxis yAxisId="right" orientation="right" tick={{ fill:DM, fontSize:isExpanded ? 11 : 8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} domain={[2400,2700]} />
+        <YAxis yAxisId="left"  tick={{ fill:DM, fontSize:isExpanded ? 11 : 8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} domain={['dataMin - 60', 'dataMax + 60']} />
+        <YAxis yAxisId="right" orientation="right" tick={{ fill:DM, fontSize:isExpanded ? 11 : 8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} domain={['dataMin - 120', 'dataMax + 120']} />
         <Tooltip content={({ active, payload, label }) => {
           if (!active || !payload?.length) return null;
           return (
@@ -549,88 +568,98 @@ export function AnalyticsV5BestEffortsProgression() {
       </LineChart>
     </ResponsiveContainer>
   );
+  };
 
   return (
     <>
       <LBPanel accent={PU} className="group" style={{ gridColumn:'span 2' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12 }}>
-          <Chapter n="10" title="Best Efforts Progression" sub="Monthly personal bests � 5K / 10K / Half Marathon" />
+          <Chapter n="10" title="Best Efforts Progression" sub="Monthly personal bests — 5K / 10K / Half Marathon" />
           <ChartExpandButton onClick={() => setExpanded(true)} />
         </div>
         <div style={{ height: 200 }}>{renderChart(false)}</div>
         <HR />
         <div style={{ display:'flex', gap:28, marginTop:12 }}>
-          <Stat label="5K best"     val="19:52" c={N}  />
-          <Stat label="10K best"    val="41:18" c={CY} />
-          <Stat label="Half best"   val="1:32:08" c={PU} />
-          <Stat label="Improvement" val="? 3.1%" c={N} />
+          <Stat label="5K best"     val={Number.isFinite(best5) ? fmt(best5) : '—'} c={N}  />
+          <Stat label="10K best"    val={Number.isFinite(best10) ? fmt(best10) : '—'} c={CY} />
+          <Stat label="Half best"   val={Number.isFinite(bestHm) ? fmt(bestHm) : '—'} c={PU} />
+          <Stat label="Campioni" val={`${chart?.quality?.sample_size ?? 0}`} c={N} />
         </div>
       </LBPanel>
       <ChartFullscreenModal
         open={expanded}
         onClose={() => setExpanded(false)}
         title="Best Efforts Progression"
-        subtitle="Monthly personal bests � 5K / 10K / Half Marathon"
+        subtitle="Monthly personal bests — 5K / 10K / Half Marathon"
         accent={PU}
-        details={<div style={{ display:'flex', gap:28 }}><Stat label="5K best" val="19:52" c={N} /><Stat label="10K best" val="41:18" c={CY} /><Stat label="Half best" val="1:32:08" c={PU} /><Stat label="Improvement" val="? 3.1%" c={N} /></div>}
+        details={<div style={{ display:'flex', gap:28 }}><Stat label="5K best" val={Number.isFinite(best5) ? fmt(best5) : '—'} c={N} /><Stat label="10K best" val={Number.isFinite(best10) ? fmt(best10) : '—'} c={CY} /><Stat label="Half best" val={Number.isFinite(bestHm) ? fmt(bestHm) : '—'} c={PU} /><Stat label="Campioni" val={`${chart?.quality?.sample_size ?? 0}`} c={N} /></div>}
       >
         {renderChart(true)}
       </ChartFullscreenModal>
     </>
   );
 }
-// 11 — Pace Distribution Bell
-export function AnalyticsV5PaceDistributionBell() {
+// 11 â€” Pace Distribution Bell
+export function AnalyticsV5PaceDistributionBell({ chart }: { chart?: ProAnalyticsChart }) {
   const [expanded, setExpanded] = useState(false);
-  const renderChart = (isExpanded = false) => (
+  const cardData = chart?.series_card ?? [];
+  const detailData = chart?.series_detail?.length ? chart.series_detail : cardData;
+  const modalPace = cardData.reduce((best, item) => Number(item.runs ?? 0) > Number(best?.runs ?? 0) ? item : best, cardData[0]);
+  const renderChart = (isExpanded = false) => {
+    const data = isExpanded ? detailData : cardData;
+    if (!data.length) {
+      return <div style={{ height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:DM, fontSize:11, fontWeight:900, letterSpacing:'0.2em', ...mono }}>DATI REALI INSUFFICIENTI</div>;
+    }
+    return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={paceBell} margin={{ top:isExpanded ? 20 : 4, right:isExpanded ? 20 : 8, bottom:isExpanded ? 20 : 0, left:isExpanded ? -4 : -20 }} barCategoryGap="12%">
+      <BarChart data={data} margin={{ top:isExpanded ? 20 : 4, right:isExpanded ? 20 : 8, bottom:isExpanded ? 20 : 0, left:isExpanded ? -4 : -20 }} barCategoryGap="12%">
         <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
         <XAxis dataKey="pace" tick={{ fill:DM, fontSize:isExpanded ? 12 : 8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
         <Tooltip content={<TT />} />
         <Bar dataKey="runs" name="Corse" radius={[4,4,0,0]}>
-          {paceBell.map((b,i) => (
-            <Cell key={i} fill={i===3 ? N : i===2||i===4 ? `${N}99` : i===1||i===5 ? `${N}55` : MT} />
+          {data.map((_,i) => (
+            <Cell key={i} fill={i === Math.floor(data.length / 2) ? N : i % 2 === 0 ? `${N}77` : MT} />
           ))}
         </Bar>
       </BarChart>
     </ResponsiveContainer>
   );
+  };
 
   return (
     <>
       <LBPanel accent={N} className="group">
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12 }}>
-          <Chapter n="11" title="Distribuzione del Passo" sub="Numero di corse per zona di passo � storico completo" />
+          <Chapter n="11" title="Distribuzione del Passo" sub="Numero di corse per zona di passo — storico completo" />
           <ChartExpandButton onClick={() => setExpanded(true)} />
         </div>
         <div style={{ height: 180 }}>{renderChart(false)}</div>
         <HR />
         <div style={{ display:'flex', gap:20, marginTop:12 }}>
-          <Stat label="Passo modale"  val="5:00-5:30" c={N} />
-          <Stat label="Corse totali" val="101"        c="#fff" />
-          <Stat label="Asimmetria"       val="Destra (bias facile)" c={DM} />
+          <Stat label="Passo modale"  val={String(modalPace?.pace ?? '—')} c={N} />
+          <Stat label="Corse totali" val={`${chart?.quality?.sample_size ?? 0}`}        c="#fff" />
+          <Stat label="Origine"       val="Outdoor GPS" c={DM} />
         </div>
       </LBPanel>
       <ChartFullscreenModal
         open={expanded}
         onClose={() => setExpanded(false)}
         title="Distribuzione del Passo"
-        subtitle="Numero di corse per zona di passo � storico completo"
+        subtitle="Numero di corse per zona di passo — storico completo"
         accent={N}
-        details={<div style={{ display:'flex', gap:28 }}><Stat label="Passo modale" val="5:00-5:30" c={N} /><Stat label="Corse totali" val="101" c="#fff" /><Stat label="Asimmetria" val="Destra (bias facile)" c={DM} /></div>}
+        details={<div style={{ display:'flex', gap:28 }}><Stat label="Passo modale" val={String(modalPace?.pace ?? '—')} c={N} /><Stat label="Corse totali" val={`${chart?.quality?.sample_size ?? 0}`} c="#fff" /><Stat label="Origine" val="Outdoor GPS" c={DM} /></div>}
       >
         {renderChart(true)}
       </ChartFullscreenModal>
     </>
   );
 }
-// 12 — Load Stress Balance 4-month
+// 12 â€” Load Stress Balance 4-month
 function LSBChart() {
   return (
     <LBPanel accent={BL} style={{ gridColumn:'span 2' }}>
-      <Chapter n="12" title="Load Stress Balance — 4 Month PMC" sub="CTL (fitness) · ATL (fatigue) · TSB (form)" />
+      <Chapter n="12" title="Load Stress Balance â€” 4 Month PMC" sub="CTL (fitness) Â· ATL (fatigue) Â· TSB (form)" />
       <ResponsiveContainer width="100%" height={200}>
         <ComposedChart data={lsb} margin={{ top:4, right:12, bottom:0, left:-16 }}>
           <defs>
@@ -655,13 +684,13 @@ function LSBChart() {
         <Stat label="ATL today" val="53.2" c={RD} />
         <Stat label="TSB today" val="+8.2" c={N} />
         <Stat label="Peak CTL"  val="68.1" c="#fff" />
-        <Stat label="Race window" val="TSB +5→+15" c={N} />
+        <Stat label="Race window" val="TSB +5â†’+15" c={N} />
       </div>
     </LBPanel>
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function AnalyticsV5() {
   return (
@@ -669,14 +698,14 @@ export function AnalyticsV5() {
       className="space-y-0 animate-in fade-in slide-in-from-bottom-4 duration-700"
       style={{ fontFamily:'monospace' }}
     >
-      {/* ── Banner ── */}
+      {/* â”€â”€ Banner â”€â”€ */}
       <div style={{ background:`linear-gradient(135deg, #0A0A0A 60%, ${N10})`, borderBottom:`3px solid ${N}`, padding:'18px 28px', display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
         <div>
-          <p style={{ ...mono, fontSize:9, color:DM, letterSpacing:'0.3em', marginBottom:4 }}>METIC LAB — INTELLIGENCE REPORT</p>
+          <p style={{ ...mono, fontSize:9, color:DM, letterSpacing:'0.3em', marginBottom:4 }}>METIC LAB â€” INTELLIGENCE REPORT</p>
           <h2 style={{ ...mono, fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'-0.02em', margin:0 }}>
             ANALYTICS <span style={{ color:N }}>PRO V5</span>
           </h2>
-          <p style={{ ...mono, fontSize:8, color:DM, letterSpacing:'0.25em', marginTop:4 }}>12 MODULES · RUNNING SCIENCE · ATHLETE #00312</p>
+          <p style={{ ...mono, fontSize:8, color:DM, letterSpacing:'0.25em', marginTop:4 }}>12 MODULES Â· RUNNING SCIENCE Â· ATHLETE #00312</p>
         </div>
         <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:6 }}>
           <div style={{ display:'flex', gap:12 }}>
@@ -687,11 +716,11 @@ export function AnalyticsV5() {
               </div>
             ))}
           </div>
-          <p style={{ ...mono, fontSize:8, color:DM, letterSpacing:'0.2em' }}>LAST SYNC: 2026-04-15 · 08:32</p>
+          <p style={{ ...mono, fontSize:8, color:DM, letterSpacing:'0.2em' }}>LAST SYNC: 2026-04-15 Â· 08:32</p>
         </div>
       </div>
 
-      {/* ── Grid ── */}
+      {/* â”€â”€ Grid â”€â”€ */}
       <div style={{ display:'grid', gap:3 }}>
 
         {/* Row A: Critical Power (2/3) + HRV (1/3) */}
@@ -730,9 +759,9 @@ export function AnalyticsV5() {
 
       </div>
 
-      {/* ── Footer ── */}
+      {/* â”€â”€ Footer â”€â”€ */}
       <div style={{ background:P1, borderTop:`1px solid ${MT}`, padding:'10px 24px', display:'flex', justifyContent:'space-between', marginTop:3 }}>
-        {tag('Powered by Metic Lab Engine · Data Science Module v5.0.1 · All metrics are estimates based on training data',DM)}
+        {tag('Powered by Metic Lab Engine Â· Data Science Module v5.0.1 Â· All metrics are estimates based on training data',DM)}
         <div style={{ display:'flex', gap:24 }}>
           {tag(`YTD: 1,248 km`, N)}
           {tag(`YTD Elev: 8,420m`, CY)}

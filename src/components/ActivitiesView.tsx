@@ -413,7 +413,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
       const result = await importGarminCsv(parsedRuns);
       setCsvResult({
         success: true,
-        message: `Importazione completata! ${result.imported} corse salvate nella collezione "garmin_csv_data". ${result.skipped} saltate.`,
+        message: `Importazione completata: ${result.imported} righe salvate, ${result.duplicates ?? 0} duplicate, ${result.matched ?? 0} match Strava, ${result.enriched ?? 0} corse arricchite.`,
         imported: result.imported,
         skipped: result.skipped,
       });

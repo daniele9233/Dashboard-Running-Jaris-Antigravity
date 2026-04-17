@@ -49,6 +49,7 @@ async def lifespan(app: FastAPI):
     global client, db
     client = motor.AsyncIOMotorClient(MONGO_URL)
     db = client[DB_NAME]
+    await _ensure_indexes()
     yield
     client.close()
 
@@ -79,6 +80,89 @@ async def _get_athlete_id() -> Optional[int]:
     """Get the current athlete_id from the latest Strava token."""
     tok = await db.strava_tokens.find_one(sort=[("_id", -1)])
     return tok.get("athlete_id") if tok else None
+
+
+async def _ensure_indexes():
+    """Create non-destructive indexes used by sync + analytics."""
+    try:
+        await db.runs.create_index([("athlete_id", 1), ("date", -1)])
+        await db.runs.create_index([("athlete_id", 1), ("is_treadmill", 1), ("has_gps", 1)])
+        await db.runs.create_index("strava_id", unique=True, sparse=True)
+        await db.garmin_csv_data.create_index([("athlete_id", 1), ("fingerprint", 1)], unique=True, sparse=True)
+        await db.garmin_csv_data.create_index([("athlete_id", 1), ("date", -1)])
+        await db.garmin_csv_data.create_index([("athlete_id", 1), ("matched_run_id", 1)])
+        await db.analytics_cache.create_index([("athlete_id", 1), ("cache_key", 1)], unique=True, sparse=True)
+    except Exception as e:
+        print(f"[indexes] non-fatal index setup error: {e}")
+
+
+def _run_has_gps(run: dict) -> bool:
+    """Return True only when a run has real GPS evidence."""
+    if run.get("polyline"):
+        return True
+    start = run.get("start_latlng")
+    if isinstance(start, list) and len(start) == 2 and start[0] is not None and start[1] is not None:
+        return True
+    streams = run.get("streams") or []
+    if isinstance(streams, list):
+        return any(pt.get("ll") for pt in streams if isinstance(pt, dict))
+    return False
+
+
+def valid_outdoor_runs_query(athlete_id=None, min_distance_km: float = 0) -> dict:
+    """Mongo query for analytics-valid outdoor GPS runs."""
+    q: dict = {"is_treadmill": {"$ne": True}}
+    if athlete_id:
+        q["athlete_id"] = athlete_id
+    if min_distance_km > 0:
+        q["distance_km"] = {"$gte": min_distance_km}
+    q["$or"] = [
+        {"has_gps": True},
+        {"polyline": {"$nin": [None, ""]}},
+        {"start_latlng.0": {"$exists": True}},
+        {"streams.ll": {"$exists": True}},
+    ]
+    return q
+
+
+def _normalise_run_quality_fields(run_doc: dict) -> dict:
+    """Add derived data-quality and biomechanics fields without removing legacy fields."""
+    has_gps = _run_has_gps(run_doc)
+    reasons = []
+    if run_doc.get("is_treadmill"):
+        reasons.append("treadmill")
+    if not has_gps:
+        reasons.append("missing_gps")
+
+    run_doc["has_gps"] = has_gps
+    run_doc["gps_quality"] = "gps" if has_gps else "none"
+    run_doc["data_quality"] = {
+        **(run_doc.get("data_quality") or {}),
+        "excluded_from_analytics_reason": reasons[0] if reasons else None,
+        "excluded_from_analytics_reasons": reasons,
+    }
+
+    avg_cad = run_doc.get("avg_cadence")
+    avg_cad_spm = None
+    if avg_cad:
+        avg_cad_spm = round(avg_cad * 2) if avg_cad < 120 else round(avg_cad)
+
+    biomech = dict(run_doc.get("biomechanics") or {})
+    fallback_bio = {
+        "avg_ground_contact_time_ms": run_doc.get("avg_ground_contact_time"),
+        "avg_vertical_oscillation_cm": run_doc.get("avg_vertical_oscillation"),
+        "avg_vertical_ratio_pct": run_doc.get("avg_vertical_ratio"),
+        "avg_stride_length_m": run_doc.get("avg_stride_length"),
+        "avg_cadence_spm": avg_cad_spm,
+    }
+    for key, value in fallback_bio.items():
+        if biomech.get(key) is None and value is not None:
+            biomech[key] = value
+    biomech["source"] = biomech.get("source") or "strava_fit"
+    if "garmin_csv_id" not in biomech:
+        biomech["garmin_csv_id"] = None
+    run_doc["biomechanics"] = biomech
+    return run_doc
 
 # ── HEALTH ───────────────────────────────────────────────────────────────────
 
@@ -217,7 +301,8 @@ async def _compute_fitness_freshness(athlete_id: str, max_hr_profile: int = 190,
     """
     from datetime import date, timedelta
 
-    q = {"athlete_id": athlete_id} if athlete_id else {}
+    q = valid_outdoor_runs_query(athlete_id)
+    delete_q = {"athlete_id": athlete_id} if athlete_id else {}
     runs = await db.runs.find(q, {"date": 1, "duration_minutes": 1, "avg_hr": 1}).sort("date", 1).to_list(None)
     if not runs:
         return
@@ -278,7 +363,7 @@ async def _compute_fitness_freshness(athlete_id: str, max_hr_profile: int = 190,
         current += timedelta(days=1)
 
     # ── Scrivi in MongoDB (sostituisci tutto) ──────────────────────────────────
-    await db.fitness_freshness.delete_many(q)
+    await db.fitness_freshness.delete_many(delete_q)
     if docs:
         await db.fitness_freshness.insert_many(docs)
 
@@ -486,6 +571,7 @@ async def strava_sync():
                 "avg_ground_contact_time":  fit_dynamics.get("avg_ground_contact_time") or detail.get("average_ground_contact_time"),
                 "avg_stride_length":        fit_dynamics.get("avg_stride_length") or detail.get("average_stride_length"),
             }
+            run_doc = _normalise_run_quality_fields(run_doc)
 
             await db.runs.update_one(
                 {"strava_id": strava_id},
@@ -510,6 +596,11 @@ async def strava_sync():
         max_hr_p = int(profile_doc.get("max_hr", 190)) if profile_doc else 190
         resting_hr_p = int(profile_doc.get("resting_hr", 50)) if profile_doc else 50
         await _compute_fitness_freshness(athlete_id, max_hr_p, resting_hr_p)
+        try:
+            await _link_garmin_csv_docs(athlete_id)
+        except Exception as e:
+            print(f"[garmin-csv-link] non-fatal relink after Strava sync failed: {e}")
+        await db.analytics_cache.delete_many({"athlete_id": athlete_id})
 
     # ── Auto-adapt training plan on every sync ───────────────────────────────
     # Recalculate VDOT from latest runs and update future weeks if paces drifted
@@ -2470,12 +2561,556 @@ def _vdot_from_best_efforts(efforts: list) -> Optional[float]:
     return best
 
 
+def _analytics_date(value: str) -> Optional[dt.date]:
+    try:
+        return dt.date.fromisoformat(str(value)[:10])
+    except (ValueError, TypeError):
+        return None
+
+
+def _parse_pace_sec(pace_str: Optional[str]) -> Optional[float]:
+    if not pace_str or ":" not in str(pace_str):
+        return None
+    try:
+        parts = str(pace_str).split(":")
+        return int(parts[0]) * 60 + int(parts[1])
+    except (ValueError, IndexError):
+        return None
+
+
+def _pace_label(seconds: Optional[float]) -> Optional[str]:
+    if seconds is None or seconds <= 0:
+        return None
+    m = int(seconds // 60)
+    s = int(round(seconds % 60))
+    if s == 60:
+        m += 1
+        s = 0
+    return f"{m}:{s:02d}"
+
+
+def _time_to_seconds(value: Optional[str]) -> Optional[int]:
+    if not value or ":" not in value:
+        return None
+    try:
+        parts = [int(p) for p in value.split(":")]
+        if len(parts) == 3:
+            return parts[0] * 3600 + parts[1] * 60 + parts[2]
+        if len(parts) == 2:
+            return parts[0] * 60 + parts[1]
+    except (ValueError, IndexError):
+        return None
+    return None
+
+
+def _avg(values: list) -> Optional[float]:
+    nums = [float(v) for v in values if v is not None]
+    return sum(nums) / len(nums) if nums else None
+
+
+def _stdev(values: list) -> float:
+    nums = [float(v) for v in values if v is not None]
+    if len(nums) < 2:
+        return 0.0
+    mean = sum(nums) / len(nums)
+    return math.sqrt(sum((v - mean) ** 2 for v in nums) / len(nums))
+
+
+def _range_cutoff(range_key: str) -> Optional[dt.date]:
+    today = dt.date.today()
+    days = {"1M": 31, "3M": 92, "6M": 183, "12M": 366}.get(range_key.upper())
+    return today - dt.timedelta(days=days) if days else None
+
+
+def _filter_runs_for_range(runs: list, range_key: str) -> list:
+    cutoff = _range_cutoff(range_key)
+    if not cutoff:
+        return runs
+    return [r for r in runs if (_analytics_date(r.get("date")) or dt.date.min) >= cutoff]
+
+
+def _resolve_resolution(range_key: str, resolution: str, detail: bool) -> str:
+    if resolution in {"day", "week", "month"}:
+        return resolution
+    if not detail:
+        return "month"
+    if range_key.upper() in {"1M", "3M"}:
+        return "day"
+    if range_key.upper() in {"6M", "12M"}:
+        return "week"
+    return "month"
+
+
+def _bucket_key(date_str: str, resolution: str) -> Optional[str]:
+    d = _analytics_date(date_str)
+    if not d:
+        return None
+    if resolution == "day":
+        return d.isoformat()
+    if resolution == "week":
+        return (d - dt.timedelta(days=d.weekday())).isoformat()
+    return d.strftime("%Y-%m")
+
+
+def _chart(
+    chart_id: str,
+    title: str,
+    unit: str = "",
+    summary: Optional[dict] = None,
+    series_card: Optional[list] = None,
+    series_detail: Optional[list] = None,
+    kpis: Optional[dict] = None,
+    sample_size: int = 0,
+    message: Optional[str] = None,
+) -> dict:
+    status = "ok" if sample_size > 0 else "insufficient_data"
+    return {
+        "id": chart_id,
+        "title": title,
+        "unit": unit,
+        "summary": summary or {},
+        "series_card": series_card or [],
+        "series_detail": series_detail or [],
+        "kpis": kpis or {},
+        "quality": {
+            "status": status,
+            "sample_size": sample_size,
+            "message": message or ("Dati insufficienti" if status != "ok" else None),
+        },
+    }
+
+
+def _group_runs_by_bucket(runs: list, resolution: str) -> dict:
+    groups: dict[str, list] = {}
+    for r in runs:
+        key = _bucket_key(r.get("date", ""), resolution)
+        if key:
+            groups.setdefault(key, []).append(r)
+    return groups
+
+
+def _weighted_pace_sec(runs: list) -> Optional[float]:
+    total_km = sum(float(r.get("distance_km") or 0) for r in runs)
+    total_min = sum(float(r.get("duration_minutes") or 0) for r in runs)
+    if total_km > 0 and total_min > 0:
+        return total_min * 60 / total_km
+    return _avg([_parse_pace_sec(r.get("avg_pace")) for r in runs])
+
+
+def _pace_at_vo2_pct(vdot: Optional[float], pct: float) -> Optional[float]:
+    if not vdot:
+        return None
+    vo2 = vdot * pct
+    disc = 0.182258 ** 2 + 4 * 0.000104 * (vo2 + 4.60)
+    if disc < 0:
+        return None
+    v = (-0.182258 + math.sqrt(disc)) / (2 * 0.000104)
+    return 60000 / v if v > 0 else None
+
+
+def _bio_value(run: dict, key: str) -> Optional[float]:
+    bio = run.get("biomechanics") or {}
+    aliases = {
+        "gct": ["avg_ground_contact_time_ms", "avg_ground_contact_time"],
+        "vo": ["avg_vertical_oscillation_cm", "avg_vertical_oscillation"],
+        "vr": ["avg_vertical_ratio_pct", "avg_vertical_ratio"],
+        "stride": ["avg_stride_length_m", "avg_stride_length"],
+        "cadence": ["avg_cadence_spm", "avg_cadence"],
+    }
+    for field in aliases.get(key, [key]):
+        value = bio.get(field)
+        if value is None:
+            value = run.get(field)
+        if value is not None:
+            try:
+                value = float(value)
+                if key == "cadence" and value < 120:
+                    value *= 2
+                return value
+            except (TypeError, ValueError):
+                continue
+    return None
+
+
+def _build_trend_km_chart(runs: list, resolution: str) -> dict:
+    detail = []
+    for key, group in sorted(_group_runs_by_bucket(runs, resolution).items()):
+        detail.append({"date": key, "km": round(sum(r.get("distance_km", 0) for r in group), 1), "runs": len(group)})
+    card = []
+    for key, group in sorted(_group_runs_by_bucket(runs, "month").items()):
+        card.append({"date": key, "km": round(sum(r.get("distance_km", 0) for r in group), 1), "runs": len(group)})
+    total = round(sum(r.get("distance_km", 0) for r in runs), 1)
+    return _chart(
+        "trend_km", "Trend KM", "km",
+        {"total_km": total, "runs": len(runs), "max_bucket_km": max([p["km"] for p in detail], default=0)},
+        card, detail,
+        {"total_km": total, "runs": len(runs), "avg_km_per_month": round(total / max(1, len(card)), 1)},
+        len(runs),
+    )
+
+
+def _build_fitness_chart(ff_docs: list, range_key: str, resolution: str) -> dict:
+    cutoff = _range_cutoff(range_key)
+    docs = [
+        d for d in ff_docs
+        if not cutoff or (_analytics_date(d.get("date")) or dt.date.min) >= cutoff
+    ]
+    docs = sorted(docs, key=lambda d: d.get("date", ""))
+    detail = [{"date": d.get("date"), "ctl": d.get("ctl"), "atl": d.get("atl"), "tsb": d.get("tsb"), "trimp": d.get("trimp")} for d in docs]
+    monthly = {}
+    for d in docs:
+        key = _bucket_key(d.get("date", ""), "month")
+        if key:
+            monthly[key] = d
+    card = [{"date": k, "ctl": v.get("ctl"), "atl": v.get("atl"), "tsb": v.get("tsb")} for k, v in sorted(monthly.items())]
+    latest = docs[-1] if docs else {}
+    return _chart(
+        "fitness_freshness", "Fitness & Freschezza", "load",
+        {"latest_ctl": latest.get("ctl"), "latest_atl": latest.get("atl"), "latest_tsb": latest.get("tsb")},
+        card, detail,
+        {"ctl": latest.get("ctl"), "atl": latest.get("atl"), "tsb": latest.get("tsb")},
+        len(docs),
+    )
+
+
+def _build_pace_zone_chart(runs: list) -> dict:
+    bins = [
+        ("Z1", "Recupero", 390, "#3B82F6"),
+        ("Z2", "Easy", 360, "#10B981"),
+        ("Z3", "Steady", 330, "#A3E635"),
+        ("Z4", "Threshold", 300, "#F59E0B"),
+        ("Z5", "Fast", 0, "#F43F5E"),
+    ]
+    totals = {b[0]: {"runs": 0, "km": 0.0, "label": b[1], "color": b[3]} for b in bins}
+    for r in runs:
+        pace = _parse_pace_sec(r.get("avg_pace"))
+        if not pace:
+            continue
+        for zone, _, min_sec, _ in bins:
+            if pace >= min_sec:
+                totals[zone]["runs"] += 1
+                totals[zone]["km"] += float(r.get("distance_km") or 0)
+                break
+    total_km = sum(v["km"] for v in totals.values())
+    series = [
+        {"zone": z, "name": v["label"], "km": round(v["km"], 1), "runs": v["runs"], "pct": round(v["km"] / total_km * 100, 1) if total_km else 0, "color": v["color"]}
+        for z, v in totals.items()
+    ]
+    return _chart("pace_zones", "Distribuzione Zone di Passo", "%", {"total_km": round(total_km, 1)}, series, series, sample_size=sum(v["runs"] for v in totals.values()))
+
+
+def _build_pace_distribution_chart(runs: list) -> dict:
+    paces = [_parse_pace_sec(r.get("avg_pace")) for r in runs]
+    paces = [p for p in paces if p]
+    bins: dict[int, int] = {}
+    for p in paces:
+        bucket = int(p // 15) * 15
+        bins[bucket] = bins.get(bucket, 0) + 1
+    series = [{"pace": _pace_label(k), "pace_sec": k, "runs": v} for k, v in sorted(bins.items())]
+    return _chart("pace_distribution", "Distribuzione del Passo", "runs", {"avg_pace_sec": round(_avg(paces) or 0, 1)}, series, series, sample_size=len(paces))
+
+
+def _build_effort_matrix_chart(runs: list) -> dict:
+    points = []
+    for r in runs:
+        pace = _parse_pace_sec(r.get("avg_pace"))
+        if not pace:
+            continue
+        hr = r.get("avg_hr")
+        duration = float(r.get("duration_minutes") or 0)
+        load = round(duration * ((hr or 140) / 140), 1)
+        points.append({
+            "date": r.get("date"),
+            "dist": r.get("distance_km"),
+            "pace": round(pace / 60, 2),
+            "pace_sec": round(pace, 1),
+            "hr": hr,
+            "z": load,
+        })
+    return _chart("effort_matrix", "Matrice degli Sforzi", "effort", {"points": len(points)}, points[-80:], points, sample_size=len(points))
+
+
+def _build_pace_trend_chart(runs: list, resolution: str) -> dict:
+    def build(res: str) -> list:
+        rows = []
+        for key, group in sorted(_group_runs_by_bucket(runs, res).items()):
+            pace = _weighted_pace_sec(group)
+            rows.append({"date": key, "pace": round(pace, 1) if pace else None, "pace_label": _pace_label(pace), "runs": len(group)})
+        return rows
+    detail = build(resolution)
+    card = build("month")
+    paces = [p["pace"] for p in detail if p.get("pace")]
+    return _chart("trend_passo", "Trend Passo", "sec/km", {"avg_pace_sec": round(_avg(paces) or 0, 1)}, card, detail, sample_size=len(paces))
+
+
+def _build_vdot_chart(runs: list, max_hr: int, resolution: str) -> tuple[dict, dict, dict]:
+    buckets: dict[str, list] = {}
+    for r in runs:
+        value = _vdot_from_run(r, max_hr)
+        key = _bucket_key(r.get("date", ""), resolution)
+        if value and key:
+            buckets.setdefault(key, []).append(min(value, 55.0))
+    detail = [
+        {"date": key, "vdot": round(_avg(vals) or 0, 1), "vo2max": round(_avg(vals) or 0, 1), "sample_size": len(vals), "quality": "hr_validated"}
+        for key, vals in sorted(buckets.items())
+    ]
+    month_buckets: dict[str, list] = {}
+    for r in runs:
+        value = _vdot_from_run(r, max_hr)
+        key = _bucket_key(r.get("date", ""), "month")
+        if value and key:
+            month_buckets.setdefault(key, []).append(min(value, 55.0))
+    card = [{"date": key, "vdot": round(_avg(vals) or 0, 1), "vo2max": round(_avg(vals) or 0, 1), "sample_size": len(vals)} for key, vals in sorted(month_buckets.items())]
+    current = detail[-1]["vdot"] if detail else None
+    vdot_chart = _chart("vo2_vdot_trend", "VO2 Max / VDOT Trend", "VDOT", {"current": current}, card, detail, {"current_vdot": current}, len(detail))
+
+    threshold_detail = []
+    race_detail = []
+    for p in detail:
+        threshold = _pace_at_vo2_pct(p.get("vdot"), 0.88)
+        threshold_detail.append({"date": p["date"], "threshold_pace": round(threshold, 1) if threshold else None, "threshold_label": _pace_label(threshold), "vdot": p.get("vdot")})
+        preds = _predict_race(p.get("vdot")) if p.get("vdot") else {}
+        race_detail.append({
+            "date": p["date"],
+            "k5": _time_to_seconds(preds.get("5K")),
+            "k10": _time_to_seconds(preds.get("10K")),
+            "hm": _time_to_seconds(preds.get("Half Marathon")),
+            "fm": _time_to_seconds(preds.get("Marathon")),
+            "vdot": p.get("vdot"),
+        })
+    threshold_chart = _chart("threshold_progression", "Soglia / Progressione Temporale", "sec/km", {}, threshold_detail[-12:], threshold_detail, sample_size=len(threshold_detail))
+    race_chart = _chart("race_evolution", "Race Evolution", "seconds", {}, race_detail[-12:], race_detail, sample_size=len(race_detail))
+    return vdot_chart, threshold_chart, race_chart
+
+
+def _build_best_efforts_progression_chart(runs: list) -> dict:
+    targets = [("k5", 5, 4.5), ("k10", 10, 9.5), ("hm", 21, 20.0)]
+    rows: dict[str, dict] = {}
+    for r in runs:
+        key = _bucket_key(r.get("date", ""), "month")
+        if not key:
+            continue
+        rows.setdefault(key, {"date": key})
+        km = float(r.get("distance_km") or 0)
+        actual_s = float(r.get("duration_minutes") or 0) * 60
+        for label, target_km, min_km in targets:
+            effort = None
+            if km >= min_km and r.get("splits"):
+                effort = _best_effort_from_splits(r.get("splits") or [], target_km)
+            if not effort and km > 0 and abs(km - target_km) <= target_km * 0.10 and actual_s > 0:
+                effort = {"time_s": actual_s, "pace_s": actual_s / km}
+            if effort and (label not in rows[key] or effort["time_s"] < rows[key][label]):
+                rows[key][label] = round(effort["time_s"])
+    series = [rows[k] for k in sorted(rows.keys())]
+    sample = sum(1 for r in series if any(k in r for k in ("k5", "k10", "hm")))
+    return _chart("best_efforts_progression", "Best Efforts Progression", "seconds", {}, series[-12:], series, sample_size=sample)
+
+
+def _build_biomechanics_charts(runs: list, resolution: str, vdot: Optional[float]) -> dict:
+    bio_runs = [r for r in runs if any(_bio_value(r, k) is not None for k in ("gct", "cadence", "vr", "stride", "vo"))]
+    gct_runs = [r for r in runs if _bio_value(r, "gct") is not None]
+    cad_runs = [r for r in runs if _bio_value(r, "cadence") is not None]
+
+    stability_rows = []
+    for key, group in sorted(_group_runs_by_bucket(gct_runs, resolution).items()):
+        gcts = [_bio_value(r, "gct") for r in group]
+        cads = [_bio_value(r, "cadence") for r in group]
+        vrs = [_bio_value(r, "vr") for r in group]
+        avg_gct = _avg(gcts)
+        avg_cad = _avg(cads)
+        avg_vr = _avg(vrs)
+        consistency = _stdev(gcts)
+        score = 100
+        if avg_gct:
+            score -= max(0, avg_gct - 250) * 0.18
+        if avg_cad:
+            score -= abs(avg_cad - 174) * 0.7
+        if avg_vr:
+            score -= max(0, avg_vr - 8.5) * 3
+        score -= consistency * 0.12
+        stability_rows.append({"date": key, "score": round(max(0, min(100, score)), 1), "gct": round(avg_gct or 0, 1), "cadence": round(avg_cad or 0, 1), "vertical_ratio": round(avg_vr or 0, 2), "runs": len(group)})
+    latest_stability = stability_rows[-1] if stability_rows else {}
+
+    pace_eff_runs = []
+    for r in runs:
+        pace = _parse_pace_sec(r.get("avg_pace"))
+        hr = r.get("avg_hr")
+        if pace and hr:
+            pace_eff_runs.append({"date": r.get("date"), "pace": pace, "hr": hr, "efficiency": round((3600 / pace) / hr * 100, 3), "cadence": _bio_value(r, "cadence"), "gct": _bio_value(r, "gct")})
+
+    adaptation = []
+    for key, group in sorted(_group_runs_by_bucket(runs, resolution).items()):
+        adaptation.append({
+            "date": key,
+            "km": round(sum(r.get("distance_km", 0) for r in group), 1),
+            "pace": round(_weighted_pace_sec(group) or 0, 1),
+            "hr": round(_avg([r.get("avg_hr") for r in group]) or 0, 1),
+            "cadence": round(_avg([_bio_value(r, "cadence") for r in group]) or 0, 1),
+            "gct": round(_avg([_bio_value(r, "gct") for r in group]) or 0, 1),
+        })
+
+    cadence_rows = []
+    for key, group in sorted(_group_runs_by_bucket(cad_runs, resolution).items()):
+        cadence_rows.append({"date": key, "cadence": round(_avg([_bio_value(r, "cadence") for r in group]) or 0, 1), "runs": len(group)})
+
+    cardiac_drift = []
+    for r in runs:
+        splits = r.get("splits") or []
+        if len(splits) < 4:
+            continue
+        half = len(splits) // 2
+        first = [_parse_pace_sec(s.get("pace")) for s in splits[:half]]
+        second = [_parse_pace_sec(s.get("pace")) for s in splits[half:]]
+        first_hr = _avg([s.get("hr") for s in splits[:half]])
+        second_hr = _avg([s.get("hr") for s in splits[half:]])
+        p1 = _avg(first)
+        p2 = _avg(second)
+        if p1 and p2:
+            cardiac_drift.append({"date": r.get("date"), "drift_pct": round((p2 - p1) / p1 * 100, 2), "hr_drift": round((second_hr or 0) - (first_hr or 0), 1), "distance_km": r.get("distance_km")})
+
+    gct_month = []
+    for key, group in sorted(_group_runs_by_bucket(gct_runs, resolution).items()):
+        row = {"date": key, "pace_530": None, "pace_500": None, "pace_445": None}
+        buckets = {"pace_530": [], "pace_500": [], "pace_445": []}
+        for r in group:
+            pace = _parse_pace_sec(r.get("avg_pace"))
+            gct = _bio_value(r, "gct")
+            if not pace or not gct:
+                continue
+            zone = "pace_530" if pace >= 330 else "pace_500" if pace >= 300 else "pace_445"
+            buckets[zone].append(gct)
+        for zone, vals in buckets.items():
+            if vals:
+                row[zone] = round(_avg(vals) or 0, 1)
+        gct_month.append(row)
+
+    gct_cad = []
+    cad_speed = []
+    for r in bio_runs:
+        pace = _parse_pace_sec(r.get("avg_pace"))
+        cad = _bio_value(r, "cadence")
+        gct = _bio_value(r, "gct")
+        if cad and gct:
+            gct_cad.append({"date": r.get("date"), "cadence": round(cad, 1), "gct": round(gct, 1), "distance_km": r.get("distance_km")})
+        if pace and cad:
+            cad_speed.append({"date": r.get("date"), "speed": round(3600 / pace, 2), "cadence": round(cad, 1), "r": max(4, min(30, r.get("distance_km", 5))), "pace_sec": round(pace, 1)})
+
+    avg_pace = _weighted_pace_sec(runs)
+    avg_hr = _avg([r.get("avg_hr") for r in runs])
+    avg_cad = _avg([_bio_value(r, "cadence") for r in cad_runs])
+    avg_gct = _avg([_bio_value(r, "gct") for r in gct_runs])
+    radar = [
+        {"axis": "Endurance", "value": round(min(100, sum(r.get("distance_km", 0) for r in runs) / max(1, len(runs)) * 7), 1)},
+        {"axis": "Speed", "value": round(min(100, ((vdot or 30) - 30) * 4), 1)},
+        {"axis": "Efficiency", "value": round(min(100, ((3600 / avg_pace) / avg_hr * 1000) if avg_pace and avg_hr else 0), 1)},
+        {"axis": "Cadence", "value": round(max(0, min(100, 100 - abs((avg_cad or 0) - 174) * 2)), 1) if avg_cad else 0},
+        {"axis": "Impact", "value": round(max(0, min(100, 100 - max(0, (avg_gct or 300) - 240) * 0.8)), 1) if avg_gct else 0},
+    ]
+
+    return {
+        "ground_contact_stability": _chart("ground_contact_stability", "Ground Contact Stability", "score", {"latest_score": latest_stability.get("score")}, stability_rows[-12:], stability_rows, latest_stability, len(stability_rows)),
+        "athletic_profile": _chart("athletic_profile", "Athletic Profile", "score", {}, radar, radar, sample_size=len(bio_runs)),
+        "efficiency_correlation": _chart("efficiency_correlation", "Efficiency Correlation", "index", {}, pace_eff_runs[-80:], pace_eff_runs, sample_size=len(pace_eff_runs)),
+        "adaptation": _chart("adaptation", "Long-Term Training Adaptation", "mixed", {}, adaptation[-12:], adaptation, sample_size=len(adaptation)),
+        "paces": _chart("paces", "Andamento Paces", "sec/km", {}, _build_pace_trend_chart(runs, "month")["series_card"], _build_pace_trend_chart(runs, resolution)["series_detail"], sample_size=len(runs)),
+        "cadence_monthly": _chart("cadence_monthly", "Cadenza Mensile", "spm", {}, cadence_rows[-12:], cadence_rows, sample_size=len(cadence_rows)),
+        "cardiac_drift": _chart("cardiac_drift", "Deriva Cardiaca", "%", {}, cardiac_drift[-40:], cardiac_drift, sample_size=len(cardiac_drift)),
+        "gct_monthly": _chart("gct_monthly", "GCT mensile", "ms", {}, gct_month[-12:], gct_month, sample_size=len(gct_month)),
+        "gct_cadence": _chart("gct_cadence", "GCT vs Cadence", "ms", {}, gct_cad[-80:], gct_cad, sample_size=len(gct_cad)),
+        "cadence_speed_matrix": _chart("cadence_speed_matrix", "Cadence vs Speed Matrix", "km/h", {}, cad_speed[-80:], cad_speed, sample_size=len(cad_speed)),
+    }
+
+
+@app.get("/api/analytics/pro")
+async def get_pro_analytics(
+    tab: str = Query("all"),
+    range_key: str = Query("12M", alias="range"),
+    resolution: str = Query("auto"),
+    detail: bool = Query(False),
+    chart: Optional[str] = Query(None),
+):
+    """Unified real-data analytics contract for visible Statistics charts."""
+    athlete_id = await _get_athlete_id()
+    if not athlete_id:
+        return JSONResponse({"error": "not_authenticated"}, status_code=401)
+
+    tab = (tab or "all").lower()
+    range_key = (range_key or "12M").upper()
+    resolved_resolution = _resolve_resolution(range_key, resolution, detail)
+    cache_key = f"pro:{tab}:{range_key}:{resolved_resolution}:{detail}:{chart or 'all'}"
+    cached = await db.analytics_cache.find_one({"athlete_id": athlete_id, "cache_key": cache_key})
+    if cached and cached.get("payload"):
+        return cached["payload"]
+
+    q = valid_outdoor_runs_query(athlete_id)
+    all_runs = await db.runs.find(q).sort("date", 1).to_list(3000)
+    all_runs = [_normalise_run_quality_fields(dict(r)) for r in all_runs]
+    runs = _filter_runs_for_range(all_runs, range_key)
+
+    profile_q = {"athlete_id": athlete_id}
+    profile = await db.profile.find_one(profile_q) or {}
+    max_hr = int(profile.get("max_hr", 190) or 190)
+    ff_docs = await db.fitness_freshness.find(profile_q).sort("date", 1).to_list(2000)
+    current_vdot = _calc_vdot(runs, max_hr) or _calc_vdot(all_runs, max_hr)
+
+    sections: dict = {}
+    if tab in {"all", "load_form"}:
+        load_charts = {
+            "fitness_freshness": _build_fitness_chart(ff_docs, range_key, resolved_resolution),
+            "trend_km": _build_trend_km_chart(runs, resolved_resolution),
+            "pace_zones": _build_pace_zone_chart(runs),
+            "pace_distribution": _build_pace_distribution_chart(runs),
+            "effort_matrix": _build_effort_matrix_chart(runs),
+        }
+        if chart:
+            load_charts = {chart: load_charts[chart]} if chart in load_charts else {}
+        sections["load_form"] = {"charts": load_charts}
+
+    if tab in {"all", "potential_progress"}:
+        vdot_chart, threshold_chart, race_chart = _build_vdot_chart(runs, max_hr, resolved_resolution)
+        potential_charts = {
+            "vo2_vdot_trend": vdot_chart,
+            "threshold_progression": threshold_chart,
+            "trend_passo": _build_pace_trend_chart(runs, resolved_resolution),
+            "race_evolution": race_chart,
+            "best_efforts_progression": _build_best_efforts_progression_chart(runs),
+        }
+        if chart:
+            potential_charts = {chart: potential_charts[chart]} if chart in potential_charts else {}
+        sections["potential_progress"] = {"charts": potential_charts}
+
+    if tab in {"all", "biomechanics"}:
+        biomech_charts = _build_biomechanics_charts(runs, resolved_resolution, current_vdot)
+        if chart:
+            biomech_charts = {chart: biomech_charts[chart]} if chart in biomech_charts else {}
+        sections["biomechanics"] = {"charts": biomech_charts}
+
+    payload = {
+        "generated_at": dt.datetime.now().isoformat(),
+        "filters": {
+            "tab": tab,
+            "range": range_key,
+            "resolution": resolved_resolution,
+            "detail": detail,
+            "chart": chart,
+            "excluded": ["treadmill", "missing_gps"],
+        },
+        "sections": sections,
+    }
+    await db.analytics_cache.replace_one(
+        {"athlete_id": athlete_id, "cache_key": cache_key},
+        {"athlete_id": athlete_id, "cache_key": cache_key, "payload": payload, "generated_at": payload["generated_at"]},
+        upsert=True,
+    )
+    return payload
+
+
 @app.get("/api/analytics")
 async def get_analytics():
     athlete_id = await _get_athlete_id()
     q = {"athlete_id": athlete_id} if athlete_id else {}
-    # Escludi tapis roulant da tutte le metriche (nessun GPS, passo non calibrato)
-    q_stats = {**q, "is_treadmill": {"$ne": True}}
+    # Escludi tapis roulant e corse senza GPS da tutte le metriche analitiche.
+    q_stats = valid_outdoor_runs_query(athlete_id)
     runs = await db.runs.find(q_stats).sort("date", -1).to_list(500)
     profile = await db.profile.find_one(q)
     max_hr = int(profile.get("max_hr", 190)) if profile else 190
@@ -2539,8 +3174,8 @@ async def get_prediction_history():
 async def get_vdot_paces():
     athlete_id = await _get_athlete_id()
     q = {"athlete_id": athlete_id} if athlete_id else {}
-    # Escludi tapis roulant da VDOT e paces
-    q_stats = {**q, "is_treadmill": {"$ne": True}}
+    # Escludi tapis roulant e corse senza GPS da VDOT e paces.
+    q_stats = valid_outdoor_runs_query(athlete_id)
     runs = await db.runs.find(q_stats).sort("date", -1).to_list(500)
     profile = await db.profile.find_one(q)
     max_hr = int(profile.get("max_hr", 190)) if profile else 190
@@ -2858,7 +3493,7 @@ def _best_effort_from_splits(splits: list, target_km: int) -> Optional[dict]:
 @app.get("/api/best-efforts")
 async def get_best_efforts():
     athlete_id = await _get_athlete_id()
-    q = {"athlete_id": athlete_id} if athlete_id else {}
+    q = valid_outdoor_runs_query(athlete_id)
 
     # Target distances: (label, meters, min_run_km, splits_km or None)
     targets = [
@@ -2928,7 +3563,7 @@ async def get_best_efforts():
 @app.get("/api/heatmap")
 async def get_heatmap():
     athlete_id = await _get_athlete_id()
-    q = {"athlete_id": athlete_id} if athlete_id else {}
+    q = valid_outdoor_runs_query(athlete_id)
     runs = await db.runs.find(q, {"date": 1, "distance_km": 1}).to_list(1000)
     heatmap = {}
     for r in runs:
@@ -4219,15 +4854,176 @@ def _parse_garmin_int(val: str) -> Optional[int]:
         return None
 
 
+def _normalise_cadence_spm(value: Optional[float]) -> Optional[int]:
+    """Normalise cadence to steps per minute."""
+    if value is None or value <= 0:
+        return None
+    return int(round(value * 2 if value < 120 else value))
+
+
+def _garmin_csv_fingerprint(doc: dict) -> str:
+    """Stable duplicate key for manually imported Garmin CSV rows."""
+    raw = "|".join([
+        str(doc.get("athlete_id") or ""),
+        str(doc.get("date") or ""),
+        f"{float(doc.get('distance_km') or 0):.2f}",
+        f"{float(doc.get('duration_minutes') or 0):.2f}",
+        str(doc.get("titolo") or "").strip().lower(),
+    ])
+    return hashlib.sha1(raw.encode("utf-8")).hexdigest()
+
+
+def _garmin_biomechanics_from_doc(doc: dict) -> dict:
+    """Extract the authoritative biomechanics values from a Garmin CSV row."""
+    bio = {
+        "avg_ground_contact_time_ms": doc.get("avg_ground_contact_time_ms"),
+        "avg_vertical_oscillation_cm": doc.get("avg_vertical_oscillation_cm"),
+        "avg_vertical_ratio_pct": doc.get("avg_vertical_ratio_pct"),
+        "avg_stride_length_m": doc.get("avg_stride_length_m"),
+        "avg_cadence_spm": doc.get("avg_cadence_spm"),
+        "source": "garmin_csv_import",
+        "garmin_csv_id": str(doc.get("_id") or doc.get("id") or ""),
+    }
+    return {k: v for k, v in bio.items() if v is not None}
+
+
+def _match_confidence(csv_doc: dict, run_doc: dict) -> float:
+    """Score Garmin CSV -> Strava run match by date, distance, duration and title."""
+    score = 0.0
+    if csv_doc.get("date") and csv_doc.get("date") == run_doc.get("date"):
+        score += 0.25
+
+    csv_dist = float(csv_doc.get("distance_km") or 0)
+    run_dist = float(run_doc.get("distance_km") or 0)
+    if csv_dist > 0 and run_dist > 0:
+        dist_delta = abs(csv_dist - run_dist)
+        score += max(0.0, 0.40 * (1 - dist_delta / max(csv_dist * 0.08, 0.20)))
+
+    csv_duration = float(csv_doc.get("duration_minutes") or 0)
+    run_duration = float(run_doc.get("duration_minutes") or 0)
+    if csv_duration > 0 and run_duration > 0:
+        dur_delta = abs(csv_duration - run_duration)
+        score += max(0.0, 0.25 * (1 - dur_delta / max(csv_duration * 0.10, 2.0)))
+
+    title = str(csv_doc.get("titolo") or "").lower()
+    name = str(run_doc.get("name") or "").lower()
+    if title and name:
+        title_tokens = {t for t in re.split(r"\W+", title) if len(t) > 3}
+        name_tokens = {t for t in re.split(r"\W+", name) if len(t) > 3}
+        if title_tokens and name_tokens:
+            overlap = len(title_tokens & name_tokens) / max(1, len(title_tokens | name_tokens))
+            score += min(0.10, overlap * 0.10)
+
+    return round(score, 3)
+
+
+async def _find_matching_run_for_garmin_csv(athlete_id: int, csv_doc: dict) -> tuple[Optional[dict], float, str]:
+    """Find a high-confidence Strava run for a Garmin CSV row."""
+    date_str = csv_doc.get("date")
+    if not date_str:
+        return None, 0.0, "no_date"
+
+    candidates = await db.runs.find({
+        "athlete_id": athlete_id,
+        "date": date_str,
+        "is_treadmill": {"$ne": True},
+    }).to_list(50)
+    if not candidates:
+        return None, 0.0, "no_match"
+
+    scored = sorted(
+        [(run, _match_confidence(csv_doc, run)) for run in candidates],
+        key=lambda item: item[1],
+        reverse=True,
+    )
+    best_run, best_score = scored[0]
+    second_score = scored[1][1] if len(scored) > 1 else 0.0
+    if best_score < 0.78:
+        return None, best_score, "low_confidence"
+    if second_score and best_score - second_score < 0.06:
+        return None, best_score, "ambiguous"
+    return best_run, best_score, "matched"
+
+
+async def _enrich_run_from_garmin_csv(run_doc: dict, csv_doc: dict, confidence: float) -> bool:
+    """Patch a Strava run with Garmin CSV biomechanics while keeping raw CSV separate."""
+    biomechanics = _garmin_biomechanics_from_doc(csv_doc)
+    if not any(k.startswith("avg_") for k in biomechanics):
+        return False
+
+    set_fields = {
+        "biomechanics": {
+            **(run_doc.get("biomechanics") or {}),
+            **biomechanics,
+            "match_confidence": confidence,
+        },
+        "garmin_csv_id": str(csv_doc.get("_id")),
+    }
+
+    if biomechanics.get("avg_ground_contact_time_ms") is not None:
+        set_fields["avg_ground_contact_time"] = biomechanics["avg_ground_contact_time_ms"]
+    if biomechanics.get("avg_vertical_oscillation_cm") is not None:
+        set_fields["avg_vertical_oscillation"] = biomechanics["avg_vertical_oscillation_cm"]
+    if biomechanics.get("avg_vertical_ratio_pct") is not None:
+        set_fields["avg_vertical_ratio"] = biomechanics["avg_vertical_ratio_pct"]
+    if biomechanics.get("avg_stride_length_m") is not None:
+        set_fields["avg_stride_length"] = biomechanics["avg_stride_length_m"]
+    if biomechanics.get("avg_cadence_spm") is not None:
+        set_fields["avg_cadence"] = biomechanics["avg_cadence_spm"]
+
+    await db.runs.update_one({"_id": run_doc["_id"]}, {"$set": set_fields})
+    await db.garmin_csv_data.update_one(
+        {"_id": csv_doc["_id"]},
+        {"$set": {
+            "matched_run_id": str(run_doc["_id"]),
+            "match_confidence": confidence,
+            "match_status": "matched",
+            "linked_at": dt.datetime.now().isoformat(),
+        }},
+    )
+    return True
+
+
+async def _link_garmin_csv_docs(athlete_id: int) -> dict:
+    """Link imported Garmin CSV rows to Strava runs and enrich biomechanics."""
+    docs = await db.garmin_csv_data.find({"athlete_id": athlete_id}).sort("date", -1).to_list(3000)
+    result = {
+        "ok": True,
+        "total_csv": len(docs),
+        "matched": 0,
+        "enriched": 0,
+        "unmatched": 0,
+        "ambiguous": 0,
+        "errors": [],
+    }
+
+    for doc in docs:
+        try:
+            run, confidence, status = await _find_matching_run_for_garmin_csv(athlete_id, doc)
+            if not run:
+                if status == "ambiguous":
+                    result["ambiguous"] += 1
+                else:
+                    result["unmatched"] += 1
+                await db.garmin_csv_data.update_one(
+                    {"_id": doc["_id"]},
+                    {"$set": {"match_status": status, "match_confidence": confidence}},
+                )
+                continue
+
+            result["matched"] += 1
+            if await _enrich_run_from_garmin_csv(run, doc, confidence):
+                result["enriched"] += 1
+        except Exception as e:
+            result["errors"].append(str(e))
+
+    await db.analytics_cache.delete_many({"athlete_id": athlete_id})
+    return result
+
+
 @app.post("/api/garmin/csv-import")
 async def garmin_csv_import(request: Request):
-    """Import Garmin CSV data into a SEPARATE collection (garmin_csv_data).
-    
-    This does NOT modify the runs collection. Data is stored as-is for
-    future use (charts, analysis, etc.).
-    
-    Body: { "runs": [ {csv_row_data}, ... ] }
-    """
+    """Import Garmin CSV rows, dedupe raw data, then link telemetry to Strava runs."""
     athlete_id = await _get_athlete_id()
     if not athlete_id:
         return JSONResponse({"error": "not_authenticated"}, status_code=401)
@@ -4240,6 +5036,7 @@ async def garmin_csv_import(request: Request):
 
     imported = 0
     skipped = 0
+    duplicates = 0
     errors = []
 
     for row in runs_data:
@@ -4326,8 +5123,8 @@ async def garmin_csv_import(request: Request):
                 "avg_ground_contact_time_ms": tempo_contatto,
                 "avg_stride_length_m": lunghezza_passo,
                 # Cadence
-                "avg_cadence_spm": round(cadenza_media / 2) if cadenza_media else None,
-                "max_cadence_spm": round(cadenza_max / 2) if cadenza_max else None,
+                "avg_cadence_spm": _normalise_cadence_spm(cadenza_media),
+                "max_cadence_spm": _normalise_cadence_spm(cadenza_max),
                 # Elevation
                 "elevation_gain_m": ascesa,
                 "elevation_loss_m": discesa,
@@ -4354,7 +5151,16 @@ async def garmin_csv_import(request: Request):
                 "raw": row,
             }
 
-            # Insert into garmin_csv_data (no upsert — always insert new)
+            doc["fingerprint"] = _garmin_csv_fingerprint(doc)
+            existing = await db.garmin_csv_data.find_one({
+                "athlete_id": athlete_id,
+                "fingerprint": doc["fingerprint"],
+            })
+            if existing:
+                duplicates += 1
+                skipped += 1
+                continue
+
             await db.garmin_csv_data.insert_one(doc)
             imported += 1
 
@@ -4362,14 +5168,30 @@ async def garmin_csv_import(request: Request):
             errors.append(f"Errore riga {imported + skipped + 1}: {str(e)}")
             continue
 
+    link_result = await _link_garmin_csv_docs(athlete_id)
+
     return {
         "ok": True,
         "imported": imported,
         "skipped": skipped,
+        "duplicates": duplicates,
+        "matched": link_result.get("matched", 0),
+        "enriched": link_result.get("enriched", 0),
+        "unmatched": link_result.get("unmatched", 0),
+        "ambiguous": link_result.get("ambiguous", 0),
         "total_received": len(runs_data),
         "collection": "garmin_csv_data",
-        "errors": errors[:10],
+        "errors": (errors + link_result.get("errors", []))[:10],
     }
+
+
+@app.post("/api/garmin/csv-link")
+async def garmin_csv_link():
+    """Relink already imported Garmin CSV telemetry to Strava runs."""
+    athlete_id = await _get_athlete_id()
+    if not athlete_id:
+        return JSONResponse({"error": "not_authenticated"}, status_code=401)
+    return await _link_garmin_csv_docs(athlete_id)
 
 
 @app.get("/api/garmin/csv-data")
@@ -4403,6 +5225,7 @@ async def delete_garmin_csv_data(doc_id: str):
         result = await db.garmin_csv_data.delete_one({"_id": ObjectId(doc_id), "athlete_id": athlete_id})
         if result.deleted_count == 0:
             return JSONResponse({"error": "not_found"}, status_code=404)
+        await db.analytics_cache.delete_many({"athlete_id": athlete_id})
         return {"ok": True}
     except Exception:
         return JSONResponse({"error": "invalid_id"}, status_code=400)

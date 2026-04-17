@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { Activity, Zap, RefreshCcw, Info, Check, AlertTriangle } from 'lucide-react';
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
+import type { GarminCsvLinkResult, ProAnalyticsChart } from '../../types/api';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const NEON   = '#C0FF00';
@@ -362,25 +363,36 @@ function DarkTooltip({ active, payload, label }: { active?: boolean; payload?: {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-function GroundContactStability() {
+function GroundContactStability({
+  chart,
+  onTelemetrySync,
+}: {
+  chart?: ProAnalyticsChart;
+  onTelemetrySync?: () => Promise<GarminCsvLinkResult | void>;
+}) {
   const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
-  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(new Date());
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [syncResult, setSyncResult] = useState<GarminCsvLinkResult | null>(null);
+  const latest = chart?.kpis ?? chart?.series_card?.[chart.series_card.length - 1] ?? {};
+  const score = Number(latest.score ?? chart?.summary?.latest_score ?? 0);
+  const gct = Number(latest.gct ?? 0);
+  const cadence = Number(latest.cadence ?? 0);
+  const verticalRatio = Number(latest.vertical_ratio ?? 0);
+  const hasData = chart?.quality?.status === 'ok' && score > 0;
+  const evolution = (chart?.series_card?.length ? chart.series_card : chart?.series_detail ?? []).slice(-7);
 
-  const handleSync = () => {
+  const handleSync = async () => {
     if (syncState === 'syncing') return;
     setSyncState('syncing');
-
-    setTimeout(() => {
-      const success = Math.random() > 0.15;
-      if (success) {
-        setSyncState('success');
-        setLastSyncTime(new Date());
-      } else {
-        setSyncState('error');
-      }
-
+    try {
+      const result = await onTelemetrySync?.();
+      setSyncResult(result ?? null);
+      setSyncState('success');
+      setLastSyncTime(new Date());
       setTimeout(() => setSyncState('idle'), 3000);
-    }, 2000);
+    } catch {
+      setSyncState('error');
+    }
   };
 
   return (
@@ -398,7 +410,7 @@ function GroundContactStability() {
         <div className="mt-4 sm:mt-0 flex items-center gap-4 bg-[#ccff00]/10 border border-[#ccff00]/20 rounded-full px-5 py-2">
           <span className="text-xs font-bold tracking-wider text-[#ccff00]">STABILITY SCORE</span>
           <div className="flex items-baseline gap-1 shadow-sm">
-            <span className="text-xl font-black text-[#ccff00]">94.2</span>
+            <span className="text-xl font-black text-[#ccff00]">{hasData ? score.toFixed(1) : '--'}</span>
             <span className="text-sm font-bold text-[#ccff00] opacity-80">%</span>
           </div>
         </div>
@@ -451,31 +463,30 @@ function GroundContactStability() {
           <div className="flex flex-col">
             <span className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2">Contact Time Off</span>
             <div className="flex items-baseline gap-2 mb-2">
-              <span className="text-6xl sm:text-7xl font-black text-white tracking-tighter shadow-sm">14</span>
+              <span className="text-6xl sm:text-7xl font-black text-white tracking-tighter shadow-sm">{hasData ? Math.round(gct) : '--'}</span>
               <span className="text-xl sm:text-2xl text-gray-500 font-bold">ms</span>
             </div>
-            <p className="text-sm text-gray-500">Optimal ground contact asymmetry. Bilateral balance within elite range.</p>
+            <p className="text-sm text-gray-500">
+              {hasData ? 'Stability calcolata da GCT, cadenza, vertical ratio e consistenza.' : 'Importa il CSV Garmin in Activities e collega la telemetria.'}
+            </p>
           </div>
 
           <div className="flex gap-4 sm:gap-6 mt-10">
-            <MetricBox title="CADENCE" value="178" unit="spm" />
-            <MetricBox title="STRIDE L." value="8.2" unit="m/s" />
+            <MetricBox title="CADENCE" value={cadence ? cadence.toFixed(0) : '--'} unit="spm" />
+            <MetricBox title="VERT. RATIO" value={verticalRatio ? verticalRatio.toFixed(1) : '--'} unit="%" />
           </div>
 
           <div className="mt-12 mb-8">
             <span className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-8 block">Session Evolution</span>
             <div className="flex items-end justify-between gap-1 sm:gap-2 px-2 h-20 border-b border-gray-800 pb-2">
-              {[
-                { scaleY: 0.3, color: '#4ade80' },
-                { scaleY: 0.4, color: '#84cc16' },
-                { scaleY: 0.5, color: '#a3e635' },
-                { scaleY: 0.6, color: '#ccff00' },
-                { scaleY: 0.7, color: '#facc15' },
-                { scaleY: 0.8, color: '#fb923c' },
-                { scaleY: 1.0, color: '#f97316' },
-              ].map((bar, idx) => (
-                <EvolutionBar key={idx} scaleY={bar.scaleY} color={bar.color} label={`${idx + 1}`} />
-              ))}
+              {(evolution.length ? evolution : Array.from({ length: 7 }, (_, i) => ({ score: 0, date: `${i + 1}` }))).map((row, idx) => {
+                const value = Number(row.score ?? 0);
+                const scaleY = value ? Math.max(0.15, Math.min(1, value / 100)) : 0.12;
+                const color = value >= 85 ? '#ccff00' : value >= 70 ? '#facc15' : '#f97316';
+                return (
+                <EvolutionBar key={idx} scaleY={scaleY} color={color} label={String(row.date ?? idx + 1).slice(-5)} />
+                );
+              })}
             </div>
           </div>
 
@@ -518,8 +529,9 @@ function GroundContactStability() {
             </button>
 
             <div className="text-center text-[10px] sm:text-xs font-mono text-gray-500 uppercase tracking-widest h-4 flex items-center justify-center">
-              {syncState === 'syncing' && 'Establishing secure connection...'}
-              {syncState === 'error' && <span className="text-[#ff5b00]">Connection timeout. Please verify telemetry link.</span>}
+              {syncState === 'syncing' && 'Collegamento CSV Garmin importati...'}
+              {syncState === 'error' && <span className="text-[#ff5b00]">Link CSV non riuscito. Importa il CSV in Activities e riprova.</span>}
+              {syncState === 'success' && syncResult && <span className="text-[#ccff00]">{syncResult.matched} match, {syncResult.enriched} corse arricchite</span>}
               {syncState !== 'syncing' && syncState !== 'error' && lastSyncTime && (
                 <>Last Synced: <span className="text-gray-400 ml-1">{syncState === 'success' ? 'Just Now' : lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></>
               )}
@@ -621,10 +633,41 @@ function EvolutionBar({ scaleY, color, label }: { scaleY: number; color: string;
   );
 }
 
-export function AnalyticsV3() {
+export function AnalyticsV3({
+  data = {},
+  onTelemetrySync,
+}: {
+  data?: Record<string, ProAnalyticsChart>;
+  onTelemetrySync?: () => Promise<GarminCsvLinkResult | void>;
+}) {
   const [athleticExpanded, setAthleticExpanded] = useState(false);
   const [efficiencyExpanded, setEfficiencyExpanded] = useState(false);
   const [adaptationExpanded, setAdaptationExpanded] = useState(false);
+  const radarAxesReal: RadarAxis[] = (data.athletic_profile?.series_card ?? []).map((d) => ({
+    label: String(d.axis ?? ''),
+    value: Number(d.value ?? 0),
+  })).filter((d) => d.label);
+  const efficiencySeries = (data.efficiency_correlation?.series_card ?? []).map((d) => ({
+    t: String(d.date ?? ''),
+    speed: Number(d.efficiency ?? 0),
+    cardiac: Number(d.hr ?? 0) / 200,
+  })).filter((d) => d.speed || d.cardiac);
+  const efficiencyDetail = (data.efficiency_correlation?.series_detail?.length ? data.efficiency_correlation.series_detail : data.efficiency_correlation?.series_card ?? []).map((d) => ({
+    t: String(d.date ?? ''),
+    speed: Number(d.efficiency ?? 0),
+    cardiac: Number(d.hr ?? 0) / 200,
+  })).filter((d) => d.speed || d.cardiac);
+  const adaptationSeries = (data.adaptation?.series_card ?? []).map((d) => ({
+    month: String(d.date ?? ''),
+    adaptation: Math.max(0, Math.min(100, 100 - Number(d.gct ?? 280) / 4)),
+    stress: Number(d.km ?? 0),
+  }));
+  const adaptationDetail = (data.adaptation?.series_detail?.length ? data.adaptation.series_detail : data.adaptation?.series_card ?? []).map((d) => ({
+    month: String(d.date ?? ''),
+    adaptation: Math.max(0, Math.min(100, 100 - Number(d.gct ?? 280) / 4)),
+    stress: Number(d.km ?? 0),
+  }));
+  const noData = <div className="h-full min-h-[180px] flex items-center justify-center text-gray-600 text-xs font-black uppercase tracking-widest">Dati reali insufficienti</div>;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -632,7 +675,7 @@ export function AnalyticsV3() {
       {/* ══════════════════════════════════════════════════
           GROUND CONTACT STABILITY
       ══════════════════════════════════════════════════ */}
-      <GroundContactStability />
+      <GroundContactStability chart={data.ground_contact_stability} onTelemetrySync={onTelemetrySync} />
 
       {/* ══════════════════════════════════════════════════
           BOTTOM ROW: Radar + Efficiency Correlation
@@ -658,9 +701,9 @@ export function AnalyticsV3() {
             </div>
             <ChartExpandButton onClick={() => setAthleticExpanded(true)} />
           </div>
-          <PentagonRadar axes={radarAxes} />
+          {radarAxesReal.length ? <PentagonRadar axes={radarAxesReal} /> : noData}
           <div className="mt-4 grid grid-cols-5 gap-2">
-            {radarAxes.map((a) => (
+            {radarAxesReal.map((a) => (
               <div key={a.label} className="text-center">
                 <p className="text-[8px] font-black tracking-widest uppercase" style={{ color: MUTED }}>{a.label}</p>
                 <p className="text-xs font-black mt-0.5" style={{ color: NEON }}>{a.value}</p>
@@ -697,8 +740,8 @@ export function AnalyticsV3() {
             </div>
           </div>
 
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={efficiencyData} margin={{ top: 4, right: 16, bottom: 0, left: -20 }}>
+          {efficiencySeries.length ? <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={efficiencySeries} margin={{ top: 4, right: 16, bottom: 0, left: -20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={GRID} vertical={false} />
               <XAxis
                 dataKey="t"
@@ -735,7 +778,7 @@ export function AnalyticsV3() {
                 activeDot={{ r: 6 }}
               />
             </LineChart>
-          </ResponsiveContainer>
+          </ResponsiveContainer> : noData}
 
           {/* Bottom stats */}
           <div
@@ -790,8 +833,8 @@ export function AnalyticsV3() {
           </div>
         </div>
 
-        <ResponsiveContainer width="100%" height={220}>
-          <AreaChart data={adaptationData} margin={{ top: 10, right: 20, bottom: 0, left: -20 }}>
+        {adaptationSeries.length ? <ResponsiveContainer width="100%" height={220}>
+          <AreaChart data={adaptationSeries} margin={{ top: 10, right: 20, bottom: 0, left: -20 }}>
             <defs>
               <linearGradient id="adaptGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%"  stopColor={NEON}   stopOpacity={0.18} />
@@ -842,7 +885,7 @@ export function AnalyticsV3() {
               dot={false}
             />
           </AreaChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : noData}
 
         {/* Bottom annotation */}
         <div
@@ -873,7 +916,7 @@ export function AnalyticsV3() {
         accent={NEON}
         details={
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            {radarAxes.map((a) => (
+            {radarAxesReal.map((a) => (
               <div key={a.label} className="rounded-xl border border-white/10 bg-white/[0.02] p-3 text-center">
                 <p className="text-[9px] font-black tracking-widest uppercase" style={{ color: MUTED }}>{a.label}</p>
                 <p className="mt-1 text-xl font-black" style={{ color: NEON }}>{a.value}</p>
@@ -884,7 +927,7 @@ export function AnalyticsV3() {
       >
         <div className="flex h-full min-h-0 w-full items-center justify-center">
           <div className="scale-[1.45] sm:scale-[1.75] origin-center">
-            <PentagonRadar axes={radarAxes} />
+            {radarAxesReal.length ? <PentagonRadar axes={radarAxesReal} /> : noData}
           </div>
         </div>
       </ChartFullscreenModal>
@@ -908,8 +951,8 @@ export function AnalyticsV3() {
           </div>
         }
       >
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={efficiencyData} margin={{ top: 12, right: 28, bottom: 8, left: -10 }}>
+        {efficiencyDetail.length ? <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={efficiencyDetail} margin={{ top: 12, right: 28, bottom: 8, left: -10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={GRID} vertical={false} />
             <XAxis dataKey="t" tick={{ fill: MUTED, fontSize: 10, fontWeight: 900 }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fill: MUTED, fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
@@ -918,7 +961,7 @@ export function AnalyticsV3() {
             <Line type="monotone" dataKey="speed" name="Speed Output" stroke={NEON} strokeWidth={3} strokeDasharray="6 3" dot={{ r: 4, fill: NEON, stroke: BG, strokeWidth: 2 }} activeDot={{ r: 6 }} />
             <Line type="monotone" dataKey="cardiac" name="Cardiac Stress" stroke={ORANGE} strokeWidth={3} strokeDasharray="4 2" dot={{ r: 4, fill: ORANGE, stroke: BG, strokeWidth: 2 }} activeDot={{ r: 6 }} />
           </LineChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : noData}
       </ChartFullscreenModal>
 
       <ChartFullscreenModal
@@ -945,8 +988,8 @@ export function AnalyticsV3() {
           </div>
         }
       >
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={adaptationData} margin={{ top: 12, right: 28, bottom: 8, left: -10 }}>
+        {adaptationDetail.length ? <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={adaptationDetail} margin={{ top: 12, right: 28, bottom: 8, left: -10 }}>
             <defs>
               <linearGradient id="adaptGradModal" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={NEON} stopOpacity={0.18} />
@@ -965,7 +1008,7 @@ export function AnalyticsV3() {
             <Area type="monotone" dataKey="stress" name="Stress" stroke={ORANGE} strokeWidth={2.5} fill="url(#stressGradModal)" dot={false} />
             <Area type="monotone" dataKey="adaptation" name="Adaptation" stroke={NEON} strokeWidth={3} fill="url(#adaptGradModal)" dot={false} />
           </AreaChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : noData}
       </ChartFullscreenModal>
 
     </div>

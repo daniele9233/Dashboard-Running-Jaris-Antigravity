@@ -76,6 +76,22 @@ export interface Run {
   avg_stride_length: number | null;         // m
   // Indoor/treadmill flag — excluded from all statistics
   is_treadmill: boolean | null;
+  has_gps?: boolean | null;
+  gps_quality?: string | null;
+  data_quality?: {
+    excluded_from_analytics_reason?: string | null;
+    excluded_from_analytics_reasons?: string[];
+  } | null;
+  biomechanics?: {
+    avg_ground_contact_time_ms?: number | null;
+    avg_vertical_oscillation_cm?: number | null;
+    avg_vertical_ratio_pct?: number | null;
+    avg_stride_length_m?: number | null;
+    avg_cadence_spm?: number | null;
+    source?: string | null;
+    garmin_csv_id?: string | null;
+    match_confidence?: number | null;
+  } | null;
   name: string | null;
 }
 
@@ -264,6 +280,54 @@ export interface AnalyticsResponse {
   pace_trend: { date: string; pace: string }[];
   zone_distribution: ZonePoint[];
   goal_gap: GoalGap | null;
+}
+
+export interface ProAnalyticsQuality {
+  status: 'ok' | 'insufficient_data' | string;
+  sample_size: number;
+  message?: string | null;
+}
+
+export interface ProAnalyticsChart {
+  id: string;
+  title: string;
+  unit: string;
+  summary: Record<string, any>;
+  series_card: Array<Record<string, any>>;
+  series_detail: Array<Record<string, any>>;
+  kpis: Record<string, any>;
+  quality: ProAnalyticsQuality;
+}
+
+export interface ProAnalyticsSection {
+  charts: Record<string, ProAnalyticsChart>;
+}
+
+export interface ProAnalyticsResponse {
+  generated_at: string;
+  filters: {
+    tab: string;
+    range: string;
+    resolution: string;
+    detail: boolean;
+    chart?: string | null;
+    excluded?: string[];
+  };
+  sections: {
+    load_form?: ProAnalyticsSection;
+    potential_progress?: ProAnalyticsSection;
+    biomechanics?: ProAnalyticsSection;
+  };
+}
+
+export interface GarminCsvLinkResult {
+  ok: boolean;
+  total_csv: number;
+  matched: number;
+  enriched: number;
+  unmatched: number;
+  ambiguous: number;
+  errors: string[];
 }
 
 // ─── TRAINING PLAN ADAPT ─────────────────────────────────────────────────────
