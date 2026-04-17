@@ -373,6 +373,7 @@ function GroundContactStability({
   const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [syncResult, setSyncResult] = useState<GarminCsvLinkResult | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const latest = chart?.kpis ?? chart?.series_card?.[chart.series_card.length - 1] ?? {};
   const score = Number(latest.score ?? chart?.summary?.latest_score ?? 0);
   const gct = Number(latest.gct ?? 0);
@@ -384,13 +385,15 @@ function GroundContactStability({
   const handleSync = async () => {
     if (syncState === 'syncing') return;
     setSyncState('syncing');
+    setSyncError(null);
     try {
       const result = await onTelemetrySync?.();
       setSyncResult(result ?? null);
       setSyncState('success');
       setLastSyncTime(new Date());
       setTimeout(() => setSyncState('idle'), 3000);
-    } catch {
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : 'Link CSV non riuscito');
       setSyncState('error');
     }
   };
@@ -530,8 +533,8 @@ function GroundContactStability({
 
             <div className="text-center text-[10px] sm:text-xs font-mono text-gray-500 uppercase tracking-widest h-4 flex items-center justify-center">
               {syncState === 'syncing' && 'Collegamento CSV Garmin importati...'}
-              {syncState === 'error' && <span className="text-[#ff5b00]">Link CSV non riuscito. Importa il CSV in Activities e riprova.</span>}
-              {syncState === 'success' && syncResult && <span className="text-[#ccff00]">{syncResult.matched} match, {syncResult.enriched} corse arricchite</span>}
+              {syncState === 'error' && <span className="text-[#ff5b00]">{syncError ?? 'Link CSV non riuscito'}</span>}
+              {syncState === 'success' && syncResult && <span className="text-[#ccff00]">{syncResult.message || `${syncResult.matched} match, ${syncResult.enriched} corse arricchite`}</span>}
               {syncState !== 'syncing' && syncState !== 'error' && lastSyncTime && (
                 <>Last Synced: <span className="text-gray-400 ml-1">{syncState === 'success' ? 'Just Now' : lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></>
               )}

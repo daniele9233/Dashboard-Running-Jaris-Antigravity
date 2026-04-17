@@ -251,7 +251,7 @@ export function StatisticsView() {
   const { data: runsData } = useApi<RunsResponse>(getRuns);
   const { data: gctData } = useApi<GctAnalysisResponse>(getGctAnalysis);
   const { data: dashData } = useApi<DashboardResponse>(getDashboard);
-  const { data: proData, refetch: refetchProAnalytics } = useApi<ProAnalyticsResponse>(() =>
+  const { data: proData, error: proError, refetch: refetchProAnalytics } = useApi<ProAnalyticsResponse>(() =>
     getProAnalytics({ tab: 'all', range: '12M', resolution: 'auto', detail: true })
   );
 
@@ -444,6 +444,12 @@ export function StatisticsView() {
             ))}
           </div>
         </div>
+
+        {proError && ['analytics', 'analyticsv2', 'analyticsv3'].includes(activeTab) && (
+          <div className="rounded-xl border border-[#ff5b00]/40 bg-[#ff5b00]/10 px-5 py-4 text-sm text-[#ffb38a]">
+            Backend analytics non disponibile: {proError}. Verifica che Render stia servendo il backend aggiornato e che /api/analytics/pro risponda 200.
+          </div>
+        )}
 
         {/* ════════════════════════════════════════════════════
             ANALYTICS PRO TAB

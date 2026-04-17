@@ -20,7 +20,17 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const text = await res.text().catch(() => 'Unknown error');
-    throw new ApiError(res.status, text);
+    let message = text || `${res.status} ${res.statusText}`;
+    try {
+      const parsed = JSON.parse(text);
+      message = parsed.message || parsed.detail || parsed.error || message;
+      if (typeof message !== 'string') {
+        message = JSON.stringify(message);
+      }
+    } catch {
+      // Keep the raw response text when the backend does not return JSON.
+    }
+    throw new ApiError(res.status, `${res.status}: ${message}`);
   }
 
   return res.json() as Promise<T>;

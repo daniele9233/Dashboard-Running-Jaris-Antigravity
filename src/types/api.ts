@@ -305,6 +305,7 @@ export interface ProAnalyticsSection {
 
 export interface ProAnalyticsResponse {
   generated_at: string;
+  schema_version?: string;
   filters: {
     tab: string;
     range: string;
@@ -312,6 +313,14 @@ export interface ProAnalyticsResponse {
     detail: boolean;
     chart?: string | null;
     excluded?: string[];
+  };
+  diagnostics?: {
+    schema_version?: string;
+    total_runs: number;
+    valid_outdoor_runs: number;
+    range_valid_outdoor_runs: number;
+    excluded_treadmill: number;
+    excluded_missing_gps: number;
   };
   sections: {
     load_form?: ProAnalyticsSection;
@@ -327,6 +336,10 @@ export interface GarminCsvLinkResult {
   enriched: number;
   unmatched: number;
   ambiguous: number;
+  low_confidence?: number;
+  no_csv?: boolean;
+  status_counts?: Record<string, number>;
+  message?: string;
   errors: string[];
 }
 
