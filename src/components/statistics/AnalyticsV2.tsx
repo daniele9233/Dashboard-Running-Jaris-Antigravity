@@ -13,7 +13,9 @@ import type { GctAnalysisResponse } from '../../api';
 import type { Run, FitnessFreshnessPoint } from '../../types/api';
 import {
   Activity, Zap, TrendingUp, Heart, Timer, Info, Footprints, Maximize2, X,
+  Target,
 } from 'lucide-react';
+import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 
 // ─────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -25,6 +27,7 @@ const CARD_BORDER = '#1E1E1E';
 const GRID_COLOR = '#1E1E1E';
 const LABEL_COLOR = '#8E8E93';
 const BG_DARK = '#111111';
+const RACE_ORANGE = '#FF5B00';
 
 // ─────────────────────────────────────────────────────────────
 // MOCK DATA
@@ -239,6 +242,398 @@ function V2Card({
   );
 }
 
+type RacePredictionCardData = {
+  distance: string;
+  time: string;
+  pace: string;
+  color: string;
+  type: 'gauge' | 'bar';
+  value: number;
+  target: number;
+  trend: string;
+  trendColor: string;
+};
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+function vdotForRaceTime(distanceKm: number, durationMin: number): number {
+  const velocity = (distanceKm * 1000) / durationMin;
+  const vo2 = -4.60 + 0.182258 * velocity + 0.000104 * velocity * velocity;
+  const fraction = 0.8
+    + 0.1894393 * Math.exp(-0.012778 * durationMin)
+    + 0.2989558 * Math.exp(-0.1932605 * durationMin);
+  return vo2 / fraction;
+}
+
+function predictRaceSeconds(vdot: number | null, distanceKm: number): number | null {
+  if (!vdot || vdot <= 0) return null;
+  let low = distanceKm * 2.2;
+  let high = distanceKm * 10;
+
+  for (let i = 0; i < 42; i++) {
+    const mid = (low + high) / 2;
+    if (vdotForRaceTime(distanceKm, mid) > vdot) {
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+
+  return Math.round(high * 60);
+}
+
+function formatRaceTime(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function formatRacePace(seconds: number, distanceKm: number): string {
+  const paceSeconds = Math.round(seconds / distanceKm);
+  const m = Math.floor(paceSeconds / 60);
+  const s = paceSeconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function formatRaceTrend(currentSeconds: number | null, previousSeconds: number | null): string {
+  if (currentSeconds === null || previousSeconds === null) return 'VDOT live projection';
+  const delta = currentSeconds - previousSeconds;
+  const sign = delta <= 0 ? '-' : '+';
+  const abs = Math.abs(Math.round(delta));
+  const m = Math.floor(abs / 60);
+  const s = abs % 60;
+  return `${sign}${m}:${s.toString().padStart(2, '0')} vs 3M`;
+}
+
+function RacePredictionCard({
+  distance,
+  time,
+  pace,
+  color,
+  type,
+  value,
+  target,
+  trend,
+  trendColor,
+}: RacePredictionCardData) {
+  return (
+    <div className="bg-[#111] border border-[#1E1E1E] rounded-2xl p-5 relative flex flex-col shadow-xl overflow-hidden hover:border-[#333] transition-colors group aspect-square min-h-0">
+      <div className="absolute top-0 left-0 right-0 h-1 transition-all group-hover:h-1.5" style={{ backgroundColor: color }} />
+
+      <div className="flex justify-between items-start mb-5">
+        <h3 className="text-2xl font-black italic text-white tracking-tighter">{distance}</h3>
+        <Target size={18} className="opacity-40 transition-opacity group-hover:opacity-100" style={{ color }} />
+      </div>
+
+      <div className="mb-4">
+        <div className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-1">Projected Time</div>
+        <div
+          className="text-3xl font-black font-mono tracking-tighter -ml-0.5"
+          style={{ color, textShadow: `0 0 15px ${color}40` }}
+        >
+          {time}
+        </div>
+        <div className="text-[10px] mt-2 font-mono tracking-wide font-medium" style={{ color: trendColor }}>
+          {trend}
+        </div>
+      </div>
+
+      <div className="flex-grow flex items-center justify-center py-2 h-[72px]">
+        {type === 'gauge' ? (
+          <RaceGauge value={value} color={color} target={target} />
+        ) : (
+          <RaceLinearBar value={value} color={color} target={target} />
+        )}
+      </div>
+
+      <div className="mt-auto border-t border-[#1E1E1E] pt-4 flex justify-between items-end">
+        <div>
+          <div className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mb-1">Target Pace</div>
+          <div className="text-sm font-black font-mono text-gray-200">
+            {pace} <span className="text-[10px] text-gray-500 font-sans tracking-wide">/km</span>
+          </div>
+        </div>
+        <div className="text-[9px] uppercase tracking-widest font-black flex items-center gap-1" style={{ color }}>
+          Analyze
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RaceGauge({ value, color, target }: { value: number; color: string; target: number }) {
+  const radius = 40;
+  const arcLength = Math.PI * radius;
+  const strokeVal = clamp01(value) * arcLength;
+  const angle = Math.PI - (clamp01(value) * Math.PI);
+  const nx = 50 + 35 * Math.cos(angle);
+  const ny = 55 - 35 * Math.sin(angle);
+  const targetAngle = Math.PI - (clamp01(target) * Math.PI);
+  const tx = 50 + 40 * Math.cos(targetAngle);
+  const ty = 55 - 40 * Math.sin(targetAngle);
+
+  return (
+    <div className="w-full h-full flex items-center justify-center">
+      <svg viewBox="0 0 100 60" className="w-[85%] max-w-[150px] drop-shadow-lg overflow-visible">
+        <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke="#222" strokeWidth="6" strokeLinecap="round" />
+        <circle cx={tx} cy={ty} r="3.5" fill={RACE_ORANGE} />
+        <path
+          d="M 10 55 A 40 40 0 0 1 90 55"
+          fill="none"
+          stroke={color}
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={`${strokeVal} ${arcLength}`}
+          className="transition-all duration-1000 ease-out drop-shadow-[0_0_6px_currentColor]"
+        />
+        <line x1="50" y1="55" x2={nx} y2={ny} stroke="white" strokeWidth="2.5" strokeLinecap="round" className="transition-all duration-1000 ease-out" />
+        <circle cx="50" cy="55" r="5" fill="white" className="drop-shadow-md" />
+      </svg>
+    </div>
+  );
+}
+
+function RaceLinearBar({ value, color, target }: { value: number; color: string; target: number }) {
+  return (
+    <div className="w-full flex items-center h-full pb-4">
+      <div className="relative w-full h-2 bg-[#222] rounded-full">
+        <div
+          className="absolute top-0 left-0 bottom-0 rounded-full transition-all duration-1000 ease-out"
+          style={{ width: `${clamp01(value) * 100}%`, backgroundColor: color, boxShadow: `0 0 10px ${color}80` }}
+        />
+        <div
+          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full"
+          style={{ left: `calc(${clamp01(target) * 100}% - 6px)`, backgroundColor: RACE_ORANGE, boxShadow: `0 0 8px ${RACE_ORANGE}` }}
+        />
+        <div className="absolute top-5 left-0 text-[9px] text-gray-600 uppercase font-black tracking-widest">Base</div>
+        <div className="absolute top-5 left-1/2 -translate-x-1/2 text-[9px] text-gray-600 uppercase font-black tracking-widest">Threshold</div>
+        <div className="absolute top-5 right-0 text-[9px] text-gray-600 uppercase font-black tracking-widest" style={{ color: `${RACE_ORANGE}AA` }}>Max</div>
+      </div>
+    </div>
+  );
+}
+
+function RacePredictionsGrid({ cards }: { cards: RacePredictionCardData[] }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 xl:gap-5 self-start">
+      {cards.map((card) => (
+        <div key={card.distance} className="min-w-0">
+          <RacePredictionCard {...card} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const EVOLUTION_RANGES = ['1M', '3M', '6M', 'ALL'] as const;
+type EvolutionRange = typeof EVOLUTION_RANGES[number];
+
+type FitnessEvolutionPoint = {
+  label: string;
+  v: number;
+  time: string;
+  pace: string;
+};
+
+type FitnessEvolutionDataSets = Record<EvolutionRange, FitnessEvolutionPoint[]>;
+
+type FitnessEvolutionCardData = {
+  title: string;
+  value: string;
+  unit: string;
+  color: string;
+  dataSets: FitnessEvolutionDataSets;
+};
+
+function makeEvolutionPoint(label: string, vdotValue: number, distanceKm: number): FitnessEvolutionPoint {
+  const seconds = predictRaceSeconds(vdotValue, distanceKm) ?? Math.round(distanceKm * 5 * 60);
+  const paceSeconds = Math.max(1, Math.round(seconds / distanceKm));
+
+  return {
+    label,
+    v: Math.round((700 - paceSeconds) * 10) / 10,
+    time: formatRaceTime(seconds),
+    pace: `${formatRacePace(seconds, distanceKm)}/km`,
+  };
+}
+
+function buildFitnessEvolutionDataSets(
+  vdotPoints: { name: string; vdot: number }[],
+  distanceKm: number,
+  fallbackVdot: number,
+): FitnessEvolutionDataSets {
+  const safePoints = vdotPoints.length > 0
+    ? vdotPoints
+    : Array.from({ length: 6 }, (_, i) => ({
+        name: ['NOV', 'DIC', 'GEN', 'FEB', 'MAR', 'APR'][i],
+        vdot: fallbackVdot - (5 - i) * 0.35,
+      }));
+
+  const latest = safePoints[safePoints.length - 1]?.vdot ?? fallbackVdot;
+  const before = safePoints[Math.max(0, safePoints.length - 2)]?.vdot ?? latest;
+  const oneMonth = Array.from({ length: 4 }, (_, i) => {
+    const t = i / 3;
+    return makeEvolutionPoint(`${i + 1} WK`, before + (latest - before) * t, distanceKm);
+  });
+
+  const fromMonthly = (count: number) => safePoints.slice(-count).map(p => makeEvolutionPoint(p.name, p.vdot, distanceKm));
+
+  return {
+    '1M': oneMonth,
+    '3M': fromMonthly(3),
+    '6M': fromMonthly(6),
+    ALL: safePoints.map(p => makeEvolutionPoint(p.name, p.vdot, distanceKm)),
+  };
+}
+
+const EvolutionTooltip = ({ active, payload, color }: any) => {
+  if (!active || !payload?.length) return null;
+  const data = payload[0].payload;
+
+  return (
+    <div className="bg-[#111] border border-[#2A2A2A] p-2.5 rounded-lg shadow-xl whitespace-nowrap z-50 flex flex-col gap-1.5 min-w-[120px]">
+      <span className="text-[9px] text-gray-400 font-bold tracking-widest uppercase mb-0.5">{data.label}</span>
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-gray-500 text-[9px] uppercase font-bold tracking-wider">Tempo</span>
+        <span className="font-mono font-black text-xs" style={{ color }}>{data.time}</span>
+      </div>
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-gray-500 text-[9px] uppercase font-bold tracking-wider">Pace</span>
+        <span className="font-mono font-bold text-xs text-gray-200">{data.pace}</span>
+      </div>
+    </div>
+  );
+};
+
+function FitnessEvolutionCard({
+  title,
+  value,
+  unit,
+  dataSets,
+  color,
+  timeRange,
+  onTimeRangeChange,
+  fullscreen = false,
+}: FitnessEvolutionCardData & {
+  timeRange: EvolutionRange;
+  onTimeRangeChange: (range: EvolutionRange) => void;
+  fullscreen?: boolean;
+}) {
+  const data = dataSets[timeRange] || [];
+  const gradientId = `fitness-evolution-${title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`;
+
+  return (
+    <div className={`bg-[#111] border border-[#1E1E1E] rounded-lg p-4 relative flex flex-col shadow-xl overflow-hidden hover:border-[#333] transition-colors group min-h-0 ${fullscreen ? 'h-full' : 'aspect-square'}`}>
+      <div className="absolute top-0 left-0 right-0 h-1 transition-all group-hover:h-1.5" style={{ backgroundColor: color }} />
+
+      <div className="flex justify-between items-start mb-2 relative z-10">
+        <div className="min-w-0">
+          <span className="text-[10px] text-gray-300 font-bold tracking-[0.15em] uppercase mb-1 block truncate">{title}</span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl xl:text-3xl font-black text-white tracking-tight font-mono">{value}</span>
+            <span className="text-[10px] xl:text-xs font-bold ml-1" style={{ color }}>{unit}</span>
+          </div>
+        </div>
+        <div className="w-8 h-8 rounded-lg bg-[#1A1A1A] flex items-center justify-center border border-[#2A2A2A] transition-transform group-hover:scale-105 shrink-0">
+          <TrendingUp size={14} style={{ color }} />
+        </div>
+      </div>
+
+      <div className="flex-1 min-h-[82px] w-full mt-3 relative z-0 -mx-1">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 10, right: 8, left: 8, bottom: 0 }}>
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity={0.5} />
+                <stop offset="100%" stopColor={color} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <Tooltip
+              content={(props) => <EvolutionTooltip {...props} color={color} />}
+              cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1, strokeDasharray: '3 3' }}
+            />
+            <Area
+              type="monotone"
+              dataKey="v"
+              stroke={color}
+              strokeWidth={3}
+              fill={`url(#${gradientId})`}
+              activeDot={{ r: 5, fill: color, stroke: '#111', strokeWidth: 2 }}
+              dot={{ r: 3.5, fill: '#111', stroke: color, strokeWidth: 2.5 }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="flex justify-between items-center text-[8px] text-gray-500 font-bold tracking-[0.1em] mt-2 px-1">
+        {data.map((d, i) => <span key={`${d.label}-${i}`}>{d.label}</span>)}
+      </div>
+
+      <div className="flex bg-[#1A1A1A] rounded-lg p-1 mt-4 border border-[#1E1E1E] select-none shadow-inner">
+        {EVOLUTION_RANGES.map(range => (
+          <button
+            key={range}
+            type="button"
+            onClick={() => onTimeRangeChange(range)}
+            className={`flex-1 text-center py-1.5 text-[9px] font-bold rounded-md transition-all cursor-pointer ${
+              range === timeRange ? 'bg-[#333] text-gray-200 shadow-md' : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            {range}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FitnessEvolutionGrid({ cards }: { cards: FitnessEvolutionCardData[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const [ranges, setRanges] = useState<Record<string, EvolutionRange>>({});
+  const rangeFor = (title: string) => ranges[title] ?? '6M';
+  const setRangeFor = (title: string, range: EvolutionRange) => {
+    setRanges(prev => ({ ...prev, [title]: range }));
+  };
+
+  const renderCards = (fullscreen = false) => (
+    <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 xl:gap-5 self-start ${fullscreen ? 'h-full grid-rows-2' : ''}`}>
+      {cards.map(card => (
+        <div key={card.title} className="min-w-0 min-h-0">
+          <FitnessEvolutionCard
+            {...card}
+            timeRange={rangeFor(card.title)}
+            onTimeRangeChange={(range) => setRangeFor(card.title, range)}
+            fullscreen={fullscreen}
+          />
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="relative group">
+      <div className="absolute right-3 top-3 z-10">
+        <ChartExpandButton onClick={() => setExpanded(true)} />
+      </div>
+      {renderCards(false)}
+      <ChartFullscreenModal
+        open={expanded}
+        onClose={() => setExpanded(false)}
+        title="Performance Evolution"
+        subtitle="Previsioni gara nel tempo — range sincronizzati"
+        accent={NEON}
+      >
+        {renderCards(true)}
+      </ChartFullscreenModal>
+    </div>
+  );
+}
+
 function V2Header({
   icon: Icon, title, subtitle, tooltip, onExpand,
 }: {
@@ -278,7 +673,11 @@ interface AnalyticsV2Props {
   ffHistory?: FitnessFreshnessPoint[];
   maxHr?: number;
   thresholdPace?: string | null;
+  onlySections?: AnalyticsV2Section[];
+  hideSections?: AnalyticsV2Section[];
 }
+
+type AnalyticsV2Section = 'pmc' | 'drift' | 'zones' | 'gct';
 
 // pace string "M:SS" → decimal minutes
 function parsePaceDecimal(pace: string): number {
@@ -297,9 +696,14 @@ function formatPaceStr(dec: number): string {
 
 export function AnalyticsV2({
   vdot, zoneDistribution, gctData, runs = [],
-  ffHistory = [], maxHr, thresholdPace,
+  ffHistory = [], maxHr, thresholdPace, onlySections, hideSections = [],
 }: AnalyticsV2Props) {
   const { t } = useTranslation();
+  const hasOnlySections = (onlySections?.length ?? 0) > 0;
+  const showCore = !hasOnlySections;
+  const showSection = (section: AnalyticsV2Section) => (
+    hasOnlySections ? onlySections!.includes(section) : !hideSections.includes(section)
+  );
 
   // ── Scatter: real avg_cadence + avg_ground_contact_time ──────────────
   const scatterData = React.useMemo(() => {
@@ -515,14 +919,112 @@ export function AnalyticsV2({
     }).filter((d): d is { name: string; vdot: number } => d.vdot !== null);
   }, [vdotHistory]);
 
+  const atPanel = React.useMemo(() => {
+    const latest = atTrendData[atTrendData.length - 1] ?? null;
+    const avgPace = atTrendData.length
+      ? atTrendData.reduce((sum, p) => sum + p.pace, 0) / atTrendData.length
+      : 0;
+    const avgHr = atTrendData.length
+      ? atTrendData.reduce((sum, p) => sum + p.hr, 0) / atTrendData.length
+      : 0;
+
+    const paceValues = atTrendData.map(p => p.pace);
+    const hrValues = atTrendData.map(p => p.hr);
+    const paceMin = paceValues.length ? Math.min(...paceValues) : 240;
+    const paceMax = paceValues.length ? Math.max(...paceValues) : 330;
+    const hrMinRaw = hrValues.length ? Math.min(...hrValues) : 150;
+    const hrMaxRaw = hrValues.length ? Math.max(...hrValues) : 180;
+
+    const paceDomainMin = Math.min(240, Math.floor((paceMin - 8) / 30) * 30);
+    const paceDomainMax = Math.max(330, Math.ceil((paceMax + 8) / 30) * 30);
+    const hrDomainMin = Math.min(150, Math.floor((hrMinRaw - 4) / 10) * 10);
+    const hrDomainMax = Math.max(180, Math.ceil((hrMaxRaw + 4) / 10) * 10);
+
+    const paceTicks: number[] = [];
+    for (let v = paceDomainMin; v <= paceDomainMax; v += 30) paceTicks.push(v);
+
+    const hrTicks: number[] = [];
+    for (let v = hrDomainMin; v <= hrDomainMax; v += 10) hrTicks.push(v);
+
+    const paceDelta = latest ? Math.round(latest.pace - avgPace) : 0;
+    const hrDelta = latest ? Math.round(latest.hr - avgHr) : 0;
+
+    return {
+      latest,
+      paceDomain: [paceDomainMin, paceDomainMax] as [number, number],
+      paceTicks,
+      hrDomain: [hrDomainMin, hrDomainMax] as [number, number],
+      hrTicks,
+      paceDelta,
+      hrDelta,
+    };
+  }, [atTrendData]);
+
+  const racePredictionCards = React.useMemo<RacePredictionCardData[]>(() => {
+    const currentVdot = vdot ?? (vdotChartData.length > 0 ? vdotChartData[vdotChartData.length - 1]?.vdot : null);
+    const olderVdot = vdotChartData.length >= 4 ? vdotChartData[vdotChartData.length - 4]?.vdot : null;
+    const sourceVdot = currentVdot ?? 52;
+    const vdotShift = (sourceVdot - 52) / 20;
+
+    const definitions = [
+      { distance: '5K', distanceKm: 5, color: NEON, type: 'gauge' as const, baseValue: 0.70, target: 0.80, weight: 0.34, fallbackSeconds: 1122 },
+      { distance: '10K', distanceKm: 10, color: NEON, type: 'gauge' as const, baseValue: 0.55, target: 0.55, weight: 0.30, fallbackSeconds: 2355 },
+      { distance: 'HALF', distanceKm: 21.0975, color: RACE_ORANGE, type: 'gauge' as const, baseValue: 0.85, target: 0.95, weight: 0.22, fallbackSeconds: 5200 },
+      { distance: 'FULL', distanceKm: 42.195, color: RACE_ORANGE, type: 'gauge' as const, baseValue: 0.35, target: 0.50, weight: 0.36, fallbackSeconds: 11520 },
+    ];
+
+    return definitions.map((def) => {
+      const predictedSeconds = predictRaceSeconds(sourceVdot, def.distanceKm) ?? def.fallbackSeconds;
+      const previousSeconds = olderVdot ? predictRaceSeconds(olderVdot, def.distanceKm) : null;
+      const delta = previousSeconds === null ? null : predictedSeconds - previousSeconds;
+
+      return {
+        distance: def.distance,
+        time: formatRaceTime(predictedSeconds),
+        pace: formatRacePace(predictedSeconds, def.distanceKm),
+        color: def.color,
+        type: def.type,
+        value: clamp01(def.baseValue + vdotShift * def.weight),
+        target: def.target,
+        trend: formatRaceTrend(predictedSeconds, previousSeconds),
+        trendColor: delta === null ? LABEL_COLOR : delta <= 0 ? NEON : RACE_ORANGE,
+      };
+    });
+  }, [vdot, vdotChartData]);
+
+  const fitnessEvolutionCards = React.useMemo<FitnessEvolutionCardData[]>(() => {
+    const currentVdot = vdot ?? (vdotChartData.length > 0 ? vdotChartData[vdotChartData.length - 1]?.vdot : null);
+    const sourceVdot = currentVdot ?? 52;
+    const raceByDistance = new Map(racePredictionCards.map(card => [card.distance, card]));
+    const definitions = [
+      { key: '5K', title: '5KM EVOLUTION', distanceKm: 5, unit: '/km', color: NEON },
+      { key: '10K', title: '10KM EVOLUTION', distanceKm: 10, unit: '/km', color: NEON },
+      { key: 'HALF', title: 'HALF MARATHON', distanceKm: 21.0975, unit: '/tot', color: RACE_ORANGE },
+      { key: 'FULL', title: 'MARATHON', distanceKm: 42.195, unit: '/tot', color: RACE_ORANGE },
+    ];
+
+    return definitions.map(def => {
+      const prediction = raceByDistance.get(def.key);
+      return {
+        title: def.title,
+        value: prediction?.time ?? '—',
+        unit: def.unit,
+        color: def.color,
+        dataSets: buildFitnessEvolutionDataSets(vdotChartData, def.distanceKm, sourceVdot),
+      };
+    });
+  }, [racePredictionCards, vdot, vdotChartData]);
+
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
+    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
       <GlowDefs />
 
       {/* ════════════════════════════════════════════════════
           1. PMC + ANAEROBIC THRESHOLD TREND — SIDE BY SIDE
       ════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-2 gap-6">
+      {(showCore || showSection('pmc')) && (
+      <div className={`grid gap-6 ${showCore ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'}`}>
+      {showSection('pmc') && (
       <V2Card className="flex flex-col">
         <V2Header
           icon={Activity}
@@ -574,159 +1076,321 @@ export function AnalyticsV2({
           </ResponsiveContainer>
         </div>
       </V2Card>
+      )}
 
-      {/* AT Trend — right column */}
-      <div
-        className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-7 flex flex-col relative group"
-        style={{ borderLeft: `3px solid ${NEON}` }}
-      >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#222] rounded-xl border border-[#2A2A2A]">
-              <Zap className="w-4 h-4" style={{ color: NEON }} />
-            </div>
-            <div>
-              <h3 className="text-sm font-black tracking-widest uppercase italic text-white">Anaerobic Threshold Trend</h3>
-              <p className="text-[9px] font-bold uppercase tracking-widest mt-0.5" style={{ color: LABEL_COLOR }}>
-                Passo soglia (neon) · FC soglia (rosa) — 12 mesi
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setAtExpanded(true)}
-            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#2A2A2A] text-[#555] hover:text-[#D4FF00]"
-            title="Espandi"
-          >
-            <Maximize2 size={15} />
-          </button>
-        </div>
-        <div className="h-[310px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={atTrendData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
-              <defs>
-                <linearGradient id="v2-at-grad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={NEON} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={NEON} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} vertical={false} />
-              <XAxis dataKey="month" stroke="#333" fontSize={9} tickLine={false} axisLine={false} />
-              <YAxis yAxisId="pace" reversed stroke="#333" fontSize={9} tickLine={false} axisLine={false}
-                tickFormatter={formatPaceSecs} domain={['dataMin - 10', 'dataMax + 10']} />
-              <YAxis yAxisId="hr" orientation="right" stroke="#333" fontSize={9} tickLine={false} axisLine={false}
-                domain={['dataMin - 5', 'dataMax + 5']} tickFormatter={(v) => `${v} bpm`} />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#0F0F0F', borderColor: '#2A2A2A', borderRadius: '10px' }}
-                itemStyle={{ color: '#fff' }}
-                formatter={(val: number, name: string) =>
-                  name === 'Threshold Pace' ? [formatPaceSecs(val) + ' /km', name] : [`${val} bpm`, name]
-                }
-              />
-              <Area yAxisId="pace" type="monotone" dataKey="pace" name="Threshold Pace"
-                stroke={NEON} strokeWidth={2.5} fillOpacity={1} fill="url(#v2-at-grad)" />
-              <Line yAxisId="hr" type="monotone" dataKey="hr" name="Threshold HR"
-                stroke="#EC4899" strokeWidth={2} dot={{ r: 3, fill: CARD_BG, stroke: '#EC4899', strokeWidth: 2 }} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
+       {/* Race Predictions — right column */}
+       {showCore && <RacePredictionsGrid cards={racePredictionCards} />}
+       {showCore && <FitnessEvolutionGrid cards={fitnessEvolutionCards} />}
+       {false && showCore && (
+       <V2Card>
+         <V2Header
+           icon={Zap}
+           title="Gara Previsioni"
+           subtitle="Stima prestazioni gara basata su VDOT — 12 mesi"
+           onExpand={() => setAtExpanded(true)}
+           tooltip={{
+             title: 'PREVISIONI GARA',
+             lines: [
+               'Stima dei tempi di gara basata sull\'indice VDOT.',
+               'VDOT: indice Jack Daniels che stima VO₂max dal ritmo di gara.',
+               'Ogni mese: miglior stima VDOT tra le corse qualificanti.',
+               'Forward-fill: i mesi senza dati mantengono l\'ultimo valore valido.',
+               'Ultimo mese forzato al valore VDOT calcolato dal profilo atleta.',
+             ],
+           }}
+         />
+         <div className="h-[260px] w-full">
+           <ResponsiveContainer width="100%" height="100%">
+             <LineChart data={vdotChartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
+               <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} vertical={false} />
+               <XAxis dataKey="name" stroke="#333" fontSize={9} tickLine={false} axisLine={false} />
+               <YAxis stroke="#333" fontSize={9} tickLine={false} axisLine={false}
+                 domain={['dataMin - 2', 'dataMax + 2']} tickFormatter={(v) => v.toFixed(0)} />
+               <Tooltip
+                 content={({ active, payload }) => {
+                   if (!active || !payload?.length) return null;
+                   const d = payload[0]?.payload;
+                   if (!d) return null;
+                   return (
+                     <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
+                       <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>{d.name}</p>
+                       <div className="flex items-center gap-2 text-xs mb-0.5">
+                         <span className="text-[#777]">VDOT:</span>
+                         <span className="text-white font-bold">{d.vdot}</span>
+                       </div>
+                       {d.vdot && (
+                         <div className="flex items-center gap-2 text-xs">
+                           <span className="text-[#777]">5K:</span>
+                           <span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span>
+                         </div>
+                       )}
+                       {d.vdot && (
+                         <div className="flex items-center gap-2 text-xs">
+                           <span className="text-[#777]">10K:</span>
+                           <span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span>
+                         </div>
+                       )}
+                     </div>
+                   );
+                 }}
+               />
+               <Line type="monotone" dataKey="vdot" name="VDOT"
+                 stroke={NEON} strokeWidth={3}
+                 dot={{ r: 4, fill: NEON, strokeWidth: 0 }}
+                 activeDot={{ r: 6, fill: NEON, stroke: '#000', strokeWidth: 2 }} />
+             </LineChart>
+           </ResponsiveContainer>
+         </div>
+         {/* KPI strip */}
+         <div className="flex gap-4 mt-5">
+           {(() => {
+             const currentVdot = vdot ?? (vdotChartData.length > 0 ? vdotChartData[vdotChartData.length - 1]?.vdot : null);
+             const olderVdot = vdotChartData.length >= 4 ? vdotChartData[vdotChartData.length - 4]?.vdot : null;
+             const recentVdot = vdotChartData.length >= 1 ? vdotChartData[vdotChartData.length - 1]?.vdot : null;
+             const trend3m = (recentVdot != null && olderVdot != null) ? (recentVdot - olderVdot) : null;
+             const tPace = currentVdot ? calcTPaceV2(currentVdot) : null;
+             return (
+               <>
+                 <div className="flex-1 bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
+                   <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">VDOT Attuale</div>
+                   <div className="text-xl font-mono font-black" style={{ color: NEON }}>{currentVdot ?? '—'}</div>
+                 </div>
+                 <div className="flex-1 bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
+                   <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Trend 3M</div>
+                   <div className="text-xl font-mono font-black" style={{ color: trend3m == null ? '#555' : trend3m >= 0 ? NEON : '#F43F5E' }}>
+                     {trend3m == null ? '—' : `${trend3m >= 0 ? '+' : ''}${trend3m.toFixed(1)}`}
+                   </div>
+                 </div>
+                 <div className="flex-1 bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
+                   <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">5K Tempo</div>
+                   <div className="text-xl font-mono font-black text-white">{tPace ?? '—'} {tPace ? '/km' : ''}</div>
+                 </div>
+               </>
+             );
+           })()}
+         </div>
+       </V2Card>
+       )}
       </div>
-      </div>{/* end grid */}
+      )}
 
-      {/* ════════════════════════════════════════════════════
-          1b. VO₂ MAX / VDOT TREND — FULL WIDTH
-      ════════════════════════════════════════════════════ */}
-      <V2Card>
-        <V2Header
-          icon={Zap}
-          title="VO₂ Max / VDOT Trend"
-          subtitle="Storico 12 mesi — stima Jack Daniels"
-          onExpand={() => setVdotV2Expanded(true)}
-          tooltip={{
-            title: 'VO₂MAX / VDOT TREND',
-            lines: [
-              'VDOT: indice Jack Daniels calcolato da distanza e durata delle corse qualificanti.',
-              'Qualificanti: ≥ 5km, non treadmill, HRpct ≥ 80% oppure ritmo ≤ 5:45/km.',
-              'Ogni mese: miglior stima VDOT tra le corse qualificanti.',
-              'Forward-fill: i mesi senza dati mantengono l\'ultimo valore valido.',
-              'Ultimo mese forzato al valore VDOT calcolato dal profilo atleta.',
-            ],
-          }}
-        />
-        <div className="h-[260px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={vdotChartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
-              <defs>
-                <linearGradient id="v2-vdot-grad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={NEON} stopOpacity={0.35} />
-                  <stop offset="100%" stopColor={NEON} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} vertical={false} />
-              <XAxis dataKey="name" stroke="#333" fontSize={9} tickLine={false} axisLine={false} />
-              <YAxis stroke="#333" fontSize={9} tickLine={false} axisLine={false}
-                domain={['dataMin - 2', 'dataMax + 2']} tickFormatter={(v) => v.toFixed(0)} />
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const d = payload[0]?.payload;
-                  if (!d) return null;
-                  return (
-                    <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
-                      <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>{d.name}</p>
-                      <div className="flex items-center gap-2 text-xs mb-0.5">
-                        <span className="text-[#777]">VDOT:</span>
-                        <span className="text-white font-bold">{d.vdot}</span>
-                      </div>
-                      {d.vdot && (
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="text-[#777]">T-Pace:</span>
-                          <span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                }}
-              />
-              <Area type="monotone" dataKey="vdot" name="VDOT"
-                stroke={NEON} strokeWidth={3} fillOpacity={1} fill="url(#v2-vdot-grad)"
-                dot={{ r: 4, fill: NEON, strokeWidth: 0 }}
-                activeDot={{ r: 6, fill: NEON, stroke: '#000', strokeWidth: 2 }} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-        {/* KPI strip */}
-        <div className="flex gap-4 mt-5">
-          {(() => {
-            const currentVdot = vdot ?? (vdotChartData.length > 0 ? vdotChartData[vdotChartData.length - 1]?.vdot : null);
-            const olderVdot = vdotChartData.length >= 4 ? vdotChartData[vdotChartData.length - 4]?.vdot : null;
-            const recentVdot = vdotChartData.length >= 1 ? vdotChartData[vdotChartData.length - 1]?.vdot : null;
-            const trend3m = (recentVdot != null && olderVdot != null) ? (recentVdot - olderVdot) : null;
-            const tPace = currentVdot ? calcTPaceV2(currentVdot) : null;
-            return (
-              <>
-                <div className="flex-1 bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">VDOT Attuale</div>
-                  <div className="text-xl font-mono font-black" style={{ color: NEON }}>{currentVdot ?? '—'}</div>
-                </div>
-                <div className="flex-1 bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Trend 3M</div>
-                  <div className="text-xl font-mono font-black" style={{ color: trend3m == null ? '#555' : trend3m >= 0 ? NEON : '#F43F5E' }}>
-                    {trend3m == null ? '—' : `${trend3m >= 0 ? '+' : ''}${trend3m.toFixed(1)}`}
+       {/* ════════════════════════════════════════════════════
+           2. ANAEROBIC THRESHOLD TREND + VO₂ MAX / VDOT TREND — SIDE BY SIDE
+       ════════════════════════════════════════════════════ */}
+       {showCore && (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+           {/* Anaerobic Threshold Trend — left column */}
+           <div
+              className="xl:col-span-2 bg-[#111111] border border-[#1B1B1B] rounded-[3px] p-6 flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_246px] gap-6 relative group overflow-hidden"
+              style={{ minHeight: 402 }}
+           >
+                <div className="min-w-0 flex flex-col">
+                <div className="flex items-start justify-between gap-4 mb-5">
+                  <div>
+                     <h3 className="text-[15px] md:text-base font-black tracking-wider uppercase italic text-[#E7E7E7] leading-none">Progressione Temporale</h3>
+                     <p className="text-[9px] font-black uppercase tracking-widest mt-2 text-[#787878]">
+                       Passo vs FC (last 12 sessions)
+                    </p>
+                  </div>
+                  <div className="hidden sm:flex items-center gap-5 pr-8 text-[9px] font-black uppercase tracking-widest text-[#3A3A3A]">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: NEON }} />
+                      Passo
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-[#FF4B93]" />
+                      Frequenza C.
+                    </span>
+                    <button
+                      onClick={() => setAtExpanded(true)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#2A2A2A] text-[#555] hover:text-[#D4FF00]"
+                      title="Espandi"
+                    >
+                      <Maximize2 size={15} />
+                    </button>
                   </div>
                 </div>
-                <div className="flex-1 bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">T-Pace</div>
-                  <div className="text-xl font-mono font-black text-white">{tPace ?? '—'} {tPace ? '/km' : ''}</div>
+              <div className="h-[312px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={atTrendData} margin={{ top: 12, right: 10, left: -12, bottom: 2 }}>
+                    <defs>
+                      <linearGradient id="v2-at-panel-area" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={NEON} stopOpacity={0.16} />
+                        <stop offset="100%" stopColor={NEON} stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="#1A1A1A" strokeDasharray="1 0" vertical horizontal />
+                    <XAxis dataKey="month" stroke="#2F2F2F" fontSize={10} fontWeight={900} tickLine={false} axisLine={false} interval={2} dy={5} />
+                    <YAxis yAxisId="pace" reversed stroke="#525252" fontSize={10} fontWeight={900} tickLine={false} axisLine={false}
+                      tickFormatter={formatPaceSecs} domain={atPanel.paceDomain} ticks={atPanel.paceTicks} width={42} />
+                    <YAxis yAxisId="hr" orientation="right" stroke="#525252" fontSize={10} fontWeight={900} tickLine={false} axisLine={false}
+                      domain={atPanel.hrDomain} ticks={atPanel.hrTicks} width={34} />
+                   <Tooltip
+                      contentStyle={{ backgroundColor: '#151515', borderColor: '#2A2A2A', borderRadius: '4px' }}
+                      itemStyle={{ color: '#fff' }}
+                      labelStyle={{ color: NEON, fontWeight: 900, textTransform: 'uppercase' }}
+                     formatter={(val: number, name: string) =>
+                       name === 'Threshold Pace' ? [formatPaceSecs(val) + ' /km', name] : [`${val} bpm`, name]
+                     }
+                   />
+                    <Area yAxisId="pace" type="monotone" dataKey="pace" name="Threshold Pace"
+                      stroke={NEON} strokeWidth={2} fill="url(#v2-at-panel-area)" fillOpacity={1}
+                      dot={{ r: 3.5, fill: '#111111', stroke: NEON, strokeWidth: 2 }}
+                      activeDot={{ r: 5, fill: NEON, stroke: '#111111', strokeWidth: 2 }} />
+                    <Line yAxisId="hr" type="monotone" dataKey="hr" name="Threshold HR"
+                      stroke="#FF4B93" strokeWidth={2} strokeDasharray="4 5"
+                      dot={false}
+                      activeDot={{ r: 5, fill: '#FF4B93', stroke: '#111111', strokeWidth: 2 }} />
+                    {atPanel.latest && (
+                      <ReferenceLine
+                        x={atPanel.latest.month}
+                        yAxisId="pace"
+                        stroke="transparent"
+                        label={{ value: 'CURRENT', position: 'insideBottomRight', fill: NEON, fontSize: 10, fontWeight: 900 }}
+                      />
+                    )}
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+              </div>
+
+              <div className="grid grid-rows-2 gap-5 min-h-[312px]">
+                <div className="bg-[#242424] border-l-2 p-6 flex flex-col justify-center relative rounded-[2px]" style={{ borderLeftColor: NEON }}>
+                  <div className="absolute right-4 top-4 w-9 h-9 rounded-[8px] bg-[#2D350A] flex items-center justify-center">
+                    <Timer className="w-4 h-4" style={{ color: NEON }} />
+                  </div>
+                  <div className="text-[10px] uppercase tracking-widest font-black text-[#A6A6A6]">
+                    Passo Soglia <span className="ml-2" style={{ color: NEON }}>Latest</span>
+                  </div>
+                  <div className="flex items-baseline mt-3">
+                    <span className="text-[52px] leading-none italic font-black" style={{ color: NEON }}>
+                      {atPanel.latest ? formatPaceSecs(atPanel.latest.pace) : '--'}
+                    </span>
+                    <span className="text-[18px] italic font-black text-[#DADADA] ml-2">/km</span>
+                  </div>
+                  <div className="text-[10px] uppercase tracking-widest font-black mt-4 text-[#A6A6A6]">
+                    <span style={{ color: NEON }}>{atPanel.paceDelta >= 0 ? '+' : '-'} {formatPaceSecs(Math.abs(atPanel.paceDelta))}</span>
+                    <span className="ml-2">vs avg</span>
+                  </div>
                 </div>
-              </>
-            );
-          })()}
-        </div>
-      </V2Card>
+
+                <div className="bg-[#242424] border-l-2 p-6 flex flex-col justify-center relative rounded-[2px]" style={{ borderLeftColor: '#FF4B93' }}>
+                  <div className="absolute right-4 top-4 w-9 h-9 rounded-[8px] bg-[#3A202D] flex items-center justify-center">
+                    <Heart className="w-4 h-4 fill-[#FF4B93]" style={{ color: '#FF4B93' }} />
+                  </div>
+                  <div className="text-[10px] uppercase tracking-widest font-black text-[#A6A6A6]">
+                    FC Soglia <span className="ml-2 text-[#FF4B93]">Latest</span>
+                  </div>
+                  <div className="flex items-baseline mt-3">
+                    <span className="text-[52px] leading-none italic font-black text-[#FF4B93]">
+                      {atPanel.latest ? atPanel.latest.hr : '--'}
+                    </span>
+                    <span className="text-[18px] italic font-black text-[#DADADA] ml-2">bpm</span>
+                  </div>
+                  <div className="text-[10px] uppercase tracking-widest font-black mt-4 text-[#A6A6A6]">
+                    <span className="text-[#FF4B93]">{atPanel.hrDelta >= 0 ? '+' : '-'} {Math.abs(atPanel.hrDelta)} BPM</span>
+                    <span className="ml-2">vs avg</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+           {/* VO₂ Max / VDOT Trend — right column */}
+           <V2Card>
+             <V2Header
+               icon={Zap}
+               title="VO₂ Max / VDOT Trend"
+               subtitle="Storico 12 mesi — stima Jack Daniels"
+               onExpand={() => setVdotV2Expanded(true)}
+               tooltip={{
+                 title: 'VO₂MAX / VDOT TREND',
+                 lines: [
+                   'VDOT: indice Jack Daniels calcolato da distanza e durata delle corse qualificanti.',
+                   'Qualificanti: ≥ 5km, non treadmill, HRpct ≥ 80% oppure ritmo ≤ 5:45/km.',
+                   'Ogni mese: miglior stima VDOT tra le corse qualificanti.',
+                   'Forward-fill: i mesi senza dati mantengono l\'ultimo valore valido.',
+                   'Ultimo mese forzato al valore VDOT calcolato dal profilo atleta.',
+                 ],
+               }}
+             />
+             <div className="h-[260px] w-full">
+               <ResponsiveContainer width="100%" height="100%">
+                 <AreaChart data={vdotChartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
+                   <defs>
+                     <linearGradient id="v2-vdot-grad" x1="0" y1="0" x2="0" y2="1">
+                       <stop offset="0%" stopColor={NEON} stopOpacity={0.35} />
+                       <stop offset="100%" stopColor={NEON} stopOpacity={0} />
+                     </linearGradient>
+                   </defs>
+                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} vertical={false} />
+                   <XAxis dataKey="name" stroke="#333" fontSize={9} tickLine={false} axisLine={false} />
+                   <YAxis stroke="#333" fontSize={9} tickLine={false} axisLine={false}
+                     domain={['dataMin - 2', 'dataMax + 2']} tickFormatter={(v) => v.toFixed(0)} />
+                   <Tooltip
+                     content={({ active, payload }) => {
+                       if (!active || !payload?.length) return null;
+                       const d = payload[0]?.payload;
+                       if (!d) return null;
+                       return (
+                         <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
+                           <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>{d.name}</p>
+                           <div className="flex items-center gap-2 text-xs mb-0.5">
+                             <span className="text-[#777]">VDOT:</span>
+                             <span className="text-white font-bold">{d.vdot}</span>
+                           </div>
+                           {d.vdot && (
+                             <div className="flex items-center gap-2 text-xs">
+                               <span className="text-[#777]">T-Pace:</span>
+                               <span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span>
+                             </div>
+                           )}
+                         </div>
+                       );
+                     }}
+                   />
+                   <Area type="monotone" dataKey="vdot" name="VDOT"
+                     stroke={NEON} strokeWidth={3} fillOpacity={1} fill="url(#v2-vdot-grad)"
+                     dot={{ r: 4, fill: NEON, strokeWidth: 0 }}
+                     activeDot={{ r: 6, fill: NEON, stroke: '#000', strokeWidth: 2 }} />
+                 </AreaChart>
+               </ResponsiveContainer>
+             </div>
+             {/* KPI strip */}
+             <div className="flex gap-4 mt-5">
+               {(() => {
+                 const currentVdot = vdot ?? (vdotChartData.length > 0 ? vdotChartData[vdotChartData.length - 1]?.vdot : null);
+                 const olderVdot = vdotChartData.length >= 4 ? vdotChartData[vdotChartData.length - 4]?.vdot : null;
+                 const recentVdot = vdotChartData.length >= 1 ? vdotChartData[vdotChartData.length - 1]?.vdot : null;
+                 const trend3m = (recentVdot != null && olderVdot != null) ? (recentVdot - olderVdot) : null;
+                 const tPace = currentVdot ? calcTPaceV2(currentVdot) : null;
+                 return (
+                   <>
+                     <div className="flex-1 bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
+                       <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">VDOT Attuale</div>
+                       <div className="text-xl font-mono font-black" style={{ color: NEON }}>{currentVdot ?? '—'}</div>
+                     </div>
+                     <div className="flex-1 bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
+                       <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Trend 3M</div>
+                       <div className="text-xl font-mono font-black" style={{ color: trend3m == null ? '#555' : trend3m >= 0 ? NEON : '#F43F5E' }}>
+                         {trend3m == null ? '—' : `${trend3m >= 0 ? '+' : ''}${trend3m.toFixed(1)}`}
+                       </div>
+                     </div>
+                     <div className="flex-1 bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
+                       <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">T-Pace</div>
+                       <div className="text-xl font-mono font-black text-white">{tPace ?? '—'} {tPace ? '/km' : ''}</div>
+                     </div>
+                   </>
+                 );
+               })()}
+             </div>
+           </V2Card>
+         </div>
+       )}
 
       {/* ════════════════════════════════════════════════════
           2. GAUGES + PACE TREND
       ════════════════════════════════════════════════════ */}
+      {showCore && (
       <div className="grid grid-cols-12 gap-6">
         {/* VDOT Gauge */}
         <V2Card className="col-span-3 flex flex-col items-center justify-center">
@@ -849,13 +1513,16 @@ export function AnalyticsV2({
           </div>
         </V2Card>
       </div>
+      )}
 
       {/* ════════════════════════════════════════════════════
           3. CARDIAC DRIFT + TIME IN ZONES
       ════════════════════════════════════════════════════ */}
+      {(showSection('drift') || showSection('zones')) && (
       <div className="grid grid-cols-12 gap-6">
         {/* Cardiac Drift */}
-        <V2Card className="col-span-7">
+        {showSection('drift') && (
+        <V2Card className={showSection('zones') ? 'col-span-7' : 'col-span-12'}>
           <V2Header
             icon={Heart}
             title={t("statistics.cardiacDrift")}
@@ -966,9 +1633,11 @@ export function AnalyticsV2({
             <span className="flex items-center gap-2 text-[#F43F5E]/60"><div className="w-6 h-2 bg-[#F43F5E]/10 rounded" /> Zona Drift</span>
           </div>
         </V2Card>
+        )}
 
         {/* Time in Zones — thin donut-style bars */}
-        <V2Card className="col-span-5">
+        {showSection('zones') && (
+        <V2Card className={showSection('drift') ? 'col-span-5' : 'col-span-12'}>
           <V2Header
             icon={Timer}
             title={t("statistics.timeInZones")}
@@ -1046,11 +1715,14 @@ export function AnalyticsV2({
             ))}
           </div>
         </V2Card>
+        )}
       </div>
+      )}
 
       {/* ════════════════════════════════════════════════════
           4. GCT TREND — FULL WIDTH (dati reali)
       ════════════════════════════════════════════════════ */}
+      {showSection('gct') && (
       <V2Card>
         <V2Header
           icon={Footprints}
@@ -1150,15 +1822,16 @@ export function AnalyticsV2({
           </ResponsiveContainer>
         </div>
       </V2Card>
+      )}
 
       {/* ── MODAL EXPANDED ── */}
-      {atExpanded && (() => {
+      {showCore && atExpanded && (() => {
         const first = atTrendData[0];
         const last = atTrendData[atTrendData.length - 1];
         const improvement = first && last ? first.pace - last.pace : 0;
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh', borderLeft: `3px solid ${NEON}` }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-[92vw] max-w-[1500px] shadow-2xl flex flex-col" style={{ height: '68vh', borderLeft: `3px solid ${NEON}` }}>
 
               {/* Modal header */}
               <div className="flex justify-between items-center mb-6">
@@ -1198,8 +1871,9 @@ export function AnalyticsV2({
                       domain={['dataMin - 10', 'dataMax + 10']} tickFormatter={(v) => `${v} bpm`}
                       label={{ value: 'Heart Rate (bpm)', angle: 90, position: 'insideRight', fill: '#555', dy: -60, fontSize: 10 }} />
                     <Tooltip
-                      contentStyle={{ backgroundColor: '#0F0F0F', borderColor: '#2A2A2A', borderRadius: '10px' }}
+                      contentStyle={{ backgroundColor: '#151515', borderColor: '#2A2A2A', borderRadius: '4px' }}
                       itemStyle={{ color: '#fff' }}
+                      labelStyle={{ color: NEON, fontWeight: 900, textTransform: 'uppercase' }}
                       formatter={(val: number, name: string) =>
                         name === 'Threshold Pace' ? [formatPaceSecs(val) + ' /km', name] : [`${val} bpm`, name]
                       }
@@ -1238,11 +1912,11 @@ export function AnalyticsV2({
       })()}
 
       {/* ── PMC MODAL ── */}
-      {pmcExpanded && (() => {
+      {showSection('pmc') && pmcExpanded && (() => {
         const lastPmc = pmcChartData[pmcChartData.length - 1];
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh', borderLeft: `3px solid ${NEON}` }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-[92vw] max-w-[1500px] shadow-2xl flex flex-col" style={{ height: '68vh', borderLeft: `3px solid ${NEON}` }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -1302,14 +1976,14 @@ export function AnalyticsV2({
       })()}
 
       {/* ── PACE TREND MODAL ── */}
-      {paceExpanded && (() => {
+      {showCore && paceExpanded && (() => {
         const paces = paceChartData.map(d => d.pace);
         const fastestPace = paces.length > 0 ? Math.min(...paces) : null;
         const slowestPace = paces.length > 0 ? Math.max(...paces) : null;
         const trendSecs = paces.length >= 2 ? Math.round((paces[0] - paces[paces.length - 1]) * 60) : null;
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh', borderLeft: `3px solid ${NEON}` }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-[92vw] max-w-[1500px] shadow-2xl flex flex-col" style={{ height: '68vh', borderLeft: `3px solid ${NEON}` }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -1376,7 +2050,7 @@ export function AnalyticsV2({
       })()}
 
       {/* ── CARDIAC DRIFT MODAL ── */}
-      {driftExpanded && (() => {
+      {showSection('drift') && driftExpanded && (() => {
         const avgPace = driftChartData.length > 0
           ? driftChartData.reduce((s, d) => s + d.pace, 0) / driftChartData.length : 0;
         const first3Hr = driftChartData.length >= 3
@@ -1385,8 +2059,8 @@ export function AnalyticsV2({
           ? driftChartData.slice(-3).reduce((s, d) => s + d.hr, 0) / 3 : 0;
         const driftPct = first3Hr > 0 ? ((last3Hr - first3Hr) / first3Hr * 100) : 0;
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh', borderLeft: `3px solid ${NEON}` }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-[92vw] max-w-[1500px] shadow-2xl flex flex-col" style={{ height: '68vh', borderLeft: `3px solid ${NEON}` }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -1464,12 +2138,12 @@ export function AnalyticsV2({
       })()}
 
       {/* ── TIME IN ZONES MODAL ── */}
-      {zonesExpanded && (() => {
+      {showSection('zones') && zonesExpanded && (() => {
         const dominantZone = [...zonesChartData].sort((a, b) => b.pct - a.pct)[0];
         const z2 = zonesChartData.find(z => z.zone === 'Z2');
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh', borderLeft: `3px solid ${NEON}` }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-[92vw] max-w-[1500px] shadow-2xl flex flex-col" style={{ height: '68vh', borderLeft: `3px solid ${NEON}` }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -1531,15 +2205,15 @@ export function AnalyticsV2({
       })()}
 
       {/* ── GCT MODAL ── */}
-      {gctExpanded && (() => {
+      {showSection('gct') && gctExpanded && (() => {
         const optimalCount = scatterData.filter(d => d.cadence > 175 && d.gct < 240).length;
         const avgCadence = scatterData.length > 0
           ? Math.round(scatterData.reduce((s, d) => s + d.cadence, 0) / scatterData.length) : 0;
         const avgGct = scatterData.length > 0
           ? Math.round(scatterData.reduce((s, d) => s + d.gct, 0) / scatterData.length) : 0;
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh', borderLeft: `3px solid ${NEON}` }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-[92vw] max-w-[1500px] shadow-2xl flex flex-col" style={{ height: '68vh', borderLeft: `3px solid ${NEON}` }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -1608,15 +2282,15 @@ export function AnalyticsV2({
       })()}
 
       {/* ── VDOT V2 MODAL ── */}
-      {vdotV2Expanded && (() => {
+      {showCore && vdotV2Expanded && (() => {
         const currentVdot = vdot ?? (vdotChartData.length > 0 ? vdotChartData[vdotChartData.length - 1]?.vdot : null);
         const olderVdot = vdotChartData.length >= 4 ? vdotChartData[vdotChartData.length - 4]?.vdot : null;
         const recentVdot = vdotChartData.length >= 1 ? vdotChartData[vdotChartData.length - 1]?.vdot : null;
         const trend3m = (recentVdot != null && olderVdot != null) ? (recentVdot - olderVdot) : null;
         const tPace = currentVdot ? calcTPaceV2(currentVdot) : null;
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-12 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-full max-w-6xl shadow-2xl flex flex-col" style={{ height: '80vh', borderLeft: `3px solid ${NEON}` }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-[92vw] max-w-[1500px] shadow-2xl flex flex-col" style={{ height: '68vh', borderLeft: `3px solid ${NEON}` }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">

@@ -7,11 +7,21 @@ import {
 import type { Run } from "../../types/api";
 import { computeDrift, driftLabel } from "../../utils/cardiacDrift";
 import type { DriftResult } from "../../utils/cardiacDrift";
+import { ChartExpandButton, ChartFullscreenModal } from "./ChartFullscreenModal";
 
 // ─── Single Run Drift ─────────────────────────────────────────────────────────
 
-function SingleRunDrift({ results }: { results: DriftResult[] }) {
-  const [selectedIdx, setSelectedIdx] = useState(0);
+function SingleRunDrift({
+  results,
+  selectedIdx,
+  setSelectedIdx,
+  fullscreen = false,
+}: {
+  results: DriftResult[];
+  selectedIdx: number;
+  setSelectedIdx: (index: number) => void;
+  fullscreen?: boolean;
+}) {
   const run = results[selectedIdx];
 
   if (!run) return (
@@ -101,7 +111,7 @@ function SingleRunDrift({ results }: { results: DriftResult[] }) {
           <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">
             FC per km (splits a passo costante)
           </div>
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={fullscreen ? 340 : 200}>
             <BarChart data={run.splits} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
               <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#1E293B" />
               <XAxis dataKey="km" tick={{ fontSize: 9, fill: "#475569" }} axisLine={false} tickLine={false} label={{ value: "km", position: "insideBottomRight", offset: -4, fill: "#475569", fontSize: 9 }} />
@@ -136,7 +146,7 @@ function SingleRunDrift({ results }: { results: DriftResult[] }) {
 
 // ─── Historical Drift ─────────────────────────────────────────────────────────
 
-function HistoricalDrift({ results }: { results: DriftResult[] }) {
+function HistoricalDrift({ results, fullscreen = false }: { results: DriftResult[]; fullscreen?: boolean }) {
   const data = [...results].reverse().map(r => ({
     date: new Date(r.date).toLocaleDateString("it", { day: "numeric", month: "short" }),
     drift: r.drift,
@@ -186,7 +196,7 @@ function HistoricalDrift({ results }: { results: DriftResult[] }) {
             </span>
           )}
         </div>
-        <ResponsiveContainer width="100%" height={200}>
+        <ResponsiveContainer width="100%" height={fullscreen ? 340 : 200}>
           <LineChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
             <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#1E293B" />
             <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#475569" }} axisLine={false} tickLine={false}
@@ -241,6 +251,8 @@ function HistoricalDrift({ results }: { results: DriftResult[] }) {
 
 export function StatsDrift({ runs }: { runs: Run[] }) {
   const [driftTab, setDriftTab] = useState<"single" | "historical">("historical");
+  const [expanded, setExpanded] = useState(false);
+  const [selectedRunIdx, setSelectedRunIdx] = useState(0);
 
   const results = useMemo(() => {
     return runs
@@ -252,7 +264,7 @@ export function StatsDrift({ runs }: { runs: Run[] }) {
 
   return (
     <div
-      className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6"
+      className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 group"
       style={{ borderLeft: "3px solid #F43F5E" }}
     >
       {/* Section header */}
@@ -268,9 +280,12 @@ export function StatsDrift({ runs }: { runs: Run[] }) {
             <p className="text-[10px] text-gray-500 font-medium">Pa:Hr ratio — Metodo Friel · solo corse a passo costante</p>
           </div>
         </div>
-        {results.length > 0 && (
-          <span className="text-[10px] text-gray-600">{results.length} corse qualificate</span>
-        )}
+        <div className="flex items-center gap-3">
+          {results.length > 0 && (
+            <span className="text-[10px] text-gray-600">{results.length} corse qualificate</span>
+          )}
+          {results.length > 0 && <ChartExpandButton onClick={() => setExpanded(true)} />}
+        </div>
       </div>
 
       {/* Sub-tabs */}
@@ -302,9 +317,38 @@ export function StatsDrift({ runs }: { runs: Run[] }) {
       ) : (
         <>
           {driftTab === "historical" && <HistoricalDrift results={results} />}
-          {driftTab === "single"     && <SingleRunDrift  results={results} />}
+          {driftTab === "single"     && <SingleRunDrift results={results} selectedIdx={selectedRunIdx} setSelectedIdx={setSelectedRunIdx} />}
         </>
       )}
+      <ChartFullscreenModal
+        open={expanded}
+        onClose={() => setExpanded(false)}
+        title="Deriva Cardiaca"
+        subtitle="Pa:Hr ratio — Metodo Friel"
+        accent="#F43F5E"
+      >
+        <div className="h-full overflow-y-auto pr-1">
+          <div className="flex gap-1 mb-5 bg-[#0A0A0A] p-1 rounded-xl w-fit">
+            {([
+              { id: "historical", label: "Historical Drift" },
+              { id: "single", label: "Single Run Drift" },
+            ] as const).map(t => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setDriftTab(t.id)}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${
+                  driftTab === t.id ? "bg-[#1E293B] text-white" : "text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {driftTab === "historical" && <HistoricalDrift results={results} fullscreen />}
+          {driftTab === "single" && <SingleRunDrift results={results} selectedIdx={selectedRunIdx} setSelectedIdx={setSelectedRunIdx} fullscreen />}
+        </div>
+      </ChartFullscreenModal>
     </div>
   );
 }

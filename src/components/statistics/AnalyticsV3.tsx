@@ -2,13 +2,15 @@
  * ANALYTICS PRO V3 — Biomechanics & Telemetry Dashboard
  * Ground Contact Stability · Radar · Efficiency Correlation · Long-Term Adaptation
  */
-import React, { useMemo } from 'react';
+import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  LineChart, Line, CartesianGrid, ReferenceLine, Legend,
-  AreaChart, Area, Cell,
+  XAxis, YAxis, Tooltip, ResponsiveContainer,
+  LineChart, Line, CartesianGrid, ReferenceLine,
+  AreaChart, Area,
 } from 'recharts';
-import { Activity, Zap, RefreshCw } from 'lucide-react';
+import { Activity, Zap, RefreshCcw, Info, Check, AlertTriangle } from 'lucide-react';
+import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const NEON   = '#C0FF00';
@@ -19,6 +21,8 @@ const BORDER = '#1E1E1E';
 const GRID   = '#1A1A1A';
 const DIM    = '#444444';
 const MUTED  = '#666666';
+const NEON_GREEN = '#ccff00';
+const NEON_ORANGE = '#ff5b00';
 
 const cardStyle = (accent = NEON): React.CSSProperties => ({
   background: CARD,
@@ -27,16 +31,6 @@ const cardStyle = (accent = NEON): React.CSSProperties => ({
 });
 
 // ─── Mock data ───────────────────────────────────────────────────────────────
-
-const sessionEvolutionData = [
-  { s: '1', score: 68, fill: '#4ade80' },
-  { s: '2', score: 72, fill: '#84cc16' },
-  { s: '3', score: 76, fill: '#a3e635' },
-  { s: '4', score: 78, fill: '#C0FF00' },
-  { s: '5', score: 80, fill: '#eab308' },
-  { s: '6', score: 83, fill: '#f97316' },
-  { s: '7', score: 94, fill: '#f97316' },
-];
 
 const efficiencyData = [
   { t: '0:00', speed: 2.80, cardiac: 0.62 },
@@ -368,132 +362,277 @@ function DarkTooltip({ active, payload, label }: { active?: boolean; payload?: {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+function GroundContactStability() {
+  const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(new Date());
+
+  const handleSync = () => {
+    if (syncState === 'syncing') return;
+    setSyncState('syncing');
+
+    setTimeout(() => {
+      const success = Math.random() > 0.15;
+      if (success) {
+        setSyncState('success');
+        setLastSyncTime(new Date());
+      } else {
+        setSyncState('error');
+      }
+
+      setTimeout(() => setSyncState('idle'), 3000);
+    }, 2000);
+  };
+
+  return (
+    <main className="relative w-full bg-[#111] rounded-[2rem] border border-gray-800 shadow-2xl flex flex-col overflow-hidden">
+      <div className="absolute left-0 top-16 bottom-16 w-1 bg-[#ccff00] rounded-r-full shadow-[0_0_15px_#ccff00]" />
+
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 sm:p-8 border-b border-gray-800/60 ml-2">
+        <div className="flex items-center gap-3">
+          <Activity size={24} color={NEON_GREEN} className="opacity-90" />
+          <h2 className="text-xl sm:text-2xl font-black italic tracking-wide text-white">
+            GROUND CONTACT STABILITY
+          </h2>
+        </div>
+
+        <div className="mt-4 sm:mt-0 flex items-center gap-4 bg-[#ccff00]/10 border border-[#ccff00]/20 rounded-full px-5 py-2">
+          <span className="text-xs font-bold tracking-wider text-[#ccff00]">STABILITY SCORE</span>
+          <div className="flex items-baseline gap-1 shadow-sm">
+            <span className="text-xl font-black text-[#ccff00]">94.2</span>
+            <span className="text-sm font-bold text-[#ccff00] opacity-80">%</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] divide-y lg:divide-y-0 lg:divide-x divide-gray-800/60 ml-2">
+        <div className="p-6 sm:p-10 flex flex-col relative group">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-6 text-xs font-bold tracking-wider text-gray-500 uppercase">
+              <span>Spatial Force Distribution</span>
+              <div className="flex gap-4">
+                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#ccff00]" /> Optimal</div>
+                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#ff5b00]" /> Imbalance</div>
+              </div>
+            </div>
+            <button className="text-gray-500 hover:text-white transition-colors bg-white/[0.03] p-1.5 rounded-full border border-gray-800/50 hover:bg-white/[0.1]">
+              <Info size={16} />
+            </button>
+          </div>
+
+          <div className="relative w-full p-8 sm:p-14 border border-gray-800/40 bg-[#060606] rounded-3xl flex items-center justify-center gap-12 sm:gap-24 overflow-hidden isolate shadow-inner">
+            <div className="absolute top-[10%] bottom-[10%] left-1/2 w-px bg-gradient-to-b from-transparent via-gray-800 to-transparent -translate-x-1/2" />
+            <SensorPad side="L" color={NEON_GREEN} load="48.5" peak="1.4" />
+            <SensorPad side="R" color={NEON_ORANGE} load="51.5" peak="1.6" />
+          </div>
+
+          <div className="flex justify-between mt-6 text-xs text-gray-500 font-bold uppercase tracking-wider pt-6 border-t border-gray-800/40">
+            <div className="flex flex-col gap-2 w-1/3">
+              <span>Pronation Deviation</span>
+              <div className="flex items-end justify-between text-[#ccff00]">
+                <div className="w-full h-1 bg-[#ccff00]/20 rounded-full overflow-hidden mr-4">
+                  <div className="h-full w-[40%] bg-[#ccff00] rounded-full shadow-[0_0_10px_#ccff00]" />
+                </div>
+                <span>+1.2%</span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 w-1/3">
+              <span className="text-right">Peak Impact Force</span>
+              <div className="flex flex-row-reverse items-end justify-between text-[#ff5b00]">
+                <div className="w-full h-1 bg-[#ff5b00]/20 rounded-full overflow-hidden ml-4">
+                  <div className="h-full w-[85%] bg-[#ff5b00] rounded-full shadow-[0_0_10px_#ff5b00]" />
+                </div>
+                <span>3.48 G</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 sm:p-10 flex flex-col justify-between">
+          <div className="flex flex-col">
+            <span className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2">Contact Time Off</span>
+            <div className="flex items-baseline gap-2 mb-2">
+              <span className="text-6xl sm:text-7xl font-black text-white tracking-tighter shadow-sm">14</span>
+              <span className="text-xl sm:text-2xl text-gray-500 font-bold">ms</span>
+            </div>
+            <p className="text-sm text-gray-500">Optimal ground contact asymmetry. Bilateral balance within elite range.</p>
+          </div>
+
+          <div className="flex gap-4 sm:gap-6 mt-10">
+            <MetricBox title="CADENCE" value="178" unit="spm" />
+            <MetricBox title="STRIDE L." value="8.2" unit="m/s" />
+          </div>
+
+          <div className="mt-12 mb-8">
+            <span className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-8 block">Session Evolution</span>
+            <div className="flex items-end justify-between gap-1 sm:gap-2 px-2 h-20 border-b border-gray-800 pb-2">
+              {[
+                { scaleY: 0.3, color: '#4ade80' },
+                { scaleY: 0.4, color: '#84cc16' },
+                { scaleY: 0.5, color: '#a3e635' },
+                { scaleY: 0.6, color: '#ccff00' },
+                { scaleY: 0.7, color: '#facc15' },
+                { scaleY: 0.8, color: '#fb923c' },
+                { scaleY: 1.0, color: '#f97316' },
+              ].map((bar, idx) => (
+                <EvolutionBar key={idx} scaleY={bar.scaleY} color={bar.color} label={`${idx + 1}`} />
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-auto flex flex-col gap-3">
+            <button
+              onClick={handleSync}
+              disabled={syncState === 'syncing'}
+              className={`
+                group w-full font-black italic tracking-widest uppercase py-5 rounded-2xl flex items-center justify-center gap-3 transition-all transform hover:scale-[1.01] active:scale-95 shadow-[0_0_20px_rgba(204,255,0,0.15)]
+                ${syncState === 'idle' ? 'bg-[#ccff00] text-black hover:bg-[#d4ff1a]' : ''}
+                ${syncState === 'syncing' ? 'bg-[#ccff00]/60 text-black/60 cursor-not-allowed shadow-none' : ''}
+                ${syncState === 'success' ? 'bg-[#4ade80] text-black shadow-[0_0_20px_rgba(74,222,128,0.2)]' : ''}
+                ${syncState === 'error' ? 'bg-[#ff5b00] text-black shadow-[0_0_20px_rgba(255,91,0,0.2)]' : ''}
+              `}
+            >
+              {syncState === 'idle' && (
+                <>
+                  <RefreshCcw size={18} className="group-hover:-rotate-180 transition-transform duration-500" />
+                  Sync Telemetry Data
+                </>
+              )}
+              {syncState === 'syncing' && (
+                <>
+                  <RefreshCcw size={18} className="animate-spin" />
+                  Syncing...
+                </>
+              )}
+              {syncState === 'success' && (
+                <>
+                  <Check size={18} />
+                  Sync Successful
+                </>
+              )}
+              {syncState === 'error' && (
+                <>
+                  <AlertTriangle size={18} />
+                  Sync Error - Retry
+                </>
+              )}
+            </button>
+
+            <div className="text-center text-[10px] sm:text-xs font-mono text-gray-500 uppercase tracking-widest h-4 flex items-center justify-center">
+              {syncState === 'syncing' && 'Establishing secure connection...'}
+              {syncState === 'error' && <span className="text-[#ff5b00]">Connection timeout. Please verify telemetry link.</span>}
+              {syncState !== 'syncing' && syncState !== 'error' && lastSyncTime && (
+                <>Last Synced: <span className="text-gray-400 ml-1">{syncState === 'success' ? 'Just Now' : lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function SensorPad({ side, color, load, peak }: { side: string; color: string; load: string; peak: string }) {
+  const rawForceData = [12, 24, 38, 75, 95, 82, 30, 15, 12, 25, 60, 92, 55, 18];
+
+  return (
+    <div className="relative w-[110px] h-[240px] sm:w-[130px] sm:h-[300px] flex flex-col justify-between z-10 group">
+      <div className="flex justify-between items-start w-full">
+        <span className="text-4xl sm:text-6xl font-light text-white/90 font-mono tracking-tighter">
+          {side}
+        </span>
+        <div className="text-right">
+          <span className="text-[9px] text-gray-500 uppercase tracking-widest block font-bold mb-0.5">Load</span>
+          <span className="text-xl font-mono text-white font-medium leading-none">{load}<span className="text-sm text-gray-500">%</span></span>
+        </div>
+      </div>
+
+      <div className={`relative w-full flex-grow my-8 flex flex-col justify-between ${side === 'L' ? 'items-end' : 'items-start'}`}>
+        <div className={`absolute top-0 bottom-0 w-px bg-gray-800/80 ${side === 'L' ? 'right-0' : 'left-0'}`} />
+        {rawForceData.map((val, idx) => {
+          const variation = side === 'L' ? 0 : (idx % 2 === 0 ? -6 : 8);
+          const finalVal = Math.min(100, Math.max(5, val + variation));
+
+          return (
+            <div
+              key={idx}
+              className="relative flex items-center w-full"
+              style={{ justifyContent: side === 'L' ? 'flex-end' : 'flex-start' }}
+            >
+              <div
+                className="h-[2px] sm:h-[3px] rounded-full transition-all duration-300 group-hover:opacity-100"
+                style={{
+                  width: `${finalVal}%`,
+                  backgroundColor: color,
+                  opacity: (finalVal / 100) * 0.8 + 0.2,
+                  boxShadow: finalVal > 80 ? `0 0 12px ${color}` : 'none',
+                }}
+              />
+
+              {finalVal > 75 && (
+                <div
+                  className="absolute w-1 h-1 rounded-full bg-white opacity-90 shadow-[0_0_8px_white]"
+                  style={{ [side === 'L' ? 'right' : 'left']: `calc(${finalVal}% + 6px)` }}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex justify-between items-end w-full border-b border-gray-800/40 pb-2">
+        <span className="text-[9px] text-gray-500 uppercase tracking-widest font-bold">Peak Force</span>
+        <span className="text-sm font-mono text-gray-300">{peak} <span className="text-[10px] text-gray-600">xBW</span></span>
+      </div>
+    </div>
+  );
+}
+
+function MetricBox({ title, value, unit }: { title: string; value: string; unit: string }) {
+  return (
+    <div className="flex-1 bg-white/[0.02] border border-white/5 rounded-2xl p-5 sm:p-6 backdrop-blur-sm shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] hover:bg-white/[0.04] transition-colors cursor-default group">
+      <span className="text-[10px] sm:text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 block">{title}</span>
+      <div className="flex items-baseline gap-1">
+        <span className="text-3xl sm:text-4xl font-black text-white tracking-tighter group-hover:text-gray-100 transition-colors">{value}</span>
+        <span className="text-sm font-bold text-gray-500">{unit}</span>
+      </div>
+    </div>
+  );
+}
+
+function EvolutionBar({ scaleY, color, label }: { scaleY: number; color: string; label: string }) {
+  return (
+    <div className="flex flex-col items-center justify-end flex-1 gap-2 sm:gap-3 group">
+      <motion.div
+        initial={{ scaleY: 0 }}
+        animate={{ scaleY }}
+        transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }}
+        className="w-full max-w-[40px] sm:max-w-[48px] rounded-t-sm rounded-b-[1px] relative overflow-hidden"
+        style={{
+          height: '20px',
+          backgroundColor: color,
+          transformOrigin: 'bottom',
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/40" />
+      </motion.div>
+      <span className="text-[10px] text-gray-600 font-black tracking-wider group-hover:text-gray-400 transition-colors">{label}</span>
+    </div>
+  );
+}
+
 export function AnalyticsV3() {
+  const [athleticExpanded, setAthleticExpanded] = useState(false);
+  const [efficiencyExpanded, setEfficiencyExpanded] = useState(false);
+  const [adaptationExpanded, setAdaptationExpanded] = useState(false);
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
       {/* ══════════════════════════════════════════════════
           GROUND CONTACT STABILITY
       ══════════════════════════════════════════════════ */}
-      <div
-        className="rounded-3xl p-0 overflow-hidden"
-        style={cardStyle(NEON)}
-      >
-        {/* Header bar */}
-        <div
-          className="flex items-center justify-between px-8 py-5 border-b"
-          style={{ borderColor: BORDER }}
-        >
-          <div className="flex items-center gap-3">
-            <Activity className="w-5 h-5" style={{ color: NEON }} />
-            <span className="text-base font-black tracking-widest uppercase italic" style={{ color: '#fff' }}>
-              Ground Contact Stability
-            </span>
-          </div>
-          <div
-            className="flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black tracking-widest"
-            style={{ background: `${NEON}18`, border: `1px solid ${NEON}44`, color: NEON }}
-          >
-            STABILITY SCORE
-            <span className="text-base font-black ml-1">94.2</span>
-            <span className="text-[10px]">%</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-          {/* Left: Spatial Force Distribution */}
-          <div
-            className="p-8 border-r"
-            style={{ borderColor: BORDER }}
-          >
-            <p className="text-[9px] font-black tracking-[0.3em] mb-4" style={{ color: DIM }}>
-              SPATIAL FORCE DISTRIBUTION
-            </p>
-            <div className="flex items-center gap-3 mb-4">
-              <span className="flex items-center gap-1.5 text-[10px] font-black" style={{ color: MUTED }}>
-                <span className="w-2 h-2 rounded-sm inline-block" style={{ background: NEON }} /> OPTIMAL
-              </span>
-              <span className="flex items-center gap-1.5 text-[10px] font-black" style={{ color: MUTED }}>
-                <span className="w-2 h-2 rounded-sm inline-block" style={{ background: ORANGE }} /> IMBALANCE
-              </span>
-            </div>
-            <SpatialForceMap />
-          </div>
-
-          {/* Right: Metrics + Bar chart */}
-          <div className="p-8 flex flex-col gap-6">
-            {/* Contact Time Off */}
-            <div>
-              <p className="text-[9px] font-black tracking-[0.3em] mb-1" style={{ color: DIM }}>CONTACT TIME OFF</p>
-              <div className="flex items-baseline gap-2">
-                <span className="text-5xl font-black leading-none" style={{ color: '#fff' }}>14</span>
-                <span className="text-xl font-black" style={{ color: MUTED }}>ms</span>
-              </div>
-              <p className="text-[9px] mt-1" style={{ color: MUTED }}>
-                Optimal ground contact asymmetry. Bilateral balance within elite range.
-              </p>
-            </div>
-
-            {/* Two metrics */}
-            <div className="grid grid-cols-2 gap-4">
-              <div
-                className="rounded-2xl px-5 py-4"
-                style={{ background: '#0D0D0D', border: `1px solid ${BORDER}` }}
-              >
-                <p className="text-[9px] font-black tracking-widest mb-1" style={{ color: DIM }}>CADENCE</p>
-                <p className="text-2xl font-black" style={{ color: '#fff' }}>178 <span className="text-xs font-bold" style={{ color: MUTED }}>spm</span></p>
-              </div>
-              <div
-                className="rounded-2xl px-5 py-4"
-                style={{ background: '#0D0D0D', border: `1px solid ${BORDER}` }}
-              >
-                <p className="text-[9px] font-black tracking-widest mb-1" style={{ color: DIM }}>STRIDE L.</p>
-                <p className="text-2xl font-black" style={{ color: '#fff' }}>8.2 <span className="text-xs font-bold" style={{ color: MUTED }}>m/s</span></p>
-              </div>
-            </div>
-
-            {/* Session Evolution bar chart */}
-            <div>
-              <p className="text-[9px] font-black tracking-[0.3em] mb-3" style={{ color: DIM }}>SESSION EVOLUTION</p>
-              <ResponsiveContainer width="100%" height={80}>
-                <BarChart data={sessionEvolutionData} barCategoryGap="20%">
-                  <XAxis dataKey="s" tick={{ fill: MUTED, fontSize: 9, fontWeight: 900 }} axisLine={false} tickLine={false} />
-                  <YAxis hide domain={[50, 100]} />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (!active || !payload?.length) return null;
-                      return (
-                        <div style={{ background: '#0D0D0D', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 900, color: NEON }}>
-                          {payload[0].value}
-                        </div>
-                      );
-                    }}
-                  />
-                  <Bar dataKey="score" radius={[4, 4, 0, 0]}>
-                    {sessionEvolutionData.map((entry, idx) => (
-                      <Cell key={idx} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Sync button */}
-            <button
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-black text-xs tracking-widest uppercase transition-all"
-              style={{
-                background: NEON,
-                color: '#000',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(1.1)')}
-              onMouseLeave={e => (e.currentTarget.style.filter = 'brightness(1)')}
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Sync Telemetry Data
-            </button>
-          </div>
-        </div>
-      </div>
+      <GroundContactStability />
 
       {/* ══════════════════════════════════════════════════
           BOTTOM ROW: Radar + Efficiency Correlation
@@ -502,19 +641,22 @@ export function AnalyticsV3() {
 
         {/* Pentagon Radar */}
         <div
-          className="rounded-3xl p-8"
+          className="rounded-3xl p-8 group"
           style={cardStyle(NEON)}
         >
-          <div className="flex items-center gap-3 mb-6">
-            <Zap className="w-5 h-5" style={{ color: NEON }} />
-            <div>
-              <h3 className="text-sm font-black tracking-widest uppercase italic" style={{ color: '#fff' }}>
-                Athletic Profile
-              </h3>
-              <p className="text-[9px] font-black tracking-widest mt-0.5" style={{ color: DIM }}>
-                MULTI-AXIS BIOMECH SCORE
-              </p>
+          <div className="flex items-center justify-between gap-3 mb-6">
+            <div className="flex items-center gap-3">
+              <Zap className="w-5 h-5" style={{ color: NEON }} />
+              <div>
+                <h3 className="text-sm font-black tracking-widest uppercase italic" style={{ color: '#fff' }}>
+                  Athletic Profile
+                </h3>
+                <p className="text-[9px] font-black tracking-widest mt-0.5" style={{ color: DIM }}>
+                  MULTI-AXIS BIOMECH SCORE
+                </p>
+              </div>
             </div>
+            <ChartExpandButton onClick={() => setAthleticExpanded(true)} />
           </div>
           <PentagonRadar axes={radarAxes} />
           <div className="mt-4 grid grid-cols-5 gap-2">
@@ -529,7 +671,7 @@ export function AnalyticsV3() {
 
         {/* Efficiency Correlation */}
         <div
-          className="rounded-3xl p-8"
+          className="rounded-3xl p-8 group"
           style={cardStyle(ORANGE)}
         >
           <div className="flex items-center justify-between mb-6">
@@ -551,6 +693,7 @@ export function AnalyticsV3() {
               <span className="flex items-center gap-1.5 text-[9px] font-black" style={{ color: MUTED }}>
                 <span className="w-4 border-t-2 border-dashed inline-block" style={{ borderColor: ORANGE }} /> CARDIAC STRESS
               </span>
+              <ChartExpandButton onClick={() => setEfficiencyExpanded(true)} />
             </div>
           </div>
 
@@ -619,7 +762,7 @@ export function AnalyticsV3() {
           LONG-TERM TRAINING ADAPTATION
       ══════════════════════════════════════════════════ */}
       <div
-        className="rounded-3xl p-8"
+        className="rounded-3xl p-8 group"
         style={cardStyle(NEON)}
       >
         <div className="flex items-center justify-between mb-8">
@@ -643,6 +786,7 @@ export function AnalyticsV3() {
               <span className="w-3 h-3 rounded-full inline-block" style={{ background: `${ORANGE}80` }} />
               RACE DATA
             </span>
+            <ChartExpandButton onClick={() => setAdaptationExpanded(true)} />
           </div>
         </div>
 
@@ -720,6 +864,109 @@ export function AnalyticsV3() {
           </div>
         </div>
       </div>
+
+      <ChartFullscreenModal
+        open={athleticExpanded}
+        onClose={() => setAthleticExpanded(false)}
+        title="Athletic Profile"
+        subtitle="Multi-axis biomech score"
+        accent={NEON}
+        details={
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            {radarAxes.map((a) => (
+              <div key={a.label} className="rounded-xl border border-white/10 bg-white/[0.02] p-3 text-center">
+                <p className="text-[9px] font-black tracking-widest uppercase" style={{ color: MUTED }}>{a.label}</p>
+                <p className="mt-1 text-xl font-black" style={{ color: NEON }}>{a.value}</p>
+              </div>
+            ))}
+          </div>
+        }
+      >
+        <div className="flex h-full min-h-0 w-full items-center justify-center">
+          <div className="scale-[1.45] sm:scale-[1.75] origin-center">
+            <PentagonRadar axes={radarAxes} />
+          </div>
+        </div>
+      </ChartFullscreenModal>
+
+      <ChartFullscreenModal
+        open={efficiencyExpanded}
+        onClose={() => setEfficiencyExpanded(false)}
+        title="Efficiency Correlation"
+        subtitle="Speed output vs cardiac stress"
+        accent={ORANGE}
+        details={
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+              <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>PEAK SPEED RATIO</p>
+              <p className="mt-1 text-xl font-black text-white">1.42 <span className="text-xs font-bold" style={{ color: MUTED }}>m/s</span></p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+              <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>AVG EFFICIENCY</p>
+              <p className="mt-1 text-xl font-black text-white">0.82 <span className="text-xs font-bold" style={{ color: MUTED }}>km/l</span></p>
+            </div>
+          </div>
+        }
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={efficiencyData} margin={{ top: 12, right: 28, bottom: 8, left: -10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={GRID} vertical={false} />
+            <XAxis dataKey="t" tick={{ fill: MUTED, fontSize: 10, fontWeight: 900 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: MUTED, fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
+            <Tooltip content={<DarkTooltip />} />
+            <ReferenceLine y={0.80} stroke={NEON} strokeDasharray="6 3" strokeWidth={1} opacity={0.4} label={{ value: 'OPTIMAL RANGE', position: 'right', fill: NEON, fontSize: 9, fontWeight: 900 }} />
+            <Line type="monotone" dataKey="speed" name="Speed Output" stroke={NEON} strokeWidth={3} strokeDasharray="6 3" dot={{ r: 4, fill: NEON, stroke: BG, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+            <Line type="monotone" dataKey="cardiac" name="Cardiac Stress" stroke={ORANGE} strokeWidth={3} strokeDasharray="4 2" dot={{ r: 4, fill: ORANGE, stroke: BG, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+          </LineChart>
+        </ResponsiveContainer>
+      </ChartFullscreenModal>
+
+      <ChartFullscreenModal
+        open={adaptationExpanded}
+        onClose={() => setAdaptationExpanded(false)}
+        title="Long-Term Training Adaptation"
+        subtitle="Supercompensation cycle - stress vs adaptation curve"
+        accent={NEON}
+        details={
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>
+              BANISTER-COGGAN SUPERCOMPENSATION MODEL
+            </p>
+            <div className="grid grid-cols-2 gap-3 sm:w-[420px]">
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>PEAK ADAPTATION</p>
+                <p className="mt-1 text-sm font-black" style={{ color: NEON }}>JUNE - JULY WINDOW</p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>READINESS INDEX</p>
+                <p className="mt-1 text-sm font-black text-white">87.4 / 100</p>
+              </div>
+            </div>
+          </div>
+        }
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={adaptationData} margin={{ top: 12, right: 28, bottom: 8, left: -10 }}>
+            <defs>
+              <linearGradient id="adaptGradModal" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={NEON} stopOpacity={0.18} />
+                <stop offset="95%" stopColor={NEON} stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="stressGradModal" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={ORANGE} stopOpacity={0.18} />
+                <stop offset="95%" stopColor={ORANGE} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke={GRID} vertical={false} />
+            <XAxis dataKey="month" tick={{ fill: MUTED, fontSize: 10, fontWeight: 900 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: MUTED, fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
+            <Tooltip content={<DarkTooltip />} />
+            <ReferenceLine x="Jul" stroke={ORANGE} strokeDasharray="6 3" strokeWidth={1.5} label={{ value: 'RACE DATE', position: 'top', fill: ORANGE, fontSize: 9, fontWeight: 900 }} />
+            <Area type="monotone" dataKey="stress" name="Stress" stroke={ORANGE} strokeWidth={2.5} fill="url(#stressGradModal)" dot={false} />
+            <Area type="monotone" dataKey="adaptation" name="Adaptation" stroke={NEON} strokeWidth={3} fill="url(#adaptGradModal)" dot={false} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </ChartFullscreenModal>
 
     </div>
   );

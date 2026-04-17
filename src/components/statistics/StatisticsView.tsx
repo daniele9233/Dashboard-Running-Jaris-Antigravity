@@ -4,12 +4,12 @@ import { StatsDrift } from './StatsDrift';
 import { BadgesGrid } from '../BadgesGrid';
 import { MainChart } from '../MainChart';
 import { AnaerobicThreshold } from '../AnaerobicThreshold';
-import { VO2MaxChart } from '../VO2MaxChart';
 import { FitnessFreshness } from '../FitnessFreshness';
 import { AnalyticsV2 } from './AnalyticsV2';
 import { AnalyticsV3 } from './AnalyticsV3';
-import { AnalyticsV4 } from './AnalyticsV4';
-import { AnalyticsV5 } from './AnalyticsV5';
+import { AnalyticsV4CadenceSpeedMatrix, AnalyticsV4PaceZoneDistribution } from './AnalyticsV4';
+import { AnalyticsV5BestEffortsProgression, AnalyticsV5EffortMatrix, AnalyticsV5PaceDistributionBell } from './AnalyticsV5';
+import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 import { useApi } from '../../hooks/useApi';
 import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, getDashboard, type GctAnalysisResponse } from '../../api';
 import type { AnalyticsResponse, VdotPacesResponse, RunsResponse, DashboardResponse } from '../../types/api';
@@ -52,6 +52,22 @@ import {
   Label,
   Legend
 } from 'recharts';
+
+const PRO_ACCENT = '#D4FF00';
+const PRO_PANEL = '#0E0E0E';
+const PRO_BORDER = '#1E1E1E';
+const PRO_BORDER_STRONG = '#2A2A2A';
+const PRO_GRID = '#1E1E1E';
+const PRO_BLUE = '#6366F1';
+const PRO_PURPLE = '#A78BFA';
+const PRO_RED = '#F43F5E';
+const PRO_ORANGE = '#F59E0B';
+const PRO_ZONE_COLORS = ['#4A4A4A', '#6366F1', '#8B5CF6', '#A78BFA', PRO_ACCENT];
+const PRO_TOOLTIP_STYLE = {
+  backgroundColor: '#141414',
+  border: `1px solid ${PRO_BORDER_STRONG}`,
+  borderRadius: '12px',
+};
 
 // ─────────────────────────────────────────────────────────────
 // INFO TOOLTIP
@@ -101,11 +117,11 @@ const volumeData = [
 ];
 
 const zoneData = [
-  { name: 'Z1 (Recovery)', time: 120, fill: '#64748B' },
-  { name: 'Z2 (Aerobic)', time: 450, fill: '#3B82F6' },
-  { name: 'Z3 (Tempo)', time: 180, fill: '#10B981' },
-  { name: 'Z4 (Threshold)', time: 90, fill: '#EAB308' },
-  { name: 'Z5 (Anaerobic)', time: 30, fill: '#F43F5E' },
+  { name: 'Z1 (Recovery)', time: 120, fill: PRO_ZONE_COLORS[0] },
+  { name: 'Z2 (Aerobic)', time: 450, fill: PRO_ZONE_COLORS[1] },
+  { name: 'Z3 (Tempo)', time: 180, fill: PRO_ZONE_COLORS[2] },
+  { name: 'Z4 (Threshold)', time: 90, fill: PRO_ZONE_COLORS[3] },
+  { name: 'Z5 (Anaerobic)', time: 30, fill: PRO_ZONE_COLORS[4] },
 ];
 
 const pacesTrendData = [
@@ -138,11 +154,11 @@ const futureTrendData = [
 // HELPERS
 // ─────────────────────────────────────────────────────────────
 function vdotLevel(v: number, t: (k: string) => string): { label: string; color: string } {
-  if (v >= 52) return { label: t('statistics.elite'), color: '#C0FF00' };
-  if (v >= 47) return { label: t('statistics.advanced'), color: '#10B981' };
-  if (v >= 40) return { label: 'Buono', color: '#3B82F6' };
-  if (v >= 32) return { label: t('statistics.intermediate'), color: '#EAB308' };
-  return { label: t('statistics.beginner'), color: '#F43F5E' };
+  if (v >= 52) return { label: t('statistics.elite'), color: PRO_ACCENT };
+  if (v >= 47) return { label: t('statistics.advanced'), color: PRO_PURPLE };
+  if (v >= 40) return { label: 'Buono', color: PRO_BLUE };
+  if (v >= 32) return { label: t('statistics.intermediate'), color: PRO_ORANGE };
+  return { label: t('statistics.beginner'), color: PRO_RED };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -152,18 +168,21 @@ function Card({
   children,
   className = '',
   accent = '#C0FF00',
+  variant = 'default',
 }: {
   children: React.ReactNode;
   className?: string;
   accent?: string;
+  variant?: 'default' | 'pro';
 }) {
+  const isPro = variant === 'pro';
   return (
     <div
-      className={`rounded-3xl p-8 ${className}`}
+      className={`${isPro ? 'rounded-2xl p-7 shadow-2xl' : 'rounded-3xl p-8'} ${className}`}
       style={{
-        background: '#0E0E0E',
-        border: '1px solid #1E1E1E',
-        borderLeft: `3px solid ${accent}`,
+        background: PRO_PANEL,
+        border: `1px solid ${isPro ? PRO_BORDER_STRONG : PRO_BORDER}`,
+        borderLeft: `3px solid ${isPro ? PRO_ACCENT : accent}`,
       }}
     >
       {children}
@@ -180,25 +199,33 @@ function CardHeader({
   title,
   subtitle,
   tooltip,
+  onExpand,
+  variant = 'default',
 }: {
   icon: React.ElementType;
   iconColor: string;
   title: string;
   subtitle?: string;
   tooltip?: { title: string; lines: string[] };
+  onExpand?: () => void;
+  variant?: 'default' | 'pro';
 }) {
+  const isPro = variant === 'pro';
   return (
-    <div className="flex items-start justify-between mb-8 gap-3">
+    <div className={`flex items-start justify-between gap-3 ${isPro ? 'mb-6' : 'mb-8'}`}>
       <div className="flex items-center gap-3">
-        <Icon className="w-5 h-5 shrink-0" style={{ color: iconColor }} />
+        <Icon className={`${isPro ? 'w-4 h-4' : 'w-5 h-5'} shrink-0`} style={{ color: isPro ? PRO_ACCENT : iconColor }} />
         <div>
-          <h2 className="text-base font-black tracking-widest uppercase italic leading-none">{title}</h2>
+          <h2 className={`${isPro ? 'text-sm text-white' : 'text-base'} font-black tracking-widest uppercase italic leading-none`}>{title}</h2>
           {subtitle && (
-            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">{subtitle}</p>
+            <p className={`text-[10px] ${isPro ? 'text-[#555]' : 'text-gray-500'} font-bold uppercase tracking-widest mt-1`}>{subtitle}</p>
           )}
         </div>
       </div>
-      {tooltip && <InfoTooltip title={tooltip.title} lines={tooltip.lines} />}
+      <div className="flex items-center gap-2">
+        {onExpand && <ChartExpandButton onClick={onExpand} />}
+        {tooltip && <InfoTooltip title={tooltip.title} lines={tooltip.lines} />}
+      </div>
     </div>
   );
 }
@@ -218,6 +245,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 export function StatisticsView() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('analytics');
+  const [expandedChart, setExpandedChart] = useState<null | 'paces' | 'cadence' | 'gctMonthly'>(null);
   const { data: analyticsData } = useApi<AnalyticsResponse>(getAnalytics);
   const { data: vdotData } = useApi<VdotPacesResponse>(getVdotPaces);
   const { data: runsData } = useApi<RunsResponse>(getRuns);
@@ -253,14 +281,96 @@ export function StatisticsView() {
 
 
   const tabs = [
-    { id: 'analytics',   label: t('statistics.analyticsPro'),  icon: LayoutGrid },
-    { id: 'analyticsv2', label: t('statistics.analyticsPro2'), icon: Radar },
-    { id: 'analyticsv3', label: 'Analytics Pro V3',            icon: Activity },
-    { id: 'analyticsv4', label: 'Analytics Pro V4',            icon: LineChartIcon },
-    { id: 'analyticsv5', label: 'Analytics Pro V5',            icon: TrendingUp },
+    { id: 'analytics',   label: 'Carico & Forma',              icon: LayoutGrid },
+    { id: 'analyticsv2', label: 'Potenziale & Progressi',      icon: Radar },
+    { id: 'analyticsv3', label: 'Biomeccanica & Efficienza',   icon: Activity },
     { id: 'biology',     label: 'Biologia & Futuro',           icon: FlaskConical },
     { id: 'badges',      label: 'Badge',                       icon: Star },
   ];
+
+  const renderPacesTrendChart = () => (
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart data={pacesTrendData}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
+        <XAxis dataKey="date" stroke="#333" fontSize={10} tickLine={false} axisLine={false} />
+        <YAxis hide domain={[3.5, 6]} reversed />
+        <Tooltip contentStyle={PRO_TOOLTIP_STYLE} />
+        <Legend
+          wrapperStyle={{ fontSize: '10px', fontWeight: 700 }}
+          formatter={(v) => v === 'easy' ? 'Easy' : v === 'tempo' ? 'Tempo' : 'Fast'}
+        />
+        <Line type="monotone" dataKey="easy" stroke={PRO_BLUE} strokeWidth={2} dot={{ r: 4, fill: PRO_BLUE }} />
+        <Line type="monotone" dataKey="tempo" stroke={PRO_PURPLE} strokeWidth={2} dot={{ r: 4, fill: PRO_PURPLE }} />
+        <Line type="monotone" dataKey="fast" stroke={PRO_ACCENT} strokeWidth={2} dot={{ r: 4, fill: PRO_ACCENT }} />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+
+  const renderCadenceMonthlyChart = () => (
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart data={cadenceMonthlyData}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
+        <XAxis dataKey="month" stroke="#333" fontSize={10} tickLine={false} axisLine={false} />
+        <YAxis stroke="#333" fontSize={10} domain={[160, 185]} tickLine={false} axisLine={false} />
+        <Tooltip contentStyle={PRO_TOOLTIP_STYLE} />
+        <ReferenceLine y={180} stroke="#333" strokeDasharray="5 5" />
+        <Line type="monotone" dataKey="value" stroke={PRO_ACCENT} strokeWidth={2} dot={{ r: 5, fill: PRO_ACCENT }} />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+
+  const formatGctMonth = (value: string) => {
+    const [y, m] = value.split('-');
+    const months = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+    return `${months[parseInt(m) - 1]} '${y.slice(2)}`;
+  };
+
+  const formatGctZone = (value: string) => {
+    const labels: Record<string, string> = {
+      pace_530: '>= 5:30/km',
+      pace_500: '5:00-5:29/km',
+      pace_445: '< 4:45/km',
+    };
+    return labels[value] || value;
+  };
+
+  const renderGctMonthlyChart = () => (
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart data={gctData?.monthly ?? []}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
+        <XAxis
+          dataKey="month"
+          stroke="#333"
+          fontSize={10}
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={formatGctMonth}
+        />
+        <YAxis
+          stroke="#333"
+          fontSize={10}
+          tickLine={false}
+          axisLine={false}
+          domain={['dataMin - 10', 'dataMax + 10']}
+          tickFormatter={(v) => `${v}ms`}
+        />
+        <Tooltip
+          contentStyle={PRO_TOOLTIP_STYLE}
+          formatter={(value: any, name: string) => {
+            if (value === null || value === undefined) return ['N/D', ''];
+            return [`${value} ms`, formatGctZone(name)];
+          }}
+        />
+        <Legend
+          formatter={formatGctZone}
+          wrapperStyle={{ fontSize: '11px', fontWeight: 700 }}
+        />
+        <Line type="monotone" dataKey="pace_530" stroke={PRO_BLUE} strokeWidth={2} dot={{ r: 4, fill: PRO_BLUE }} connectNulls={false} />
+        <Line type="monotone" dataKey="pace_500" stroke={PRO_PURPLE} strokeWidth={2} dot={{ r: 4, fill: PRO_PURPLE }} connectNulls={false} />
+        <Line type="monotone" dataKey="pace_445" stroke={PRO_ACCENT} strokeWidth={2} dot={{ r: 4, fill: PRO_ACCENT }} connectNulls={false} />
+      </LineChart>
+    </ResponsiveContainer>
+  );
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#0A0A0A] text-white p-6 lg:p-10">
@@ -305,80 +415,80 @@ export function StatisticsView() {
 
             <SectionLabel>CARICO — FITNESS · FATICA · FORMA</SectionLabel>
 
-            {/* ── KPI Grid ── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-              {[
-                {
-                  label: 'Fitness (CTL)',
-                  value: '54.2',
-                  trend: '+2.1',
-                  trendUp: true,
-                  icon: TrendingUp,
-                  color: '#3B82F6',
-                  desc: 'Chronic Training Load',
-                },
-                {
-                  label: 'Fatigue (ATL)',
-                  value: '68.5',
-                  trend: '+5.4',
-                  trendUp: true,
-                  icon: Zap,
-                  color: '#F43F5E',
-                  desc: 'Acute Training Load',
-                },
-                {
-                  label: 'Form (TSB)',
-                  value: '-14.3',
-                  trend: '-3.3',
-                  trendUp: false,
-                  icon: Activity,
-                  color: '#EAB308',
-                  desc: 'Training Stress Balance',
-                },
-                {
-                  label: 'Efficiency Factor',
-                  value: '1.42',
-                  trend: '+0.05',
-                  trendUp: true,
-                  icon: Flame,
-                  color: '#10B981',
-                  desc: 'Pace vs Heart Rate',
-                },
-              ].map((kpi, i) => (
-                <div
-                  key={i}
-                  className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 relative overflow-hidden hover:border-[#2A2A2A] transition-colors"
-                  style={{ borderLeft: `3px solid ${kpi.color}` }}
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">
-                        {kpi.label}
-                      </p>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-black italic">{kpi.value}</span>
-                        <span
-                          className={`text-xs font-bold flex items-center ${
-                            kpi.trendUp ? 'text-[#10B981]' : 'text-[#F43F5E]'
-                          }`}
-                        >
-                          {kpi.trendUp ? '↑' : '↓'} {kpi.trend}
-                        </span>
-                      </div>
-                    </div>
-                    <div
-                      className="p-3 rounded-xl bg-[#0D0D0D] border border-[#1E1E1E]"
-                      style={{ color: kpi.color }}
-                    >
-                      <kpi.icon className="w-5 h-5" />
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">
-                    {kpi.desc}
-                  </p>
-                </div>
-              ))}
-            </div>
+             {/* ── KPI Grid ── */}
+             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+               {[
+                 {
+                   label: 'Fitness (CTL)',
+                   value: '54.2',
+                   trend: '+2.1',
+                   trendUp: true,
+                   icon: TrendingUp,
+                   color: PRO_BLUE,
+                   desc: 'Carico Cronico',
+                 },
+                 {
+                   label: 'Fatigue (ATL)',
+                   value: '68.5',
+                   trend: '+5.4',
+                   trendUp: true,
+                   icon: Zap,
+                   color: PRO_RED,
+                   desc: 'Carico Acuto',
+                 },
+                 {
+                   label: 'Form (TSB)',
+                   value: '-14.3',
+                   trend: '-3.3',
+                   trendUp: false,
+                   icon: Activity,
+                   color: PRO_ACCENT,
+                   desc: 'Bilancio Carico/Recupero',
+                 },
+                 {
+                   label: 'Efficiency Factor',
+                   value: '1.42',
+                   trend: '+0.05',
+                   trendUp: true,
+                   icon: Flame,
+                   color: PRO_PURPLE,
+                   desc: 'Passo vs Frequenza Cardiaca',
+                 },
+               ].map((kpi, i) => (
+                 <div
+                   key={i}
+                   className="bg-[#0E0E0E] border border-[#2A2A2A] rounded-2xl p-6 relative overflow-hidden hover:border-[#333] transition-colors shadow-2xl"
+                   style={{ borderLeft: `3px solid ${kpi.color}` }}
+                 >
+                   <div className="flex justify-between items-start mb-4">
+                     <div>
+                       <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">
+                         {kpi.label}
+                       </p>
+                       <div className="flex items-baseline gap-2">
+                         <span className="text-3xl font-black italic">{kpi.value}</span>
+                         <span
+                           className={`text-xs font-bold flex items-center ${
+                             kpi.trendUp ? 'text-[#D4FF00]' : 'text-[#F43F5E]'
+                           }`}
+                         >
+                           {kpi.trendUp ? '↑' : '↓'} {kpi.trend}
+                         </span>
+                       </div>
+                     </div>
+                     <div
+                       className="p-3 rounded-xl bg-[#0D0D0D] border border-[#1E1E1E]"
+                       style={{ color: kpi.color }}
+                     >
+                       <kpi.icon className="w-5 h-5" />
+                     </div>
+                   </div>
+                   <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">
+                     {kpi.desc}
+                   </p>
+                 </div>
+               ))}
+             </div>
 
             {/* ── Fitness & Freshness (real data) ── */}
             <div className="relative">
@@ -389,320 +499,496 @@ export function StatisticsView() {
               />
             </div>
 
-            {/* ── Volume + Time in Zones ── */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              <Card className="xl:col-span-2" accent="#3B82F6">
-                <CardHeader
-                  icon={BarChart3}
-                  iconColor="#3B82F6"
-                  title="Volume Settimanale"
-                  subtitle="Distanza (km) e durata (ore) — ultime 8 settimane"
-                  tooltip={{
-                    title: 'VOLUME TREND',
-                    lines: [
-                      'Barre: km percorsi per settimana.',
-                      'Linea: ore totali di allenamento.',
-                      'Oscillazioni fisiologiche o settimane di scarico = cali volontari.',
-                      'Target: aumento ≤ 10% settimana/settimana.',
-                    ],
-                  }}
-                />
-                <div className="h-60 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={volumeData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
-                      <XAxis
-                        dataKey="week"
-                        stroke="#333"
-                        fontSize={10}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis
-                        yAxisId="left"
-                        stroke="#333"
-                        fontSize={10}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis
-                        yAxisId="right"
-                        orientation="right"
-                        stroke="#333"
-                        fontSize={10}
-                        tickLine={false}
-                        axisLine={false}
-                        hide
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#111',
-                          border: '1px solid #1E1E1E',
-                          borderRadius: '12px',
-                        }}
-                      />
-                      <Bar
-                        yAxisId="left"
-                        dataKey="distance"
-                        name="Distanza (km)"
-                        fill="#3B82F6"
-                        opacity={0.8}
-                        radius={[4, 4, 0, 0]}
-                        maxBarSize={40}
-                      />
-                      <Line
-                        yAxisId="right"
-                        type="monotone"
-                        dataKey="duration"
-                        name="Durata (ore)"
-                        stroke="#C0FF00"
-                        strokeWidth={2}
-                        dot={{ r: 4, fill: '#C0FF00' }}
-                      />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
+             <SectionLabel>TREND — KM · ANDAMENTO · DISTRIBUZIONE ZONE DI PASSO</SectionLabel>
 
-              <Card accent="#F43F5E">
-                <CardHeader
-                  icon={Heart}
-                  iconColor="#F43F5E"
-                  title={t('statistics.timeInZones')}
-                  subtitle="Distribuzione FC"
-                  tooltip={{
-                    title: 'ZONE FREQUENZA CARDIACA',
-                    lines: [
-                      'Z1 Recovery: < 68% FC max. Recupero attivo.',
-                      'Z2 Aerobic: 68–83%. Base aerobica, brucia grassi.',
-                      'Z3 Tempo: 84–94%. Soglia lattato.',
-                      'Z4 Threshold: 94–99%. Ritmo gara 10k/HM.',
-                      'Z5 Anaerobic: > 99%. Potenza massima.',
-                      'Regola 80/20: 80% Z1-Z2, 20% Z3-Z5.',
-                    ],
-                  }}
-                />
-                {zoneDistribution.length > 0 ? (
-                  <div className="space-y-4">
-                    {zoneDistribution.map((zone, i) => {
-                      const colors = ['#64748B', '#3B82F6', '#10B981', '#EAB308', '#F43F5E'];
-                      return (
-                        <div key={i}>
-                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-1.5">
-                            <span className="text-gray-400">
-                              {zone.zone} {zone.name}
-                            </span>
-                            <span className="text-white">{zone.pct}%</span>
-                          </div>
-                          <div className="h-1.5 w-full bg-[#0D0D0D] rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all duration-500"
-                              style={{ width: `${zone.pct}%`, backgroundColor: colors[i] }}
-                            />
-                          </div>
-                          <div className="text-[9px] text-[#333] mt-0.5">{zone.minutes} min</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {zoneData.map((zone, i) => {
-                      const total = zoneData.reduce((acc, curr) => acc + curr.time, 0);
-                      const percentage = Math.round((zone.time / total) * 100);
-                      return (
-                        <div key={i}>
-                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-1.5">
-                            <span className="text-gray-400">{zone.name}</span>
-                            <span className="text-white">{percentage}%</span>
-                          </div>
-                          <div className="h-1.5 w-full bg-[#0D0D0D] rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all duration-500"
-                              style={{ width: `${percentage}%`, backgroundColor: zone.fill }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </Card>
-            </div>
+             {/* ── MainChart and PaceZoneDistribution on same row ── */}
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+               <div>
+                 {/* ── MainChart ── */}
+                 <div className="h-[420px]">
+                   <MainChart runs={runs} />
+                 </div>
+               </div>
+               <div>
+                 {/* ── Pace Zone Distribution ── */}
+                 <AnalyticsV4PaceZoneDistribution />
+               </div>
+             </div>
 
-            <SectionLabel>PERFORMANCE — VDOT · PACES · PREVISIONI</SectionLabel>
+             {false && (
+             <>
+             {/* ── Paces Trend + Cadenza ── */}
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+               <Card accent={PRO_ACCENT} variant="pro">
+                 <CardHeader
+                   icon={TrendingUp}
+                   iconColor={PRO_ACCENT}
+                   title="Andamento Paces"
+                   variant="pro"
+                   subtitle="Easy · Tempo · Rapido — trend storico"
+                   tooltip={{
+                     title: 'ANDAMENTO PACES',
+                     lines: [
+                       'Easy (giallo): passo delle corse lente. Deve scendere nel tempo.',
+                       'Tempo (blu): passo soglia lattato. Indica progressi fitness.',
+                       'Fast (rosso): passo delle ripetute veloci.',
+                       'Scala Y invertita: valore più basso = passo più veloce.',
+                     ],
+                   }}
+                 />
+                 <div className="h-64 w-full">
+                   <ResponsiveContainer width="100%" height="100%">
+                     <LineChart data={pacesTrendData}>
+                       <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
+                       <XAxis
+                         dataKey="date"
+                         stroke="#333"
+                         fontSize={10}
+                         tickLine={false}
+                         axisLine={false}
+                       />
+                       <YAxis hide domain={[3.5, 6]} reversed />
+                       <Tooltip
+                         contentStyle={PRO_TOOLTIP_STYLE}
+                       />
+                       <Legend
+                         wrapperStyle={{ fontSize: '10px', fontWeight: 700 }}
+                         formatter={(v) =>
+                           v === 'easy' ? 'Easy' : v === 'tempo' ? 'Tempo' : 'Fast'
+                         }
+                       />
+                       <Line
+                         type="monotone"
+                         dataKey="easy"
+                         stroke={PRO_BLUE}
+                         strokeWidth={2}
+                         dot={{ r: 4, fill: PRO_BLUE }}
+                       />
+                       <Line
+                         type="monotone"
+                         dataKey="tempo"
+                         stroke={PRO_PURPLE}
+                         strokeWidth={2}
+                         dot={{ r: 4, fill: PRO_PURPLE }}
+                       />
+                       <Line
+                         type="monotone"
+                         dataKey="fast"
+                         stroke={PRO_ACCENT}
+                         strokeWidth={2}
+                         dot={{ r: 4, fill: PRO_ACCENT }}
+                       />
+                     </LineChart>
+                   </ResponsiveContainer>
+                 </div>
+               </Card>
 
-            {/* ── VDOT + Race Predictions ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* VDOT Dinamico */}
-              <Card className="lg:col-span-4 flex flex-col justify-center" accent="#3B82F6">
-                <CardHeader
-                  icon={Activity}
-                  iconColor="#3B82F6"
-                  title="VDOT Dinamico"
-                  tooltip={{
-                    title: 'VDOT — JACK DANIELS',
-                    lines: [
-                      'VO₂max equivalente calcolato dal passo di gara.',
-                      'Formula iterativa Jack Daniels (Running Formula 2014).',
-                      'Solo corse ≥ 5K con HR ≥ 85% FC max incluse.',
-                      'Aggiornato ad ogni sync Strava.',
-                      '< 32: Principiante · 32–40: Intermedio · 40–47: Buono · 47–52: Avanzato · ≥ 52: Elite',
-                    ],
-                  }}
-                />
-                {vdot ? (
-                  <>
-                    <div className="flex items-center gap-8 mb-6">
-                      <div className="relative w-28 h-28 shrink-0 flex items-center justify-center">
-                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                          <circle cx="50" cy="50" r="44" fill="transparent" stroke="#1A1A1A" strokeWidth="8" />
-                          <circle
-                            cx="50"
-                            cy="50"
-                            r="44"
-                            fill="transparent"
-                            stroke={level!.color}
-                            strokeWidth="8"
-                            strokeDasharray="276.46"
-                            strokeDashoffset={276.46 * (1 - vdot / 60)}
-                            strokeLinecap="round"
-                            className="transition-all duration-1000"
-                          />
-                        </svg>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-3xl font-black italic text-white">{vdot}</span>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div
-                          className="text-sm font-black uppercase tracking-widest"
-                          style={{ color: level!.color }}
-                        >
-                          {level!.label}
-                        </div>
-                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                          ml/kg/min
-                        </div>
-                        <div className="text-[10px] text-gray-600 font-medium italic">
-                          Jack Daniels formula
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-[9px] text-gray-600 font-bold mb-1">
-                        <span>Princ.</span>
-                        <span>Interm.</span>
-                        <span>Buono</span>
-                        <span>Avanz.</span>
-                        <span>Elite</span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full overflow-hidden flex">
-                        {([['#F43F5E', 20], ['#EAB308', 15], ['#3B82F6', 15], ['#10B981', 15], ['#C0FF00', 35]] as [string, number][]).map(
-                          ([c, w], i) => (
-                            <div key={i} className="h-full" style={{ width: `${w}%`, backgroundColor: c }} />
-                          )
-                        )}
-                      </div>
-                      <div className="mt-1 relative h-3">
-                        <div
-                          className="absolute top-0 w-0.5 h-3 bg-white rounded-full"
-                          style={{ left: `${Math.min((vdot / 60) * 100, 98)}%` }}
-                        />
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="text-gray-600 text-sm font-bold">—</div>
-                    <div className="text-gray-500 text-xs mt-2">
-                      Sincronizza corse per calcolare il VDOT
-                    </div>
-                  </div>
-                )}
-              </Card>
+               <Card accent={PRO_ACCENT} variant="pro">
+                 <CardHeader
+                   icon={Timer}
+                   iconColor={PRO_ACCENT}
+                   title="Cadenza Mensile"
+                   variant="pro"
+                   subtitle="Passi/minuto — media mensile"
+                   tooltip={{
+                     title: 'CADENZA (SPM)',
+                     lines: [
+                       'Cadenza = passi al minuto (strides per minute).',
+                       'Ottimale: 170–185 spm per la maggior parte dei runner.',
+                       '< 160 spm: over-striding, rischio infortuni al ginocchio.',
+                       '> 185 spm: molto efficiente, tipico dei runner elite.',
+                       'Linea tratteggiata = 180 spm (target ideale Daniels).',
+                     ],
+                   }}
+                 />
+                 <div className="h-64 w-full">
+                   <ResponsiveContainer width="100%" height="100%">
+                     <LineChart data={cadenceMonthlyData}>
+                       <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
+                       <XAxis
+                         dataKey="month"
+                         stroke="#333"
+                         fontSize={10}
+                         tickLine={false}
+                         axisLine={false}
+                       />
+                       <YAxis
+                         stroke="#333"
+                         fontSize={10}
+                         domain={[160, 185]}
+                         tickLine={false}
+                         axisLine={false}
+                       />
+                       <Tooltip
+                         contentStyle={PRO_TOOLTIP_STYLE}
+                       />
+                       <ReferenceLine y={180} stroke="#333" strokeDasharray="5 5" />
+                       <Line
+                         type="monotone"
+                         dataKey="value"
+                         stroke={PRO_ACCENT}
+                         strokeWidth={2}
+                         dot={{ r: 5, fill: PRO_ACCENT }}
+                       />
+                     </LineChart>
+                   </ResponsiveContainer>
+                 </div>
+               </Card>
+             </div>
+             </>
+             )}
 
-              {/* Race Predictions */}
-              <Card className="lg:col-span-8" accent="#F43F5E">
-                <CardHeader
-                  icon={Target}
-                  iconColor="#F43F5E"
-                  title="Previsioni Gara"
-                  subtitle={`da VDOT ${vdot ?? '—'}`}
-                  tooltip={{
-                    title: 'PREVISIONI GARA',
-                    lines: [
-                      'Tempi predetti dalla formula Jack Daniels basata sul VDOT attuale.',
-                      'Presuppongono allenamento adeguato alla distanza.',
-                      '5K e 10K: previsioni più accurate (distanze di riferimento VDOT).',
-                      'Mezza e Maratona: aggiungere +3–5% per margine energetico.',
-                    ],
-                  }}
-                />
-                {Object.keys(racePredictions).length > 0 ? (
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
-                    {[
-                      { key: '5K', label: '5 km', color: '#3B82F6', sub: 'Base' },
-                      { key: '10K', label: '10 km', color: '#10B981', sub: 'Test' },
-                      { key: 'Half Marathon', label: 'Mezza', color: '#8B5CF6', sub: '21.1 km' },
-                      { key: 'Marathon', label: 'Maratona', color: '#F43F5E', sub: '42.2 km' },
-                    ].map(({ key, label, color, sub }) => (
+             {false && <SectionLabel>FISIOLOGIA — SOGLIA · DERIVA · GCT · DISLIVELLO</SectionLabel>}
+
+             {/* ── Anaerobic Threshold ── */}
+             {false && (
+             <div>
+               <AnaerobicThreshold
+                 runs={runs}
+                 maxHr={dashData?.profile?.max_hr ?? 180}
+                 vdot={vdot}
+               />
+             </div>
+             )}
+
+             {/* ── Cardiac Drift ── */}
+             {false && <StatsDrift runs={runs} />}
+
+             {/* ── GCT Analysis ── */}
+             {false && gctData && gctData.monthly.length > 0 && (
+               <Card accent={PRO_ACCENT} variant="pro">
+                 <CardHeader
+                   icon={Zap}
+                   iconColor={PRO_ACCENT}
+                   title="Tempo Contatto Suolo (GCT)"
+                   variant="pro"
+                   subtitle={`Media mensile per fascia di pace · ${gctData.summary.total_runs} corse${gctData.summary.avg_gct ? ` · GCT medio: ${gctData.summary.avg_gct} ms` : ''}`}
+                   tooltip={{
+                     title: 'GROUND CONTACT TIME',
+                     lines: [
+                       'Tempo (ms) in cui il piede è a contatto col suolo per passo.',
+                       'Elite: < 200 ms. Amatori avanzati: 220–260 ms. Principianti: > 270 ms.',
+                       'GCT ridotto = corsa più elastica e reattiva.',
+                       'Migliora con pliometria (box jump, pogo), forza reattiva.',
+                       'Analizzato per fascia di passo: lento, medio, veloce.',
+                     ],
+                   }}
+                 />
+                 <div className="h-72 w-full">
+                   <ResponsiveContainer width="100%" height="100%">
+                     <LineChart data={gctData.monthly}>
+                       <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
+                       <XAxis
+                         dataKey="month"
+                         stroke="#333"
+                         fontSize={10}
+                         tickLine={false}
+                         axisLine={false}
+                         tickFormatter={(v) => {
+                           const [y, m] = v.split('-');
+                           const months = [
+                             'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu',
+                             'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic',
+                           ];
+                           return `${months[parseInt(m) - 1]} '${y.slice(2)}`;
+                         }}
+                       />
+                       <YAxis
+                         stroke="#333"
+                         fontSize={10}
+                         tickLine={false}
+                         axisLine={false}
+                         domain={['dataMin - 10', 'dataMax + 10']}
+                         tickFormatter={(v) => `${v}ms`}
+                       />
+                       <Tooltip
+                         contentStyle={PRO_TOOLTIP_STYLE}
+                         formatter={(value: any, name: string) => {
+                           if (value === null || value === undefined) return ['N/D', ''];
+                           const zoneLabels: Record<string, string> = {
+                             pace_530: '≥ 5:30/km',
+                             pace_500: '5:00-5:29/km',
+                             pace_445: '< 4:45/km',
+                           };
+                           return [`${value} ms`, zoneLabels[name] || name];
+                         }}
+                         labelFormatter={(label) => {
+                           const [y, m] = label.split('-');
+                           const months = [
+                             'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                             'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre',
+                           ];
+                           return `${months[parseInt(m) - 1]} ${y}`;
+                         }}
+                       />
+                       <Legend
+                         formatter={(value: string) => {
+                           const labels: Record<string, string> = {
+                             pace_530: '≥ 5:30/km',
+                             pace_500: '5:00-5:29/km',
+                             pace_445: '< 4:45/km',
+                           };
+                           return labels[value] || value;
+                         }}
+                         wrapperStyle={{ fontSize: '11px', fontWeight: 700 }}
+                       />
+                       <Line
+                         type="monotone"
+                         dataKey="pace_530"
+                         stroke={PRO_BLUE}
+                         strokeWidth={2}
+                         dot={{ r: 4, fill: PRO_BLUE }}
+                         connectNulls={false}
+                       />
+                       <Line
+                         type="monotone"
+                         dataKey="pace_500"
+                         stroke={PRO_PURPLE}
+                         strokeWidth={2}
+                         dot={{ r: 4, fill: PRO_PURPLE }}
+                         connectNulls={false}
+                       />
+                       <Line
+                         type="monotone"
+                         dataKey="pace_445"
+                         stroke={PRO_ACCENT}
+                         strokeWidth={2}
+                         dot={{ r: 4, fill: PRO_ACCENT }}
+                         connectNulls={false}
+                       />
+                     </LineChart>
+                   </ResponsiveContainer>
+                 </div>
+                 <div className="mt-4 grid grid-cols-3 gap-4">
+                   {[
+                     { key: 'pace_530', label: '≥ 5:30/km', color: PRO_BLUE },
+                     { key: 'pace_500', label: '5:00–5:29/km', color: PRO_PURPLE },
+                     { key: 'pace_445', label: '< 4:45/km', color: PRO_ACCENT },
+                   ].map(({ key, label, color }) => {
+                     const values = gctData.monthly
+                       .map((m) => m[key as keyof typeof m])
+                       .filter((v): v is number => v !== null);
+                     const avg = values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null;
+                     const min = values.length > 0 ? Math.min(...values) : null;
+                     const max = values.length > 0 ? Math.max(...values) : null;
+                     return (
+                       <div
+                         key={key}
+                         className="bg-[#0D0D0D] border border-[#1A1A1A] rounded-xl p-4 text-center"
+                       >
+                         <div
+                           className="text-[9px] font-black uppercase tracking-widest mb-2"
+                           style={{ color }}
+                         >
+                           {label}
+                         </div>
+                         {avg !== null ? (
+                           <>
+                             <div className="text-2xl font-black italic text-white">
+                               {avg}
+                               <span className="text-xs text-gray-500 font-normal ml-1">ms</span>
+                             </div>
+                             <div className="text-[9px] text-gray-500 mt-1">
+                               min {min}ms · max {max}ms
+                             </div>
+                           </>
+                         ) : (
+                           <div className="text-sm text-gray-600 font-bold">N/D</div>
+                         )}
+                       </div>
+                     );
+                   })}
+                 </div>
+               </Card>
+             )}
+
+             {/* ── Elevation Gain ── */}
+             {false && (
+             <Card accent={PRO_ACCENT} variant="pro">
+               <div className="flex items-start justify-between mb-8">
+                 <div className="flex items-center gap-3">
+                   <TrendingUp className="w-5 h-5" style={{ color: PRO_ACCENT }} />
+                   <div>
+                     <h2 className="text-base font-black tracking-widest uppercase italic leading-none">
+                       Dislivello Mensile
+                     </h2>
+                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">
+                       Guadagno altimetrico (m) — ultimi 12 mesi
+                     </p>
+                   </div>
+                 </div>
+                 <div className="flex items-center gap-4">
+                   <div className="text-right">
+                     <div className="text-xl font-black italic" style={{ color: PRO_ACCENT }}>
+                       {elevationData.reduce((s, d) => s + d.dislivello, 0).toLocaleString('it')} m
+                     </div>
+                     <div className="text-[9px] text-gray-500 font-black uppercase tracking-widest">
+                       Totale anno
+                     </div>
+                   </div>
+                   <InfoTooltip
+                     title="DISLIVELLO MENSILE"
+                     lines={[
+                       'Guadagno altimetrico totale per mese da Strava.',
+                       'Indicatore di volume di lavoro muscolare eccentrico.',
+                       'Utile per pianificare il recupero dopo settimane con molto salita.',
+                       'Più dislivello = maggiore stress muscolare su quadricipiti e tendini.',
+                     ]}
+                   />
+                 </div>
+               </div>
+               {elevationData.some((d) => d.dislivello > 0) ? (
+                 <div className="h-64 w-full">
+                   <ResponsiveContainer width="100%" height="100%">
+                     <BarChart data={elevationData} margin={{ top: 4, right: 0, left: -20, bottom: 0 }}>
+                       <defs>
+                         <linearGradient id="elevGrad" x1="0" y1="0" x2="0" y2="1">
+                           <stop offset="0%" stopColor={PRO_ACCENT} stopOpacity={0.9} />
+                           <stop offset="100%" stopColor={PRO_ORANGE} stopOpacity={0.45} />
+                         </linearGradient>
+                       </defs>
+                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1A1A1A" />
+                       <XAxis
+                         dataKey="name"
+                         stroke="#333"
+                         fontSize={10}
+                         tickLine={false}
+                         axisLine={false}
+                       />
+                       <YAxis
+                         stroke="#333"
+                         fontSize={10}
+                         tickLine={false}
+                         axisLine={false}
+                         tickFormatter={(v) => `${v}m`}
+                       />
+                       <Tooltip
+                         contentStyle={PRO_TOOLTIP_STYLE}
+                         formatter={(v: any) => [`${v.toLocaleString('it')} m`, 'Dislivello']}
+                         labelStyle={{ color: PRO_ACCENT, fontWeight: 700, fontSize: 11 }}
+                       />
+                       <Bar
+                         dataKey="dislivello"
+                         fill="url(#elevGrad)"
+                         radius={[4, 4, 0, 0]}
+                         maxBarSize={36}
+                       />
+                     </BarChart>
+                   </ResponsiveContainer>
+                 </div>
+               ) : (
+                 <div className="h-48 flex items-center justify-center text-gray-600 text-sm">
+                   Nessun dato di dislivello disponibile
+                 </div>
+               )}
+             </Card>
+             )}
+
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+               <AnalyticsV5PaceDistributionBell />
+               <AnalyticsV5EffortMatrix />
+             </div>
+
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════
+            ANALYTICS PRO V2 TAB
+        ════════════════════════════════════════════════════ */}
+        {activeTab === 'analyticsv2' && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <AnalyticsV2
+              vdot={vdot}
+              zoneDistribution={zoneDistribution}
+              gctData={gctData}
+              runs={runs}
+              ffHistory={ffHistory}
+              maxHr={dashData?.profile?.max_hr}
+              thresholdPace={vdotData?.paces?.threshold}
+              hideSections={['pmc', 'drift', 'zones', 'gct']}
+            />
+            {false && (
+            <Card accent={PRO_ACCENT} variant="pro">
+              <CardHeader
+                icon={Target}
+                iconColor={PRO_ACCENT}
+                title="Previsioni Gara"
+                variant="pro"
+                subtitle={`da VDOT ${vdot ?? '—'}`}
+                tooltip={{
+                  title: 'PREVISIONI GARA',
+                  lines: [
+                    'Tempi predetti dalla formula Jack Daniels basata sul VDOT attuale.',
+                    'Presuppongono allenamento adeguato alla distanza.',
+                    '5K e 10K: previsioni piu accurate.',
+                    'Mezza e Maratona: aggiungere margine energetico.',
+                  ],
+                }}
+              />
+              {Object.keys(racePredictions).length > 0 ? (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
+                  {[
+                    { key: '5K', label: '5 km', color: PRO_BLUE, sub: 'Base' },
+                    { key: '10K', label: '10 km', color: PRO_PURPLE, sub: 'Test' },
+                    { key: 'Half Marathon', label: 'Mezza', color: PRO_ACCENT, sub: '21.1 km' },
+                    { key: 'Marathon', label: 'Maratona', color: PRO_RED, sub: '42.2 km' },
+                  ].map(({ key, label, color, sub }) => (
+                    <div
+                      key={key}
+                      className="bg-[#111111] border border-[#2A2A2A] rounded-2xl p-5 text-center"
+                    >
                       <div
-                        key={key}
-                        className="bg-[#0D0D0D] border border-[#1A1A1A] rounded-2xl p-5 text-center"
+                        className="text-[10px] font-black uppercase tracking-widest mb-1"
+                        style={{ color }}
                       >
-                        <div
-                          className="text-[10px] font-black uppercase tracking-widest mb-1"
-                          style={{ color }}
-                        >
-                          {label}
-                        </div>
-                        <div className="text-[9px] text-gray-600 font-bold mb-3">{sub}</div>
-                        <div className="text-2xl font-black italic text-white">
-                          {(racePredictions as Record<string, string>)[key] ?? '—'}
-                        </div>
-                        <div className="text-[9px] text-gray-500 font-bold mt-1">Daniels</div>
+                        {label}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-gray-600 text-sm py-8">
-                    Sincronizza corse validate (≥ 5K, HR ≥ 85% FC Max) per calcolare le previsioni
-                  </p>
-                )}
-              </Card>
-            </div>
+                      <div className="text-[9px] text-gray-600 font-bold mb-3">{sub}</div>
+                      <div className="text-2xl font-black italic text-white">
+                        {(racePredictions as Record<string, string>)[key] ?? '—'}
+                      </div>
+                      <div className="text-[9px] text-gray-500 font-bold mt-1">Daniels</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-gray-600 text-sm py-8">
+                  Sincronizza corse validate per calcolare le previsioni
+                </p>
+              )}
+            </Card>
+            )}
 
-            {/* ── Daniels Training Zones ── */}
-            <Card accent="#C0FF00">
+            <Card accent={PRO_ACCENT} variant="pro">
               <CardHeader
                 icon={Zap}
-                iconColor="#C0FF00"
+                iconColor={PRO_ACCENT}
                 title="Zone di Allenamento Daniels"
+                variant="pro"
                 subtitle="5 zone fisiologiche da VDOT"
                 tooltip={{
                   title: 'ZONE DANIELS',
                   lines: [
-                    'E (Easy): 59–74% VO₂max. Recupero + volume base. Può durare ore.',
-                    'M (Marathon): 75–84%. Ritmo maratona, sviluppa la resistenza specifica.',
-                    'T (Threshold): 83–88%. Soglia lattato, max 20–40 min continuati.',
-                    'I (Interval): 95–100%. VO₂max, ripetute 3–5 min con recupero uguale.',
-                    'R (Repetition): 105–120%. Neuromuscolare, < 2 min con recupero lungo.',
+                    'E: recupero e volume base.',
+                    'M: ritmo maratona.',
+                    'T: soglia lattato.',
+                    'I: ripetute VO2max.',
+                    'R: velocita neuromuscolare.',
                   ],
                 }}
               />
               {Object.keys(paces).length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   {[
-                    { key: 'easy',       zone: 'E', name: 'Easy',       desc: 'Recupero / volume lento',       pct: '59–74%',   color: '#3B82F6' },
-                    { key: 'marathon',   zone: 'M', name: 'Marathon',   desc: 'Ritmo maratona',                pct: '75–84%',   color: '#10B981' },
-                    { key: 'threshold',  zone: 'T', name: 'Threshold',  desc: 'Soglia lattato (20–40 min)',    pct: '83–88%',   color: '#EAB308' },
-                    { key: 'interval',   zone: 'I', name: 'Interval',   desc: 'Ripetute VO₂max (3–5 min)',    pct: '95–100%',  color: '#F59E0B' },
-                    { key: 'repetition', zone: 'R', name: 'Repetition', desc: 'Velocità neuromuscolare',       pct: '105–120%', color: '#F43F5E' },
+                    { key: 'easy', zone: 'E', name: 'Easy', desc: 'Recupero / volume lento', pct: '59-74%', color: PRO_BLUE },
+                    { key: 'marathon', zone: 'M', name: 'Marathon', desc: 'Ritmo maratona', pct: '75-84%', color: PRO_PURPLE },
+                    { key: 'threshold', zone: 'T', name: 'Threshold', desc: 'Soglia lattato', pct: '83-88%', color: PRO_ACCENT },
+                    { key: 'interval', zone: 'I', name: 'Interval', desc: 'Ripetute VO2max', pct: '95-100%', color: PRO_ORANGE },
+                    { key: 'repetition', zone: 'R', name: 'Repetition', desc: 'Velocita neuromuscolare', pct: '105-120%', color: PRO_RED },
                   ].map(({ key, zone, name, desc, pct, color }) => (
                     <div
                       key={key}
-                      className="bg-[#0D0D0D] border border-[#1A1A1A] rounded-2xl p-5 flex flex-col gap-2"
+                      className="bg-[#111111] border border-[#2A2A2A] rounded-2xl p-5 flex flex-col gap-2"
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-2xl font-black italic" style={{ color }}>
@@ -725,429 +1011,113 @@ export function StatisticsView() {
                 </div>
               ) : (
                 <p className="text-center text-gray-600 text-sm py-4">
-                  VDOT non disponibile — sincronizza corse validate per calcolare i passi
+                  VDOT non disponibile: sincronizza corse validate per calcolare i passi
                 </p>
               )}
             </Card>
-
-            <SectionLabel>TREND — KM · VO2MAX · PACES · CADENZA</SectionLabel>
-
-            {/* ── MainChart + VO2MaxChart ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="min-h-[400px]">
-                <MainChart runs={runs} />
-              </div>
-              <div className="min-h-[400px]">
-                <VO2MaxChart runs={runs} vdot={vdot} />
-              </div>
-            </div>
-
-            {/* ── Paces Trend + Cadenza ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card accent="#10B981">
-                <CardHeader
-                  icon={TrendingUp}
-                  iconColor="#10B981"
-                  title="Andamento Paces"
-                  subtitle="Easy · Tempo · Rapido — trend storico"
-                  tooltip={{
-                    title: 'ANDAMENTO PACES',
-                    lines: [
-                      'Easy (giallo): passo delle corse lente. Deve scendere nel tempo.',
-                      'Tempo (blu): passo soglia lattato. Indica progressi fitness.',
-                      'Fast (rosso): passo delle ripetute veloci.',
-                      'Scala Y invertita: valore più basso = passo più veloce.',
-                    ],
-                  }}
-                />
-                <div className="h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={pacesTrendData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
-                      <XAxis
-                        dataKey="date"
-                        stroke="#333"
-                        fontSize={10}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis hide domain={[3.5, 6]} reversed />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#111',
-                          border: '1px solid #1E1E1E',
-                          borderRadius: '12px',
-                        }}
-                      />
-                      <Legend
-                        wrapperStyle={{ fontSize: '10px', fontWeight: 700 }}
-                        formatter={(v) =>
-                          v === 'easy' ? 'Easy' : v === 'tempo' ? 'Tempo' : 'Fast'
-                        }
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="easy"
-                        stroke="#EAB308"
-                        strokeWidth={2}
-                        dot={{ r: 4, fill: '#EAB308' }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="tempo"
-                        stroke="#3B82F6"
-                        strokeWidth={2}
-                        dot={{ r: 4, fill: '#3B82F6' }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="fast"
-                        stroke="#F43F5E"
-                        strokeWidth={2}
-                        dot={{ r: 4, fill: '#F43F5E' }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
-
-              <Card accent="#3B82F6">
-                <CardHeader
-                  icon={Timer}
-                  iconColor="#3B82F6"
-                  title="Cadenza Mensile"
-                  subtitle="Passi/minuto — media mensile"
-                  tooltip={{
-                    title: 'CADENZA (SPM)',
-                    lines: [
-                      'Cadenza = passi al minuto (strides per minute).',
-                      'Ottimale: 170–185 spm per la maggior parte dei runner.',
-                      '< 160 spm: over-striding, rischio infortuni al ginocchio.',
-                      '> 185 spm: molto efficiente, tipico dei runner elite.',
-                      'Linea tratteggiata = 180 spm (target ideale Daniels).',
-                    ],
-                  }}
-                />
-                <div className="h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={cadenceMonthlyData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
-                      <XAxis
-                        dataKey="month"
-                        stroke="#333"
-                        fontSize={10}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis
-                        stroke="#333"
-                        fontSize={10}
-                        domain={[160, 185]}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#111',
-                          border: '1px solid #1E1E1E',
-                          borderRadius: '12px',
-                        }}
-                      />
-                      <ReferenceLine y={180} stroke="#333" strokeDasharray="5 5" />
-                      <Line
-                        type="monotone"
-                        dataKey="value"
-                        stroke="#3B82F6"
-                        strokeWidth={2}
-                        dot={{ r: 5, fill: '#3B82F6' }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
-            </div>
-
-            <SectionLabel>FISIOLOGIA — SOGLIA · DERIVA · GCT · DISLIVELLO</SectionLabel>
-
-            {/* ── Anaerobic Threshold ── */}
-            <div>
-              <AnaerobicThreshold
-                runs={runs}
-                maxHr={dashData?.profile?.max_hr ?? 180}
-                vdot={vdot}
-              />
-            </div>
-
-            {/* ── Cardiac Drift ── */}
-            <StatsDrift runs={runs} />
-
-            {/* ── GCT Analysis ── */}
-            {gctData && gctData.monthly.length > 0 && (
-              <Card accent="#8B5CF6">
-                <CardHeader
-                  icon={Zap}
-                  iconColor="#8B5CF6"
-                  title="Tempo Contatto Suolo (GCT)"
-                  subtitle={`Media mensile per fascia di pace · ${gctData.summary.total_runs} corse${gctData.summary.avg_gct ? ` · GCT medio: ${gctData.summary.avg_gct} ms` : ''}`}
-                  tooltip={{
-                    title: 'GROUND CONTACT TIME',
-                    lines: [
-                      'Tempo (ms) in cui il piede è a contatto col suolo per passo.',
-                      'Elite: < 200 ms. Amatori avanzati: 220–260 ms. Principianti: > 270 ms.',
-                      'GCT ridotto = corsa più elastica e reattiva.',
-                      'Migliora con pliometria (box jump, pogo), forza reattiva.',
-                      'Analizzato per fascia di passo: lento, medio, veloce.',
-                    ],
-                  }}
-                />
-                <div className="h-72 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={gctData.monthly}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
-                      <XAxis
-                        dataKey="month"
-                        stroke="#333"
-                        fontSize={10}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(v) => {
-                          const [y, m] = v.split('-');
-                          const months = [
-                            'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu',
-                            'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic',
-                          ];
-                          return `${months[parseInt(m) - 1]} '${y.slice(2)}`;
-                        }}
-                      />
-                      <YAxis
-                        stroke="#333"
-                        fontSize={10}
-                        tickLine={false}
-                        axisLine={false}
-                        domain={['dataMin - 10', 'dataMax + 10']}
-                        tickFormatter={(v) => `${v}ms`}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#111',
-                          border: '1px solid #1E1E1E',
-                          borderRadius: '12px',
-                        }}
-                        formatter={(value: any, name: string) => {
-                          if (value === null || value === undefined) return ['N/D', ''];
-                          const zoneLabels: Record<string, string> = {
-                            pace_530: '≥ 5:30/km',
-                            pace_500: '5:00-5:29/km',
-                            pace_445: '< 4:45/km',
-                          };
-                          return [`${value} ms`, zoneLabels[name] || name];
-                        }}
-                        labelFormatter={(label) => {
-                          const [y, m] = label.split('-');
-                          const months = [
-                            'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
-                            'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre',
-                          ];
-                          return `${months[parseInt(m) - 1]} ${y}`;
-                        }}
-                      />
-                      <Legend
-                        formatter={(value: string) => {
-                          const labels: Record<string, string> = {
-                            pace_530: '≥ 5:30/km',
-                            pace_500: '5:00-5:29/km',
-                            pace_445: '< 4:45/km',
-                          };
-                          return labels[value] || value;
-                        }}
-                        wrapperStyle={{ fontSize: '11px', fontWeight: 700 }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="pace_530"
-                        stroke="#3B82F6"
-                        strokeWidth={2}
-                        dot={{ r: 4, fill: '#3B82F6' }}
-                        connectNulls={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="pace_500"
-                        stroke="#10B981"
-                        strokeWidth={2}
-                        dot={{ r: 4, fill: '#10B981' }}
-                        connectNulls={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="pace_445"
-                        stroke="#F43F5E"
-                        strokeWidth={2}
-                        dot={{ r: 4, fill: '#F43F5E' }}
-                        connectNulls={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="mt-4 grid grid-cols-3 gap-4">
-                  {[
-                    { key: 'pace_530', label: '≥ 5:30/km', color: '#3B82F6' },
-                    { key: 'pace_500', label: '5:00–5:29/km', color: '#10B981' },
-                    { key: 'pace_445', label: '< 4:45/km', color: '#F43F5E' },
-                  ].map(({ key, label, color }) => {
-                    const values = gctData.monthly
-                      .map((m) => m[key as keyof typeof m])
-                      .filter((v): v is number => v !== null);
-                    const avg = values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null;
-                    const min = values.length > 0 ? Math.min(...values) : null;
-                    const max = values.length > 0 ? Math.max(...values) : null;
-                    return (
-                      <div
-                        key={key}
-                        className="bg-[#0D0D0D] border border-[#1A1A1A] rounded-xl p-4 text-center"
-                      >
-                        <div
-                          className="text-[9px] font-black uppercase tracking-widest mb-2"
-                          style={{ color }}
-                        >
-                          {label}
-                        </div>
-                        {avg !== null ? (
-                          <>
-                            <div className="text-2xl font-black italic text-white">
-                              {avg}
-                              <span className="text-xs text-gray-500 font-normal ml-1">ms</span>
-                            </div>
-                            <div className="text-[9px] text-gray-500 mt-1">
-                              min {min}ms · max {max}ms
-                            </div>
-                          </>
-                        ) : (
-                          <div className="text-sm text-gray-600 font-bold">N/D</div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </Card>
-            )}
-
-            {/* ── Elevation Gain ── */}
-            <Card accent="#F59E0B">
-              <div className="flex items-start justify-between mb-8">
-                <div className="flex items-center gap-3">
-                  <TrendingUp className="w-5 h-5 text-[#F59E0B]" />
-                  <div>
-                    <h2 className="text-base font-black tracking-widest uppercase italic leading-none">
-                      Dislivello Mensile
-                    </h2>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">
-                      Guadagno altimetrico (m) — ultimi 12 mesi
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="text-xl font-black italic" style={{ color: '#F59E0B' }}>
-                      {elevationData.reduce((s, d) => s + d.dislivello, 0).toLocaleString('it')} m
-                    </div>
-                    <div className="text-[9px] text-gray-500 font-black uppercase tracking-widest">
-                      Totale anno
-                    </div>
-                  </div>
-                  <InfoTooltip
-                    title="DISLIVELLO MENSILE"
-                    lines={[
-                      'Guadagno altimetrico totale per mese da Strava.',
-                      'Indicatore di volume di lavoro muscolare eccentrico.',
-                      'Utile per pianificare il recupero dopo settimane con molto salita.',
-                      'Più dislivello = maggiore stress muscolare su quadricipiti e tendini.',
-                    ]}
-                  />
-                </div>
-              </div>
-              {elevationData.some((d) => d.dislivello > 0) ? (
-                <div className="h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={elevationData} margin={{ top: 4, right: 0, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="elevGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.9} />
-                          <stop offset="100%" stopColor="#D97706" stopOpacity={0.5} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1A1A1A" />
-                      <XAxis
-                        dataKey="name"
-                        stroke="#333"
-                        fontSize={10}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis
-                        stroke="#333"
-                        fontSize={10}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(v) => `${v}m`}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#111',
-                          border: '1px solid #1E1E1E',
-                          borderRadius: '12px',
-                        }}
-                        formatter={(v: any) => [`${v.toLocaleString('it')} m`, 'Dislivello']}
-                        labelStyle={{ color: '#F59E0B', fontWeight: 700, fontSize: 11 }}
-                      />
-                      <Bar
-                        dataKey="dislivello"
-                        fill="url(#elevGrad)"
-                        radius={[4, 4, 0, 0]}
-                        maxBarSize={36}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="h-48 flex items-center justify-center text-gray-600 text-sm">
-                  Nessun dato di dislivello disponibile
-                </div>
-              )}
-            </Card>
-
+            <AnalyticsV5BestEffortsProgression />
           </div>
-        )}
-
-        {/* ════════════════════════════════════════════════════
-            ANALYTICS PRO V2 TAB
-        ════════════════════════════════════════════════════ */}
-        {activeTab === 'analyticsv2' && (
-          <AnalyticsV2
-            vdot={vdot}
-            zoneDistribution={zoneDistribution}
-            gctData={gctData}
-            runs={runs}
-            ffHistory={ffHistory}
-            maxHr={dashData?.profile?.max_hr}
-            thresholdPace={vdotData?.paces?.threshold}
-          />
         )}
 
         {/* ════════════════════════════════════════════════════
             ANALYTICS PRO V3 TAB
         ════════════════════════════════════════════════════ */}
-        {activeTab === 'analyticsv3' && <AnalyticsV3 />}
+        {activeTab === 'analyticsv3' && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <AnalyticsV3 />
+            <SectionLabel>BIOMECCANICA — PACES · CADENZA · DERIVA · GCT</SectionLabel>
 
-        {/* ════════════════════════════════════════════════════
-            ANALYTICS PRO V4 TAB
-        ════════════════════════════════════════════════════ */}
-        {activeTab === 'analyticsv4' && <AnalyticsV4 />}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card accent={PRO_ACCENT} variant="pro" className="group">
+                <CardHeader
+                  icon={TrendingUp}
+                  iconColor={PRO_ACCENT}
+                  title="Andamento Paces"
+                  variant="pro"
+                  onExpand={() => setExpandedChart('paces')}
+                  subtitle="Easy · Tempo · Rapido — trend storico"
+                  tooltip={{
+                    title: 'ANDAMENTO PACES',
+                    lines: [
+                      'Easy: passo delle corse lente. Deve scendere nel tempo.',
+                      'Tempo: passo soglia lattato. Indica progressi fitness.',
+                      'Fast: passo delle ripetute veloci.',
+                      'Scala Y invertita: valore più basso = passo più veloce.',
+                    ],
+                  }}
+                />
+                <div className="h-64 w-full">
+                  {renderPacesTrendChart()}
+                </div>
+              </Card>
 
-        {/* ════════════════════════════════════════════════════
-            ANALYTICS PRO V5 TAB
-        ════════════════════════════════════════════════════ */}
-        {activeTab === 'analyticsv5' && <AnalyticsV5 />}
+              <Card accent={PRO_ACCENT} variant="pro" className="group">
+                <CardHeader
+                  icon={Timer}
+                  iconColor={PRO_ACCENT}
+                  title="Cadenza Mensile"
+                  variant="pro"
+                  onExpand={() => setExpandedChart('cadence')}
+                  subtitle="Passi/minuto — media mensile"
+                  tooltip={{
+                    title: 'CADENZA (SPM)',
+                    lines: [
+                      'Cadenza = passi al minuto.',
+                      'Ottimale: 170-185 spm per la maggior parte dei runner.',
+                      '< 160 spm: over-striding.',
+                      '> 185 spm: molto efficiente.',
+                      'Linea tratteggiata = 180 spm.',
+                    ],
+                  }}
+                />
+                <div className="h-64 w-full">
+                  {renderCadenceMonthlyChart()}
+                </div>
+              </Card>
+            </div>
+
+            <StatsDrift runs={runs} />
+
+            {gctData && gctData.monthly.length > 0 && (
+              <Card accent={PRO_ACCENT} variant="pro" className="group">
+                <CardHeader
+                  icon={Zap}
+                  iconColor={PRO_ACCENT}
+                  title="Tempo Contatto Suolo (GCT)"
+                  variant="pro"
+                  onExpand={() => setExpandedChart('gctMonthly')}
+                  subtitle={`Media mensile per fascia di pace · ${gctData.summary.total_runs} corse${gctData.summary.avg_gct ? ` · GCT medio: ${gctData.summary.avg_gct} ms` : ''}`}
+                  tooltip={{
+                    title: 'GROUND CONTACT TIME',
+                    lines: [
+                      'Tempo in cui il piede resta a contatto col suolo per passo.',
+                      'Elite: < 200 ms.',
+                      'GCT ridotto = corsa più elastica e reattiva.',
+                      'Analizzato per fascia di passo.',
+                    ],
+                  }}
+                />
+                <div className="h-72 w-full">
+                  {renderGctMonthlyChart()}
+                </div>
+              </Card>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+              <AnalyticsV2
+                vdot={vdot}
+                zoneDistribution={zoneDistribution}
+                gctData={gctData}
+                runs={runs}
+                ffHistory={ffHistory}
+                maxHr={dashData?.profile?.max_hr}
+                thresholdPace={vdotData?.paces?.threshold}
+                onlySections={['gct']}
+              />
+              <AnalyticsV4CadenceSpeedMatrix />
+            </div>
+          </div>
+        )}
 
         {/* ════════════════════════════════════════════════════
             BIOLOGIA & FUTURO TAB
@@ -1397,6 +1367,84 @@ export function StatisticsView() {
             />
           </div>
         )}
+
+        <ChartFullscreenModal
+          open={expandedChart === 'paces'}
+          onClose={() => setExpandedChart(null)}
+          title="Andamento Paces"
+          subtitle="Easy · Tempo · Rapido — trend storico"
+          accent={PRO_ACCENT}
+          details={
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Easy</p>
+                <p className="text-sm text-gray-300 font-bold mt-1">Passo lento, scala Y invertita</p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Tempo</p>
+                <p className="text-sm text-gray-300 font-bold mt-1">Indicatore soglia lattato</p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Fast</p>
+                <p className="text-sm text-gray-300 font-bold mt-1">Ripetute e lavoro veloce</p>
+              </div>
+            </div>
+          }
+        >
+          {renderPacesTrendChart()}
+        </ChartFullscreenModal>
+
+        <ChartFullscreenModal
+          open={expandedChart === 'cadence'}
+          onClose={() => setExpandedChart(null)}
+          title="Cadenza Mensile"
+          subtitle="Passi/minuto — media mensile"
+          accent={PRO_ACCENT}
+          details={
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Target</p>
+                <p className="text-xl text-white font-black mt-1">170-185 <span className="text-xs text-gray-500">spm</span></p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Reference</p>
+                <p className="text-xl text-white font-black mt-1">180 <span className="text-xs text-gray-500">spm</span></p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Focus</p>
+                <p className="text-sm text-gray-300 font-bold mt-1">Stabilita e riduzione over-striding</p>
+              </div>
+            </div>
+          }
+        >
+          {renderCadenceMonthlyChart()}
+        </ChartFullscreenModal>
+
+        <ChartFullscreenModal
+          open={expandedChart === 'gctMonthly'}
+          onClose={() => setExpandedChart(null)}
+          title="Tempo Contatto Suolo (GCT)"
+          subtitle={gctData ? `Media mensile per fascia di pace · ${gctData.summary.total_runs} corse${gctData.summary.avg_gct ? ` · GCT medio: ${gctData.summary.avg_gct} ms` : ''}` : 'Media mensile per fascia di pace'}
+          accent={PRO_ACCENT}
+          details={
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Lento</p>
+                <p className="text-sm text-gray-300 font-bold mt-1">&gt;= 5:30/km</p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Medio</p>
+                <p className="text-sm text-gray-300 font-bold mt-1">5:00-5:29/km</p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Veloce</p>
+                <p className="text-sm text-gray-300 font-bold mt-1">&lt; 4:45/km</p>
+              </div>
+            </div>
+          }
+        >
+          {renderGctMonthlyChart()}
+        </ChartFullscreenModal>
 
       </div>
     </div>

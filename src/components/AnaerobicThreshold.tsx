@@ -234,32 +234,32 @@ export function AnaerobicThreshold({ runs, maxHr, vdot }: Props) {
         {/* ── Left: current metrics ── */}
         <div className="flex flex-col justify-center gap-4 shrink-0 w-[140px]">
 
-          {currentHr > 0 && (
-            <div>
-              <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">FC Media (ultimo mese)</div>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-black text-[#F43F5E]">{currentHr}</span>
-                <span className="text-xs text-text-muted">bpm</span>
-              </div>
-            </div>
-          )}
+           {currentHr > 0 && (
+             <div>
+               <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1">FC Media (ultimo mese)</div>
+               <div className="flex items-baseline gap-1.5">
+                 <span className="text-4xl font-black text-white bg-[#F43F5E] px-3 py-1 rounded-xl">{currentHr}</span>
+                 <span className="text-xs text-text-muted">bpm</span>
+               </div>
+             </div>
+           )}
 
-          {currentPace > 0 && (
-            <div>
-              <div className="text-[9px] text-[#3B82F6] uppercase tracking-wider mb-1">Passo (ultimo mese)</div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-black text-white">{fmtPace(currentPace)}</span>
-                <span className="text-xs text-text-muted">/km</span>
-              </div>
-            </div>
-          )}
+           {currentPace > 0 && (
+             <div>
+               <div className="text-[9px] text-[#3B82F6] uppercase tracking-wider mb-1">Passo (ultimo mese)</div>
+               <div className="flex items-baseline gap-1">
+                 <span className="text-3xl font-black text-white bg-[#F59E0B] px-3 py-1 rounded-xl">{fmtPace(currentPace)}</span>
+                 <span className="text-xs text-text-muted">/km</span>
+               </div>
+             </div>
+           )}
 
-          <div>
-            <div className="text-[9px] text-[#14B8A6] uppercase tracking-wider mb-0.5">Trend</div>
-            <div className={`text-base font-black ${trendColor}`}>
-              {trendIcon} {trendLabel}
-            </div>
-          </div>
+           <div>
+             <div className="text-[9px] text-[#14B8A6] uppercase tracking-wider mb-0.5">Trend</div>
+             <div className={`text-2xl font-black ${trendColor} bg-[#F59E0B] px-3 py-1 rounded-xl`}>
+               {trendIcon} {trendLabel}
+             </div>
+           </div>
         </div>
 
         {/* ── Right: chart ── */}

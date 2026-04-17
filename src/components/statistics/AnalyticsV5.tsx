@@ -3,13 +3,14 @@
  * Style: Data-Journal / Left-border panels / Chapter layout / Inverted callouts
  * 12 unique running charts — completely distinct from V1–V4
  */
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   LineChart, Line, AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   ScatterChart, Scatter, ZAxis, Cell, ReferenceLine,
   ComposedChart, Legend, LabelList,
 } from 'recharts';
+import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 
 // ─── Palette ────────────────────────────────────────────────────────────────
 const N   = '#C0FF00';
@@ -366,34 +367,53 @@ function ElevProfileChart() {
 }
 
 // 06 — Effort bubble chart
-function EffortBubble() {
+export function AnalyticsV5EffortMatrix() {
+  const [expanded, setExpanded] = useState(false);
+  const renderChart = (isExpanded = false) => (
+    <ResponsiveContainer width="100%" height="100%">
+      <ScatterChart margin={{ top: isExpanded ? 20 : 4, right: isExpanded ? 20 : 8, bottom: isExpanded ? 24 : 8, left: isExpanded ? -4 : -16 }}>
+        <CartesianGrid strokeDasharray="2 6" stroke={MT} />
+        <XAxis type="number" dataKey="dist" name="Distanza" domain={[0,40]} tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} label={{ value:'KM', position:'insideBottom', fill:DM, fontSize:8, fontWeight:900, offset:-4 }} />
+        <YAxis type="number" dataKey="pace" name="Passo" domain={[3.5,6.5]} tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} label={{ value:'MIN/KM', angle:-90, fill:DM, fontSize:8, fontWeight:900 }} />
+        <ZAxis type="number" dataKey="z" range={isExpanded ? [50,260] : [30,200]} />
+        <Tooltip cursor={{ stroke:MT }} content={({ active, payload }) => {
+          if (!active || !payload?.length) return null;
+          const d = payload[0].payload;
+          return (
+            <div style={{ background:'#040404', border:`1px solid ${MT}`, padding:'8px 12px', ...mono }}>
+              <p style={{ color:N, fontSize:10, fontWeight:900 }}>{d.dist.toFixed(1)} km @ {d.pace.toFixed(2)} min/km</p>
+              <p style={{ color:DM, fontSize:9, fontWeight:900 }}>FC: {d.hr.toFixed(0)} bpm</p>
+            </div>
+          );
+        }} />
+        <ReferenceLine y={4.5} stroke={N} strokeDasharray="4 3" strokeWidth={1} />
+        <Scatter data={bubbles} fill={N} fillOpacity={0.55} />
+      </ScatterChart>
+    </ResponsiveContainer>
+  );
+
   return (
-    <LBPanel accent={RD}>
-      <Chapter n="06" title="Effort Matrix" sub="Distance × Pace × Heart Rate (bubble size = HR load)" />
-      <ResponsiveContainer width="100%" height={200}>
-        <ScatterChart margin={{ top:4, right:8, bottom:8, left:-16 }}>
-          <CartesianGrid strokeDasharray="2 6" stroke={MT} />
-          <XAxis type="number" dataKey="dist" name="Distance" domain={[0,40]} tick={{ fill:DM, fontSize:9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} label={{ value:'KM', position:'insideBottom', fill:DM, fontSize:8, fontWeight:900, offset:-4 }} />
-          <YAxis type="number" dataKey="pace" name="Pace" domain={[3.5,6.5]} tick={{ fill:DM, fontSize:9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} label={{ value:'MIN/KM', angle:-90, fill:DM, fontSize:8, fontWeight:900 }} />
-          <ZAxis type="number" dataKey="z" range={[30,200]} />
-          <Tooltip cursor={{ stroke:MT }} content={({ active, payload }) => {
-            if (!active || !payload?.length) return null;
-            const d = payload[0].payload;
-            return (
-              <div style={{ background:'#040404', border:`1px solid ${MT}`, padding:'8px 12px', ...mono }}>
-                <p style={{ color:RD, fontSize:10, fontWeight:900 }}>{d.dist.toFixed(1)} km @ {d.pace.toFixed(2)} min/km</p>
-                <p style={{ color:DM, fontSize:9, fontWeight:900 }}>HR: {d.hr.toFixed(0)} bpm</p>
-              </div>
-            );
-          }} />
-          <ReferenceLine y={4.5} stroke={N} strokeDasharray="4 3" strokeWidth={1} />
-          <Scatter data={bubbles} fill={RD} fillOpacity={0.55} />
-        </ScatterChart>
-      </ResponsiveContainer>
-    </LBPanel>
+    <>
+      <LBPanel accent={N} className="group">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+          <Chapter n="06" title="Matrice degli Sforzi" sub="Distanza � Passo � Frequenza Cardiaca (dimensione bolla = carico FC)" />
+          <ChartExpandButton onClick={() => setExpanded(true)} />
+        </div>
+        <div style={{ height: 200 }}>{renderChart(false)}</div>
+      </LBPanel>
+      <ChartFullscreenModal
+        open={expanded}
+        onClose={() => setExpanded(false)}
+        title="Matrice degli Sforzi"
+        subtitle="Distanza � passo � frequenza cardiaca"
+        accent={N}
+        details={<div style={{ display:'flex', gap:28, marginTop:4 }}><Stat label="Campioni" val={`${bubbles.length}`} c={N} /><Stat label="Threshold ref" val="4.50 /km" c="#fff" /><Stat label="Bubble size" val="Carico FC" c={DM} /></div>}
+      >
+        {renderChart(true)}
+      </ChartFullscreenModal>
+    </>
   );
 }
-
 // 07 — Running Economy trend
 function RunningEconomy() {
   return (
@@ -499,75 +519,113 @@ function SeasonalMatrix() {
 }
 
 // 10 — Best Efforts Progression
-function BestEffortsChart() {
+export function AnalyticsV5BestEffortsProgression() {
+  const [expanded, setExpanded] = useState(false);
   const fmt = (s: number) => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  const renderChart = (isExpanded = false) => (
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart data={bestEfforts} margin={{ top:isExpanded ? 20 : 4, right:isExpanded ? 20 : 8, bottom:isExpanded ? 20 : 0, left:isExpanded ? 0 : -8 }}>
+        <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
+        <XAxis dataKey="mo" tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
+        <YAxis yAxisId="left"  tick={{ fill:DM, fontSize:isExpanded ? 11 : 8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} domain={[1100,1300]} />
+        <YAxis yAxisId="right" orientation="right" tick={{ fill:DM, fontSize:isExpanded ? 11 : 8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} domain={[2400,2700]} />
+        <Tooltip content={({ active, payload, label }) => {
+          if (!active || !payload?.length) return null;
+          return (
+            <div style={{ background:'#040404', border:`1px solid ${MT}`, padding:'8px 12px', ...mono }}>
+              <p style={{ color:DM, fontSize:9, fontWeight:900, letterSpacing:'0.2em', marginBottom:4 }}>{label}</p>
+              {payload.map((p,i) => (
+                <p key={i} style={{ fontSize:11, fontWeight:900, margin:0 }}>
+                  <span style={{ color:p.color as string }}>{p.name}</span>
+                  <span style={{ color:'#fff', marginLeft:8 }}>{fmt(p.value as number)}</span>
+                </p>
+              ))}
+            </div>
+          );
+        }} />
+        <Line yAxisId="left"  type="monotone" dataKey="k5"  name="5K"   stroke={N}  strokeWidth={2.5} dot={{ r:4, fill:N,  stroke:BG, strokeWidth:1.5 }} />
+        <Line yAxisId="right" type="monotone" dataKey="k10" name="10K"  stroke={CY} strokeWidth={2}   dot={{ r:3, fill:CY, stroke:BG, strokeWidth:1.5 }} />
+        <Line yAxisId="right" type="monotone" dataKey="hm"  name="Half" stroke={PU} strokeWidth={2}   dot={{ r:3, fill:PU, stroke:BG, strokeWidth:1.5 }} strokeDasharray="6 3" />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+
   return (
-    <LBPanel accent={PU} style={{ gridColumn:'span 2' }}>
-      <Chapter n="10" title="Best Efforts Progression" sub="Monthly personal bests — 5K / 10K / Half Marathon" />
-      <ResponsiveContainer width="100%" height={200}>
-        <LineChart data={bestEfforts} margin={{ top:4, right:8, bottom:0, left:-8 }}>
-          <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-          <XAxis dataKey="mo" tick={{ fill:DM, fontSize:9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
-          <YAxis yAxisId="left"  tick={{ fill:DM, fontSize:8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} domain={[1100,1300]} />
-          <YAxis yAxisId="right" orientation="right" tick={{ fill:DM, fontSize:8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} domain={[2400,2700]} />
-          <Tooltip content={({ active, payload, label }) => {
-            if (!active || !payload?.length) return null;
-            return (
-              <div style={{ background:'#040404', border:`1px solid ${MT}`, padding:'8px 12px', ...mono }}>
-                <p style={{ color:DM, fontSize:9, fontWeight:900, letterSpacing:'0.2em', marginBottom:4 }}>{label}</p>
-                {payload.map((p,i) => (
-                  <p key={i} style={{ fontSize:11, fontWeight:900, margin:0 }}>
-                    <span style={{ color:p.color as string }}>{p.name}</span>
-                    <span style={{ color:'#fff', marginLeft:8 }}>{fmt(p.value as number)}</span>
-                  </p>
-                ))}
-              </div>
-            );
-          }} />
-          <Line yAxisId="left"  type="monotone" dataKey="k5"  name="5K"   stroke={N}  strokeWidth={2.5} dot={{ r:4, fill:N,  stroke:BG, strokeWidth:1.5 }} />
-          <Line yAxisId="right" type="monotone" dataKey="k10" name="10K"  stroke={CY} strokeWidth={2}   dot={{ r:3, fill:CY, stroke:BG, strokeWidth:1.5 }} />
-          <Line yAxisId="right" type="monotone" dataKey="hm"  name="Half" stroke={PU} strokeWidth={2}   dot={{ r:3, fill:PU, stroke:BG, strokeWidth:1.5 }} strokeDasharray="6 3" />
-        </LineChart>
-      </ResponsiveContainer>
-      <HR />
-      <div style={{ display:'flex', gap:28, marginTop:12 }}>
-        <Stat label="5K best"     val="19:52" c={N}  />
-        <Stat label="10K best"    val="41:18" c={CY} />
-        <Stat label="Half best"   val="1:32:08" c={PU} />
-        <Stat label="Improvement" val="↑ 3.1%" c={N} />
-      </div>
-    </LBPanel>
+    <>
+      <LBPanel accent={PU} className="group" style={{ gridColumn:'span 2' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12 }}>
+          <Chapter n="10" title="Best Efforts Progression" sub="Monthly personal bests � 5K / 10K / Half Marathon" />
+          <ChartExpandButton onClick={() => setExpanded(true)} />
+        </div>
+        <div style={{ height: 200 }}>{renderChart(false)}</div>
+        <HR />
+        <div style={{ display:'flex', gap:28, marginTop:12 }}>
+          <Stat label="5K best"     val="19:52" c={N}  />
+          <Stat label="10K best"    val="41:18" c={CY} />
+          <Stat label="Half best"   val="1:32:08" c={PU} />
+          <Stat label="Improvement" val="? 3.1%" c={N} />
+        </div>
+      </LBPanel>
+      <ChartFullscreenModal
+        open={expanded}
+        onClose={() => setExpanded(false)}
+        title="Best Efforts Progression"
+        subtitle="Monthly personal bests � 5K / 10K / Half Marathon"
+        accent={PU}
+        details={<div style={{ display:'flex', gap:28 }}><Stat label="5K best" val="19:52" c={N} /><Stat label="10K best" val="41:18" c={CY} /><Stat label="Half best" val="1:32:08" c={PU} /><Stat label="Improvement" val="? 3.1%" c={N} /></div>}
+      >
+        {renderChart(true)}
+      </ChartFullscreenModal>
+    </>
   );
 }
-
 // 11 — Pace Distribution Bell
-function PaceBell() {
+export function AnalyticsV5PaceDistributionBell() {
+  const [expanded, setExpanded] = useState(false);
+  const renderChart = (isExpanded = false) => (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={paceBell} margin={{ top:isExpanded ? 20 : 4, right:isExpanded ? 20 : 8, bottom:isExpanded ? 20 : 0, left:isExpanded ? -4 : -20 }} barCategoryGap="12%">
+        <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
+        <XAxis dataKey="pace" tick={{ fill:DM, fontSize:isExpanded ? 12 : 8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
+        <Tooltip content={<TT />} />
+        <Bar dataKey="runs" name="Corse" radius={[4,4,0,0]}>
+          {paceBell.map((b,i) => (
+            <Cell key={i} fill={i===3 ? N : i===2||i===4 ? `${N}99` : i===1||i===5 ? `${N}55` : MT} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+
   return (
-    <LBPanel accent={YL}>
-      <Chapter n="11" title="Pace Distribution Bell" sub="Run count by pace zone — all-time" />
-      <ResponsiveContainer width="100%" height={180}>
-        <BarChart data={paceBell} margin={{ top:4, right:8, bottom:0, left:-20 }} barCategoryGap="12%">
-          <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-          <XAxis dataKey="pace" tick={{ fill:DM, fontSize:8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fill:DM, fontSize:9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
-          <Tooltip content={<TT />} />
-          <Bar dataKey="runs" name="Runs" radius={[4,4,0,0]}>
-            {paceBell.map((b,i) => (
-              <Cell key={i} fill={i===3 ? YL : i===2||i===4 ? `${YL}99` : i===1||i===5 ? `${YL}55` : MT} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-      <HR />
-      <div style={{ display:'flex', gap:20, marginTop:12 }}>
-        <Stat label="Mode pace"  val="5:00–5:30" c={YL} />
-        <Stat label="Total runs" val="101"        c="#fff" />
-        <Stat label="Skew"       val="Right (easy bias)" c={DM} />
-      </div>
-    </LBPanel>
+    <>
+      <LBPanel accent={N} className="group">
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12 }}>
+          <Chapter n="11" title="Distribuzione del Passo" sub="Numero di corse per zona di passo � storico completo" />
+          <ChartExpandButton onClick={() => setExpanded(true)} />
+        </div>
+        <div style={{ height: 180 }}>{renderChart(false)}</div>
+        <HR />
+        <div style={{ display:'flex', gap:20, marginTop:12 }}>
+          <Stat label="Passo modale"  val="5:00-5:30" c={N} />
+          <Stat label="Corse totali" val="101"        c="#fff" />
+          <Stat label="Asimmetria"       val="Destra (bias facile)" c={DM} />
+        </div>
+      </LBPanel>
+      <ChartFullscreenModal
+        open={expanded}
+        onClose={() => setExpanded(false)}
+        title="Distribuzione del Passo"
+        subtitle="Numero di corse per zona di passo � storico completo"
+        accent={N}
+        details={<div style={{ display:'flex', gap:28 }}><Stat label="Passo modale" val="5:00-5:30" c={N} /><Stat label="Corse totali" val="101" c="#fff" /><Stat label="Asimmetria" val="Destra (bias facile)" c={DM} /></div>}
+      >
+        {renderChart(true)}
+      </ChartFullscreenModal>
+    </>
   );
 }
-
 // 12 — Load Stress Balance 4-month
 function LSBChart() {
   return (
@@ -653,7 +711,7 @@ export function AnalyticsV5() {
 
         {/* Row D: Effort Bubble (1/2) + Running Economy (1/4) + Recovery (1/4) */}
         <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr', gap:3 }}>
-          <EffortBubble />
+          <AnalyticsV5EffortMatrix />
           <RunningEconomy />
           <RecoveryHistogram />
         </div>
@@ -663,8 +721,8 @@ export function AnalyticsV5() {
 
         {/* Row F: Best Efforts (2/3) + Pace Bell (1/3) */}
         <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:3 }}>
-          <BestEffortsChart />
-          <PaceBell />
+          <AnalyticsV5BestEffortsProgression />
+          <AnalyticsV5PaceDistributionBell />
         </div>
 
         {/* Row G: LSB full width */}

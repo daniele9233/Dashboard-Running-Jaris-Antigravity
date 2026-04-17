@@ -3,7 +3,7 @@
  * Style: Scientific Instrument / Data Observatory
  * Sharp panels · bracket decorations · terminal data · dense charts
  */
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ScatterChart, Scatter, ZAxis,
@@ -12,6 +12,7 @@ import {
   PolarAngleAxis, PolarRadiusAxis,
 } from 'recharts';
 import type { Run, FitnessFreshnessPoint } from '../../types/api';
+import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 
 // ─── Palette ────────────────────────────────────────────────────────────────
 const N  = '#C0FF00';           // neon lime
@@ -293,42 +294,67 @@ function LactateCurve() {
   );
 }
 
-function CadenceScatter() {
+export function AnalyticsV4CadenceSpeedMatrix() {
+  const [expanded, setExpanded] = useState(false);
+  const renderChart = (isExpanded = false) => (
+    <ResponsiveContainer width="100%" height="100%">
+      <ScatterChart margin={{ top: isExpanded ? 20 : 4, right: isExpanded ? 20 : 12, bottom: isExpanded ? 24 : 0, left: isExpanded ? -4 : -16 }}>
+        <CartesianGrid strokeDasharray="2 4" stroke={MT} />
+        <XAxis type="number" dataKey="speed" name="Speed" domain={[7,17]} tick={{ fill: DM, fontSize: isExpanded ? 12 : 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} label={{ value: 'SPEED KM/H', position: 'insideBottom', fill: DM, fontSize: 8, fontWeight: 900, offset: -2 }} />
+        <YAxis type="number" dataKey="cadence" name="Cadence" domain={[150,190]} tick={{ fill: DM, fontSize: isExpanded ? 12 : 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} />
+        <ZAxis type="number" dataKey="r" range={isExpanded ? [45,180] : [20,100]} />
+        <Tooltip cursor={{ stroke: MT }} content={({ active, payload }) => {
+          if (!active || !payload?.length) return null;
+          const d = payload[0].payload;
+          return (
+            <div style={{ background: '#050505', border: `1px solid ${BR}`, padding: '8px 12px', fontFamily: 'monospace' }}>
+              <p style={{ color: CY, fontSize: 10, fontWeight: 900 }}>{d.speed.toFixed(1)} km/h � {d.cadence.toFixed(0)} spm</p>
+            </div>
+          );
+        }} />
+        <ReferenceLine x={13} stroke={N} strokeDasharray="4 3" strokeWidth={1} />
+        <ReferenceLine y={170} stroke={N} strokeDasharray="4 3" strokeWidth={1} />
+        <Scatter data={cadScatter} fill={CY} fillOpacity={0.6} />
+      </ScatterChart>
+    </ResponsiveContainer>
+  );
+
   return (
-    <Panel className="p-6" accent={CY}>
-      <div className="flex items-center justify-between mb-5">
-        <Lbl color={DM}>CADENCE vs SPEED MATRIX</Lbl>
-        <Lbl color={CY}>R² = 0.84</Lbl>
-      </div>
-      <ResponsiveContainer width="100%" height={200}>
-        <ScatterChart margin={{ top: 4, right: 12, bottom: 0, left: -16 }}>
-          <CartesianGrid strokeDasharray="2 4" stroke={MT} />
-          <XAxis type="number" dataKey="speed" name="Speed" domain={[7,17]} tick={{ fill: DM, fontSize: 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} label={{ value: 'SPEED KM/H', position: 'insideBottom', fill: DM, fontSize: 8, fontWeight: 900, offset: -2 }} />
-          <YAxis type="number" dataKey="cadence" name="Cadence" domain={[150,190]} tick={{ fill: DM, fontSize: 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} />
-          <ZAxis type="number" dataKey="r" range={[20,100]} />
-          <Tooltip cursor={{ stroke: MT }} content={({ active, payload }) => {
-            if (!active || !payload?.length) return null;
-            const d = payload[0].payload;
-            return (
-              <div style={{ background: '#050505', border: `1px solid ${BR}`, padding: '8px 12px', fontFamily: 'monospace' }}>
-                <p style={{ color: CY, fontSize: 10, fontWeight: 900 }}>{d.speed.toFixed(1)} km/h · {d.cadence.toFixed(0)} spm</p>
-              </div>
-            );
-          }} />
-          <ReferenceLine x={13} stroke={N} strokeDasharray="4 3" strokeWidth={1} />
-          <ReferenceLine y={170} stroke={N} strokeDasharray="4 3" strokeWidth={1} />
-          <Scatter data={cadScatter} fill={CY} fillOpacity={0.6} />
-        </ScatterChart>
-      </ResponsiveContainer>
-      <div className="flex items-center justify-between mt-4 pt-4" style={{ borderTop: `1px solid ${MT}` }}>
-        <div><Lbl color={DM}>AVG CADENCE</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>174 <span style={{ fontSize: 11, color: DM }}>spm</span></p></div>
-        <div><Lbl color={DM}>OPT. WINDOW</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: N, fontFamily: 'monospace' }}>170–180</p></div>
-        <div><Lbl color={DM}>OVER-STRIDE</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: OR, fontFamily: 'monospace' }}>12%</p></div>
-      </div>
-    </Panel>
+    <>
+      <Panel className="p-6 group" accent={CY}>
+        <div className="flex items-center justify-between mb-5">
+          <Lbl color={DM}>CADENCE vs SPEED MATRIX</Lbl>
+          <div className="flex items-center gap-3">
+            <Lbl color={CY}>R� = 0.84</Lbl>
+            <ChartExpandButton onClick={() => setExpanded(true)} />
+          </div>
+        </div>
+        <div className="h-[200px] w-full">{renderChart(false)}</div>
+        <div className="flex items-center justify-between mt-4 pt-4" style={{ borderTop: `1px solid ${MT}` }}>
+          <div><Lbl color={DM}>AVG CADENCE</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>174 <span style={{ fontSize: 11, color: DM }}>spm</span></p></div>
+          <div><Lbl color={DM}>OPT. WINDOW</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: N, fontFamily: 'monospace' }}>170-180</p></div>
+          <div><Lbl color={DM}>OVER-STRIDE</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: OR, fontFamily: 'monospace' }}>12%</p></div>
+        </div>
+      </Panel>
+      <ChartFullscreenModal
+        open={expanded}
+        onClose={() => setExpanded(false)}
+        title="Cadence vs Speed Matrix"
+        subtitle="Cadenza rispetto alla velocita � finestra ottimale evidenziata"
+        accent={CY}
+        details={
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]"><Lbl color={DM}>AVG CADENCE</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>174 spm</p></div>
+            <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]"><Lbl color={DM}>OPT. WINDOW</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: N, fontFamily: 'monospace' }}>170-180</p></div>
+            <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]"><Lbl color={DM}>OVER-STRIDE</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: OR, fontFamily: 'monospace' }}>12%</p></div>
+          </div>
+        }
+      >
+        {renderChart(true)}
+      </ChartFullscreenModal>
+    </>
   );
 }
-
 function SplitAnalysis() {
   const paceMin = Math.min(...splits.map(s => s.pace));
   const paceMax = Math.max(...splits.map(s => s.pace));
@@ -397,50 +423,73 @@ function WeeklyVolume() {
   );
 }
 
-function PaceZoneBar() {
-  return (
-    <Panel className="p-6" accent={CY}>
-      <Lbl color={DM}>PACE ZONE DISTRIBUTION — LAST 90 DAYS</Lbl>
-      <div className="mt-5 space-y-3">
-        {paceZones.map((z) => (
-          <div key={z.zone}>
-            <div className="flex items-center justify-between mb-1">
-              <Lbl color={z.color}>{z.zone}</Lbl>
-              <div className="flex items-center gap-3">
-                <Lbl color={DM}>{z.pace}</Lbl>
-                <span style={{ fontSize: 13, fontWeight: 900, color: '#fff', fontFamily: 'monospace', width: 32, textAlign: 'right' }}>{z.pct}%</span>
-              </div>
-            </div>
-            <div style={{ height: 6, background: S2, width: '100%' }}>
-              <div
-                style={{
-                  height: '100%',
-                  width: `${z.pct * 2}%`,
-                  background: z.color,
-                  boxShadow: z.pct > 25 ? `0 0 8px ${z.color}` : 'none',
-                  transition: 'width 0.8s ease',
-                }}
-              />
+export function AnalyticsV4PaceZoneDistribution() {
+  const [expanded, setExpanded] = useState(false);
+  const renderZones = (isExpanded = false) => (
+    <div className={`${isExpanded ? 'h-full flex flex-col justify-center gap-5' : 'mt-5 space-y-3'}`}>
+      {paceZones.map((z) => (
+        <div key={z.zone}>
+          <div className="flex items-center justify-between mb-1">
+            <Lbl color={z.color}>{z.zone}</Lbl>
+            <div className="flex items-center gap-3">
+              <Lbl color={DM}>{z.pace}</Lbl>
+              <span style={{ fontSize: isExpanded ? 18 : 13, fontWeight: 900, color: '#fff', fontFamily: 'monospace', width: isExpanded ? 46 : 32, textAlign: 'right' }}>{z.pct}%</span>
             </div>
           </div>
-        ))}
-      </div>
-      <div className="mt-5 pt-4 grid grid-cols-2 gap-4" style={{ borderTop: `1px solid ${MT}` }}>
-        <div>
-          <Lbl color={DM}>80/20 RATIO</Lbl>
-          <p style={{ fontSize: 22, fontWeight: 900, color: N, fontFamily: 'monospace', marginTop: 2 }}>72 / 28</p>
-          <Lbl color={OR}>TARGET: 80/20</Lbl>
+          <div style={{ height: isExpanded ? 10 : 6, background: S2, width: '100%' }}>
+            <div
+              style={{
+                height: '100%',
+                width: `${z.pct * 2}%`,
+                background: z.color,
+                transition: 'width 0.8s ease',
+              }}
+            />
+          </div>
         </div>
-        <div>
-          <Lbl color={DM}>HIGH-INTENSITY DAYS</Lbl>
-          <p style={{ fontSize: 22, fontWeight: 900, color: '#fff', fontFamily: 'monospace', marginTop: 2 }}>14 <span style={{ fontSize: 12, color: DM }}>/ mo</span></p>
-          <Lbl color={DM}>WITHIN RANGE</Lbl>
+      ))}
+    </div>
+  );
+
+  return (
+    <>
+      <Panel className="p-6 group" accent={N}>
+        <div className="flex items-center justify-between gap-3">
+          <Lbl color={DM}>DISTRIBUZIONE ZONE DI PASSO � ULTIMI 90 GIORNI</Lbl>
+          <ChartExpandButton onClick={() => setExpanded(true)} />
         </div>
-      </div>
-    </Panel>
+        {renderZones(false)}
+        <div className="mt-5 pt-4 grid grid-cols-2 gap-4" style={{ borderTop: `1px solid ${MT}` }}>
+          <div>
+            <Lbl color={DM}>RAPPORTO 80/20</Lbl>
+            <p style={{ fontSize: 22, fontWeight: 900, color: N, fontFamily: 'monospace', marginTop: 2 }}>72 / 28</p>
+            <Lbl color={OR}>OBIETTIVO: 80/20</Lbl>
+          </div>
+          <div>
+            <Lbl color={DM}>GIORNI AD ALTA INTENSITA</Lbl>
+            <p style={{ fontSize: 22, fontWeight: 900, color: '#fff', fontFamily: 'monospace', marginTop: 2 }}>14 <span style={{ fontSize: 12, color: DM }}>/ mese</span></p>
+            <Lbl color={DM}>ENTRO I LIMITI</Lbl>
+          </div>
+        </div>
+      </Panel>
+      <ChartFullscreenModal
+        open={expanded}
+        onClose={() => setExpanded(false)}
+        title="Distribuzione Zone di Passo"
+        subtitle="Ultimi 90 giorni � rapporto intensita"
+        accent={N}
+        details={
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]"><Lbl color={DM}>RAPPORTO 80/20</Lbl><p style={{ fontSize: 22, fontWeight: 900, color: N, fontFamily: 'monospace' }}>72 / 28</p></div>
+            <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]"><Lbl color={DM}>GIORNI AD ALTA INTENSITA</Lbl><p style={{ fontSize: 22, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>14 / mese</p></div>
+          </div>
+        }
+      >
+        {renderZones(true)}
+      </ChartFullscreenModal>
+    </>
   );
 }
-
 function ShoeWearRadar() {
   return (
     <Panel className="p-6" accent={OR}>
@@ -537,14 +586,14 @@ export function AnalyticsV4() {
 
       {/* ── Heatmap full width ── */}
       <div className="grid grid-cols-3 gap-4" style={{ gridTemplateColumns: '1fr 2fr' }}>
-        <PaceZoneBar />
+        <AnalyticsV4PaceZoneDistribution />
         <HeatmapCalendar />
       </div>
 
       {/* ── Lactate + Cadence row ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <LactateCurve />
-        <CadenceScatter />
+        <AnalyticsV4CadenceSpeedMatrix />
       </div>
 
       {/* ── Split analysis + Shoe radar ── */}
