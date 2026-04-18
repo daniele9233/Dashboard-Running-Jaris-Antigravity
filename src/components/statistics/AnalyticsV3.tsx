@@ -644,9 +644,11 @@ function EvolutionBar({ scaleY, color, label }: { key?: string | number; scaleY:
 
 export function AnalyticsV3({
   data = {},
+  onRequestChartDetail,
   onTelemetrySync,
 }: {
   data?: Record<string, ProAnalyticsChart>;
+  onRequestChartDetail?: (chartId: string) => void;
   onTelemetrySync?: () => Promise<GarminCsvLinkResult | void>;
 }) {
   const [athleticExpanded, setAthleticExpanded] = useState(false);
@@ -708,7 +710,7 @@ export function AnalyticsV3({
                 </p>
               </div>
             </div>
-            <ChartExpandButton onClick={() => setAthleticExpanded(true)} />
+            <ChartExpandButton onClick={() => { onRequestChartDetail?.('athletic_profile'); setAthleticExpanded(true); }} />
           </div>
           {radarAxesReal.length ? <PentagonRadar axes={radarAxesReal} /> : noData}
           <div className="mt-4 grid grid-cols-5 gap-2">
@@ -745,7 +747,7 @@ export function AnalyticsV3({
               <span className="flex items-center gap-1.5 text-[9px] font-black" style={{ color: MUTED }}>
                 <span className="w-4 border-t-2 border-dashed inline-block" style={{ borderColor: ORANGE }} /> CARDIAC STRESS
               </span>
-              <ChartExpandButton onClick={() => setEfficiencyExpanded(true)} />
+              <ChartExpandButton onClick={() => { onRequestChartDetail?.('efficiency_correlation'); setEfficiencyExpanded(true); }} />
             </div>
           </div>
 
@@ -838,7 +840,7 @@ export function AnalyticsV3({
               <span className="w-3 h-3 rounded-full inline-block" style={{ background: `${ORANGE}80` }} />
               RACE DATA
             </span>
-            <ChartExpandButton onClick={() => setAdaptationExpanded(true)} />
+            <ChartExpandButton onClick={() => { onRequestChartDetail?.('adaptation'); setAdaptationExpanded(true); }} />
           </div>
         </div>
 

@@ -294,7 +294,7 @@ function LactateCurve() {
   );
 }
 
-export function AnalyticsV4CadenceSpeedMatrix({ chart }: { chart?: ProAnalyticsChart }) {
+export function AnalyticsV4CadenceSpeedMatrix({ chart, onRequestDetail }: { chart?: ProAnalyticsChart; onRequestDetail?: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const cardPoints = chart?.series_card ?? [];
   const detailPoints = chart?.series_detail?.length ? chart.series_detail : cardPoints;
@@ -336,7 +336,7 @@ export function AnalyticsV4CadenceSpeedMatrix({ chart }: { chart?: ProAnalyticsC
           <Lbl color={DM}>CADENCE vs SPEED MATRIX</Lbl>
           <div className="flex items-center gap-3">
             <Lbl color={CY}>N = {cardPoints.length}</Lbl>
-            <ChartExpandButton onClick={() => setExpanded(true)} />
+            <ChartExpandButton onClick={() => { onRequestDetail?.(); setExpanded(true); }} />
           </div>
         </div>
         <div className="h-[200px] w-full">{renderChart(false)}</div>
@@ -433,7 +433,7 @@ function WeeklyVolume() {
   );
 }
 
-export function AnalyticsV4PaceZoneDistribution({ chart }: { chart?: ProAnalyticsChart }) {
+export function AnalyticsV4PaceZoneDistribution({ chart, onRequestDetail }: { chart?: ProAnalyticsChart; onRequestDetail?: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const zones = (chart?.series_card ?? []).map((z) => ({
     zone: String(z.zone ?? z.name ?? ''),
@@ -479,7 +479,7 @@ export function AnalyticsV4PaceZoneDistribution({ chart }: { chart?: ProAnalytic
       <Panel className="p-6 group" accent={N}>
         <div className="flex items-center justify-between gap-3">
           <Lbl color={DM}>DISTRIBUZIONE ZONE DI PASSO — ULTIMI 90 GIORNI</Lbl>
-          <ChartExpandButton onClick={() => setExpanded(true)} />
+          <ChartExpandButton onClick={() => { onRequestDetail?.(); setExpanded(true); }} />
         </div>
         {renderZones(false)}
         <div className="mt-5 pt-4 grid grid-cols-2 gap-4" style={{ borderTop: `1px solid ${MT}` }}>

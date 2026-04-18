@@ -369,7 +369,7 @@ function ElevProfileChart() {
 }
 
 // 06 â€” Effort bubble chart
-export function AnalyticsV5EffortMatrix({ chart }: { chart?: ProAnalyticsChart }) {
+export function AnalyticsV5EffortMatrix({ chart, onRequestDetail }: { chart?: ProAnalyticsChart; onRequestDetail?: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const cardData = chart?.series_card ?? [];
   const detailData = chart?.series_detail?.length ? chart.series_detail : cardData;
@@ -407,7 +407,7 @@ export function AnalyticsV5EffortMatrix({ chart }: { chart?: ProAnalyticsChart }
       <LBPanel accent={N} className="group">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
           <Chapter n="06" title="Matrice degli Sforzi" sub="Distanza × Passo × Frequenza Cardiaca (dimensione bolla = carico FC)" />
-          <ChartExpandButton onClick={() => setExpanded(true)} />
+          <ChartExpandButton onClick={() => { onRequestDetail?.(); setExpanded(true); }} />
         </div>
         <div style={{ height: 200 }}>{renderChart(false)}</div>
       </LBPanel>
@@ -529,7 +529,7 @@ function SeasonalMatrix() {
 }
 
 // 10 â€” Best Efforts Progression
-export function AnalyticsV5BestEffortsProgression({ chart }: { chart?: ProAnalyticsChart }) {
+export function AnalyticsV5BestEffortsProgression({ chart, onRequestDetail }: { chart?: ProAnalyticsChart; onRequestDetail?: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const fmt = (s?: number) => s ? `${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}` : '—';
   const toPoint = (d: Record<string, any>): Record<string, any> & { mo: string } => ({ ...d, mo: String(d.date ?? '') });
@@ -577,7 +577,7 @@ export function AnalyticsV5BestEffortsProgression({ chart }: { chart?: ProAnalyt
       <LBPanel accent={PU} className="group" style={{ gridColumn:'span 2' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12 }}>
           <Chapter n="10" title="Best Efforts Progression" sub="Monthly personal bests — 5K / 10K / Half Marathon" />
-          <ChartExpandButton onClick={() => setExpanded(true)} />
+          <ChartExpandButton onClick={() => { onRequestDetail?.(); setExpanded(true); }} />
         </div>
         <div style={{ height: 200 }}>{renderChart(false)}</div>
         <HR />
@@ -602,7 +602,7 @@ export function AnalyticsV5BestEffortsProgression({ chart }: { chart?: ProAnalyt
   );
 }
 // 11 â€” Pace Distribution Bell
-export function AnalyticsV5PaceDistributionBell({ chart }: { chart?: ProAnalyticsChart }) {
+export function AnalyticsV5PaceDistributionBell({ chart, onRequestDetail }: { chart?: ProAnalyticsChart; onRequestDetail?: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const cardData = chart?.series_card ?? [];
   const detailData = chart?.series_detail?.length ? chart.series_detail : cardData;
@@ -634,7 +634,7 @@ export function AnalyticsV5PaceDistributionBell({ chart }: { chart?: ProAnalytic
       <LBPanel accent={N} className="group">
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12 }}>
           <Chapter n="11" title="Distribuzione del Passo" sub="Numero di corse per zona di passo — storico completo" />
-          <ChartExpandButton onClick={() => setExpanded(true)} />
+          <ChartExpandButton onClick={() => { onRequestDetail?.(); setExpanded(true); }} />
         </div>
         <div style={{ height: 180 }}>{renderChart(false)}</div>
         <HR />

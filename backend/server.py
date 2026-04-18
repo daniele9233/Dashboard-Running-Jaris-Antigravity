@@ -35,7 +35,7 @@ FISH_AUDIO_API_KEY = os.environ.get("FISH_AUDIO_API_KEY", "")
 GARMIN_EMAIL       = os.environ.get("GARMIN_EMAIL", "")
 GARMIN_PASSWORD    = os.environ.get("GARMIN_PASSWORD", "")
 APP_VERSION        = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT") or os.environ.get("COMMIT_SHA") or "local"
-ANALYTICS_SCHEMA_VERSION = "pro-v3-2026-04-17"
+ANALYTICS_SCHEMA_VERSION = "pro-v8-2026-04-18"
 
 # Build the callback URL from the current host (set via Render env or default)
 BACKEND_URL        = os.environ.get("BACKEND_URL", "https://dani-backend-ea0s.onrender.com")
@@ -132,19 +132,77 @@ def valid_outdoor_runs_query(athlete_id=None, min_distance_km: float = 0) -> dic
     return q
 
 
-async def _analytics_run_diagnostics(athlete_id: int, range_runs_count: int = 0) -> dict:
-    base = {"athlete_id": athlete_id}
-    gps_or = [
+def fast_valid_outdoor_runs_query(athlete_id=None, min_distance_km: float = 0) -> dict:
+    """Lean analytics-valid query that avoids scanning heavy streams arrays."""
+    q: dict = {"is_treadmill": {"$ne": True}}
+    if athlete_id:
+        q["athlete_id"] = athlete_id
+    if min_distance_km > 0:
+        q["distance_km"] = {"$gte": min_distance_km}
+    q["$or"] = [
         {"has_gps": True},
         {"polyline": {"$nin": [None, ""]}},
         {"start_latlng.0": {"$exists": True}},
-        {"streams.ll": {"$exists": True}},
     ]
+    return q
+
+
+def analytics_run_projection(include_splits: bool = False) -> dict:
+    """Fields needed by pro analytics without large per-point streams payloads."""
+    projection = {
+        "athlete_id": 1,
+        "strava_id": 1,
+        "name": 1,
+        "date": 1,
+        "distance_km": 1,
+        "duration_minutes": 1,
+        "avg_pace": 1,
+        "avg_hr": 1,
+        "max_hr": 1,
+        "avg_cadence": 1,
+        "elevation_gain": 1,
+        "is_treadmill": 1,
+        "has_gps": 1,
+        "polyline": 1,
+        "start_latlng": 1,
+        "avg_ground_contact_time": 1,
+        "avg_vertical_oscillation": 1,
+        "avg_vertical_ratio": 1,
+        "avg_stride_length": 1,
+        "biomechanics": 1,
+        "garmin_csv_id": 1,
+    }
+    if include_splits:
+        projection["splits"] = 1
+    return projection
+
+
+def garmin_csv_projection() -> dict:
+    """Lean Garmin CSV fields needed to enrich biomechanics charts."""
+    return {
+        "date": 1,
+        "titolo": 1,
+        "distance_km": 1,
+        "duration_minutes": 1,
+        "avg_pace": 1,
+        "avg_pace_sec": 1,
+        "avg_hr": 1,
+        "avg_ground_contact_time_ms": 1,
+        "avg_vertical_oscillation_cm": 1,
+        "avg_vertical_ratio_pct": 1,
+        "avg_stride_length_m": 1,
+        "avg_cadence_spm": 1,
+    }
+
+
+async def _analytics_run_diagnostics(athlete_id: int, range_runs_count: int = 0) -> dict:
+    base = {"athlete_id": athlete_id}
     outdoor = {"athlete_id": athlete_id, "is_treadmill": {"$ne": True}}
     total_runs = await db.runs.count_documents(base)
     excluded_treadmill = await db.runs.count_documents({"athlete_id": athlete_id, "is_treadmill": True})
-    valid_outdoor = await db.runs.count_documents(valid_outdoor_runs_query(athlete_id))
-    excluded_missing_gps = await db.runs.count_documents({**outdoor, "$nor": gps_or})
+    valid_outdoor = await db.runs.count_documents(fast_valid_outdoor_runs_query(athlete_id))
+    outdoor_total = await db.runs.count_documents(outdoor)
+    excluded_missing_gps = max(0, outdoor_total - valid_outdoor)
     return {
         "schema_version": ANALYTICS_SCHEMA_VERSION,
         "total_runs": total_runs,
@@ -2961,43 +3019,63 @@ def _build_pace_trend_chart(runs: list, resolution: str) -> dict:
     return _chart("trend_passo", "Trend Passo", "sec/km", {"avg_pace_sec": round(_avg(paces) or 0, 1)}, card, detail, sample_size=len(paces))
 
 
-def _build_vdot_chart(runs: list, max_hr: int, resolution: str) -> tuple[dict, dict, dict]:
+def _build_vdot_chart(
+    runs: list,
+    max_hr: int,
+    resolution: str,
+    only_chart: Optional[str] = None,
+) -> tuple[Optional[dict], Optional[dict], Optional[dict]]:
+    want_all = only_chart is None
+    want_vdot = want_all or only_chart == "vo2_vdot_trend"
+    want_threshold = want_all or only_chart == "threshold_progression"
+    want_race = want_all or only_chart == "race_evolution"
+
     buckets: dict[str, list] = {}
+    month_buckets: dict[str, list] = {}
     for r in runs:
         value = _vdot_from_run(r, max_hr)
-        key = _bucket_key(r.get("date", ""), resolution)
-        if value and key:
-            buckets.setdefault(key, []).append(min(value, 55.0))
+        if not value:
+            continue
+        capped = min(value, 55.0)
+        date = r.get("date", "")
+        detail_key = _bucket_key(date, resolution)
+        month_key = _bucket_key(date, "month")
+        if detail_key:
+            buckets.setdefault(detail_key, []).append(capped)
+        if month_key:
+            month_buckets.setdefault(month_key, []).append(capped)
     detail = [
         {"date": key, "vdot": round(_avg(vals) or 0, 1), "vo2max": round(_avg(vals) or 0, 1), "sample_size": len(vals), "quality": "hr_validated"}
         for key, vals in sorted(buckets.items())
     ]
-    month_buckets: dict[str, list] = {}
-    for r in runs:
-        value = _vdot_from_run(r, max_hr)
-        key = _bucket_key(r.get("date", ""), "month")
-        if value and key:
-            month_buckets.setdefault(key, []).append(min(value, 55.0))
     card = [{"date": key, "vdot": round(_avg(vals) or 0, 1), "vo2max": round(_avg(vals) or 0, 1), "sample_size": len(vals)} for key, vals in sorted(month_buckets.items())]
     current = detail[-1]["vdot"] if detail else None
-    vdot_chart = _chart("vo2_vdot_trend", "VO2 Max / VDOT Trend", "VDOT", {"current": current}, card, detail, {"current_vdot": current}, len(detail))
+    vdot_chart = None
+    if want_vdot:
+        vdot_chart = _chart("vo2_vdot_trend", "VO2 Max / VDOT Trend", "VDOT", {"current": current}, card, detail, {"current_vdot": current}, len(detail))
 
-    threshold_detail = []
-    race_detail = []
-    for p in detail:
-        threshold = _pace_at_vo2_pct(p.get("vdot"), 0.88)
-        threshold_detail.append({"date": p["date"], "threshold_pace": round(threshold, 1) if threshold else None, "threshold_label": _pace_label(threshold), "vdot": p.get("vdot")})
-        preds = _predict_race(p.get("vdot")) if p.get("vdot") else {}
-        race_detail.append({
-            "date": p["date"],
-            "k5": _time_to_seconds(preds.get("5K")),
-            "k10": _time_to_seconds(preds.get("10K")),
-            "hm": _time_to_seconds(preds.get("Half Marathon")),
-            "fm": _time_to_seconds(preds.get("Marathon")),
-            "vdot": p.get("vdot"),
-        })
-    threshold_chart = _chart("threshold_progression", "Soglia / Progressione Temporale", "sec/km", {}, threshold_detail[-12:], threshold_detail, sample_size=len(threshold_detail))
-    race_chart = _chart("race_evolution", "Race Evolution", "seconds", {}, race_detail[-12:], race_detail, sample_size=len(race_detail))
+    threshold_chart = None
+    if want_threshold:
+        threshold_detail = []
+        for p in detail:
+            threshold = _pace_at_vo2_pct(p.get("vdot"), 0.88)
+            threshold_detail.append({"date": p["date"], "threshold_pace": round(threshold, 1) if threshold else None, "threshold_label": _pace_label(threshold), "vdot": p.get("vdot")})
+        threshold_chart = _chart("threshold_progression", "Soglia / Progressione Temporale", "sec/km", {}, threshold_detail[-12:], threshold_detail, sample_size=len(threshold_detail))
+
+    race_chart = None
+    if want_race:
+        race_detail = []
+        for p in detail:
+            preds = _predict_race(p.get("vdot")) if p.get("vdot") else {}
+            race_detail.append({
+                "date": p["date"],
+                "k5": _time_to_seconds(preds.get("5K")),
+                "k10": _time_to_seconds(preds.get("10K")),
+                "hm": _time_to_seconds(preds.get("Half Marathon")),
+                "fm": _time_to_seconds(preds.get("Marathon")),
+                "vdot": p.get("vdot"),
+            })
+        race_chart = _chart("race_evolution", "Race Evolution", "seconds", {}, race_detail[-12:], race_detail, sample_size=len(race_detail))
     return vdot_chart, threshold_chart, race_chart
 
 
@@ -3080,7 +3158,26 @@ def _build_biomechanics_charts(
     resolution: str,
     vdot: Optional[float],
     garmin_csv_docs: Optional[list] = None,
+    only_chart: Optional[str] = None,
 ) -> dict:
+    def wants(chart_id: str) -> bool:
+        return only_chart is None or only_chart == chart_id
+
+    valid_chart_ids = {
+        "ground_contact_stability",
+        "athletic_profile",
+        "efficiency_correlation",
+        "adaptation",
+        "paces",
+        "cadence_monthly",
+        "cardiac_drift",
+        "gct_monthly",
+        "gct_cadence",
+        "cadence_speed_matrix",
+    }
+    if only_chart and only_chart not in valid_chart_ids:
+        return {}
+
     linked_csv_ids = set()
     for r in runs:
         for value in (r.get("garmin_csv_id"), (r.get("biomechanics") or {}).get("garmin_csv_id")):
@@ -3103,118 +3200,146 @@ def _build_biomechanics_charts(
         csv_runs.append(_garmin_csv_doc_to_run_like(doc))
 
     telemetry_runs = runs + csv_runs
-    bio_runs = [r for r in telemetry_runs if any(_bio_value(r, k) is not None for k in ("gct", "cadence", "vr", "stride", "vo"))]
-    gct_runs = [r for r in bio_runs if _bio_value(r, "gct") is not None]
-    cad_runs = [r for r in bio_runs if _bio_value(r, "cadence") is not None]
+    charts: dict[str, dict] = {}
 
-    stability_rows = []
-    for key, group in sorted(_group_runs_by_bucket(gct_runs, resolution).items()):
-        gcts = [_bio_value(r, "gct") for r in group]
-        cads = [_bio_value(r, "cadence") for r in group]
-        vrs = [_bio_value(r, "vr") for r in group]
-        avg_gct = _avg(gcts)
-        avg_cad = _avg(cads)
-        avg_vr = _avg(vrs)
-        consistency = _stdev(gcts)
-        score = 100
-        if avg_gct:
-            score -= max(0, avg_gct - 250) * 0.18
-        if avg_cad:
-            score -= abs(avg_cad - 174) * 0.7
-        if avg_vr:
-            score -= max(0, avg_vr - 8.5) * 3
-        score -= consistency * 0.12
-        stability_rows.append({"date": key, "score": round(max(0, min(100, score)), 1), "gct": round(avg_gct or 0, 1), "cadence": round(avg_cad or 0, 1), "vertical_ratio": round(avg_vr or 0, 2), "runs": len(group)})
-    latest_stability = stability_rows[-1] if stability_rows else {}
-
-    pace_eff_runs = []
-    for r in telemetry_runs:
-        pace = _parse_pace_sec(r.get("avg_pace"))
-        hr = r.get("avg_hr")
-        if pace and hr:
-            pace_eff_runs.append({"date": r.get("date"), "pace": pace, "hr": hr, "efficiency": round((3600 / pace) / hr * 100, 3), "cadence": _bio_value(r, "cadence"), "gct": _bio_value(r, "gct")})
-
-    adaptation = []
-    for key, group in sorted(_group_runs_by_bucket(runs, resolution).items()):
-        adaptation.append({
-            "date": key,
-            "km": round(sum(r.get("distance_km", 0) for r in group), 1),
-            "pace": round(_weighted_pace_sec(group) or 0, 1),
-            "hr": round(_avg([r.get("avg_hr") for r in group]) or 0, 1),
-            "cadence": round(_avg([_bio_value(r, "cadence") for r in group]) or 0, 1),
-            "gct": round(_avg([_bio_value(r, "gct") for r in group]) or 0, 1),
-        })
-
-    cadence_rows = []
-    for key, group in sorted(_group_runs_by_bucket(cad_runs, resolution).items()):
-        cadence_rows.append({"date": key, "cadence": round(_avg([_bio_value(r, "cadence") for r in group]) or 0, 1), "runs": len(group)})
-
-    cardiac_drift = []
-    for r in runs:
-        splits = r.get("splits") or []
-        if len(splits) < 4:
-            continue
-        half = len(splits) // 2
-        first = [_parse_pace_sec(s.get("pace")) for s in splits[:half]]
-        second = [_parse_pace_sec(s.get("pace")) for s in splits[half:]]
-        first_hr = _avg([s.get("hr") for s in splits[:half]])
-        second_hr = _avg([s.get("hr") for s in splits[half:]])
-        p1 = _avg(first)
-        p2 = _avg(second)
-        if p1 and p2:
-            cardiac_drift.append({"date": r.get("date"), "drift_pct": round((p2 - p1) / p1 * 100, 2), "hr_drift": round((second_hr or 0) - (first_hr or 0), 1), "distance_km": r.get("distance_km")})
-
-    gct_month = []
-    for key, group in sorted(_group_runs_by_bucket(gct_runs, resolution).items()):
-        row = {"date": key, "pace_530": None, "pace_500": None, "pace_445": None}
-        buckets = {"pace_530": [], "pace_500": [], "pace_445": []}
-        for r in group:
-            pace = _parse_pace_sec(r.get("avg_pace"))
-            gct = _bio_value(r, "gct")
-            if not pace or not gct:
-                continue
-            zone = "pace_530" if pace >= 330 else "pace_500" if pace >= 300 else "pace_445"
-            buckets[zone].append(gct)
-        for zone, vals in buckets.items():
-            if vals:
-                row[zone] = round(_avg(vals) or 0, 1)
-        gct_month.append(row)
-
-    gct_cad = []
-    cad_speed = []
-    for r in bio_runs:
-        pace = _parse_pace_sec(r.get("avg_pace"))
-        cad = _bio_value(r, "cadence")
-        gct = _bio_value(r, "gct")
-        if cad and gct:
-            gct_cad.append({"date": r.get("date"), "cadence": round(cad, 1), "gct": round(gct, 1), "distance_km": r.get("distance_km")})
-        if pace and cad:
-            cad_speed.append({"date": r.get("date"), "speed": round(3600 / pace, 2), "cadence": round(cad, 1), "r": max(4, min(30, r.get("distance_km", 5))), "pace_sec": round(pace, 1)})
-
-    avg_pace = _weighted_pace_sec(runs)
-    avg_hr = _avg([r.get("avg_hr") for r in runs])
-    avg_cad = _avg([_bio_value(r, "cadence") for r in cad_runs])
-    avg_gct = _avg([_bio_value(r, "gct") for r in gct_runs])
-    radar = [
-        {"axis": "Endurance", "value": round(min(100, sum(r.get("distance_km", 0) for r in runs) / max(1, len(runs)) * 7), 1)},
-        {"axis": "Speed", "value": round(min(100, ((vdot or 30) - 30) * 4), 1)},
-        {"axis": "Efficiency", "value": round(min(100, ((3600 / avg_pace) / avg_hr * 1000) if avg_pace and avg_hr else 0), 1)},
-        {"axis": "Cadence", "value": round(max(0, min(100, 100 - abs((avg_cad or 0) - 174) * 2)), 1) if avg_cad else 0},
-        {"axis": "Impact", "value": round(max(0, min(100, 100 - max(0, (avg_gct or 300) - 240) * 0.8)), 1) if avg_gct else 0},
-    ]
-
-    return {
-        "ground_contact_stability": _chart("ground_contact_stability", "Ground Contact Stability", "score", {"latest_score": latest_stability.get("score")}, stability_rows[-12:], stability_rows, latest_stability, len(stability_rows)),
-        "athletic_profile": _chart("athletic_profile", "Athletic Profile", "score", {}, radar, radar, sample_size=len(bio_runs)),
-        "efficiency_correlation": _chart("efficiency_correlation", "Efficiency Correlation", "index", {}, pace_eff_runs[-80:], pace_eff_runs, sample_size=len(pace_eff_runs)),
-        "adaptation": _chart("adaptation", "Long-Term Training Adaptation", "mixed", {}, adaptation[-12:], adaptation, sample_size=len(adaptation)),
-        "paces": _chart("paces", "Andamento Paces", "sec/km", {}, _build_pace_trend_chart(runs, "month")["series_card"], _build_pace_trend_chart(runs, resolution)["series_detail"], sample_size=len(runs)),
-        "cadence_monthly": _chart("cadence_monthly", "Cadenza Mensile", "spm", {}, cadence_rows[-12:], cadence_rows, sample_size=len(cadence_rows)),
-        "cardiac_drift": _chart("cardiac_drift", "Deriva Cardiaca", "%", {}, cardiac_drift[-40:], cardiac_drift, sample_size=len(cardiac_drift)),
-        "gct_monthly": _chart("gct_monthly", "GCT mensile", "ms", {}, gct_month[-12:], gct_month, sample_size=len(gct_month)),
-        "gct_cadence": _chart("gct_cadence", "GCT vs Cadence", "ms", {}, gct_cad[-80:], gct_cad, sample_size=len(gct_cad)),
-        "cadence_speed_matrix": _chart("cadence_speed_matrix", "Cadence vs Speed Matrix", "km/h", {}, cad_speed[-80:], cad_speed, sample_size=len(cad_speed)),
+    needs_bio_runs = only_chart is None or only_chart in {
+        "ground_contact_stability",
+        "athletic_profile",
+        "efficiency_correlation",
+        "cadence_monthly",
+        "gct_monthly",
+        "gct_cadence",
+        "cadence_speed_matrix",
     }
+    bio_runs = []
+    gct_runs = []
+    cad_runs = []
+    if needs_bio_runs:
+        bio_runs = [r for r in telemetry_runs if any(_bio_value(r, k) is not None for k in ("gct", "cadence", "vr", "stride", "vo"))]
+        gct_runs = [r for r in bio_runs if _bio_value(r, "gct") is not None]
+        cad_runs = [r for r in bio_runs if _bio_value(r, "cadence") is not None]
+
+    if wants("ground_contact_stability"):
+        stability_rows = []
+        for key, group in sorted(_group_runs_by_bucket(gct_runs, resolution).items()):
+            gcts = [_bio_value(r, "gct") for r in group]
+            cads = [_bio_value(r, "cadence") for r in group]
+            vrs = [_bio_value(r, "vr") for r in group]
+            avg_gct = _avg(gcts)
+            avg_cad = _avg(cads)
+            avg_vr = _avg(vrs)
+            consistency = _stdev(gcts)
+            score = 100
+            if avg_gct:
+                score -= max(0, avg_gct - 250) * 0.18
+            if avg_cad:
+                score -= abs(avg_cad - 174) * 0.7
+            if avg_vr:
+                score -= max(0, avg_vr - 8.5) * 3
+            score -= consistency * 0.12
+            stability_rows.append({"date": key, "score": round(max(0, min(100, score)), 1), "gct": round(avg_gct or 0, 1), "cadence": round(avg_cad or 0, 1), "vertical_ratio": round(avg_vr or 0, 2), "runs": len(group)})
+        latest_stability = stability_rows[-1] if stability_rows else {}
+        charts["ground_contact_stability"] = _chart("ground_contact_stability", "Ground Contact Stability", "score", {"latest_score": latest_stability.get("score")}, stability_rows[-12:], stability_rows, latest_stability, len(stability_rows))
+
+    if wants("athletic_profile"):
+        avg_pace = _weighted_pace_sec(runs)
+        avg_hr = _avg([r.get("avg_hr") for r in runs])
+        avg_cad = _avg([_bio_value(r, "cadence") for r in cad_runs])
+        avg_gct = _avg([_bio_value(r, "gct") for r in gct_runs])
+        radar = [
+            {"axis": "Endurance", "value": round(min(100, sum(r.get("distance_km", 0) for r in runs) / max(1, len(runs)) * 7), 1)},
+            {"axis": "Speed", "value": round(min(100, ((vdot or 30) - 30) * 4), 1)},
+            {"axis": "Efficiency", "value": round(min(100, ((3600 / avg_pace) / avg_hr * 1000) if avg_pace and avg_hr else 0), 1)},
+            {"axis": "Cadence", "value": round(max(0, min(100, 100 - abs((avg_cad or 0) - 174) * 2)), 1) if avg_cad else 0},
+            {"axis": "Impact", "value": round(max(0, min(100, 100 - max(0, (avg_gct or 300) - 240) * 0.8)), 1) if avg_gct else 0},
+        ]
+        charts["athletic_profile"] = _chart("athletic_profile", "Athletic Profile", "score", {}, radar, radar, sample_size=len(bio_runs))
+
+    if wants("efficiency_correlation"):
+        pace_eff_runs = []
+        for r in telemetry_runs:
+            pace = _parse_pace_sec(r.get("avg_pace"))
+            hr = r.get("avg_hr")
+            if pace and hr:
+                pace_eff_runs.append({"date": r.get("date"), "pace": pace, "hr": hr, "efficiency": round((3600 / pace) / hr * 100, 3), "cadence": _bio_value(r, "cadence"), "gct": _bio_value(r, "gct")})
+        charts["efficiency_correlation"] = _chart("efficiency_correlation", "Efficiency Correlation", "index", {}, pace_eff_runs[-80:], pace_eff_runs, sample_size=len(pace_eff_runs))
+
+    if wants("adaptation"):
+        adaptation = []
+        for key, group in sorted(_group_runs_by_bucket(runs, resolution).items()):
+            adaptation.append({
+                "date": key,
+                "km": round(sum(r.get("distance_km", 0) for r in group), 1),
+                "pace": round(_weighted_pace_sec(group) or 0, 1),
+                "hr": round(_avg([r.get("avg_hr") for r in group]) or 0, 1),
+                "cadence": round(_avg([_bio_value(r, "cadence") for r in group]) or 0, 1),
+                "gct": round(_avg([_bio_value(r, "gct") for r in group]) or 0, 1),
+            })
+        charts["adaptation"] = _chart("adaptation", "Long-Term Training Adaptation", "mixed", {}, adaptation[-12:], adaptation, sample_size=len(adaptation))
+
+    if wants("paces"):
+        monthly_paces = _build_pace_trend_chart(runs, "month")["series_card"]
+        detail_paces = _build_pace_trend_chart(runs, resolution)["series_detail"]
+        charts["paces"] = _chart("paces", "Andamento Paces", "sec/km", {}, monthly_paces, detail_paces, sample_size=len(runs))
+
+    if wants("cadence_monthly"):
+        cadence_rows = []
+        for key, group in sorted(_group_runs_by_bucket(cad_runs, resolution).items()):
+            cadence_rows.append({"date": key, "cadence": round(_avg([_bio_value(r, "cadence") for r in group]) or 0, 1), "runs": len(group)})
+        charts["cadence_monthly"] = _chart("cadence_monthly", "Cadenza Mensile", "spm", {}, cadence_rows[-12:], cadence_rows, sample_size=len(cadence_rows))
+
+    if wants("cardiac_drift"):
+        cardiac_drift = []
+        for r in runs:
+            splits = r.get("splits") or []
+            if len(splits) < 4:
+                continue
+            half = len(splits) // 2
+            first = [_parse_pace_sec(s.get("pace")) for s in splits[:half]]
+            second = [_parse_pace_sec(s.get("pace")) for s in splits[half:]]
+            first_hr = _avg([s.get("hr") for s in splits[:half]])
+            second_hr = _avg([s.get("hr") for s in splits[half:]])
+            p1 = _avg(first)
+            p2 = _avg(second)
+            if p1 and p2:
+                cardiac_drift.append({"date": r.get("date"), "drift_pct": round((p2 - p1) / p1 * 100, 2), "hr_drift": round((second_hr or 0) - (first_hr or 0), 1), "distance_km": r.get("distance_km")})
+        charts["cardiac_drift"] = _chart("cardiac_drift", "Deriva Cardiaca", "%", {}, cardiac_drift[-40:], cardiac_drift, sample_size=len(cardiac_drift))
+
+    if wants("gct_monthly"):
+        gct_month = []
+        for key, group in sorted(_group_runs_by_bucket(gct_runs, resolution).items()):
+            row = {"date": key, "pace_530": None, "pace_500": None, "pace_445": None}
+            buckets = {"pace_530": [], "pace_500": [], "pace_445": []}
+            for r in group:
+                pace = _parse_pace_sec(r.get("avg_pace"))
+                gct = _bio_value(r, "gct")
+                if not pace or not gct:
+                    continue
+                zone = "pace_530" if pace >= 330 else "pace_500" if pace >= 300 else "pace_445"
+                buckets[zone].append(gct)
+            for zone, vals in buckets.items():
+                if vals:
+                    row[zone] = round(_avg(vals) or 0, 1)
+            gct_month.append(row)
+        charts["gct_monthly"] = _chart("gct_monthly", "GCT mensile", "ms", {}, gct_month[-12:], gct_month, sample_size=len(gct_month))
+
+    if wants("gct_cadence") or wants("cadence_speed_matrix"):
+        gct_cad = []
+        cad_speed = []
+        for r in bio_runs:
+            pace = _parse_pace_sec(r.get("avg_pace"))
+            cad = _bio_value(r, "cadence")
+            gct = _bio_value(r, "gct")
+            if cad and gct:
+                gct_cad.append({"date": r.get("date"), "cadence": round(cad, 1), "gct": round(gct, 1), "distance_km": r.get("distance_km")})
+            if pace and cad:
+                cad_speed.append({"date": r.get("date"), "speed": round(3600 / pace, 2), "cadence": round(cad, 1), "r": max(4, min(30, r.get("distance_km", 5))), "pace_sec": round(pace, 1)})
+        if wants("gct_cadence"):
+            charts["gct_cadence"] = _chart("gct_cadence", "GCT vs Cadence", "ms", {}, gct_cad[-80:], gct_cad, sample_size=len(gct_cad))
+        if wants("cadence_speed_matrix"):
+            charts["cadence_speed_matrix"] = _chart("cadence_speed_matrix", "Cadence vs Speed Matrix", "km/h", {}, cad_speed[-80:], cad_speed, sample_size=len(cad_speed))
+
+    return charts
 
 
 @app.get("/api/analytics/pro")
@@ -3238,60 +3363,119 @@ async def get_pro_analytics(
     if cached and cached.get("payload"):
         return cached["payload"]
 
-    q = valid_outdoor_runs_query(athlete_id)
-    all_runs = await db.runs.find(q).sort("date", 1).to_list(3000)
-    all_runs = [_normalise_run_quality_fields(dict(r)) for r in all_runs]
-    runs = _filter_runs_for_range(all_runs, range_key)
+    csv_only_biomech_charts = {
+        "ground_contact_stability",
+        "cadence_monthly",
+        "gct_monthly",
+        "gct_cadence",
+        "cadence_speed_matrix",
+    }
+    skip_runs_for_csv_chart = tab == "biomechanics" and chart in csv_only_biomech_charts
+    needs_splits = (
+        tab == "all"
+        or (tab == "potential_progress" and (not chart or chart == "best_efforts_progression"))
+        or (tab == "biomechanics" and (chart == "cardiac_drift" or (detail and not chart)))
+    )
+    all_runs = []
+    runs = []
+    if not skip_runs_for_csv_chart:
+        q = fast_valid_outdoor_runs_query(athlete_id)
+        all_runs = await db.runs.find(q, analytics_run_projection(include_splits=needs_splits)).sort("date", 1).to_list(3000)
+        all_runs = [_normalise_run_quality_fields(dict(r)) for r in all_runs]
+        runs = _filter_runs_for_range(all_runs, range_key)
     diagnostics = await _analytics_run_diagnostics(athlete_id, len(runs))
 
     profile_q = {"athlete_id": athlete_id}
     profile = await db.profile.find_one(profile_q) or {}
     max_hr = int(profile.get("max_hr", 190) or 190)
-    ff_docs = await db.fitness_freshness.find(profile_q).sort("date", 1).to_list(2000)
-    current_vdot = _calc_vdot(runs, max_hr) or _calc_vdot(all_runs, max_hr)
 
     sections: dict = {}
     if tab in {"all", "load_form"}:
-        load_charts = {
-            "fitness_freshness": _build_fitness_chart(ff_docs, range_key, resolved_resolution),
-            "trend_km": _build_trend_km_chart(runs, resolved_resolution),
-            "pace_zones": _build_pace_zone_chart(all_runs, 90),
-            "pace_distribution": _build_pace_distribution_chart(all_runs),
-            "effort_matrix": _build_effort_matrix_chart(runs),
+        load_builders = {
+            "trend_km": lambda: _build_trend_km_chart(runs, resolved_resolution),
+            "pace_zones": lambda: _build_pace_zone_chart(all_runs, 90),
+            "pace_distribution": lambda: _build_pace_distribution_chart(all_runs),
+            "effort_matrix": lambda: _build_effort_matrix_chart(runs),
         }
+        load_charts = {}
+        if not chart or chart == "fitness_freshness":
+            ff_docs = await db.fitness_freshness.find(profile_q).sort("date", 1).to_list(2000)
+            load_charts["fitness_freshness"] = _build_fitness_chart(ff_docs, range_key, resolved_resolution)
         if chart:
-            load_charts = {chart: load_charts[chart]} if chart in load_charts else {}
+            if chart in load_builders:
+                load_charts = {chart: load_builders[chart]()}
+            elif chart in load_charts:
+                load_charts = {chart: load_charts[chart]}
+            else:
+                load_charts = {}
+        else:
+            load_charts.update({key: builder() for key, builder in load_builders.items()})
         sections["load_form"] = {"charts": load_charts}
 
     if tab in {"all", "potential_progress"}:
-        vdot_chart, threshold_chart, race_chart = _build_vdot_chart(runs, max_hr, resolved_resolution)
-        potential_charts = {
-            "vo2_vdot_trend": vdot_chart,
-            "threshold_progression": threshold_chart,
-            "trend_passo": _build_pace_trend_chart(runs, resolved_resolution),
-            "race_evolution": race_chart,
-            "best_efforts_progression": _build_best_efforts_progression_chart(all_runs, resolved_resolution),
-        }
-        if chart:
-            potential_charts = {chart: potential_charts[chart]} if chart in potential_charts else {}
+        potential_charts = {}
+        vdot_chart_ids = {"vo2_vdot_trend", "threshold_progression", "race_evolution"}
+        if not chart or chart in vdot_chart_ids:
+            only_vdot_chart = chart if chart in vdot_chart_ids else None
+            vdot_chart, threshold_chart, race_chart = _build_vdot_chart(runs, max_hr, resolved_resolution, only_vdot_chart)
+            vdot_charts = {}
+            if vdot_chart:
+                vdot_charts["vo2_vdot_trend"] = vdot_chart
+            if threshold_chart:
+                vdot_charts["threshold_progression"] = threshold_chart
+            if race_chart:
+                vdot_charts["race_evolution"] = race_chart
+            potential_charts.update(vdot_charts if not chart else {chart: vdot_charts[chart]} if chart in vdot_charts else {})
+        if not chart or chart == "trend_passo":
+            potential_charts["trend_passo"] = _build_pace_trend_chart(runs, resolved_resolution)
+        if not chart or chart == "best_efforts_progression":
+            potential_charts["best_efforts_progression"] = _build_best_efforts_progression_chart(all_runs, resolved_resolution)
+        if chart and chart not in potential_charts:
+            potential_charts = {}
         sections["potential_progress"] = {"charts": potential_charts}
 
     if tab in {"all", "biomechanics"}:
-        garmin_csv_docs = await db.garmin_csv_data.find({
-            "athlete_id": athlete_id,
-            "$or": [
-                {"avg_ground_contact_time_ms": {"$ne": None}},
-                {"avg_vertical_oscillation_cm": {"$ne": None}},
-                {"avg_vertical_ratio_pct": {"$ne": None}},
-                {"avg_stride_length_m": {"$ne": None}},
-                {"avg_cadence_spm": {"$ne": None}},
-            ],
-        }).sort("date", 1).to_list(3000)
-        garmin_csv_docs = _filter_runs_for_range(garmin_csv_docs, range_key)
-        biomech_charts = _build_biomechanics_charts(runs, resolved_resolution, current_vdot, garmin_csv_docs)
-        if chart:
-            biomech_charts = {chart: biomech_charts[chart]} if chart in biomech_charts else {}
+        current_vdot = None
+        if not chart or chart == "athletic_profile":
+            current_vdot = _calc_vdot(runs, max_hr) or _calc_vdot(all_runs, max_hr)
+        csv_chart_ids = {
+            "ground_contact_stability",
+            "athletic_profile",
+            "efficiency_correlation",
+            "cadence_monthly",
+            "gct_monthly",
+            "gct_cadence",
+            "cadence_speed_matrix",
+        }
+        garmin_csv_docs = []
+        if not chart or chart in csv_chart_ids:
+            csv_query = {
+                "athlete_id": athlete_id,
+                "$or": [
+                    {"avg_ground_contact_time_ms": {"$ne": None}},
+                    {"avg_vertical_oscillation_cm": {"$ne": None}},
+                    {"avg_vertical_ratio_pct": {"$ne": None}},
+                    {"avg_stride_length_m": {"$ne": None}},
+                    {"avg_cadence_spm": {"$ne": None}},
+                ],
+            }
+            csv_cutoff = _range_cutoff(range_key, _latest_analytics_date(runs) or dt.date.today())
+            if csv_cutoff:
+                csv_query["date"] = {"$gte": csv_cutoff.isoformat()}
+            garmin_csv_docs = await db.garmin_csv_data.find(csv_query, garmin_csv_projection()).sort("date", 1).to_list(3000)
+            garmin_csv_docs = _filter_runs_for_range(garmin_csv_docs, range_key)
+            if skip_runs_for_csv_chart and not garmin_csv_docs:
+                q = fast_valid_outdoor_runs_query(athlete_id)
+                all_runs = await db.runs.find(q, analytics_run_projection()).sort("date", 1).to_list(3000)
+                all_runs = [_normalise_run_quality_fields(dict(r)) for r in all_runs]
+                runs = _filter_runs_for_range(all_runs, range_key)
+        biomech_charts = _build_biomechanics_charts(runs, resolved_resolution, current_vdot, garmin_csv_docs, chart)
         sections["biomechanics"] = {"charts": biomech_charts}
+
+    if not detail:
+        for section in sections.values():
+            for chart_payload in section.get("charts", {}).values():
+                chart_payload["series_detail"] = chart_payload.get("series_card", [])
 
     payload = {
         "generated_at": dt.datetime.now().isoformat(),

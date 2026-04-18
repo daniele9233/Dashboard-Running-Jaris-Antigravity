@@ -674,6 +674,7 @@ interface AnalyticsV2Props {
   maxHr?: number;
   thresholdPace?: string | null;
   proCharts?: Record<string, ProAnalyticsChart>;
+  onRequestChartDetail?: (chartId: string) => void;
   onlySections?: AnalyticsV2Section[];
   hideSections?: AnalyticsV2Section[];
 }
@@ -697,7 +698,7 @@ function formatPaceStr(dec: number): string {
 
 export function AnalyticsV2({
   vdot, zoneDistribution, gctData, runs = [],
-  ffHistory = [], maxHr, thresholdPace, proCharts = {}, onlySections, hideSections = [],
+  ffHistory = [], maxHr, thresholdPace, proCharts = {}, onRequestChartDetail, onlySections, hideSections = [],
 }: AnalyticsV2Props) {
   const { t } = useTranslation();
   const hasOnlySections = (onlySections?.length ?? 0) > 0;
@@ -845,6 +846,10 @@ export function AnalyticsV2({
   const [zonesExpanded, setZonesExpanded] = useState(false);
   const [gctExpanded, setGctExpanded] = useState(false);
   const [vdotV2Expanded, setVdotV2Expanded] = useState(false);
+  const openExpandedChart = (chartId: string, setter: (open: boolean) => void) => {
+    onRequestChartDetail?.(chartId);
+    setter(true);
+  };
 
   function formatPaceSecs(secs: number): string {
     if (!secs || secs <= 0) return '--';
@@ -1080,7 +1085,7 @@ export function AnalyticsV2({
           icon={Activity}
           title={t("statistics.performanceManagementChart")}
           subtitle="Fitness (CTL) · Fatigue (ATL) · Form (TSB) — 90 giorni"
-          onExpand={() => setPmcExpanded(true)}
+          onExpand={() => openExpandedChart('fitness_freshness', setPmcExpanded)}
           tooltip={{
             title: 'PMC — BANISTER MODEL',
             lines: [
@@ -1137,7 +1142,7 @@ export function AnalyticsV2({
            icon={Zap}
            title="Gara Previsioni"
            subtitle="Stima prestazioni gara basata su VDOT — 12 mesi"
-           onExpand={() => setAtExpanded(true)}
+           onExpand={() => openExpandedChart('threshold_progression', setAtExpanded)}
            tooltip={{
              title: 'PREVISIONI GARA',
              lines: [
@@ -1252,7 +1257,7 @@ export function AnalyticsV2({
                       Frequenza C.
                     </span>
                     <button
-                      onClick={() => setAtExpanded(true)}
+                      onClick={() => openExpandedChart('threshold_progression', setAtExpanded)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#2A2A2A] text-[#555] hover:text-[#D4FF00]"
                       title="Espandi"
                     >
@@ -1351,7 +1356,7 @@ export function AnalyticsV2({
                icon={Zap}
                title="VO₂ Max / VDOT Trend"
                subtitle="Storico 12 mesi — stima Jack Daniels"
-               onExpand={() => setVdotV2Expanded(true)}
+              onExpand={() => openExpandedChart('vo2_vdot_trend', setVdotV2Expanded)}
                tooltip={{
                  title: 'VO₂MAX / VDOT TREND',
                  lines: [
@@ -1499,7 +1504,7 @@ export function AnalyticsV2({
             icon={TrendingUp}
             title={t("statistics.paceTrend")}
             subtitle="Passo medio mensile — Y invertita (più basso = più veloce)"
-            onExpand={() => setPaceExpanded(true)}
+            onExpand={() => openExpandedChart('trend_passo', setPaceExpanded)}
             tooltip={{
               title: 'ANDAMENTO PACE',
               lines: [
@@ -1577,7 +1582,7 @@ export function AnalyticsV2({
             icon={Heart}
             title={t("statistics.cardiacDrift")}
             subtitle={`${driftRunLabel} — Passo vs FC per km split`}
-            onExpand={() => setDriftExpanded(true)}
+            onExpand={() => openExpandedChart('cardiac_drift', setDriftExpanded)}
             tooltip={{
               title: 'CARDIAC DRIFT / DECOUPLING',
               lines: [
@@ -1690,7 +1695,7 @@ export function AnalyticsV2({
             icon={Timer}
             title={t("statistics.timeInZones")}
             subtitle="Distribuzione tempo per zona FC"
-            onExpand={() => setZonesExpanded(true)}
+            onExpand={() => openExpandedChart('pace_zones', setZonesExpanded)}
             tooltip={{
               title: 'DISTRIBUZIONE ZONE FC',
               lines: [
@@ -1776,7 +1781,7 @@ export function AnalyticsV2({
           icon={Footprints}
           title="GCT vs Cadence"
           subtitle={`Tempo Contatto Suolo (ms) vs Cadenza (spm) · ${scatterData.length} corse`}
-          onExpand={() => setGctExpanded(true)}
+          onExpand={() => openExpandedChart('gct_cadence', setGctExpanded)}
           tooltip={{
             title: 'GCT × CADENZA',
             lines: [

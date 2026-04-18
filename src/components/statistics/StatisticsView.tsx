@@ -423,14 +423,66 @@ export function StatisticsView() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('analytics');
   const [expandedChart, setExpandedChart] = useState<null | 'paces' | 'cadence' | 'gctMonthly'>(null);
+  const [proSections, setProSections] = useState<ProAnalyticsResponse['sections']>({});
+  const [proError, setProError] = useState<string | null>(null);
+  const detailRequestsRef = useRef<Set<string>>(new Set());
   const { data: analyticsData } = useApi<AnalyticsResponse>(getAnalytics);
   const { data: vdotData } = useApi<VdotPacesResponse>(getVdotPaces);
   const { data: runsData } = useApi<RunsResponse>(getRuns);
   const { data: gctData } = useApi<GctAnalysisResponse>(getGctAnalysis);
   const { data: dashData } = useApi<DashboardResponse>(getDashboard);
-  const { data: proData, error: proError, refetch: refetchProAnalytics } = useApi<ProAnalyticsResponse>(() =>
-    getProAnalytics({ tab: 'all', range: '12M', resolution: 'auto', detail: true })
-  );
+
+  type ProTab = 'load_form' | 'potential_progress' | 'biomechanics';
+  const activeProTab = React.useMemo<ProTab | null>(() => {
+    if (activeTab === 'analytics') return 'load_form';
+    if (activeTab === 'analyticsv2') return 'potential_progress';
+    if (activeTab === 'analyticsv3') return 'biomechanics';
+    return null;
+  }, [activeTab]);
+
+  const mergeProAnalytics = React.useCallback((response: ProAnalyticsResponse) => {
+    setProSections((prev) => {
+      const next: ProAnalyticsResponse['sections'] = { ...prev };
+      (Object.keys(response.sections) as ProTab[]).forEach((sectionKey) => {
+        const incoming = response.sections[sectionKey];
+        if (!incoming) return;
+        next[sectionKey] = {
+          charts: {
+            ...(next[sectionKey]?.charts ?? {}),
+            ...incoming.charts,
+          },
+        };
+      });
+      return next;
+    });
+  }, []);
+
+  const fetchProSection = React.useCallback(async (tab: ProTab) => {
+    try {
+      setProError(null);
+      const response = await getProAnalytics({ tab, range: '12M', resolution: 'auto', detail: false });
+      mergeProAnalytics(response);
+    } catch (err) {
+      setProError(err instanceof Error ? err.message : 'Errore analytics');
+    }
+  }, [mergeProAnalytics]);
+
+  const requestProChartDetail = React.useCallback((tab: ProTab, chart: string) => {
+    const key = `${tab}:${chart}`;
+    if (detailRequestsRef.current.has(key)) return;
+    detailRequestsRef.current.add(key);
+    getProAnalytics({ tab, range: '12M', resolution: 'auto', detail: true, chart })
+      .then(mergeProAnalytics)
+      .catch((err) => {
+        detailRequestsRef.current.delete(key);
+        setProError(err instanceof Error ? err.message : 'Errore analytics');
+      });
+  }, [mergeProAnalytics]);
+
+  React.useEffect(() => {
+    if (!activeProTab) return;
+    void fetchProSection(activeProTab);
+  }, [activeProTab, fetchProSection]);
 
   const runs = runsData?.runs ?? [];
   const statsRuns = React.useMemo(
@@ -445,8 +497,8 @@ export function StatisticsView() {
   const zoneDistribution = analyticsData?.zone_distribution ?? [];
   const ffHistory = dashData?.fitness_freshness ?? [];
   const prevCtl = ffHistory.length >= 2 ? ffHistory[ffHistory.length - 2].ctl : null;
-  const rawLoadCharts: Record<string, ProAnalyticsChart> = proData?.sections.load_form?.charts ?? {};
-  const rawPotentialCharts: Record<string, ProAnalyticsChart> = proData?.sections.potential_progress?.charts ?? {};
+  const rawLoadCharts: Record<string, ProAnalyticsChart> = proSections.load_form?.charts ?? {};
+  const rawPotentialCharts: Record<string, ProAnalyticsChart> = proSections.potential_progress?.charts ?? {};
   const loadCharts: Record<string, ProAnalyticsChart> = {
     ...rawLoadCharts,
     pace_zones: preferChart(rawLoadCharts.pace_zones, fallbackCharts.load_form.pace_zones),
@@ -457,7 +509,7 @@ export function StatisticsView() {
     ...rawPotentialCharts,
     best_efforts_progression: preferChart(rawPotentialCharts.best_efforts_progression, fallbackCharts.potential_progress.best_efforts_progression),
   };
-  const biomechCharts: Record<string, ProAnalyticsChart> = proData?.sections.biomechanics?.charts ?? {};
+  const biomechCharts: Record<string, ProAnalyticsChart> = proSections.biomechanics?.charts ?? {};
 
   // ── Monthly elevation from runs ───────────────────────────
   const elevationData = React.useMemo(() => {
@@ -596,6 +648,16 @@ export function StatisticsView() {
       </LineChart>
     </ResponsiveContainer>
   );
+  };
+
+  const openBiomechModal = (modal: 'paces' | 'cadence' | 'gctMonthly') => {
+    const chartByModal = {
+      paces: 'paces',
+      cadence: 'cadence_monthly',
+      gctMonthly: 'gct_monthly',
+    } as const;
+    requestProChartDetail('biomechanics', chartByModal[modal]);
+    setExpandedChart(modal);
   };
 
   return (
@@ -743,7 +805,10 @@ export function StatisticsView() {
                </div>
                <div>
                  {/* ── Pace Zone Distribution ── */}
-                  <AnalyticsV4PaceZoneDistribution chart={loadCharts.pace_zones} />
+                  <AnalyticsV4PaceZoneDistribution
+                    chart={loadCharts.pace_zones}
+                    onRequestDetail={() => requestProChartDetail('load_form', 'pace_zones')}
+                  />
                </div>
              </div>
 
@@ -1117,8 +1182,14 @@ export function StatisticsView() {
              )}
 
              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-               <AnalyticsV5PaceDistributionBell chart={loadCharts.pace_distribution} />
-               <AnalyticsV5EffortMatrix chart={loadCharts.effort_matrix} />
+               <AnalyticsV5PaceDistributionBell
+                 chart={loadCharts.pace_distribution}
+                 onRequestDetail={() => requestProChartDetail('load_form', 'pace_distribution')}
+               />
+               <AnalyticsV5EffortMatrix
+                 chart={loadCharts.effort_matrix}
+                 onRequestDetail={() => requestProChartDetail('load_form', 'effort_matrix')}
+               />
              </div>
 
           </div>
@@ -1138,6 +1209,7 @@ export function StatisticsView() {
               maxHr={dashData?.profile?.max_hr}
               thresholdPace={vdotData?.paces?.threshold}
               proCharts={potentialCharts}
+              onRequestChartDetail={(chartId) => requestProChartDetail('potential_progress', chartId)}
               hideSections={['pmc', 'drift', 'zones', 'gct']}
             />
             {false && (
@@ -1248,7 +1320,10 @@ export function StatisticsView() {
                 </p>
               )}
             </Card>
-            <AnalyticsV5BestEffortsProgression chart={potentialCharts.best_efforts_progression} />
+            <AnalyticsV5BestEffortsProgression
+              chart={potentialCharts.best_efforts_progression}
+              onRequestDetail={() => requestProChartDetail('potential_progress', 'best_efforts_progression')}
+            />
           </div>
         )}
 
@@ -1257,9 +1332,15 @@ export function StatisticsView() {
         ════════════════════════════════════════════════════ */}
         {activeTab === 'analyticsv3' && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <AnalyticsV3 data={biomechCharts} onTelemetrySync={async () => {
+            <AnalyticsV3 data={biomechCharts} onRequestChartDetail={(chartId) => requestProChartDetail('biomechanics', chartId)} onTelemetrySync={async () => {
               const result = await linkGarminCsv();
-              refetchProAnalytics();
+              detailRequestsRef.current.clear();
+              setProSections((prev) => {
+                const next = { ...prev };
+                delete next.biomechanics;
+                return next;
+              });
+              void fetchProSection('biomechanics');
               return result as GarminCsvLinkResult;
             }} />
             <SectionLabel>BIOMECCANICA — PACES · CADENZA · DERIVA · GCT</SectionLabel>
@@ -1271,7 +1352,7 @@ export function StatisticsView() {
                   iconColor={PRO_ACCENT}
                   title="Andamento Paces"
                   variant="pro"
-                  onExpand={() => setExpandedChart('paces')}
+                  onExpand={() => openBiomechModal('paces')}
                   subtitle="Easy · Tempo · Rapido — trend storico"
                   tooltip={{
                     title: 'ANDAMENTO PACES',
@@ -1294,7 +1375,7 @@ export function StatisticsView() {
                   iconColor={PRO_ACCENT}
                   title="Cadenza Mensile"
                   variant="pro"
-                  onExpand={() => setExpandedChart('cadence')}
+                  onExpand={() => openBiomechModal('cadence')}
                   subtitle="Passi/minuto — media mensile"
                   tooltip={{
                     title: 'CADENZA (SPM)',
@@ -1322,7 +1403,7 @@ export function StatisticsView() {
                   iconColor={PRO_ACCENT}
                   title="Tempo Contatto Suolo (GCT)"
                   variant="pro"
-                  onExpand={() => setExpandedChart('gctMonthly')}
+                  onExpand={() => openBiomechModal('gctMonthly')}
                   subtitle={`Media mensile per fascia di pace · ${gctData.summary.total_runs} corse${gctData.summary.avg_gct ? ` · GCT medio: ${gctData.summary.avg_gct} ms` : ''}`}
                   tooltip={{
                     title: 'GROUND CONTACT TIME',
@@ -1350,9 +1431,13 @@ export function StatisticsView() {
                 maxHr={dashData?.profile?.max_hr}
                 thresholdPace={vdotData?.paces?.threshold}
                 proCharts={biomechCharts}
+                onRequestChartDetail={(chartId) => requestProChartDetail('biomechanics', chartId)}
                 onlySections={['gct']}
               />
-              <AnalyticsV4CadenceSpeedMatrix chart={biomechCharts.cadence_speed_matrix} />
+              <AnalyticsV4CadenceSpeedMatrix
+                chart={biomechCharts.cadence_speed_matrix}
+                onRequestDetail={() => requestProChartDetail('biomechanics', 'cadence_speed_matrix')}
+              />
             </div>
           </div>
         )}
