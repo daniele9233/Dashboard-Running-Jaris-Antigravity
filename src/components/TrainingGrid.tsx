@@ -454,6 +454,7 @@ interface GenerateResult {
     optimistic_rate?: number;
     original_target_time?: string;
     suggested_weeks?: number;
+    suggested_timeframe?: string;
   };
   race_predictions: Record<string, string>;
 }
@@ -1253,7 +1254,7 @@ export function TrainingGrid() {
                 { color: SESSION_COLORS.long,      label: 'Long Run' },
                 { color: SESSION_COLORS.strength,  label: 'Riposo + Forza' },
                 { color: '#2A2A2A',                label: 'Riposo', opacity: 0.3 },
-              ] as const).map(({ color, label, opacity }) => (
+              ] as Array<{ color: string; label: string; opacity?: number }>).map(({ color, label, opacity }) => (
                 <div key={label} className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: color, opacity: (opacity as number | undefined) ?? 0.9 }} />
                   <span className="text-xs text-gray-500">{label}</span>

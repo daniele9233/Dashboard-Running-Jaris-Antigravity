@@ -734,14 +734,36 @@ export function AnalyticsV2({
     return [];
   }, [ffHistory]);
 
-  // ── Pace Trend: monthly avg pace from runs ───────────────────────────
+  const toPaceTrendData = React.useCallback((points?: Array<Record<string, any>>) => (
+    points ?? []
+  )
+    .filter((d) => d.pace)
+    .map((d) => ({
+      month: String(d.date),
+      pace: Math.round((Number(d.pace) / 60) * 100) / 100,
+      runs: Number(d.runs ?? 0),
+    })), []);
+
+  const toThresholdTrendData = React.useCallback((points?: Array<Record<string, any>>) => (
+    points ?? []
+  )
+    .filter((d) => d.threshold_pace)
+    .map((d) => ({
+      month: String(d.date),
+      pace: Math.round(Number(d.threshold_pace)),
+      hr: Math.round((maxHr ?? 190) * 0.88),
+    })), [maxHr]);
+
+  const toVdotTrendData = React.useCallback((points?: Array<Record<string, any>>) => (
+    points ?? []
+  )
+    .filter((d) => d.vdot)
+    .map((d) => ({ name: String(d.date), vdot: Number(d.vdot) })), []);
+
+  // ── Pace Trend: monthly card, weekly detail when expanded ────────────
   const paceChartData = React.useMemo(() => {
-    const backend = proCharts.trend_passo?.series_card;
-    if (backend?.length) {
-      return backend
-        .filter((d) => d.pace)
-        .map((d) => ({ month: String(d.date), pace: Math.round((Number(d.pace) / 60) * 100) / 100 }));
-    }
+    const backend = toPaceTrendData(proCharts.trend_passo?.series_card);
+    if (backend.length) return backend;
     const now = new Date();
     const data = Array.from({ length: 10 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (9 - i), 1);
@@ -760,7 +782,12 @@ export function AnalyticsV2({
       };
     }).filter((d): d is { month: string; pace: number } => d.pace !== null && d.pace > 0);
     return data;
-  }, [runs, proCharts]);
+  }, [runs, proCharts, toPaceTrendData]);
+
+  const paceDetailData = React.useMemo(() => {
+    const backend = toPaceTrendData(proCharts.trend_passo?.series_detail);
+    return backend.length ? backend : paceChartData;
+  }, [paceChartData, proCharts, toPaceTrendData]);
 
   // ── Cardiac Drift: splits of most recent long run with HR ────────────
   const { driftChartData, driftRunLabel, driftStartKm } = React.useMemo(() => {
@@ -788,18 +815,20 @@ export function AnalyticsV2({
   const zonesChartData = React.useMemo(() => {
     const backend = proCharts.pace_zones?.series_card;
     if (backend?.length) {
-      return backend.map((z) => ({
-        z: String(z.zone ?? ''),
-        label: String(z.name ?? z.zone ?? ''),
+      return backend.map((z, i) => ({
+        zone: String(z.zone ?? `Z${i + 1}`),
+        name: String(z.name ?? z.zone ?? ''),
         min: Number(z.km ?? z.minutes ?? 0),
         pct: Number(z.pct ?? 0),
+        color: String(z.color ?? zonesV2[i]?.color ?? NEON),
       }));
     }
-    return (zoneDistribution ?? []).map((z) => ({
-      z: z.zone,
-      label: z.name,
+    return (zoneDistribution ?? []).map((z, i) => ({
+      zone: z.zone,
+      name: z.name,
       min: z.minutes,
       pct: z.pct,
+      color: zonesV2.find((fallback) => fallback.zone === z.zone)?.color ?? zonesV2[i]?.color ?? NEON,
     }));
   }, [proCharts, zoneDistribution]);
   const totalZoneMin = zonesChartData.reduce((s, z) => s + z.min, 0);
@@ -827,16 +856,8 @@ export function AnalyticsV2({
   const MONTH_SHORT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 
   const atTrendData = React.useMemo(() => {
-    const backend = proCharts.threshold_progression?.series_card;
-    if (backend?.length) {
-      return backend
-        .filter((d) => d.threshold_pace)
-        .map((d) => ({
-          month: String(d.date),
-          pace: Math.round(Number(d.threshold_pace)),
-          hr: Math.round((maxHr ?? 190) * 0.88),
-        }));
-    }
+    const backend = toThresholdTrendData(proCharts.threshold_progression?.series_card);
+    if (backend.length) return backend;
     const now = new Date();
     const monthly = Array.from({ length: 12 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
@@ -860,7 +881,12 @@ export function AnalyticsV2({
     }).filter((d): d is { month: string; pace: number; hr: number } => d !== null);
 
     return monthly;
-  }, [runs, maxHr, proCharts]);
+  }, [runs, maxHr, proCharts, toThresholdTrendData]);
+
+  const atTrendDetailData = React.useMemo(() => {
+    const backend = toThresholdTrendData(proCharts.threshold_progression?.series_detail);
+    return backend.length ? backend : atTrendData;
+  }, [atTrendData, proCharts, toThresholdTrendData]);
 
   // ── VDOT estimator ────────────────────────────────────────────────────
   function estimateVdotV2(distanceKm: number, durationMin: number): number | null {
@@ -924,12 +950,8 @@ export function AnalyticsV2({
   }, [runs, vdot, maxHr]);
 
   const vdotChartData = React.useMemo(() => {
-    const backend = proCharts.vo2_vdot_trend?.series_card;
-    if (backend?.length) {
-      return backend
-        .filter((d) => d.vdot)
-        .map((d) => ({ name: String(d.date), vdot: Number(d.vdot) }));
-    }
+    const backend = toVdotTrendData(proCharts.vo2_vdot_trend?.series_card);
+    if (backend.length) return backend;
     const now = new Date();
     return Array.from({ length: 12 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
@@ -940,7 +962,12 @@ export function AnalyticsV2({
         vdot: vdotHistory[i],
       };
     }).filter((d): d is { name: string; vdot: number } => d.vdot !== null);
-  }, [vdotHistory, proCharts]);
+  }, [vdotHistory, proCharts, toVdotTrendData]);
+
+  const vdotDetailData = React.useMemo(() => {
+    const backend = toVdotTrendData(proCharts.vo2_vdot_trend?.series_detail);
+    return backend.length ? backend : vdotChartData;
+  }, [proCharts, toVdotTrendData, vdotChartData]);
 
   const atPanel = React.useMemo(() => {
     const latest = atTrendData[atTrendData.length - 1] ?? null;
@@ -1018,7 +1045,7 @@ export function AnalyticsV2({
   const fitnessEvolutionCards = React.useMemo<FitnessEvolutionCardData[]>(() => {
     const currentVdot = vdot ?? (vdotChartData.length > 0 ? vdotChartData[vdotChartData.length - 1]?.vdot : null);
     const sourceVdot = currentVdot ?? 52;
-    const raceByDistance = new Map(racePredictionCards.map(card => [card.distance, card]));
+    const raceByDistance = new Map<string, RacePredictionCardData>(racePredictionCards.map(card => [card.distance, card]));
     const definitions = [
       { key: '5K', title: '5KM EVOLUTION', distanceKm: 5, unit: '/km', color: NEON },
       { key: '10K', title: '10KM EVOLUTION', distanceKm: 10, unit: '/km', color: NEON },
@@ -1621,8 +1648,6 @@ export function AnalyticsV2({
                   );
                 }} />
                 {/* Divergence zone highlight */}
-                {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
-                {/* @ts-expect-error recharts ReferenceArea generic typing issue */}
                 <ReferenceArea yAxisId="pace" x1={driftStartKm} x2={driftChartData[driftChartData.length - 1]?.km ?? '14'} fill="url(#v2-drift-area)" />
                 <ReferenceLine yAxisId="pace" x={driftStartKm} stroke="#F43F5E" strokeDasharray="4 4" strokeOpacity={0.5} />
                 {/* Pace line */}
@@ -1849,8 +1874,9 @@ export function AnalyticsV2({
 
       {/* ── MODAL EXPANDED ── */}
       {showCore && atExpanded && (() => {
-        const first = atTrendData[0];
-        const last = atTrendData[atTrendData.length - 1];
+        const expandedAtData = atTrendDetailData.length ? atTrendDetailData : atTrendData;
+        const first = expandedAtData[0];
+        const last = expandedAtData[expandedAtData.length - 1];
         const improvement = first && last ? first.pace - last.pace : 0;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
@@ -1864,7 +1890,7 @@ export function AnalyticsV2({
                   </div>
                   <div>
                     <h2 className="text-white font-black text-xl tracking-widest uppercase italic">Anaerobic Threshold Trend</h2>
-                    <p className="text-[11px] mt-0.5" style={{ color: LABEL_COLOR }}>Analisi storica passo e FC di soglia anaerobica</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: LABEL_COLOR }}>Dettaglio settimanale passo e FC di soglia anaerobica</p>
                   </div>
                 </div>
                 <button
@@ -1878,7 +1904,7 @@ export function AnalyticsV2({
               {/* Expanded chart */}
               <div className="flex-1 w-full" style={{ minHeight: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={atTrendData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
+                  <ComposedChart data={expandedAtData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
                     <defs>
                       <linearGradient id="v2-at-grad-exp" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor={NEON} stopOpacity={0.4} />
@@ -1886,7 +1912,7 @@ export function AnalyticsV2({
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-                    <XAxis dataKey="month" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                    <XAxis dataKey="month" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} interval="preserveStartEnd" minTickGap={22} />
                     <YAxis yAxisId="pace" reversed stroke="#555" fontSize={12} tickLine={false} axisLine={false}
                       tickFormatter={formatPaceSecs} domain={['dataMin - 15', 'dataMax + 15']}
                       label={{ value: 'Pace (min/km)', angle: -90, position: 'insideLeft', fill: '#555', dy: 55, fontSize: 10 }} />
@@ -2000,7 +2026,8 @@ export function AnalyticsV2({
 
       {/* ── PACE TREND MODAL ── */}
       {showCore && paceExpanded && (() => {
-        const paces = paceChartData.map(d => d.pace);
+        const expandedPaceData = paceDetailData.length ? paceDetailData : paceChartData;
+        const paces = expandedPaceData.map(d => d.pace);
         const fastestPace = paces.length > 0 ? Math.min(...paces) : null;
         const slowestPace = paces.length > 0 ? Math.max(...paces) : null;
         const trendSecs = paces.length >= 2 ? Math.round((paces[0] - paces[paces.length - 1]) * 60) : null;
@@ -2014,7 +2041,7 @@ export function AnalyticsV2({
                   </div>
                   <div>
                     <h2 className="text-white font-black text-xl tracking-widest uppercase italic">Pace Trend</h2>
-                    <p className="text-[11px] mt-0.5" style={{ color: LABEL_COLOR }}>Passo medio mensile negli ultimi 10 mesi</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: LABEL_COLOR }}>Passo medio settimanale negli ultimi 12 mesi</p>
                   </div>
                 </div>
                 <button onClick={() => setPaceExpanded(false)} className="p-2 bg-[#222] hover:bg-[#2A2A2A] rounded-full text-white transition-colors border border-[#333]">
@@ -2023,7 +2050,7 @@ export function AnalyticsV2({
               </div>
               <div className="flex-1 w-full" style={{ minHeight: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={paceChartData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
+                  <AreaChart data={expandedPaceData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
                     <defs>
                       <linearGradient id="v2-pace-grad-exp" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={NEON} stopOpacity={0.4} />
@@ -2031,7 +2058,7 @@ export function AnalyticsV2({
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-                    <XAxis dataKey="month" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                    <XAxis dataKey="month" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} interval="preserveStartEnd" minTickGap={22} />
                     <YAxis stroke="#555" fontSize={12} tickLine={false} axisLine={false} reversed
                       domain={['dataMin - 0.2', 'dataMax + 0.2']}
                       tickFormatter={(v) => { const m = Math.floor(v); const s = Math.round((v - m) * 60); return `${m}:${s.toString().padStart(2, '0')}`; }} />
@@ -2128,7 +2155,6 @@ export function AnalyticsV2({
                         </div>
                       );
                     }} />
-                    {/* @ts-expect-error recharts typing */}
                     <ReferenceArea yAxisId="pace" x1={driftStartKm} x2={driftChartData[driftChartData.length - 1]?.km ?? '14'} fill="url(#v2-drift-area-exp)" />
                     <ReferenceLine yAxisId="pace" x={driftStartKm} stroke="#F43F5E" strokeDasharray="4 4" strokeOpacity={0.5} />
                     <Line yAxisId="pace" type="monotone" dataKey="pace" name="Pace" stroke={NEON} strokeWidth={3}
@@ -2306,9 +2332,10 @@ export function AnalyticsV2({
 
       {/* ── VDOT V2 MODAL ── */}
       {showCore && vdotV2Expanded && (() => {
-        const currentVdot = vdot ?? (vdotChartData.length > 0 ? vdotChartData[vdotChartData.length - 1]?.vdot : null);
-        const olderVdot = vdotChartData.length >= 4 ? vdotChartData[vdotChartData.length - 4]?.vdot : null;
-        const recentVdot = vdotChartData.length >= 1 ? vdotChartData[vdotChartData.length - 1]?.vdot : null;
+        const expandedVdotData = vdotDetailData.length ? vdotDetailData : vdotChartData;
+        const currentVdot = vdot ?? (expandedVdotData.length > 0 ? expandedVdotData[expandedVdotData.length - 1]?.vdot : null);
+        const olderVdot = expandedVdotData.length >= 4 ? expandedVdotData[expandedVdotData.length - 4]?.vdot : null;
+        const recentVdot = expandedVdotData.length >= 1 ? expandedVdotData[expandedVdotData.length - 1]?.vdot : null;
         const trend3m = (recentVdot != null && olderVdot != null) ? (recentVdot - olderVdot) : null;
         const tPace = currentVdot ? calcTPaceV2(currentVdot) : null;
         return (
@@ -2321,7 +2348,7 @@ export function AnalyticsV2({
                   </div>
                   <div>
                     <h2 className="text-white font-black text-xl tracking-widest uppercase italic">VO₂ Max / VDOT Trend</h2>
-                    <p className="text-[11px] mt-0.5" style={{ color: LABEL_COLOR }}>Storico 12 mesi — stima Jack Daniels</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: LABEL_COLOR }}>Dettaglio settimanale — stima Jack Daniels</p>
                   </div>
                 </div>
                 <button onClick={() => setVdotV2Expanded(false)} className="p-2 bg-[#222] hover:bg-[#2A2A2A] rounded-full text-white transition-colors border border-[#333]">
@@ -2330,7 +2357,7 @@ export function AnalyticsV2({
               </div>
               <div className="flex-1 w-full" style={{ minHeight: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={vdotChartData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
+                  <AreaChart data={expandedVdotData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
                     <defs>
                       <linearGradient id="v2-vdot-grad-exp" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={NEON} stopOpacity={0.35} />
@@ -2338,7 +2365,7 @@ export function AnalyticsV2({
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-                    <XAxis dataKey="name" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                    <XAxis dataKey="name" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} interval="preserveStartEnd" minTickGap={22} />
                     <YAxis stroke="#555" fontSize={12} tickLine={false} axisLine={false}
                       domain={['dataMin - 2', 'dataMax + 2']} tickFormatter={(v) => v.toFixed(0)} />
                     <Tooltip content={({ active, payload }) => {

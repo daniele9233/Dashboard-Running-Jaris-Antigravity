@@ -35,6 +35,7 @@ const MID = '#333';
 // â”€â”€â”€ Micro helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const mono: React.CSSProperties = { fontFamily: 'monospace' };
+const chartMono = { fontFamily: 'monospace' } as const;
 const tag  = (txt: string, c = DM) => (
   <span style={{ ...mono, fontSize: 8, fontWeight: 900, letterSpacing: '0.25em', textTransform: 'uppercase', color: c }}>{txt}</span>
 );
@@ -223,8 +224,8 @@ function CPCurve() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-              <XAxis dataKey="t" tick={{ fill: DM, fontSize: 9, ...mono, fontWeight: 900 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: DM, fontSize: 9, ...mono, fontWeight: 900 }} axisLine={false} tickLine={false} domain={[140,440]} />
+              <XAxis dataKey="t" tick={{ fill: DM, fontSize: 9, ...chartMono, fontWeight: 900 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: DM, fontSize: 9, ...chartMono, fontWeight: 900 }} axisLine={false} tickLine={false} domain={[140,440]} />
               <Tooltip content={<TT />} />
               <ReferenceLine y={182} stroke={OR} strokeDasharray="5 3" strokeWidth={1.5} label={{ value: 'CP', fill: OR, fontSize: 9, fontWeight: 900 }} />
               <Area type="monotone" dataKey="p" name="Power (W)" stroke={N} strokeWidth={2.5} fill="url(#cpGrad)" dot={{ r:3, fill:N, stroke:BG, strokeWidth:1.5 }} />
@@ -256,8 +257,8 @@ function HRVTrend() {
       <ResponsiveContainer width="100%" height={160}>
         <ComposedChart data={hrv} margin={{ top:4, right:8, bottom:0, left:-20 }}>
           <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-          <XAxis dataKey="day" tick={{ fill:DM, fontSize:8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} interval={6} />
-          <YAxis tick={{ fill:DM, fontSize:9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} domain={[20,70]} />
+          <XAxis dataKey="day" tick={{ fill:DM, fontSize:8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} interval={6} />
+          <YAxis tick={{ fill:DM, fontSize:9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} domain={[20,70]} />
           <Tooltip content={<TT />} />
           <ReferenceLine y={44} stroke={CY} strokeDasharray="5 3" strokeWidth={1} label={{ value:'BASELINE', fill:CY, fontSize:8, fontWeight:900, position:'right' }} />
           <Area type="monotone" dataKey="rmssd" name="RMSSD (ms)" stroke={CY} strokeWidth={2} fill="rgba(34,211,238,0.08)" dot={false} />
@@ -283,8 +284,8 @@ function TRIMPChart() {
       <ResponsiveContainer width="100%" height={180}>
         <BarChart data={trimp} margin={{ top:4, right:8, bottom:0, left:-20 }} barCategoryGap="30%">
           <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-          <XAxis dataKey="w" tick={{ fill:DM, fontSize:8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} interval={1} />
-          <YAxis tick={{ fill:DM, fontSize:9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
+          <XAxis dataKey="w" tick={{ fill:DM, fontSize:8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} interval={1} />
+          <YAxis tick={{ fill:DM, fontSize:9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
           <Tooltip content={<TT />} />
           <Bar dataKey="aerobic"   name="Aerobic"   stackId="t" fill={N}  fillOpacity={0.85} radius={[0,0,0,0]} />
           <Bar dataKey="anaerobic" name="Anaerobic" stackId="t" fill={OR} fillOpacity={0.90} radius={[3,3,0,0]} />
@@ -310,8 +311,8 @@ function DecouplingChart() {
       <ResponsiveContainer width="100%" height={160}>
         <BarChart data={decouple} margin={{ top:4, right:8, bottom:0, left:-20 }}>
           <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-          <XAxis dataKey="run" tick={{ fill:DM, fontSize:8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fill:DM, fontSize:9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} domain={[0,10]} />
+          <XAxis dataKey="run" tick={{ fill:DM, fontSize:8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fill:DM, fontSize:9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} domain={[0,10]} />
           <Tooltip content={<TT />} />
           <ReferenceLine y={5} stroke={OR} strokeDasharray="5 3" strokeWidth={1.5} label={{ value:'THRESHOLD 5%', fill:OR, fontSize:8, fontWeight:900, position:'right' }} />
           <Bar dataKey="pdc" name="Decoupling %">
@@ -348,8 +349,8 @@ function ElevProfileChart() {
             ))}
           </defs>
           <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-          <XAxis dataKey="km" tick={{ fill:DM, fontSize:8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} interval={9} label={{ value:'KM', position:'insideBottom', fill:DM, fontSize:8, fontWeight:900, offset:-2 }} />
-          <YAxis tick={{ fill:DM, fontSize:9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} label={{ value:'m', angle:-90, fill:DM, fontSize:8, fontWeight:900 }} />
+          <XAxis dataKey="km" tick={{ fill:DM, fontSize:8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} interval={9} label={{ value:'KM', position:'insideBottom', fill:DM, fontSize:8, fontWeight:900, offset:-2 }} />
+          <YAxis tick={{ fill:DM, fontSize:9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} label={{ value:'m', angle:-90, fill:DM, fontSize:8, fontWeight:900 }} />
           <Tooltip content={<TT />} />
           <Area type="monotone" dataKey="runC" name="Trail 28k"    stroke={YL} strokeWidth={1.5} fill="url(#cGrad)" dot={false} />
           <Area type="monotone" dataKey="runB" name="Road 15k"     stroke={CY} strokeWidth={1.5} fill="url(#bGrad)" dot={false} />
@@ -381,8 +382,8 @@ export function AnalyticsV5EffortMatrix({ chart }: { chart?: ProAnalyticsChart }
     <ResponsiveContainer width="100%" height="100%">
       <ScatterChart margin={{ top: isExpanded ? 20 : 4, right: isExpanded ? 20 : 8, bottom: isExpanded ? 24 : 8, left: isExpanded ? -4 : -16 }}>
         <CartesianGrid strokeDasharray="2 6" stroke={MT} />
-        <XAxis type="number" dataKey="dist" name="Distanza" domain={[0,40]} tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} label={{ value:'KM', position:'insideBottom', fill:DM, fontSize:8, fontWeight:900, offset:-4 }} />
-        <YAxis type="number" dataKey="pace" name="Passo" domain={[3.5,6.5]} tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} label={{ value:'MIN/KM', angle:-90, fill:DM, fontSize:8, fontWeight:900 }} />
+        <XAxis type="number" dataKey="dist" name="Distanza" domain={[0,40]} tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} label={{ value:'KM', position:'insideBottom', fill:DM, fontSize:8, fontWeight:900, offset:-4 }} />
+        <YAxis type="number" dataKey="pace" name="Passo" domain={[3.5,6.5]} tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} label={{ value:'MIN/KM', angle:-90, fill:DM, fontSize:8, fontWeight:900 }} />
         <ZAxis type="number" dataKey="z" range={isExpanded ? [50,260] : [30,200]} />
         <Tooltip cursor={{ stroke:MT }} content={({ active, payload }) => {
           if (!active || !payload?.length) return null;
@@ -439,8 +440,8 @@ function RunningEconomy() {
       <ResponsiveContainer width="100%" height={120}>
         <ComposedChart data={reIndex} margin={{ top:4, right:8, bottom:0, left:-20 }}>
           <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-          <XAxis dataKey="s" tick={{ fill:DM, fontSize:8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
-          <YAxis domain={[185,230]} tick={{ fill:DM, fontSize:8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
+          <XAxis dataKey="s" tick={{ fill:DM, fontSize:8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
+          <YAxis domain={[185,230]} tick={{ fill:DM, fontSize:8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
           <Tooltip content={<TT />} />
           <ReferenceLine y={200} stroke={N} strokeDasharray="4 3" strokeWidth={1} label={{ value:'TARGET', fill:N, fontSize:8, fontWeight:900, position:'right' }} />
           <Line type="monotone" dataKey="re" name="RE" stroke={N} strokeWidth={2.5} dot={{ r:3, fill:N, stroke:BG, strokeWidth:1.5 }} />
@@ -458,8 +459,8 @@ function RecoveryHistogram() {
       <ResponsiveContainer width="100%" height={160}>
         <BarChart data={recovBins} margin={{ top:4, right:8, bottom:0, left:-20 }} barCategoryGap="15%">
           <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-          <XAxis dataKey="bin" tick={{ fill:DM, fontSize:8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fill:DM, fontSize:9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
+          <XAxis dataKey="bin" tick={{ fill:DM, fontSize:8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fill:DM, fontSize:9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
           <Tooltip content={<TT />} />
           <ReferenceLine x="24-36" stroke={N} strokeDasharray="4 3" strokeWidth={1} label={{ value:'OPTIMAL', fill:N, fontSize:8, fontWeight:900 }} />
           <Bar dataKey="count" name="Sessions" radius={[3,3,0,0]}>
@@ -531,8 +532,9 @@ function SeasonalMatrix() {
 export function AnalyticsV5BestEffortsProgression({ chart }: { chart?: ProAnalyticsChart }) {
   const [expanded, setExpanded] = useState(false);
   const fmt = (s?: number) => s ? `${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}` : '—';
-  const cardData = (chart?.series_card ?? []).map((d) => ({ ...d, mo: d.date }));
-  const detailData = (chart?.series_detail?.length ? chart.series_detail : chart?.series_card ?? []).map((d) => ({ ...d, mo: d.date }));
+  const toPoint = (d: Record<string, any>): Record<string, any> & { mo: string } => ({ ...d, mo: String(d.date ?? '') });
+  const cardData = (chart?.series_card ?? []).map(toPoint);
+  const detailData = (chart?.series_detail?.length ? chart.series_detail : chart?.series_card ?? []).map(toPoint);
   const best5 = Math.min(...detailData.map((d) => Number(d.k5)).filter(Boolean));
   const best10 = Math.min(...detailData.map((d) => Number(d.k10)).filter(Boolean));
   const bestHm = Math.min(...detailData.map((d) => Number(d.hm)).filter(Boolean));
@@ -545,9 +547,9 @@ export function AnalyticsV5BestEffortsProgression({ chart }: { chart?: ProAnalyt
     <ResponsiveContainer width="100%" height="100%">
       <LineChart data={data} margin={{ top:isExpanded ? 20 : 4, right:isExpanded ? 20 : 8, bottom:isExpanded ? 20 : 0, left:isExpanded ? 0 : -8 }}>
         <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-        <XAxis dataKey="mo" tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
-        <YAxis yAxisId="left"  tick={{ fill:DM, fontSize:isExpanded ? 11 : 8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} domain={['dataMin - 60', 'dataMax + 60']} />
-        <YAxis yAxisId="right" orientation="right" tick={{ fill:DM, fontSize:isExpanded ? 11 : 8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} domain={['dataMin - 120', 'dataMax + 120']} />
+        <XAxis dataKey="mo" tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
+        <YAxis yAxisId="left"  tick={{ fill:DM, fontSize:isExpanded ? 11 : 8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} domain={['dataMin - 60', 'dataMax + 60']} />
+        <YAxis yAxisId="right" orientation="right" tick={{ fill:DM, fontSize:isExpanded ? 11 : 8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} domain={['dataMin - 120', 'dataMax + 120']} />
         <Tooltip content={({ active, payload, label }) => {
           if (!active || !payload?.length) return null;
           return (
@@ -614,8 +616,8 @@ export function AnalyticsV5PaceDistributionBell({ chart }: { chart?: ProAnalytic
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ top:isExpanded ? 20 : 4, right:isExpanded ? 20 : 8, bottom:isExpanded ? 20 : 0, left:isExpanded ? -4 : -20 }} barCategoryGap="12%">
         <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-        <XAxis dataKey="pace" tick={{ fill:DM, fontSize:isExpanded ? 12 : 8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
+        <XAxis dataKey="pace" tick={{ fill:DM, fontSize:isExpanded ? 12 : 8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
         <Tooltip content={<TT />} />
         <Bar dataKey="runs" name="Corse" radius={[4,4,0,0]}>
           {data.map((_,i) => (
@@ -669,8 +671,8 @@ function LSBChart() {
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-          <XAxis dataKey="d" tick={{ fill:DM, fontSize:8, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} interval={19} />
-          <YAxis tick={{ fill:DM, fontSize:9, ...mono, fontWeight:900 }} axisLine={false} tickLine={false} />
+          <XAxis dataKey="d" tick={{ fill:DM, fontSize:8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} interval={19} />
+          <YAxis tick={{ fill:DM, fontSize:9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
           <Tooltip content={<TT />} />
           <ReferenceLine y={0} stroke={MT} strokeWidth={1} />
           <Area type="monotone" dataKey="tsb" name="TSB (Form)" stroke={N} strokeWidth={1.5} fill="url(#tsbGrad)" dot={false} />

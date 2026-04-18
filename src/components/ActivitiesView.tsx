@@ -353,31 +353,56 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
   function parseGarminCsv(text: string): Array<Record<string, string>> {
     const lines = text.split(/\r?\n/).filter(l => l.trim());
     if (lines.length < 2) return [];
-    
-    // Parse header
-    const header = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-    const runs: Array<Record<string, string>> = [];
-    
-    for (let i = 1; i < lines.length; i++) {
+
+    const countDelimiter = (line: string, delimiter: string) => {
+      let count = 0;
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        const next = line[i + 1];
+        if (char === '"' && next === '"') {
+          i++;
+          continue;
+        }
+        if (char === '"') inQuotes = !inQuotes;
+        if (char === delimiter && !inQuotes) count++;
+      }
+      return count;
+    };
+    const delimiter = [',', ';', '\t']
+      .map((candidate) => ({ candidate, count: countDelimiter(lines[0], candidate) }))
+      .sort((a, b) => b.count - a.count)[0]?.candidate ?? ',';
+    const parseLine = (line: string) => {
       const values: string[] = [];
       let current = '';
       let inQuotes = false;
-      
-      for (const char of lines[i]) {
-        if (char === '"') {
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        const next = line[i + 1];
+        if (char === '"' && next === '"') {
+          current += '"';
+          i++;
+        } else if (char === '"') {
           inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
-          values.push(current.trim());
+        } else if (char === delimiter && !inQuotes) {
+          values.push(current.trim().replace(/^"|"$/g, ''));
           current = '';
         } else {
           current += char;
         }
       }
-      values.push(current.trim());
-      
+      values.push(current.trim().replace(/^"|"$/g, ''));
+      return values;
+    };
+
+    const header = parseLine(lines[0]).map(h => h.replace(/^\uFEFF/, '').trim());
+    const runs: Array<Record<string, string>> = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = parseLine(lines[i]);
       const row: Record<string, string> = {};
       header.forEach((h, idx) => {
-        row[h] = (values[idx] || '').replace(/^"|"$/g, '');
+        row[h] = values[idx] || '';
       });
       runs.push(row);
     }
@@ -401,8 +426,9 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
       setCsvResult({ success: true, message: `${runs.length} corse trovate nel file "${file.name}". Pronto per l'import.`, imported: 0, skipped: 0 });
     } catch (e: any) {
       setCsvResult({ success: false, message: `Errore parsing CSV: ${e?.message ?? 'Errore sconosciuto'}`, imported: 0, skipped: 0 });
+    } finally {
+      setCsvParsing(false);
     }
-    setCsvParsing(false);
   }
 
   async function handleImportToDatabase() {

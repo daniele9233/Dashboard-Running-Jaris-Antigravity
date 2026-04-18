@@ -12,7 +12,7 @@ import { AnalyticsV5BestEffortsProgression, AnalyticsV5EffortMatrix, AnalyticsV5
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 import { useApi } from '../../hooks/useApi';
 import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, getDashboard, getProAnalytics, linkGarminCsv, type GctAnalysisResponse } from '../../api';
-import type { AnalyticsResponse, VdotPacesResponse, RunsResponse, DashboardResponse, ProAnalyticsResponse, ProAnalyticsChart, GarminCsvLinkResult } from '../../types/api';
+import type { AnalyticsResponse, VdotPacesResponse, RunsResponse, DashboardResponse, ProAnalyticsResponse, ProAnalyticsChart, GarminCsvLinkResult, Run } from '../../types/api';
 import {
   Activity,
   Zap,
@@ -242,6 +242,183 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 // ─────────────────────────────────────────────────────────────
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────
+function hasUsableChart(chart?: ProAnalyticsChart): boolean {
+  return Boolean(chart?.quality?.sample_size && ((chart.series_card?.length ?? 0) > 0 || (chart.series_detail?.length ?? 0) > 0));
+}
+
+function preferChart(primary: ProAnalyticsChart | undefined, fallback: ProAnalyticsChart): ProAnalyticsChart {
+  return hasUsableChart(primary) ? primary as ProAnalyticsChart : fallback;
+}
+
+function parseRunPaceSec(pace?: string | null): number | null {
+  if (!pace) return null;
+  const parts = String(pace).trim().split(':').map(Number);
+  if (parts.length !== 2 || parts.some(Number.isNaN)) return null;
+  return parts[0] * 60 + parts[1];
+}
+
+function paceLabel(seconds?: number | null): string {
+  if (!seconds || !Number.isFinite(seconds)) return '--';
+  const rounded = Math.round(seconds);
+  return `${Math.floor(rounded / 60)}:${String(rounded % 60).padStart(2, '0')}`;
+}
+
+function isoWeekKey(dateString: string): string {
+  const date = new Date(`${dateString.slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return dateString.slice(0, 10);
+  const day = date.getDay() || 7;
+  date.setDate(date.getDate() - day + 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function makeFallbackChart(
+  id: string,
+  title: string,
+  unit: string,
+  seriesCard: Array<Record<string, any>>,
+  seriesDetail: Array<Record<string, any>>,
+  kpis: Record<string, any> = {},
+): ProAnalyticsChart {
+  const sampleSize = Number(kpis.samples ?? kpis.runs ?? kpis.points ?? seriesDetail.length ?? seriesCard.length);
+  return {
+    id,
+    title,
+    unit,
+    summary: kpis,
+    series_card: seriesCard,
+    series_detail: seriesDetail,
+    kpis,
+    quality: {
+      status: sampleSize > 0 ? 'ok' : 'insufficient_data',
+      sample_size: sampleSize,
+      message: sampleSize > 0 ? null : 'Fallback locale: nessuna corsa valida disponibile',
+    },
+  };
+}
+
+function buildClientAnalyticsFallbacks(runs: Run[]) {
+  const validRuns = runs
+    .filter((run) => !run.is_treadmill && (run.has_gps ?? Boolean(run.polyline || run.start_latlng)))
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const latestDate = validRuns.reduce<Date | null>((latest, run) => {
+    const date = new Date(`${run.date.slice(0, 10)}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return latest;
+    return !latest || date > latest ? date : latest;
+  }, null);
+
+  const paceRuns = validRuns
+    .map((run) => ({ run, paceSec: parseRunPaceSec(run.avg_pace) }))
+    .filter((item): item is { run: Run; paceSec: number } => Boolean(item.paceSec));
+
+  const paceBins = new Map<number, number>();
+  for (const { paceSec } of paceRuns) {
+    const bucket = Math.floor(paceSec / 15) * 15;
+    paceBins.set(bucket, (paceBins.get(bucket) ?? 0) + 1);
+  }
+  const paceDistribution = Array.from(paceBins.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([paceSec, count]) => ({ pace: paceLabel(paceSec), pace_sec: paceSec, runs: count }));
+
+  const paceZoneBins = [
+    { zone: 'Z1', name: 'Recupero', minSec: 390, color: '#3B82F6', runs: 0, km: 0 },
+    { zone: 'Z2', name: 'Easy', minSec: 360, color: '#10B981', runs: 0, km: 0 },
+    { zone: 'Z3', name: 'Steady', minSec: 330, color: '#A3E635', runs: 0, km: 0 },
+    { zone: 'Z4', name: 'Threshold', minSec: 300, color: '#F59E0B', runs: 0, km: 0 },
+    { zone: 'Z5', name: 'Fast', minSec: 0, color: '#F43F5E', runs: 0, km: 0 },
+  ];
+  const cutoff90 = latestDate ? new Date(latestDate) : null;
+  cutoff90?.setDate(cutoff90.getDate() - 90);
+  for (const { run, paceSec } of paceRuns) {
+    const date = new Date(`${run.date.slice(0, 10)}T00:00:00`);
+    if (cutoff90 && date < cutoff90) continue;
+    const zone = paceZoneBins.find((bin) => paceSec >= bin.minSec);
+    if (!zone) continue;
+    zone.runs += 1;
+    zone.km += Number(run.distance_km || 0);
+  }
+  const totalZoneKm = paceZoneBins.reduce((sum, zone) => sum + zone.km, 0);
+  const paceZones = paceZoneBins.map((zone) => ({
+    zone: zone.zone,
+    name: zone.name,
+    km: Number(zone.km.toFixed(1)),
+    runs: zone.runs,
+    pct: totalZoneKm ? Number(((zone.km / totalZoneKm) * 100).toFixed(1)) : 0,
+    color: zone.color,
+  }));
+
+  const effortPoints = paceRuns
+    .filter(({ run }) => Number(run.distance_km || 0) > 0)
+    .map(({ run, paceSec }) => {
+      const distance = Number(run.distance_km || 0);
+      const duration = Number(run.duration_minutes || 0) || (distance * paceSec) / 60;
+      const hr = run.avg_hr ?? null;
+      return {
+        date: run.date,
+        dist: Number(distance.toFixed(2)),
+        pace: Number((paceSec / 60).toFixed(2)),
+        pace_sec: paceSec,
+        hr,
+        z: Number((duration * ((hr ?? 140) / 140)).toFixed(1)),
+      };
+    });
+
+  const monthlyBest: Record<string, Record<string, any>> = {};
+  const weeklyBest: Record<string, Record<string, any>> = {};
+  const targets = [
+    ['k5', 5.0, 4.5],
+    ['k10', 10.0, 9.5],
+    ['hm', 21.097, 20.0],
+  ] as const;
+  let bestSamples = 0;
+  const updateBest = (rows: Record<string, Record<string, any>>, key: string, label: string, seconds: number) => {
+    rows[key] ??= { date: key };
+    if (!rows[key][label] || seconds < Number(rows[key][label])) rows[key][label] = Math.round(seconds);
+  };
+  for (const { run } of paceRuns) {
+    const distance = Number(run.distance_km || 0);
+    const durationSeconds = Number(run.duration_minutes || 0) * 60;
+    if (distance <= 0 || durationSeconds <= 0) continue;
+    const month = run.date.slice(0, 7);
+    const week = isoWeekKey(run.date);
+    for (const [label, targetKm, minKm] of targets) {
+      if (distance < minKm || distance < targetKm * 0.98) continue;
+      const estimate = durationSeconds * (targetKm / distance);
+      updateBest(monthlyBest, month, label, estimate);
+      updateBest(weeklyBest, week, label, estimate);
+      bestSamples += 1;
+    }
+  }
+  const bestEffortsCard = Object.values(monthlyBest)
+    .filter((row) => row.k5 || row.k10 || row.hm)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+    .slice(-12);
+  const bestEffortsDetail = Object.values(weeklyBest)
+    .filter((row) => row.k5 || row.k10 || row.hm)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+
+  return {
+    load_form: {
+      pace_zones: makeFallbackChart('pace_zones', 'Distribuzione Zone di Passo', '%', paceZones, paceZones, {
+        total_km: Number(totalZoneKm.toFixed(1)),
+        runs: paceZoneBins.reduce((sum, zone) => sum + zone.runs, 0),
+      }),
+      pace_distribution: makeFallbackChart('pace_distribution', 'Distribuzione del Passo', 'runs', paceDistribution, paceDistribution, {
+        runs: paceRuns.length,
+        avg_pace: paceLabel(paceRuns.reduce((sum, item) => sum + item.paceSec, 0) / Math.max(1, paceRuns.length)),
+      }),
+      effort_matrix: makeFallbackChart('effort_matrix', 'Matrice degli Sforzi', 'effort', effortPoints.slice(-80), effortPoints, {
+        points: effortPoints.length,
+      }),
+    },
+    potential_progress: {
+      best_efforts_progression: makeFallbackChart('best_efforts_progression', 'Best Efforts Progression', 'seconds', bestEffortsCard, bestEffortsDetail, {
+        samples: bestSamples,
+      }),
+    },
+  };
+}
+
 export function StatisticsView() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('analytics');
@@ -260,6 +437,7 @@ export function StatisticsView() {
     () => runs.filter((r) => !r.is_treadmill && (r.has_gps ?? Boolean(r.polyline || r.start_latlng))),
     [runs]
   );
+  const fallbackCharts = React.useMemo(() => buildClientAnalyticsFallbacks(statsRuns), [statsRuns]);
   const vdot = vdotData?.vdot ?? null;
   const level = vdot ? vdotLevel(vdot, t) : null;
   const paces = vdotData?.paces ?? {};
@@ -267,9 +445,19 @@ export function StatisticsView() {
   const zoneDistribution = analyticsData?.zone_distribution ?? [];
   const ffHistory = dashData?.fitness_freshness ?? [];
   const prevCtl = ffHistory.length >= 2 ? ffHistory[ffHistory.length - 2].ctl : null;
-  const loadCharts = proData?.sections.load_form?.charts ?? {};
-  const potentialCharts = proData?.sections.potential_progress?.charts ?? {};
-  const biomechCharts = proData?.sections.biomechanics?.charts ?? {};
+  const rawLoadCharts: Record<string, ProAnalyticsChart> = proData?.sections.load_form?.charts ?? {};
+  const rawPotentialCharts: Record<string, ProAnalyticsChart> = proData?.sections.potential_progress?.charts ?? {};
+  const loadCharts: Record<string, ProAnalyticsChart> = {
+    ...rawLoadCharts,
+    pace_zones: preferChart(rawLoadCharts.pace_zones, fallbackCharts.load_form.pace_zones),
+    pace_distribution: preferChart(rawLoadCharts.pace_distribution, fallbackCharts.load_form.pace_distribution),
+    effort_matrix: preferChart(rawLoadCharts.effort_matrix, fallbackCharts.load_form.effort_matrix),
+  };
+  const potentialCharts: Record<string, ProAnalyticsChart> = {
+    ...rawPotentialCharts,
+    best_efforts_progression: preferChart(rawPotentialCharts.best_efforts_progression, fallbackCharts.potential_progress.best_efforts_progression),
+  };
+  const biomechCharts: Record<string, ProAnalyticsChart> = proData?.sections.biomechanics?.charts ?? {};
 
   // ── Monthly elevation from runs ───────────────────────────
   const elevationData = React.useMemo(() => {

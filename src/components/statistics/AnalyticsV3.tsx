@@ -387,7 +387,13 @@ function GroundContactStability({
     setSyncState('syncing');
     setSyncError(null);
     try {
-      const result = await onTelemetrySync?.();
+      const result = await onTelemetrySync?.() as GarminCsvLinkResult | undefined;
+      if (result?.no_csv) {
+        throw new Error(result.message || 'Nessun CSV Garmin importato in Activities.');
+      }
+      if (result && result.ok === false) {
+        throw new Error(result.message || 'Link CSV non riuscito');
+      }
       setSyncResult(result ?? null);
       setSyncState('success');
       setLastSyncTime(new Date());
@@ -614,7 +620,7 @@ function MetricBox({ title, value, unit }: { title: string; value: string; unit:
   );
 }
 
-function EvolutionBar({ scaleY, color, label }: { scaleY: number; color: string; label: string }) {
+function EvolutionBar({ scaleY, color, label }: { key?: string | number; scaleY: number; color: string; label: string }) {
   return (
     <div className="flex flex-col items-center justify-end flex-1 gap-2 sm:gap-3 group">
       <motion.div

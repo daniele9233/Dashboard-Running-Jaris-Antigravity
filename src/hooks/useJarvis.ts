@@ -61,7 +61,7 @@ export function useJarvis({
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const vadLoopRef = useRef<number>();
+  const vadLoopRef = useRef<number | null>(null);
   const silenceStartRef = useRef<number>(0);
   const isSpeakingMicRef = useRef(false);
   const streamRef = useRef<MediaStream | null>(null);
@@ -284,14 +284,14 @@ export function useJarvis({
     mr.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
     
     mr.onstop = async () => {
-      cancelAnimationFrame(vadLoopRef.current!);
+      if (vadLoopRef.current !== null) cancelAnimationFrame(vadLoopRef.current);
       if (!isListeningRef.current || orbStateRef.current === 'thinking' || orbStateRef.current === 'speaking') return;
       
       const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
       audioChunksRef.current = [];
       if (audioBlob.size < 5000) {
           // Too small, probably empty
-          if (isListeningRef.current && orbStateRef.current !== 'thinking') {
+          if (isListeningRef.current) {
              startLocalWhisperVAD();
           }
           return;
@@ -412,7 +412,7 @@ export function useJarvis({
         setTranscript(displayTranscript);
       }
 
-      if (isFinal && orbStateRef.current !== 'thinking' && orbStateRef.current !== 'speaking' && orbStateRef.current !== 'navigating') {
+      if (isFinal) {
          processFinalText(lower);
          return;
       }

@@ -141,8 +141,8 @@ const PaceTooltip = ({
   activeRace,
 }: {
   active?: boolean;
-  payload?: any[];
-  label?: string;
+  payload?: ReadonlyArray<any>;
+  label?: string | number;
   activeRace: string;
 }) => {
   if (!active || !payload?.length) return null;

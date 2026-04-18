@@ -93,6 +93,12 @@ export interface Run {
     match_confidence?: number | null;
   } | null;
   name: string | null;
+  elapsed_time?: number | null;
+  weather?: string | null;
+  temperature?: number | null;
+  surface?: string | null;
+  terrain?: string | null;
+  event?: string | null;
 }
 
 export interface RunsResponse {
@@ -334,6 +340,7 @@ export interface GarminCsvLinkResult {
   total_csv: number;
   matched: number;
   enriched: number;
+  already_linked?: number;
   unmatched: number;
   ambiguous: number;
   low_confidence?: number;

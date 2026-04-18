@@ -35,7 +35,7 @@ FISH_AUDIO_API_KEY = os.environ.get("FISH_AUDIO_API_KEY", "")
 GARMIN_EMAIL       = os.environ.get("GARMIN_EMAIL", "")
 GARMIN_PASSWORD    = os.environ.get("GARMIN_PASSWORD", "")
 APP_VERSION        = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT") or os.environ.get("COMMIT_SHA") or "local"
-ANALYTICS_SCHEMA_VERSION = "pro-v2-2026-04-17"
+ANALYTICS_SCHEMA_VERSION = "pro-v3-2026-04-17"
 
 # Build the callback URL from the current host (set via Render env or default)
 BACKEND_URL        = os.environ.get("BACKEND_URL", "https://dani-backend-ea0s.onrender.com")
@@ -2658,14 +2658,20 @@ def _stdev(values: list) -> float:
     return math.sqrt(sum((v - mean) ** 2 for v in nums) / len(nums))
 
 
-def _range_cutoff(range_key: str) -> Optional[dt.date]:
-    today = dt.date.today()
+def _range_cutoff(range_key: str, reference_date: Optional[dt.date] = None) -> Optional[dt.date]:
+    today = reference_date or dt.date.today()
     days = {"1M": 31, "3M": 92, "6M": 183, "12M": 366}.get(range_key.upper())
     return today - dt.timedelta(days=days) if days else None
 
 
-def _filter_runs_for_range(runs: list, range_key: str) -> list:
-    cutoff = _range_cutoff(range_key)
+def _latest_analytics_date(rows: list) -> Optional[dt.date]:
+    dates = [_analytics_date(r.get("date")) for r in rows]
+    dates = [d for d in dates if d]
+    return max(dates) if dates else None
+
+
+def _filter_runs_for_range(runs: list, range_key: str, reference_date: Optional[dt.date] = None) -> list:
+    cutoff = _range_cutoff(range_key, reference_date or _latest_analytics_date(runs))
     if not cutoff:
         return runs
     return [r for r in runs if (_analytics_date(r.get("date")) or dt.date.min) >= cutoff]
@@ -2717,7 +2723,7 @@ def _chart(
         "quality": {
             "status": status,
             "sample_size": sample_size,
-            "message": message or ("Dati insufficienti" if status != "ok" else None),
+            "message": (message or "Dati insufficienti") if status != "ok" else None,
         },
     }
 
@@ -2774,6 +2780,43 @@ def _bio_value(run: dict, key: str) -> Optional[float]:
     return None
 
 
+def _garmin_csv_doc_to_run_like(doc: dict) -> dict:
+    """Expose imported Garmin CSV telemetry through the same shape used by charts."""
+    csv_id = str(doc.get("_id") or doc.get("id") or "")
+    pace_sec = doc.get("avg_pace_sec") or _parse_pace_sec(doc.get("avg_pace"))
+    distance_km = float(doc.get("distance_km") or 0)
+    duration = doc.get("duration_minutes")
+    if (not duration or float(duration or 0) <= 0) and pace_sec and distance_km > 0:
+        duration = distance_km * pace_sec / 60
+
+    biomechanics = {
+        "avg_ground_contact_time_ms": doc.get("avg_ground_contact_time_ms"),
+        "avg_vertical_oscillation_cm": doc.get("avg_vertical_oscillation_cm"),
+        "avg_vertical_ratio_pct": doc.get("avg_vertical_ratio_pct"),
+        "avg_stride_length_m": doc.get("avg_stride_length_m"),
+        "avg_cadence_spm": doc.get("avg_cadence_spm"),
+        "source": "garmin_csv_import",
+        "garmin_csv_id": csv_id,
+    }
+    return {
+        "id": f"garmin_csv:{csv_id}",
+        "date": doc.get("date"),
+        "name": doc.get("titolo"),
+        "distance_km": distance_km,
+        "duration_minutes": duration,
+        "avg_pace": doc.get("avg_pace"),
+        "avg_hr": doc.get("avg_hr"),
+        "avg_cadence": doc.get("avg_cadence_spm"),
+        "avg_ground_contact_time": doc.get("avg_ground_contact_time_ms"),
+        "avg_vertical_oscillation": doc.get("avg_vertical_oscillation_cm"),
+        "avg_vertical_ratio": doc.get("avg_vertical_ratio_pct"),
+        "avg_stride_length": doc.get("avg_stride_length_m"),
+        "biomechanics": biomechanics,
+        "source": "garmin_csv_import",
+        "garmin_csv_id": csv_id,
+    }
+
+
 def _build_trend_km_chart(runs: list, resolution: str) -> dict:
     detail = []
     for key, group in sorted(_group_runs_by_bucket(runs, resolution).items()):
@@ -2792,7 +2835,7 @@ def _build_trend_km_chart(runs: list, resolution: str) -> dict:
 
 
 def _build_fitness_chart(ff_docs: list, range_key: str, resolution: str) -> dict:
-    cutoff = _range_cutoff(range_key)
+    cutoff = _range_cutoff(range_key, _latest_analytics_date(ff_docs))
     docs = [
         d for d in ff_docs
         if not cutoff or (_analytics_date(d.get("date")) or dt.date.min) >= cutoff
@@ -2816,7 +2859,8 @@ def _build_fitness_chart(ff_docs: list, range_key: str, resolution: str) -> dict
 
 
 def _build_pace_zone_chart(runs: list, days: int = 90) -> dict:
-    cutoff = dt.date.today() - dt.timedelta(days=days)
+    reference_date = _latest_analytics_date(runs) or dt.date.today()
+    cutoff = reference_date - dt.timedelta(days=days)
     scoped_runs = [
         r for r in runs
         if (_analytics_date(r.get("date")) or dt.date.min) >= cutoff
@@ -3031,10 +3075,37 @@ def _build_best_efforts_progression_chart(runs: list, resolution: str) -> dict:
     )
 
 
-def _build_biomechanics_charts(runs: list, resolution: str, vdot: Optional[float]) -> dict:
-    bio_runs = [r for r in runs if any(_bio_value(r, k) is not None for k in ("gct", "cadence", "vr", "stride", "vo"))]
-    gct_runs = [r for r in runs if _bio_value(r, "gct") is not None]
-    cad_runs = [r for r in runs if _bio_value(r, "cadence") is not None]
+def _build_biomechanics_charts(
+    runs: list,
+    resolution: str,
+    vdot: Optional[float],
+    garmin_csv_docs: Optional[list] = None,
+) -> dict:
+    linked_csv_ids = set()
+    for r in runs:
+        for value in (r.get("garmin_csv_id"), (r.get("biomechanics") or {}).get("garmin_csv_id")):
+            if value:
+                linked_csv_ids.add(str(value))
+
+    csv_runs = []
+    for doc in garmin_csv_docs or []:
+        csv_id = str(doc.get("_id") or doc.get("id") or "")
+        if csv_id and csv_id in linked_csv_ids:
+            continue
+        if not any(doc.get(k) is not None for k in (
+            "avg_ground_contact_time_ms",
+            "avg_vertical_oscillation_cm",
+            "avg_vertical_ratio_pct",
+            "avg_stride_length_m",
+            "avg_cadence_spm",
+        )):
+            continue
+        csv_runs.append(_garmin_csv_doc_to_run_like(doc))
+
+    telemetry_runs = runs + csv_runs
+    bio_runs = [r for r in telemetry_runs if any(_bio_value(r, k) is not None for k in ("gct", "cadence", "vr", "stride", "vo"))]
+    gct_runs = [r for r in bio_runs if _bio_value(r, "gct") is not None]
+    cad_runs = [r for r in bio_runs if _bio_value(r, "cadence") is not None]
 
     stability_rows = []
     for key, group in sorted(_group_runs_by_bucket(gct_runs, resolution).items()):
@@ -3057,7 +3128,7 @@ def _build_biomechanics_charts(runs: list, resolution: str, vdot: Optional[float
     latest_stability = stability_rows[-1] if stability_rows else {}
 
     pace_eff_runs = []
-    for r in runs:
+    for r in telemetry_runs:
         pace = _parse_pace_sec(r.get("avg_pace"))
         hr = r.get("avg_hr")
         if pace and hr:
@@ -3199,14 +3270,25 @@ async def get_pro_analytics(
             "threshold_progression": threshold_chart,
             "trend_passo": _build_pace_trend_chart(runs, resolved_resolution),
             "race_evolution": race_chart,
-            "best_efforts_progression": _build_best_efforts_progression_chart(runs, resolved_resolution),
+            "best_efforts_progression": _build_best_efforts_progression_chart(all_runs, resolved_resolution),
         }
         if chart:
             potential_charts = {chart: potential_charts[chart]} if chart in potential_charts else {}
         sections["potential_progress"] = {"charts": potential_charts}
 
     if tab in {"all", "biomechanics"}:
-        biomech_charts = _build_biomechanics_charts(runs, resolved_resolution, current_vdot)
+        garmin_csv_docs = await db.garmin_csv_data.find({
+            "athlete_id": athlete_id,
+            "$or": [
+                {"avg_ground_contact_time_ms": {"$ne": None}},
+                {"avg_vertical_oscillation_cm": {"$ne": None}},
+                {"avg_vertical_ratio_pct": {"$ne": None}},
+                {"avg_stride_length_m": {"$ne": None}},
+                {"avg_cadence_spm": {"$ne": None}},
+            ],
+        }).sort("date", 1).to_list(3000)
+        garmin_csv_docs = _filter_runs_for_range(garmin_csv_docs, range_key)
+        biomech_charts = _build_biomechanics_charts(runs, resolved_resolution, current_vdot, garmin_csv_docs)
         if chart:
             biomech_charts = {chart: biomech_charts[chart]} if chart in biomech_charts else {}
         sections["biomechanics"] = {"charts": biomech_charts}
@@ -5035,9 +5117,17 @@ def _match_confidence(csv_doc: dict, run_doc: dict) -> float:
 
     csv_duration = float(csv_doc.get("duration_minutes") or 0)
     run_duration = float(run_doc.get("duration_minutes") or 0)
+    csv_pace = csv_doc.get("avg_pace_sec") or _parse_pace_sec(csv_doc.get("avg_pace"))
+    run_pace = _parse_pace_sec(run_doc.get("avg_pace"))
+    if csv_duration <= 0 and csv_pace and csv_dist > 0:
+        csv_duration = csv_dist * csv_pace / 60
     if csv_duration > 0 and run_duration > 0:
         dur_delta = abs(csv_duration - run_duration)
         score += max(0.0, 0.30 * (1 - dur_delta / max(csv_duration * 0.12, 3.0)))
+
+    if csv_pace and run_pace:
+        pace_delta = abs(float(csv_pace) - float(run_pace))
+        score += max(0.0, 0.15 * (1 - pace_delta / max(float(csv_pace) * 0.08, 20.0)))
 
     title = str(csv_doc.get("titolo") or "").lower()
     name = str(run_doc.get("name") or "").lower()
@@ -5048,7 +5138,7 @@ def _match_confidence(csv_doc: dict, run_doc: dict) -> float:
             overlap = len(title_tokens & name_tokens) / max(1, len(title_tokens | name_tokens))
             score += min(0.05, overlap * 0.05)
 
-    return round(score, 3)
+    return round(min(score, 1.0), 3)
 
 
 async def _find_matching_run_for_garmin_csv(athlete_id: int, csv_doc: dict) -> tuple[Optional[dict], float, str]:
@@ -5128,6 +5218,7 @@ async def _link_garmin_csv_docs(athlete_id: int) -> dict:
         "total_csv": len(docs),
         "matched": 0,
         "enriched": 0,
+        "already_linked": 0,
         "unmatched": 0,
         "ambiguous": 0,
         "low_confidence": 0,
@@ -5139,6 +5230,11 @@ async def _link_garmin_csv_docs(athlete_id: int) -> dict:
 
     for doc in docs:
         try:
+            if doc.get("match_status") == "matched" and doc.get("matched_run_id"):
+                result["already_linked"] += 1
+                result["status_counts"]["already_linked"] = result["status_counts"].get("already_linked", 0) + 1
+                continue
+
             run, confidence, status = await _find_matching_run_for_garmin_csv(athlete_id, doc)
             result["status_counts"][status] = result["status_counts"].get(status, 0) + 1
             if not run:
@@ -5166,6 +5262,8 @@ async def _link_garmin_csv_docs(athlete_id: int) -> dict:
         result["message"] = "Nessun CSV Garmin importato in Activities."
     elif result["enriched"] > 0:
         result["message"] = f"{result['matched']} CSV abbinati, {result['enriched']} corse arricchite."
+    elif result["already_linked"] > 0:
+        result["message"] = f"{result['already_linked']} CSV Garmin gia collegati."
     elif result["matched"] > 0:
         result["message"] = f"{result['matched']} CSV abbinati, ma nessun nuovo campo biomeccanico da arricchire."
     elif result["ambiguous"] > 0:
@@ -5255,6 +5353,8 @@ async def garmin_csv_import(request: Request):
             # Parse pace
             pace_sec = _parse_garmin_pace(passo_medio_str)
             avg_pace = f"{int(pace_sec // 60)}:{int(pace_sec % 60):02d}" if pace_sec else None
+            if (not duration_minutes or duration_minutes <= 0) and pace_sec and distanza_km:
+                duration_minutes = distanza_km * pace_sec / 60
 
             # Build document for garmin_csv_data collection
             doc = {

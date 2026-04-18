@@ -56,6 +56,10 @@ interface BadgeContext {
   runsInHeat: number;
   runsInCold: number;
   longestTime: number;
+  fastest100m: number | null;
+  fastest200m: number | null;
+  fastest400m: number | null;
+  fastest800m: number | null;
   fastest1k: number | null;
   fastest2k: number | null;
   fastest3k: number | null;
@@ -238,6 +242,8 @@ interface BadgeContext {
   hasNegativeSplitEasy: boolean;
   hasPositiveSplitEasy: boolean;
   hasEvenSplitEasy: boolean;
+  hasRacePaceRun: boolean;
+  hasRecoveryRun: boolean;
   hasNegativeSplitRacePace: boolean;
   hasPositiveSplitRacePace: boolean;
   hasEvenSplitRacePace: boolean;
@@ -1043,6 +1049,7 @@ function buildContext(runs: Run[], vdot: number, vdotPeak: number, vdotDelta: nu
   const hasPositiveSplitEasy = false;
   const hasEvenSplitEasy = false;
   const hasRacePaceRun = hasRacePace;
+  const hasRecoveryRun = hasRecovery;
   const hasNegativeSplitRacePace = false;
   const hasPositiveSplitRacePace = false;
   const hasEvenSplitRacePace = false;
@@ -1328,6 +1335,7 @@ function buildContext(runs: Run[], vdot: number, vdotPeak: number, vdotDelta: nu
     hasPositiveSplitEasy,
     hasEvenSplitEasy,
     hasRacePaceRun,
+    hasRecoveryRun,
     hasNegativeSplitRacePace,
     hasPositiveSplitRacePace,
     hasEvenSplitRacePace,
@@ -1411,6 +1419,7 @@ function getWeekNumber(d: Date): number {
 // ─── Badge Card Component ────────────────────────────────────────────────────
 
 function BadgeCard({ badge, unlocked, progress, target }: {
+  key?: string;
   badge: BadgeDef;
   unlocked: boolean;
   progress: number;
