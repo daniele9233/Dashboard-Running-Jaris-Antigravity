@@ -12,7 +12,21 @@ import { AnalyticsV5BestEffortsProgression, AnalyticsV5EffortMatrix, AnalyticsV5
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 import { useApi } from '../../hooks/useApi';
 import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, getDashboard, getProAnalytics, linkGarminCsv, getSupercompensation, type GctAnalysisResponse } from '../../api';
-import type { AnalyticsResponse, VdotPacesResponse, RunsResponse, DashboardResponse, ProAnalyticsResponse, ProAnalyticsChart, GarminCsvLinkResult, Run, SupercompensationResponse } from '../../types/api';
+import type {
+  AnalyticsResponse,
+  VdotPacesResponse,
+  RunsResponse,
+  DashboardResponse,
+  ProAnalyticsResponse,
+  ProAnalyticsChart,
+  GarminCsvLinkResult,
+  Run,
+  SupercompensationResponse,
+  SupercompensationRun,
+  SupercompensationProjectionPoint,
+  AdaptationKey,
+  AdaptationType,
+} from '../../types/api';
 import {
   Activity,
   Zap,
@@ -263,6 +277,179 @@ function paceLabel(seconds?: number | null): string {
   return `${Math.floor(rounded / 60)}:${String(rounded % 60).padStart(2, '0')}`;
 }
 
+function dateLabel(dateString?: string | null): string {
+  const date = new Date(`${String(dateString ?? '').slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return String(dateString ?? '');
+  return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+}
+
+function classifyBiologyRun(run: Run): {
+  type: AdaptationType;
+  key: AdaptationKey;
+  window: number;
+  reason: string;
+} {
+  const paceSec = parseRunPaceSec(run.avg_pace);
+  const duration = Number(run.duration_minutes ?? 0);
+  const distance = Number(run.distance_km ?? 0);
+  const hrPct = Number(run.avg_hr_pct ?? 0);
+  const cadence = Number(run.avg_cadence ?? run.biomechanics?.avg_cadence_spm ?? 0);
+  const elevation = Number(run.elevation_gain ?? 0);
+  const text = `${run.name ?? ''} ${run.run_type ?? ''} ${run.notes ?? ''}`.toLowerCase();
+
+  if (
+    /repetition|ripet|sprint|strides|fartlek|hill sprint|salite brevi/.test(text)
+    || (duration <= 45 && paceSec !== null && paceSec <= 300 && (hrPct >= 82 || cadence >= 178))
+    || (duration <= 40 && cadence >= 182)
+  ) {
+    return {
+      type: 'Neuromuscolare',
+      key: 'neuromuscular',
+      window: 7,
+      reason: 'Velocita, coordinazione e reclutamento muscolare',
+    };
+  }
+
+  if (/long|lungo|trail|hilly|collinare|easy lungo/.test(text) || distance >= 14 || duration >= 75 || elevation >= 250) {
+    return {
+      type: 'Strutturale',
+      key: 'structural',
+      window: 21,
+      reason: 'Tendini, capillari, tolleranza al volume',
+    };
+  }
+
+  return {
+    type: 'Metabolico',
+    key: 'metabolic',
+    window: 14,
+    reason: 'Soglia, mitocondri ed economia aerobica',
+  };
+}
+
+function buildStravaBiologyFallback(runs: Run[], ffHistory: DashboardResponse['fitness_freshness']): SupercompensationResponse {
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const latestTsb = ffHistory.length ? Number(ffHistory[ffHistory.length - 1]?.tsb) : null;
+  const stravaRuns = runs
+    .filter((run) => run.strava_id !== null && run.strava_id !== undefined && run.is_treadmill !== true)
+    .slice()
+    .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')))
+    .slice(0, 20);
+
+  const recent_runs: SupercompensationRun[] = stravaRuns.map((run) => {
+    const adaptation = classifyBiologyRun(run);
+    const runDate = new Date(`${String(run.date ?? '').slice(0, 10)}T12:00:00`);
+    const elapsed = Number.isNaN(runDate.getTime()) ? 0 : Math.max(0, Math.floor((today.getTime() - runDate.getTime()) / 86400000));
+    const progress = Math.max(0, Math.min(100, (elapsed / adaptation.window) * 100));
+    const benefitDate = Number.isNaN(runDate.getTime())
+      ? String(run.date ?? '').slice(0, 10)
+      : new Date(runDate.getTime() + adaptation.window * 86400000).toISOString().slice(0, 10);
+    const distance = Number(run.distance_km ?? 0);
+    const duration = Number(run.duration_minutes ?? 0);
+    const hrFactor = run.avg_hr_pct ? 1 + Math.max(0, run.avg_hr_pct - 70) / 100 : 1;
+
+    return {
+      id: run.id ?? String(run.strava_id ?? `${run.date}-${run.distance_km}`),
+      strava_id: run.strava_id,
+      date: String(run.date ?? ''),
+      date_label: dateLabel(run.date),
+      name: run.name || run.run_type || 'Corsa Strava',
+      distance_km: Math.round(distance * 100) / 100,
+      duration_minutes: Math.round(duration * 10) / 10,
+      avg_pace: run.avg_pace ?? null,
+      avg_hr: run.avg_hr ?? null,
+      run_type: run.run_type ?? null,
+      adaptation_type: adaptation.type,
+      adaptation_key: adaptation.key,
+      benefit_window_days: adaptation.window,
+      benefit_date: benefitDate,
+      benefit_progress_pct: Math.round(progress),
+      missing_pct: Math.round(Math.max(0, 100 - progress)),
+      days_remaining: Math.max(0, adaptation.window - elapsed),
+      load: Math.round(Math.max(0, distance * Math.max(duration, 1) / 10 * hrFactor) * 10) / 10,
+      reason: adaptation.reason,
+    };
+  });
+
+  const adaptation_totals: SupercompensationResponse['adaptation_totals'] = {
+    neuromuscular: { label: 'Neuromuscolare', load: 0, runs: 0, missing_pct: 0, ready_pct: 0, color: PRO_ACCENT },
+    metabolic: { label: 'Metabolico', load: 0, runs: 0, missing_pct: 0, ready_pct: 0, color: PRO_ORANGE },
+    structural: { label: 'Strutturale', load: 0, runs: 0, missing_pct: 0, ready_pct: 0, color: PRO_BLUE },
+  };
+
+  recent_runs.forEach((run) => {
+    const total = adaptation_totals[run.adaptation_key];
+    total.load += run.load;
+    total.runs += 1;
+    total.missing_pct += run.missing_pct;
+    total.ready_pct += run.benefit_progress_pct;
+  });
+  Object.values(adaptation_totals).forEach((total) => {
+    const count = total.runs || 1;
+    total.load = Math.round(total.load * 10) / 10;
+    total.missing_pct = Math.round(total.missing_pct / count);
+    total.ready_pct = Math.round(total.ready_pct / count);
+  });
+
+  const totalLoad = recent_runs.reduce((sum, run) => sum + run.load, 0) || 1;
+  const loadByKey = (key: AdaptationKey) => recent_runs.filter((run) => run.adaptation_key === key).reduce((sum, run) => sum + run.load, 0) || 1;
+  const categoryLoad: Record<AdaptationKey, number> = {
+    neuromuscular: loadByKey('neuromuscular'),
+    metabolic: loadByKey('metabolic'),
+    structural: loadByKey('structural'),
+  };
+
+  let bestPoint: SupercompensationProjectionPoint | null = null;
+  const projection: SupercompensationProjectionPoint[] = Array.from({ length: recent_runs.length ? 21 : 0 }, (_, i) => {
+    const day = new Date(today.getTime() + i * 86400000);
+    const raw: Record<AdaptationKey, number> = { neuromuscular: 0, metabolic: 0, structural: 0 };
+    let matured = 0;
+    recent_runs.forEach((run) => {
+      const runDate = new Date(`${run.date.slice(0, 10)}T12:00:00`);
+      const elapsed = Number.isNaN(runDate.getTime()) ? 0 : Math.max(0, Math.floor((day.getTime() - runDate.getTime()) / 86400000));
+      const window = run.benefit_window_days || 1;
+      const maturity = elapsed <= window
+        ? elapsed / window
+        : Math.max(0, 1 - ((elapsed - window) / Math.max(1, window * 0.75)));
+      raw[run.adaptation_key] += run.load * maturity;
+      matured += run.load * maturity;
+    });
+    const adaptationReady = Math.max(0, Math.min(100, matured / totalLoad * 100));
+    const freshness = latestTsb === null ? null : Math.max(0, Math.min(100, 50 + latestTsb * 1.4 + i * 0.6));
+    const readiness = freshness === null ? adaptationReady : adaptationReady * 0.62 + freshness * 0.38;
+    const point: SupercompensationProjectionPoint = {
+      date: day.toISOString().slice(0, 10),
+      label: dateLabel(day.toISOString()),
+      neuromuscular: Math.round(Math.min(100, raw.neuromuscular / categoryLoad.neuromuscular * 100) * 10) / 10,
+      metabolic: Math.round(Math.min(100, raw.metabolic / categoryLoad.metabolic * 100) * 10) / 10,
+      structural: Math.round(Math.min(100, raw.structural / categoryLoad.structural * 100) * 10) / 10,
+      adaptation_ready: Math.round(adaptationReady * 10) / 10,
+      readiness: Math.round(readiness * 10) / 10,
+      fitness: Math.round(readiness * 10) / 10,
+      tsb: latestTsb,
+      freshness: freshness === null ? null : Math.round(freshness * 10) / 10,
+    };
+    if (!bestPoint || point.readiness > bestPoint.readiness) bestPoint = point;
+    return point;
+  });
+
+  return {
+    investments: recent_runs.slice(0, 10).map((run) => ({
+      date: run.date,
+      load: run.load,
+      type: run.run_type,
+      adaptation_type: run.adaptation_type,
+    })),
+    golden_day: bestPoint?.date ?? null,
+    days_to_golden: bestPoint ? Math.max(0, Math.floor((new Date(`${bestPoint.date}T12:00:00`).getTime() - today.getTime()) / 86400000)) : null,
+    projection,
+    recent_runs,
+    adaptation_totals,
+    golden_day_score: bestPoint?.readiness ?? null,
+  };
+}
+
 function isoWeekKey(dateString: string): string {
   const date = new Date(`${dateString.slice(0, 10)}T00:00:00`);
   if (Number.isNaN(date.getTime())) return dateString.slice(0, 10);
@@ -511,14 +698,17 @@ export function StatisticsView() {
     best_efforts_progression: preferChart(rawPotentialCharts.best_efforts_progression, fallbackCharts.potential_progress.best_efforts_progression),
   };
   const biomechCharts: Record<string, ProAnalyticsChart> = proSections.biomechanics?.charts ?? {};
-  const biologyProjection = superData?.projection ?? [];
-  const biologyRuns = superData?.recent_runs ?? [];
-  const biologyGoldenPoint = biologyProjection.find((p) => p.date === superData?.golden_day) ?? null;
-  const biologyGoldenDate = superData?.golden_day ? new Date(`${superData.golden_day}T12:00:00`) : null;
+  const localBiologyData = React.useMemo(() => buildStravaBiologyFallback(runs, ffHistory), [runs, ffHistory]);
+  const serverBiologyHasStravaRuns = Boolean(superData?.recent_runs?.some((run) => run.strava_id !== null && run.strava_id !== undefined));
+  const biologyData = serverBiologyHasStravaRuns ? superData as SupercompensationResponse : localBiologyData;
+  const biologyProjection = biologyData.projection ?? [];
+  const biologyRuns = biologyData.recent_runs ?? [];
+  const biologyGoldenPoint = biologyProjection.find((p) => p.date === biologyData.golden_day) ?? null;
+  const biologyGoldenDate = biologyData.golden_day ? new Date(`${biologyData.golden_day}T12:00:00`) : null;
   const biologyGoldenLabel = biologyGoldenDate
     ? biologyGoldenDate.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
     : 'Dati reali insufficienti';
-  const biologyGoldenScore = superData?.golden_day_score ?? biologyGoldenPoint?.readiness ?? null;
+  const biologyGoldenScore = biologyData.golden_day_score ?? biologyGoldenPoint?.readiness ?? null;
   const biologyAdaptationCards = React.useMemo(() => ([
     {
       key: 'neuromuscular' as const,
@@ -526,7 +716,7 @@ export function StatisticsView() {
       icon: Zap,
       color: PRO_ACCENT,
       desc: 'Velocita, cadenza, potenza breve',
-      total: superData?.adaptation_totals?.neuromuscular,
+      total: biologyData.adaptation_totals?.neuromuscular,
     },
     {
       key: 'metabolic' as const,
@@ -534,7 +724,7 @@ export function StatisticsView() {
       icon: Activity,
       color: PRO_ORANGE,
       desc: 'Soglia, VO2, economia aerobica',
-      total: superData?.adaptation_totals?.metabolic,
+      total: biologyData.adaptation_totals?.metabolic,
     },
     {
       key: 'structural' as const,
@@ -542,9 +732,9 @@ export function StatisticsView() {
       icon: Dna,
       color: PRO_BLUE,
       desc: 'Tendini, capillari, volume',
-      total: superData?.adaptation_totals?.structural,
+      total: biologyData.adaptation_totals?.structural,
     },
-  ]), [superData]);
+  ]), [biologyData]);
 
   // ── Monthly elevation from runs ───────────────────────────
   const elevationData = React.useMemo(() => {
@@ -1493,7 +1683,7 @@ export function StatisticsView() {
                   tooltip={{
                     title: 'SUPERCOMPENSAZIONE REALE',
                     lines: [
-                      'Usa le ultime 20 corse outdoor, escludendo il tapis roulant.',
+                      'Usa le ultime 20 corse syncate su Strava, escludendo il tapis roulant.',
                       'Ogni corsa genera uno stimolo neuromuscolare, metabolico o strutturale.',
                       'La linea readiness combina adattamento maturato e freschezza TSB quando disponibile.',
                     ],
@@ -1542,7 +1732,7 @@ export function StatisticsView() {
                   <div className="h-[260px] flex items-center justify-center border border-dashed border-[#2A2A2A] rounded-[6px] text-center">
                     <div>
                       <div className="text-white font-black uppercase tracking-widest text-sm">Dati reali insufficienti</div>
-                      <div className="text-[#666] text-xs mt-2">Servono corse outdoor recenti per calcolare la curva biologica.</div>
+                      <div className="text-[#666] text-xs mt-2">Servono corse Strava recenti per calcolare la curva biologica.</div>
                     </div>
                   </div>
                 )}
@@ -1573,7 +1763,7 @@ export function StatisticsView() {
                       />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-5xl font-black text-white italic">{superData?.days_to_golden ?? '--'}</span>
+                      <span className="text-5xl font-black text-white italic">{biologyData.days_to_golden ?? '--'}</span>
                       <span className="text-[10px] text-[#666] uppercase tracking-widest font-black">giorni</span>
                     </div>
                   </div>
@@ -1628,7 +1818,7 @@ export function StatisticsView() {
               <CardHeader
                 icon={Briefcase}
                 iconColor={PRO_ACCENT}
-                title="Ultime 20 Corse Outdoor"
+                title="Ultime 20 Corse Strava"
                 subtitle="Adattamento generato e beneficio residuo"
                 variant="pro"
                 tooltip={{
@@ -1688,7 +1878,7 @@ export function StatisticsView() {
               ) : (
                 <div className="p-8 text-center border border-dashed border-[#2A2A2A] rounded-[6px]">
                   <div className="text-white font-black uppercase tracking-widest">Dati reali insufficienti</div>
-                  <div className="text-[#666] text-xs mt-2">Quando arrivano corse outdoor, qui compariranno adattamenti e Golden Day.</div>
+                  <div className="text-[#666] text-xs mt-2">Quando arrivano corse syncate su Strava, qui compariranno adattamenti e Golden Day.</div>
                 </div>
               )}
             </Card>

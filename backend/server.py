@@ -3683,7 +3683,12 @@ async def post_recovery_checkin(request: Request):
 @app.get("/api/supercompensation")
 async def get_supercompensation():
     athlete_id = await _get_athlete_id()
-    q = {"athlete_id": athlete_id, "is_treadmill": {"$ne": True}} if athlete_id else {"is_treadmill": {"$ne": True}}
+    q = {
+        "is_treadmill": {"$ne": True},
+        "strava_id": {"$exists": True, "$ne": None},
+    }
+    if athlete_id:
+        q["athlete_id"] = athlete_id
     profile_q = {"athlete_id": athlete_id} if athlete_id else {}
     profile, ff_latest = await asyncio.gather(
         db.profile.find_one(profile_q),
