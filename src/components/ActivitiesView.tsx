@@ -32,35 +32,6 @@ import type { MapRef } from 'react-map-gl/mapbox';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
 
-// ── Demo trail run (premium showcase) ────────────────────────────────────────
-const DEMO_TRAIL_RUN: Run = {
-  id: '__demo_trail__',
-  date: '2026-04-06',
-  distance_km: 12.4,
-  duration_minutes: 148,
-  avg_pace: '11:56',
-  avg_hr: 158,
-  max_hr: 178,
-  avg_hr_pct: 0.87,
-  max_hr_pct: 0.98,
-  run_type: 'trail',
-  notes: 'Monte Cavo Loop — Castelli Romani',
-  location: 'Rocca di Papa, RM',
-  strava_id: null,
-  avg_cadence: 168,
-  elevation_gain: 624,
-  splits: [],
-  polyline: null,
-  start_latlng: [41.7619, 12.7136],
-  plan_feedback: null,
-  avg_vertical_oscillation: null,
-  avg_vertical_ratio: null,
-  avg_ground_contact_time: null,
-  avg_stride_length: null,
-  is_treadmill: false,
-  name: 'Monte Cavo Loop Trail',
-};
-
 type RunType = 'Easy' | 'Tempo' | 'Intervals' | 'Long' | 'Recovery' | string;
 type MapViewMode = 'world' | 'last-run' | 'all-zoomed';
 
@@ -178,7 +149,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
   const rotationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const runs: Run[] = data?.runs ?? [];
-  const allRuns: Run[] = [DEMO_TRAIL_RUN, ...runs];
+  const allRuns: Run[] = runs;
   const runsWithCoords = allRuns.filter(r => r.start_latlng && r.start_latlng.length === 2);
 
   // Pre-compute cardiac drift for all runs (only steady-pace runs qualify)
