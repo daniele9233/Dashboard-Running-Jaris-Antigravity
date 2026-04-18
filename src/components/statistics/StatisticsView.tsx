@@ -11,8 +11,8 @@ import { AnalyticsV4CadenceSpeedMatrix, AnalyticsV4PaceZoneDistribution } from '
 import { AnalyticsV5BestEffortsProgression, AnalyticsV5EffortMatrix, AnalyticsV5PaceDistributionBell } from './AnalyticsV5';
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 import { useApi } from '../../hooks/useApi';
-import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, getDashboard, getProAnalytics, linkGarminCsv, type GctAnalysisResponse } from '../../api';
-import type { AnalyticsResponse, VdotPacesResponse, RunsResponse, DashboardResponse, ProAnalyticsResponse, ProAnalyticsChart, GarminCsvLinkResult, Run } from '../../types/api';
+import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, getDashboard, getProAnalytics, linkGarminCsv, getSupercompensation, type GctAnalysisResponse } from '../../api';
+import type { AnalyticsResponse, VdotPacesResponse, RunsResponse, DashboardResponse, ProAnalyticsResponse, ProAnalyticsChart, GarminCsvLinkResult, Run, SupercompensationResponse } from '../../types/api';
 import {
   Activity,
   Zap,
@@ -431,6 +431,7 @@ export function StatisticsView() {
   const { data: runsData } = useApi<RunsResponse>(getRuns);
   const { data: gctData } = useApi<GctAnalysisResponse>(getGctAnalysis);
   const { data: dashData } = useApi<DashboardResponse>(getDashboard);
+  const { data: superData } = useApi<SupercompensationResponse>(getSupercompensation);
 
   type ProTab = 'load_form' | 'potential_progress' | 'biomechanics';
   const activeProTab = React.useMemo<ProTab | null>(() => {
@@ -510,6 +511,40 @@ export function StatisticsView() {
     best_efforts_progression: preferChart(rawPotentialCharts.best_efforts_progression, fallbackCharts.potential_progress.best_efforts_progression),
   };
   const biomechCharts: Record<string, ProAnalyticsChart> = proSections.biomechanics?.charts ?? {};
+  const biologyProjection = superData?.projection ?? [];
+  const biologyRuns = superData?.recent_runs ?? [];
+  const biologyGoldenPoint = biologyProjection.find((p) => p.date === superData?.golden_day) ?? null;
+  const biologyGoldenDate = superData?.golden_day ? new Date(`${superData.golden_day}T12:00:00`) : null;
+  const biologyGoldenLabel = biologyGoldenDate
+    ? biologyGoldenDate.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
+    : 'Dati reali insufficienti';
+  const biologyGoldenScore = superData?.golden_day_score ?? biologyGoldenPoint?.readiness ?? null;
+  const biologyAdaptationCards = React.useMemo(() => ([
+    {
+      key: 'neuromuscular' as const,
+      label: 'Neuromuscolare',
+      icon: Zap,
+      color: PRO_ACCENT,
+      desc: 'Velocita, cadenza, potenza breve',
+      total: superData?.adaptation_totals?.neuromuscular,
+    },
+    {
+      key: 'metabolic' as const,
+      label: 'Metabolico',
+      icon: Activity,
+      color: PRO_ORANGE,
+      desc: 'Soglia, VO2, economia aerobica',
+      total: superData?.adaptation_totals?.metabolic,
+    },
+    {
+      key: 'structural' as const,
+      label: 'Strutturale',
+      icon: Dna,
+      color: PRO_BLUE,
+      desc: 'Tendini, capillari, volume',
+      total: superData?.adaptation_totals?.structural,
+    },
+  ]), [superData]);
 
   // ── Monthly elevation from runs ───────────────────────────
   const elevationData = React.useMemo(() => {
@@ -1446,6 +1481,221 @@ export function StatisticsView() {
             BIOLOGIA & FUTURO TAB
         ════════════════════════════════════════════════════ */}
         {activeTab === 'biology' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+              <Card className="xl:col-span-8" accent={PRO_ACCENT} variant="pro">
+                <CardHeader
+                  icon={LineChartIcon}
+                  iconColor={PRO_ACCENT}
+                  title="Curva Biologica"
+                  subtitle="Maturazione adattamenti - prossimi 21 giorni"
+                  variant="pro"
+                  tooltip={{
+                    title: 'SUPERCOMPENSAZIONE REALE',
+                    lines: [
+                      'Usa le ultime 20 corse outdoor, escludendo il tapis roulant.',
+                      'Ogni corsa genera uno stimolo neuromuscolare, metabolico o strutturale.',
+                      'La linea readiness combina adattamento maturato e freschezza TSB quando disponibile.',
+                    ],
+                  }}
+                />
+                {biologyRuns.length > 0 && biologyProjection.length > 0 ? (
+                  <div className="h-[360px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={biologyProjection} margin={{ top: 6, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="bio-neuro" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={PRO_ACCENT} stopOpacity={0.42} />
+                            <stop offset="100%" stopColor={PRO_ACCENT} stopOpacity={0.02} />
+                          </linearGradient>
+                          <linearGradient id="bio-metabolic" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={PRO_ORANGE} stopOpacity={0.34} />
+                            <stop offset="100%" stopColor={PRO_ORANGE} stopOpacity={0.02} />
+                          </linearGradient>
+                          <linearGradient id="bio-structural" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={PRO_BLUE} stopOpacity={0.30} />
+                            <stop offset="100%" stopColor={PRO_BLUE} stopOpacity={0.02} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke={PRO_GRID} vertical={false} />
+                        <XAxis dataKey="label" stroke="#444" fontSize={10} tickLine={false} axisLine={false} interval={2} />
+                        <YAxis yAxisId="left" hide domain={[0, 100]} />
+                        <YAxis yAxisId="right" hide domain={[0, 100]} />
+                        <Tooltip
+                          contentStyle={PRO_TOOLTIP_STYLE}
+                          labelStyle={{ color: PRO_ACCENT, fontSize: 11, fontWeight: 800 }}
+                          formatter={(value: any, name: string) => [`${Number(value).toFixed(1)}%`, name]}
+                        />
+                        <Area yAxisId="left" type="monotone" dataKey="structural" name="Strutturale" stroke={PRO_BLUE} fill="url(#bio-structural)" strokeWidth={1.5} dot={false} />
+                        <Area yAxisId="left" type="monotone" dataKey="metabolic" name="Metabolico" stroke={PRO_ORANGE} fill="url(#bio-metabolic)" strokeWidth={1.5} dot={false} />
+                        <Area yAxisId="left" type="monotone" dataKey="neuromuscular" name="Neuromuscolare" stroke={PRO_ACCENT} fill="url(#bio-neuro)" strokeWidth={1.5} dot={false} />
+                        <Line yAxisId="right" type="monotone" dataKey="readiness" name="Readiness" stroke={PRO_ACCENT} strokeWidth={3} dot={{ r: 3, fill: PRO_ACCENT, strokeWidth: 0 }} />
+                        {biologyGoldenPoint && (
+                          <ReferenceLine yAxisId="right" x={biologyGoldenPoint.label} stroke={PRO_ACCENT} strokeDasharray="4 4">
+                            <Label value="Golden Day" position="top" fill={PRO_ACCENT} fontSize={10} fontWeight="bold" />
+                          </ReferenceLine>
+                        )}
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-[260px] flex items-center justify-center border border-dashed border-[#2A2A2A] rounded-[6px] text-center">
+                    <div>
+                      <div className="text-white font-black uppercase tracking-widest text-sm">Dati reali insufficienti</div>
+                      <div className="text-[#666] text-xs mt-2">Servono corse outdoor recenti per calcolare la curva biologica.</div>
+                    </div>
+                  </div>
+                )}
+              </Card>
+
+              <Card className="xl:col-span-4 flex flex-col" accent={PRO_ACCENT} variant="pro">
+                <div className="flex items-center gap-3 mb-6">
+                  <Star className="w-5 h-5" style={{ color: PRO_ACCENT }} />
+                  <div>
+                    <div className="text-white font-black uppercase italic tracking-widest">Golden Day</div>
+                    <div className="text-[10px] text-[#666] uppercase tracking-widest font-bold">Picco aggregato</div>
+                  </div>
+                </div>
+                <div className="flex-1 flex flex-col items-center justify-center text-center">
+                  <div className="relative w-44 h-44 mb-6">
+                    <svg className="w-full h-full -rotate-90">
+                      <circle cx="88" cy="88" r="78" stroke="#1A1A1A" strokeWidth="8" fill="none" />
+                      <circle
+                        cx="88"
+                        cy="88"
+                        r="78"
+                        stroke={PRO_ACCENT}
+                        strokeWidth="8"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeDasharray={490}
+                        strokeDashoffset={490 * (1 - Math.max(0, Math.min(100, biologyGoldenScore ?? 0)) / 100)}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-5xl font-black text-white italic">{superData?.days_to_golden ?? '--'}</span>
+                      <span className="text-[10px] text-[#666] uppercase tracking-widest font-black">giorni</span>
+                    </div>
+                  </div>
+                  <div className="text-2xl font-black italic uppercase" style={{ color: PRO_ACCENT }}>{biologyGoldenLabel}</div>
+                  <div className="text-xs text-[#777] mt-3 font-bold leading-relaxed">
+                    Readiness {biologyGoldenScore != null ? `${Math.round(biologyGoldenScore)}%` : 'N/D'} con carichi reali e freschezza disponibile.
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {biologyAdaptationCards.map(({ key, label, icon: Icon, color, desc, total }) => (
+                <Card key={key} accent={color} variant="pro">
+                  <div className="flex items-start justify-between gap-4 mb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-[6px] bg-[#111] border border-[#2A2A2A]">
+                        <Icon className="w-4 h-4" style={{ color }} />
+                      </div>
+                      <div>
+                        <div className="text-sm text-white font-black uppercase italic">{label}</div>
+                        <div className="text-[10px] text-[#666] font-bold uppercase tracking-widest">{desc}</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-mono font-black" style={{ color }}>{total?.ready_pct ?? 0}%</div>
+                      <div className="text-[9px] text-[#666] uppercase font-black">maturato</div>
+                    </div>
+                  </div>
+                  <div className="h-2 rounded-full bg-[#1A1A1A] overflow-hidden mb-4">
+                    <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, total?.ready_pct ?? 0))}%`, backgroundColor: color }} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="bg-[#111] border border-[#1E1E1E] rounded-[6px] p-3">
+                      <div className="text-white font-mono font-black">{total?.runs ?? 0}</div>
+                      <div className="text-[9px] text-[#666] uppercase font-black">corse</div>
+                    </div>
+                    <div className="bg-[#111] border border-[#1E1E1E] rounded-[6px] p-3">
+                      <div className="text-white font-mono font-black">{total?.load ?? 0}</div>
+                      <div className="text-[9px] text-[#666] uppercase font-black">carico</div>
+                    </div>
+                    <div className="bg-[#111] border border-[#1E1E1E] rounded-[6px] p-3">
+                      <div className="text-white font-mono font-black">{total?.missing_pct ?? 0}%</div>
+                      <div className="text-[9px] text-[#666] uppercase font-black">manca</div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            <Card accent={PRO_ACCENT} variant="pro">
+              <CardHeader
+                icon={Briefcase}
+                iconColor={PRO_ACCENT}
+                title="Ultime 20 Corse Outdoor"
+                subtitle="Adattamento generato e beneficio residuo"
+                variant="pro"
+                tooltip={{
+                  title: 'ADATTAMENTI PER CORSA',
+                  lines: [
+                    'Neuromuscolare: ripetute brevi, cadenza alta, lavori veloci.',
+                    'Metabolico: soglia, tempo, intervalli sostenuti e FC media alta.',
+                    'Strutturale: lunghi, trail, colline, volume e durata alta.',
+                  ],
+                }}
+              />
+              {biologyRuns.length > 0 ? (
+                <div className="space-y-3 max-h-[680px] overflow-y-auto pr-1">
+                  {biologyRuns.map((run) => {
+                    const meta = biologyAdaptationCards.find((card) => card.key === run.adaptation_key);
+                    const color = meta?.color ?? PRO_ACCENT;
+                    const benefitDate = run.benefit_date
+                      ? new Date(`${run.benefit_date}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
+                      : 'N/D';
+                    return (
+                      <div key={`${run.id}-${run.date}`} className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center bg-[#111] border border-[#1E1E1E] rounded-[6px] p-4 hover:border-[#333] transition-colors">
+                        <div className="lg:col-span-4 min-w-0">
+                          <div className="text-white font-black uppercase tracking-wide truncate">{run.name || 'Corsa'}</div>
+                          <div className="text-[10px] text-[#666] font-bold uppercase tracking-widest mt-1">
+                            {run.date_label} - {run.distance_km.toFixed(2)} km - {run.avg_pace ?? 'N/D'}/km
+                          </div>
+                        </div>
+                        <div className="lg:col-span-2">
+                          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-[6px] border border-[#2A2A2A] bg-[#0D0D0D]">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                            <span className="text-[10px] font-black uppercase tracking-widest" style={{ color }}>{run.adaptation_type}</span>
+                          </div>
+                        </div>
+                        <div className="lg:col-span-3">
+                          <div className="flex justify-between text-[10px] uppercase font-black tracking-widest mb-2">
+                            <span className="text-[#666]">Maturato</span>
+                            <span className="text-white">{run.benefit_progress_pct}%</span>
+                          </div>
+                          <div className="h-2 bg-[#1A1A1A] rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, run.benefit_progress_pct))}%`, backgroundColor: color }} />
+                          </div>
+                        </div>
+                        <div className="lg:col-span-3 grid grid-cols-2 gap-3">
+                          <div className="bg-[#0D0D0D] border border-[#1E1E1E] rounded-[6px] p-3">
+                            <div className="text-lg font-mono font-black text-white">{run.missing_pct}%</div>
+                            <div className="text-[9px] text-[#666] uppercase font-black">manca</div>
+                          </div>
+                          <div className="bg-[#0D0D0D] border border-[#1E1E1E] rounded-[6px] p-3">
+                            <div className="text-lg font-mono font-black" style={{ color }}>{run.days_remaining}</div>
+                            <div className="text-[9px] text-[#666] uppercase font-black">gg - {benefitDate}</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-8 text-center border border-dashed border-[#2A2A2A] rounded-[6px]">
+                  <div className="text-white font-black uppercase tracking-widest">Dati reali insufficienti</div>
+                  <div className="text-[#666] text-xs mt-2">Quando arrivano corse outdoor, qui compariranno adattamenti e Golden Day.</div>
+                </div>
+              )}
+            </Card>
+          </div>
+        )}
+
+        {false && activeTab === 'biology' && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

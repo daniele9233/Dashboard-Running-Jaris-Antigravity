@@ -13,7 +13,7 @@ import type { GctAnalysisResponse } from '../../api';
 import type { Run, FitnessFreshnessPoint, ProAnalyticsChart } from '../../types/api';
 import {
   Activity, Zap, TrendingUp, Heart, Timer, Info, Footprints, Maximize2, X,
-  Target,
+  Target, Radar,
 } from 'lucide-react';
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 
@@ -254,6 +254,21 @@ type RacePredictionCardData = {
   trendColor: string;
 };
 
+type RaceReadinessAxis = {
+  label: string;
+  value: number;
+  hint: string;
+};
+
+type RaceForecastRow = {
+  distance: string;
+  time: string;
+  pace: string;
+  score: number;
+  color: string;
+  note: string;
+};
+
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
@@ -427,6 +442,201 @@ function RacePredictionsGrid({ cards }: { cards: RacePredictionCardData[] }) {
         </div>
       ))}
     </div>
+  );
+}
+
+function RaceReadinessRadarCard({
+  axes,
+  overall,
+  limiter,
+  advice,
+}: {
+  axes: RaceReadinessAxis[];
+  overall: number;
+  limiter: string;
+  advice: string;
+}) {
+  const center = 105;
+  const radius = 72;
+  const axisCount = Math.max(axes.length, 1);
+  const pointFor = (index: number, value: number) => {
+    const angle = -Math.PI / 2 + (index / axisCount) * Math.PI * 2;
+    const r = radius * clamp01(value / 100);
+    return {
+      x: center + Math.cos(angle) * r,
+      y: center + Math.sin(angle) * r,
+      labelX: center + Math.cos(angle) * (radius + 30),
+      labelY: center + Math.sin(angle) * (radius + 22),
+    };
+  };
+  const polygon = axes.map((axis, index) => {
+    const p = pointFor(index, axis.value);
+    return `${p.x},${p.y}`;
+  }).join(' ');
+
+  return (
+    <V2Card accent={NEON}>
+      <V2Header
+        icon={Radar}
+        title="Race Readiness Radar"
+        subtitle="Velocita - soglia - endurance - consistenza - freschezza"
+        tooltip={{
+          title: 'RACE READINESS',
+          lines: [
+            'Sintesi della prontezza gara dai dati gia caricati in AnalyticsV2.',
+            'Velocita e soglia derivano da VDOT, trend passo e threshold pace.',
+            'Endurance, consistenza e freschezza usano ultime corse e fitness/freshness.',
+          ],
+        }}
+      />
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-center">
+        <div className="lg:col-span-3 min-h-[250px] flex items-center justify-center">
+          <svg viewBox="0 0 210 210" className="w-full max-w-[300px] overflow-visible">
+            {[0.25, 0.5, 0.75, 1].map((level) => {
+              const ring = axes.map((_, index) => {
+                const p = pointFor(index, level * 100);
+                return `${p.x},${p.y}`;
+              }).join(' ');
+              return (
+                <polygon key={level} points={ring} fill="none" stroke="#252525" strokeWidth="1" />
+              );
+            })}
+            {axes.map((axis, index) => {
+              const p = pointFor(index, 100);
+              return (
+                <g key={axis.label}>
+                  <line x1={center} y1={center} x2={p.x} y2={p.y} stroke="#242424" strokeWidth="1" />
+                  <text
+                    x={p.labelX}
+                    y={p.labelY}
+                    textAnchor={p.labelX < center - 5 ? 'end' : p.labelX > center + 5 ? 'start' : 'middle'}
+                    fill={LABEL_COLOR}
+                    fontSize="9"
+                    fontWeight="900"
+                  >
+                    {axis.label}
+                  </text>
+                </g>
+              );
+            })}
+            <polygon points={polygon} fill={NEON_DIM} stroke={NEON} strokeWidth="3" filter="url(#v2-glow-sm)" />
+            {axes.map((axis, index) => {
+              const p = pointFor(index, axis.value);
+              return <circle key={axis.label} cx={p.x} cy={p.y} r="4" fill={NEON} stroke="#050505" strokeWidth="2" />;
+            })}
+            <text x={center} y={center - 2} textAnchor="middle" fill="white" fontSize="28" fontWeight="900" fontStyle="italic">
+              {overall}
+            </text>
+            <text x={center} y={center + 14} textAnchor="middle" fill={LABEL_COLOR} fontSize="9" fontWeight="900">
+              READY
+            </text>
+          </svg>
+        </div>
+        <div className="lg:col-span-2 space-y-3">
+          {axes.map((axis) => (
+            <div key={axis.label} className="bg-[#111] border border-[#242424] rounded-[6px] p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] text-[#777] font-black uppercase tracking-widest">{axis.label}</span>
+                <span className="text-sm font-mono font-black text-white">{axis.value}%</span>
+              </div>
+              <div className="h-1.5 bg-[#1A1A1A] rounded-full overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: `${axis.value}%`, backgroundColor: NEON }} />
+              </div>
+              <div className="text-[9px] text-[#555] font-bold mt-2 uppercase tracking-widest">{axis.hint}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-5">
+        <div className="bg-[#111] border border-[#242424] rounded-[6px] p-4">
+          <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Fattore limitante</div>
+          <div className="text-white font-black uppercase italic">{limiter}</div>
+        </div>
+        <div className="bg-[#111] border border-[#242424] rounded-[6px] p-4">
+          <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Mossa pratica</div>
+          <div className="text-white text-xs font-bold leading-relaxed">{advice}</div>
+        </div>
+      </div>
+    </V2Card>
+  );
+}
+
+function RaceForecastLab({
+  rows,
+  bestDistance,
+  confidence,
+  limiter,
+  advice,
+}: {
+  rows: RaceForecastRow[];
+  bestDistance: string;
+  confidence: number;
+  limiter: string;
+  advice: string;
+}) {
+  return (
+    <V2Card className="xl:col-span-2" accent={NEON}>
+      <V2Header
+        icon={Target}
+        title="Race Forecast Lab"
+        subtitle="Affidabilita previsioni e distanza piu pronta oggi"
+        tooltip={{
+          title: 'RACE FORECAST LAB',
+          lines: [
+            'Mantiene le previsioni gara sopra e aggiunge un riepilogo decisionale.',
+            'La confidenza cresce con consistenza, endurance e trend VDOT.',
+            'Il limitante principale guida il prossimo allenamento utile.',
+          ],
+        }}
+      />
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+        <div className="xl:col-span-4 bg-[#111] border border-[#242424] rounded-[6px] p-5 flex flex-col justify-between min-h-[220px]">
+          <div>
+            <div className="text-[10px] text-[#555] uppercase tracking-widest font-black">Distanza piu pronta oggi</div>
+            <div className="text-5xl font-black italic mt-4" style={{ color: NEON }}>{bestDistance}</div>
+            <div className="text-[11px] text-[#777] font-bold uppercase tracking-widest mt-3">Confidenza previsione</div>
+          </div>
+          <div>
+            <div className="flex items-end gap-2">
+              <span className="text-4xl font-mono font-black text-white">{confidence}</span>
+              <span className="text-sm font-black pb-1" style={{ color: NEON }}>%</span>
+            </div>
+            <div className="h-2 bg-[#1A1A1A] rounded-full overflow-hidden mt-3">
+              <div className="h-full rounded-full" style={{ width: `${confidence}%`, backgroundColor: NEON }} />
+            </div>
+          </div>
+        </div>
+        <div className="xl:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {rows.map((row) => (
+            <div key={row.distance} className="bg-[#111] border border-[#242424] rounded-[6px] p-4">
+              <div className="flex justify-between items-start gap-3 mb-3">
+                <div>
+                  <div className="text-white text-lg font-black italic">{row.distance}</div>
+                  <div className="text-[10px] text-[#666] uppercase tracking-widest font-bold">{row.note}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-mono font-black" style={{ color: row.color }}>{row.time}</div>
+                  <div className="text-[9px] text-[#666] font-bold">{row.pace}/km</div>
+                </div>
+              </div>
+              <div className="h-1.5 bg-[#1A1A1A] rounded-full overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: `${row.score}%`, backgroundColor: row.color }} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="xl:col-span-3 space-y-3">
+          <div className="bg-[#111] border border-[#242424] rounded-[6px] p-4">
+            <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-2">Limitante</div>
+            <div className="text-white font-black uppercase italic">{limiter}</div>
+          </div>
+          <div className="bg-[#111] border border-[#242424] rounded-[6px] p-4">
+            <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-2">Prossimo focus</div>
+            <div className="text-[#BDBDBD] text-xs font-bold leading-relaxed">{advice}</div>
+          </div>
+        </div>
+      </div>
+    </V2Card>
   );
 }
 
@@ -1070,6 +1280,99 @@ export function AnalyticsV2({
     });
   }, [racePredictionCards, vdot, vdotChartData]);
 
+  const raceReadiness = React.useMemo(() => {
+    const now = new Date();
+    const datedRuns = runs
+      .map((run) => ({ run, date: new Date(`${run.date}T12:00:00`) }))
+      .filter(({ date }) => !Number.isNaN(date.getTime()));
+    const recentDays = (days: number) => datedRuns.filter(({ date }) => (now.getTime() - date.getTime()) / 86400000 <= days);
+    const recent35 = recentDays(35);
+    const recent56 = recentDays(56);
+    const recent90 = recentDays(90);
+    const currentVdot = vdot ?? (vdotChartData.length > 0 ? vdotChartData[vdotChartData.length - 1]?.vdot : null) ?? 45;
+    const olderVdot = vdotChartData.length >= 4 ? vdotChartData[vdotChartData.length - 4]?.vdot : currentVdot;
+    const vdotTrend = currentVdot - olderVdot;
+    const firstPace = paceChartData.find((p) => p.pace && p.pace > 0)?.pace ?? null;
+    const lastPace = [...paceChartData].reverse().find((p) => p.pace && p.pace > 0)?.pace ?? null;
+    const paceGainSec = firstPace && lastPace ? (firstPace - lastPace) * 60 : 0;
+    const thresholdSeconds = thresholdPace ? parsePaceDecimal(thresholdPace) * 60 : null;
+    const latestTsb = ffHistory.length ? ffHistory[ffHistory.length - 1]?.tsb : null;
+    const maxRecentDistance = Math.max(0, ...recent90.map(({ run }) => run.distance_km ?? 0));
+    const longRuns = recent90.filter(({ run }) => (run.distance_km ?? 0) >= 14).length;
+    const weekKeys = new Set(recent56.map(({ date }) => {
+      const weekStart = new Date(date);
+      weekStart.setDate(date.getDate() - date.getDay());
+      return `${weekStart.getFullYear()}-${weekStart.getMonth()}-${weekStart.getDate()}`;
+    }));
+
+    const speed = Math.round(Math.max(35, Math.min(100, 48 + (currentVdot - 38) * 2.3 + paceGainSec * 0.55 + vdotTrend * 5)));
+    const threshold = Math.round(Math.max(35, Math.min(100, thresholdSeconds ? 112 - (thresholdSeconds - 240) * 0.32 : 52 + (currentVdot - 40) * 2.1)));
+    const endurance = Math.round(Math.max(30, Math.min(100, (maxRecentDistance / 21.1) * 70 + longRuns * 8 + recent90.length * 0.7)));
+    const consistency = Math.round(Math.max(25, Math.min(100, (weekKeys.size / 8) * 82 + Math.min(recent56.length, 16) * 1.4)));
+    const freshness = Math.round(Math.max(30, Math.min(100, latestTsb == null ? 62 : 58 + latestTsb * 1.6 + Math.min(recent35.length, 12) * 0.6)));
+    const axes: RaceReadinessAxis[] = [
+      { label: 'Velocita', value: speed, hint: 'VDOT e passo' },
+      { label: 'Soglia', value: threshold, hint: 'T-pace e HR' },
+      { label: 'Endurance', value: endurance, hint: 'lunghi recenti' },
+      { label: 'Consistenza', value: consistency, hint: 'settimane attive' },
+      { label: 'Freschezza', value: freshness, hint: 'TSB e carico' },
+    ];
+    const limiterAxis = axes.reduce((min, axis) => axis.value < min.value ? axis : min, axes[0]);
+    const adviceByLimiter: Record<string, string> = {
+      Velocita: 'Inserisci 6-8 allunghi o ripetute brevi con recupero pieno.',
+      Soglia: 'Fai un blocco tempo controllato da 20-30 minuti a ritmo sostenibile.',
+      Endurance: 'Aggiungi un lungo facile progressivo senza forzare il finale.',
+      Consistenza: 'Stabilizza la settimana con 3-4 uscite regolari prima di testare.',
+      Freschezza: 'Scarica 48 ore e tieni solo mobilita o corsa molto facile.',
+    };
+    const overall = Math.round(axes.reduce((sum, axis) => sum + axis.value, 0) / axes.length);
+    return {
+      axes,
+      overall,
+      limiter: limiterAxis.label,
+      advice: adviceByLimiter[limiterAxis.label] ?? 'Mantieni il carico stabile e ritesta dopo una settimana pulita.',
+    };
+  }, [ffHistory, paceChartData, runs, thresholdPace, vdot, vdotChartData]);
+
+  const raceForecastRows = React.useMemo<RaceForecastRow[]>(() => {
+    const scores = new Map(raceReadiness.axes.map((axis) => [axis.label, axis.value]));
+    const scoreFor = (distance: string) => {
+      const speed = scores.get('Velocita') ?? 60;
+      const threshold = scores.get('Soglia') ?? 60;
+      const endurance = scores.get('Endurance') ?? 60;
+      const consistency = scores.get('Consistenza') ?? 60;
+      const freshness = scores.get('Freschezza') ?? 60;
+      if (distance === '5K') return speed * 0.42 + threshold * 0.24 + freshness * 0.20 + consistency * 0.14;
+      if (distance === '10K') return threshold * 0.36 + speed * 0.25 + endurance * 0.20 + consistency * 0.19;
+      if (distance === 'HALF') return endurance * 0.38 + threshold * 0.30 + consistency * 0.20 + freshness * 0.12;
+      return endurance * 0.46 + consistency * 0.26 + freshness * 0.16 + threshold * 0.12;
+    };
+    const noteFor: Record<string, string> = {
+      '5K': 'spinta rapida',
+      '10K': 'soglia stabile',
+      HALF: 'tenuta aerobica',
+      FULL: 'volume richiesto',
+    };
+    return racePredictionCards.map((card) => ({
+      distance: card.distance,
+      time: card.time,
+      pace: card.pace,
+      color: card.color,
+      score: Math.round(Math.max(0, Math.min(100, scoreFor(card.distance)))),
+      note: noteFor[card.distance] ?? 'profilo gara',
+    }));
+  }, [racePredictionCards, raceReadiness.axes]);
+
+  const raceBestDistance = raceForecastRows.reduce((best, row) => row.score > best.score ? row : best, raceForecastRows[0] ?? {
+    distance: '5K',
+    score: 0,
+    time: '--',
+    pace: '--',
+    color: NEON,
+    note: '',
+  }).distance;
+  const raceConfidence = Math.round(Math.max(0, Math.min(100, raceForecastRows.reduce((sum, row) => sum + row.score, 0) / Math.max(1, raceForecastRows.length))));
+
   return (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
       <GlowDefs />
@@ -1136,6 +1439,15 @@ export function AnalyticsV2({
        {/* Race Predictions — right column */}
        {showCore && <RacePredictionsGrid cards={racePredictionCards} />}
        {showCore && <FitnessEvolutionGrid cards={fitnessEvolutionCards} />}
+       {showCore && (
+         <RaceForecastLab
+           rows={raceForecastRows}
+           bestDistance={raceBestDistance}
+           confidence={raceConfidence}
+           limiter={raceReadiness.limiter}
+           advice={raceReadiness.advice}
+         />
+       )}
        {false && showCore && (
        <V2Card>
          <V2Header
@@ -1439,6 +1751,12 @@ export function AnalyticsV2({
                })()}
              </div>
            </V2Card>
+           <RaceReadinessRadarCard
+             axes={raceReadiness.axes}
+             overall={raceReadiness.overall}
+             limiter={raceReadiness.limiter}
+             advice={raceReadiness.advice}
+           />
          </div>
        )}
 

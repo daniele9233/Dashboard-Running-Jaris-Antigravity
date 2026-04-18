@@ -159,6 +159,8 @@ def analytics_run_projection(include_splits: bool = False) -> dict:
         "avg_pace": 1,
         "avg_hr": 1,
         "max_hr": 1,
+        "run_type": 1,
+        "notes": 1,
         "avg_cadence": 1,
         "elevation_gain": 1,
         "is_treadmill": 1,
@@ -3681,34 +3683,219 @@ async def post_recovery_checkin(request: Request):
 @app.get("/api/supercompensation")
 async def get_supercompensation():
     athlete_id = await _get_athlete_id()
-    q = {"athlete_id": athlete_id} if athlete_id else {}
-    runs = await db.runs.find(q).sort("date", -1).to_list(30)
-
-    investments = []
-    for r in runs[:10]:
-        investments.append({
-            "date": r.get("date"),
-            "load": round(r.get("distance_km", 0) * r.get("duration_minutes", 0) / 10, 1),
-            "type": r.get("run_type"),
-        })
-
-    # Simple projection
+    q = {"athlete_id": athlete_id, "is_treadmill": {"$ne": True}} if athlete_id else {"is_treadmill": {"$ne": True}}
+    profile_q = {"athlete_id": athlete_id} if athlete_id else {}
+    profile, ff_latest = await asyncio.gather(
+        db.profile.find_one(profile_q),
+        db.fitness_freshness.find_one(profile_q, sort=[("date", -1)]),
+    )
+    max_hr = int((profile or {}).get("max_hr", 190) or 190)
+    runs = await db.runs.find(q, analytics_run_projection()).sort("date", -1).to_list(80)
     today = dt.date.today()
-    projection = []
-    base_fitness = 50
-    for i in range(14):
-        d = today + dt.timedelta(days=i)
-        # Fitness decays slowly, supercompensation peaks 2-3 days after hard effort
-        fitness = base_fitness + 5 * math.sin(i * 0.5) * math.exp(-i * 0.05)
-        projection.append({"date": d.isoformat(), "fitness": round(fitness, 1)})
 
-    golden_day = (today + dt.timedelta(days=3)).isoformat() if runs else None
+    def _safe_float(value, default=0.0) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    def _safe_int(value, default=0) -> int:
+        try:
+            return int(round(float(value)))
+        except (TypeError, ValueError):
+            return default
+
+    def _normalised_cadence(run: dict) -> Optional[float]:
+        cadence = run.get("avg_cadence")
+        bio = run.get("biomechanics") or {}
+        cadence = cadence or bio.get("avg_cadence_spm")
+        cadence_f = _safe_float(cadence, 0)
+        if cadence_f <= 0:
+            return None
+        # Strava may store running cadence as one foot/min; UI needs steps/min.
+        return cadence_f * 2 if cadence_f < 120 else cadence_f
+
+    def _format_date_label(value: Optional[str]) -> str:
+        d = _analytics_date(value or "")
+        if not d:
+            return str(value or "")
+        return d.strftime("%d/%m")
+
+    def _adaptation_for_run(run: dict) -> tuple[str, str, int, str]:
+        distance = _safe_float(run.get("distance_km"), 0)
+        duration = _safe_float(run.get("duration_minutes"), 0)
+        pace_s = _parse_pace_sec(run.get("avg_pace"))
+        hr = _safe_float(run.get("avg_hr"), 0)
+        hr_pct = hr / max_hr if max_hr > 0 and hr > 0 else 0
+        cadence = _normalised_cadence(run) or 0
+        elevation = _safe_float(run.get("elevation_gain"), 0)
+        text = " ".join(str(run.get(k) or "") for k in ("name", "run_type", "notes")).lower()
+
+        neuromuscular_keys = ("repetition", "ripet", "sprint", "strides", "fartlek", "hill sprint", "salite brevi")
+        metabolic_keys = ("tempo", "threshold", "soglia", "interval", "progressive", "medio", "vo2")
+        structural_keys = ("long", "lungo", "trail", "hilly", "collinare", "easy lungo")
+
+        if (
+            any(k in text for k in neuromuscular_keys)
+            or (duration <= 45 and pace_s is not None and pace_s <= 300 and (hr_pct >= 0.82 or cadence >= 178))
+            or (duration <= 40 and cadence >= 182)
+        ):
+            return "Neuromuscolare", "neuromuscular", 7, "Velocita, coordinazione e reclutamento muscolare"
+
+        if (
+            any(k in text for k in structural_keys)
+            or distance >= 14
+            or duration >= 75
+            or elevation >= 250
+        ):
+            return "Strutturale", "structural", 21, "Tendini, capillari, tolleranza al volume"
+
+        if (
+            any(k in text for k in metabolic_keys)
+            or (20 <= duration <= 75 and (hr_pct >= 0.78 or (pace_s is not None and pace_s <= 340)))
+        ):
+            return "Metabolico", "metabolic", 14, "Soglia, mitocondri ed economia aerobica"
+
+        if distance >= 10 or duration >= 60:
+            return "Strutturale", "structural", 21, "Volume aerobico e resilienza tissutale"
+
+        return "Metabolico", "metabolic", 14, "Stimolo aerobico generale"
+
+    recent_runs = []
+    for run in runs:
+        run_date = _analytics_date(run.get("date", ""))
+        if not run_date:
+            continue
+        distance = _safe_float(run.get("distance_km"), 0)
+        duration = _safe_float(run.get("duration_minutes"), 0)
+        adaptation_type, adaptation_key, window_days, reason = _adaptation_for_run(run)
+        elapsed_days = max(0, (today - run_date).days)
+        raw_progress = (elapsed_days / window_days) * 100 if window_days > 0 else 100
+        benefit_progress_pct = round(max(0, min(100, raw_progress)))
+        missing_pct = round(max(0, 100 - raw_progress))
+        days_remaining = max(0, window_days - elapsed_days)
+        hr = _safe_float(run.get("avg_hr"), 0)
+        hr_factor = 1.0 + max(0.0, (hr / max_hr) - 0.70) * 1.8 if max_hr > 0 and hr > 0 else 1.0
+        load = round(max(0.0, distance * max(duration, 1) / 10 * hr_factor), 1)
+        benefit_date = run_date + dt.timedelta(days=window_days)
+
+        recent_runs.append({
+            "id": str(run.get("_id") or run.get("id") or ""),
+            "strava_id": run.get("strava_id"),
+            "date": run.get("date"),
+            "date_label": _format_date_label(run.get("date")),
+            "name": run.get("name") or run.get("run_type") or "Corsa",
+            "distance_km": round(distance, 2),
+            "duration_minutes": round(duration, 1),
+            "avg_pace": run.get("avg_pace"),
+            "avg_hr": _safe_int(run.get("avg_hr"), 0) or None,
+            "run_type": run.get("run_type"),
+            "adaptation_type": adaptation_type,
+            "adaptation_key": adaptation_key,
+            "benefit_window_days": window_days,
+            "benefit_date": benefit_date.isoformat(),
+            "benefit_progress_pct": benefit_progress_pct,
+            "missing_pct": missing_pct,
+            "days_remaining": days_remaining,
+            "load": load,
+            "reason": reason,
+            "_date_obj": run_date,
+        })
+        if len(recent_runs) >= 20:
+            break
+
+    totals = {
+        "neuromuscular": {"label": "Neuromuscolare", "load": 0.0, "runs": 0, "missing_pct": 0, "ready_pct": 0, "color": "#D4FF00"},
+        "metabolic": {"label": "Metabolico", "load": 0.0, "runs": 0, "missing_pct": 0, "ready_pct": 0, "color": "#F59E0B"},
+        "structural": {"label": "Strutturale", "load": 0.0, "runs": 0, "missing_pct": 0, "ready_pct": 0, "color": "#6366F1"},
+    }
+    for item in recent_runs:
+        bucket = totals[item["adaptation_key"]]
+        bucket["load"] += item["load"]
+        bucket["runs"] += 1
+        bucket["missing_pct"] += item["missing_pct"]
+        bucket["ready_pct"] += item["benefit_progress_pct"]
+
+    for bucket in totals.values():
+        count = bucket["runs"] or 1
+        bucket["load"] = round(bucket["load"], 1)
+        bucket["missing_pct"] = round(bucket["missing_pct"] / count)
+        bucket["ready_pct"] = round(bucket["ready_pct"] / count)
+
+    investments = [
+        {
+            "date": item["date"],
+            "load": item["load"],
+            "type": item["run_type"],
+            "adaptation_type": item["adaptation_type"],
+        }
+        for item in recent_runs[:10]
+    ]
+
+    latest_tsb = ff_latest.get("tsb") if ff_latest else None
+    total_load = sum(item["load"] for item in recent_runs) or 1.0
+    category_load = {
+        key: max(1.0, sum(item["load"] for item in recent_runs if item["adaptation_key"] == key))
+        for key in totals
+    }
+
+    projection = []
+    best_projection = None
+    for i in range(21):
+        d = today + dt.timedelta(days=i)
+        raw_category_scores = {"neuromuscular": 0.0, "metabolic": 0.0, "structural": 0.0}
+        matured_total = 0.0
+        for item in recent_runs:
+            elapsed_on_day = max(0, (d - item["_date_obj"]).days)
+            window = item["benefit_window_days"] or 1
+            if elapsed_on_day <= window:
+                maturity = elapsed_on_day / window
+            else:
+                maturity = max(0.0, 1.0 - ((elapsed_on_day - window) / max(1.0, window * 0.75)))
+            contribution = item["load"] * maturity
+            raw_category_scores[item["adaptation_key"]] += contribution
+            matured_total += contribution
+
+        adaptation_ready = max(0.0, min(100.0, (matured_total / total_load) * 100))
+        if latest_tsb is not None:
+            freshness = max(0.0, min(100.0, 50 + float(latest_tsb) * 1.4 + i * 0.6))
+            readiness = adaptation_ready * 0.62 + freshness * 0.38
+        else:
+            freshness = None
+            readiness = adaptation_ready
+
+        row = {
+            "date": d.isoformat(),
+            "label": d.strftime("%d/%m"),
+            "neuromuscular": round(min(100.0, raw_category_scores["neuromuscular"] / category_load["neuromuscular"] * 100), 1),
+            "metabolic": round(min(100.0, raw_category_scores["metabolic"] / category_load["metabolic"] * 100), 1),
+            "structural": round(min(100.0, raw_category_scores["structural"] / category_load["structural"] * 100), 1),
+            "adaptation_ready": round(adaptation_ready, 1),
+            "readiness": round(readiness, 1),
+            "fitness": round(readiness, 1),
+            "tsb": round(float(latest_tsb), 1) if latest_tsb is not None else None,
+            "freshness": round(freshness, 1) if freshness is not None else None,
+        }
+        projection.append(row)
+        if best_projection is None or row["readiness"] > best_projection["readiness"]:
+            best_projection = row
+
+    golden_day = best_projection["date"] if best_projection and recent_runs else None
+    days_to_golden = (dt.date.fromisoformat(golden_day) - today).days if golden_day else None
+    public_recent_runs = []
+    for item in recent_runs:
+        public_item = dict(item)
+        public_item.pop("_date_obj", None)
+        public_recent_runs.append(public_item)
 
     return {
         "investments": investments,
         "golden_day": golden_day,
-        "days_to_golden": 3 if runs else None,
+        "days_to_golden": days_to_golden,
         "projection": projection,
+        "recent_runs": public_recent_runs,
+        "adaptation_totals": totals,
+        "golden_day_score": best_projection["readiness"] if best_projection and recent_runs else None,
     }
 
 

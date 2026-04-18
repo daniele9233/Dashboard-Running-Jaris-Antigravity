@@ -233,11 +233,68 @@ export interface InjuryRiskResponse {
 
 // ─── SUPERCOMPENSATION ───────────────────────────────────────────────────────
 
+export type AdaptationKey = 'neuromuscular' | 'metabolic' | 'structural';
+export type AdaptationType = 'Neuromuscolare' | 'Metabolico' | 'Strutturale';
+
+export interface SupercompensationInvestment {
+  date: string | null;
+  load: number;
+  type: string | null;
+  adaptation_type?: AdaptationType;
+}
+
+export interface SupercompensationRun {
+  id: string;
+  strava_id?: number | string | null;
+  date: string;
+  date_label: string;
+  name: string;
+  distance_km: number;
+  duration_minutes: number;
+  avg_pace: string | null;
+  avg_hr: number | null;
+  run_type: string | null;
+  adaptation_type: AdaptationType;
+  adaptation_key: AdaptationKey;
+  benefit_window_days: number;
+  benefit_date: string;
+  benefit_progress_pct: number;
+  missing_pct: number;
+  days_remaining: number;
+  load: number;
+  reason: string;
+}
+
+export interface SupercompensationProjectionPoint {
+  date: string;
+  label: string;
+  neuromuscular: number;
+  metabolic: number;
+  structural: number;
+  adaptation_ready: number;
+  readiness: number;
+  fitness: number;
+  tsb: number | null;
+  freshness: number | null;
+}
+
+export interface SupercompensationAdaptationTotal {
+  label: AdaptationType;
+  load: number;
+  runs: number;
+  missing_pct: number;
+  ready_pct: number;
+  color: string;
+}
+
 export interface SupercompensationResponse {
-  investments: unknown[];
+  investments: SupercompensationInvestment[];
   golden_day: string | null;
   days_to_golden: number | null;
-  projection: unknown[];
+  projection: SupercompensationProjectionPoint[];
+  recent_runs: SupercompensationRun[];
+  adaptation_totals: Record<AdaptationKey, SupercompensationAdaptationTotal>;
+  golden_day_score: number | null;
 }
 
 // ─── BEST EFFORTS ────────────────────────────────────────────────────────────
