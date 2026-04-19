@@ -875,6 +875,79 @@ function V2Header({
 // ─────────────────────────────────────────────────────────────
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────
+type WeeklyColumn = {
+  key: string;
+  label: string;
+  color?: string;
+  render?: (row: Record<string, any>) => React.ReactNode;
+};
+
+function formatWeekBucketLabel(value: string): string {
+  if (!value) return '--';
+  const isoDate = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  if (!isoDate) return value;
+
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return `Week ${date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })}`;
+}
+
+function WeeklyDetailTable({
+  rows,
+  columns,
+  limit = 8,
+}: {
+  rows: Array<Record<string, any>>;
+  columns: WeeklyColumn[];
+  limit?: number;
+}) {
+  const visibleRows = rows.slice(-limit).reverse();
+  if (!visibleRows.length) return null;
+
+  return (
+    <div className="rounded-[6px] border border-[#242424] bg-[#101010] p-3">
+      <div className="flex items-center justify-between gap-4 mb-3">
+        <div className="text-[10px] uppercase tracking-widest font-black" style={{ color: NEON }}>
+          Dettaglio settimana per settimana
+        </div>
+        <div className="text-[9px] uppercase tracking-widest font-black text-[#555]">
+          ultime {visibleRows.length}
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <div
+          className="grid gap-x-4 gap-y-2 min-w-[560px]"
+          style={{ gridTemplateColumns: `1.2fr repeat(${columns.length}, minmax(90px, 1fr))` }}
+        >
+          <div className="text-[9px] uppercase tracking-widest font-black text-[#555]">Settimana</div>
+          {columns.map((column) => (
+            <div key={column.key} className="text-[9px] uppercase tracking-widest font-black text-[#555]">
+              {column.label}
+            </div>
+          ))}
+
+          {visibleRows.map((row, index) => (
+            <React.Fragment key={`${row.month ?? row.name ?? row.date ?? index}-${index}`}>
+              <div className="text-[11px] font-mono font-black text-white">
+                {formatWeekBucketLabel(String(row.month ?? row.name ?? row.date ?? ''))}
+              </div>
+              {columns.map((column) => (
+                <div
+                  key={`${column.key}-${index}`}
+                  className="text-[11px] font-mono font-black"
+                  style={{ color: column.color ?? '#DADADA' }}
+                >
+                  {column.render ? column.render(row) : row[column.key] ?? '--'}
+                </div>
+              ))}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface AnalyticsV2Props {
   vdot: number | null;
   zoneDistribution?: { zone: string; name: string; pct: number; minutes: number }[];
@@ -952,6 +1025,7 @@ export function AnalyticsV2({
     .map((d) => ({
       month: String(d.date),
       pace: Math.round((Number(d.pace) / 60) * 100) / 100,
+      paceSec: Number(d.pace),
       runs: Number(d.runs ?? 0),
     })), []);
 
@@ -963,15 +1037,29 @@ export function AnalyticsV2({
       month: String(d.date),
       pace: Math.round(Number(d.threshold_pace)),
       hr: Math.round((maxHr ?? 190) * 0.88),
+      vdot: d.vdot != null ? Number(d.vdot) : null,
+      samples: Number(d.sample_size ?? d.samples ?? 0),
     })), [maxHr]);
 
   const toVdotTrendData = React.useCallback((points?: Array<Record<string, any>>) => (
     points ?? []
   )
     .filter((d) => d.vdot)
-    .map((d) => ({ name: String(d.date), vdot: Number(d.vdot) })), []);
+    .map((d) => ({
+      name: String(d.date),
+      vdot: Number(d.vdot),
+      vo2max: Number(d.vo2max ?? d.vdot),
+      samples: Number(d.sample_size ?? d.samples ?? 0),
+    })), []);
 
   // ── Pace Trend: monthly card, weekly detail when expanded ────────────
+  const weekStartKey = React.useCallback((dateStr: string) => {
+    const d = new Date(`${dateStr}T12:00:00`);
+    if (Number.isNaN(d.getTime())) return null;
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return d.toISOString().slice(0, 10);
+  }, []);
+
   const paceChartData = React.useMemo(() => {
     const backend = toPaceTrendData(proCharts.trend_passo?.series_card);
     if (backend.length) return backend;
@@ -995,10 +1083,45 @@ export function AnalyticsV2({
     return data;
   }, [runs, proCharts, toPaceTrendData]);
 
+  const weeklyPaceFallbackData = React.useMemo(() => {
+    const buckets = new Map<string, { km: number; seconds: number; paces: number[]; runs: number }>();
+    for (const run of runs) {
+      if (!run.avg_pace || run.is_treadmill) continue;
+      const month = weekStartKey(run.date);
+      if (!month) continue;
+      const paceSec = parsePaceDecimal(run.avg_pace) * 60;
+      if (paceSec <= 100) continue;
+      const distance = Number(run.distance_km ?? 0);
+      const durationSeconds = Number(run.duration_minutes ?? 0) * 60;
+      const bucket = buckets.get(month) ?? { km: 0, seconds: 0, paces: [], runs: 0 };
+      bucket.runs += 1;
+      bucket.paces.push(paceSec);
+      if (distance > 0 && durationSeconds > 0) {
+        bucket.km += distance;
+        bucket.seconds += durationSeconds;
+      }
+      buckets.set(month, bucket);
+    }
+
+    return Array.from(buckets.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, bucket]) => {
+        const paceSec = bucket.km > 0 && bucket.seconds > 0
+          ? bucket.seconds / bucket.km
+          : bucket.paces.reduce((sum, value) => sum + value, 0) / Math.max(1, bucket.paces.length);
+        return {
+          month,
+          pace: Math.round((paceSec / 60) * 100) / 100,
+          paceSec: Math.round(paceSec),
+          runs: bucket.runs,
+        };
+      });
+  }, [runs, weekStartKey]);
+
   const paceDetailData = React.useMemo(() => {
     const backend = toPaceTrendData(proCharts.trend_passo?.series_detail);
-    return backend.length ? backend : paceChartData;
-  }, [paceChartData, proCharts, toPaceTrendData]);
+    return backend.length ? backend : weeklyPaceFallbackData.length ? weeklyPaceFallbackData : paceChartData;
+  }, [paceChartData, proCharts, toPaceTrendData, weeklyPaceFallbackData]);
 
   // ── Cardiac Drift: splits of most recent long run with HR ────────────
   const { driftChartData, driftRunLabel, driftStartKm } = React.useMemo(() => {
@@ -1098,10 +1221,36 @@ export function AnalyticsV2({
     return monthly;
   }, [runs, maxHr, proCharts, toThresholdTrendData]);
 
+  const weeklyAtFallbackData = React.useMemo(() => {
+    const buckets = new Map<string, Run[]>();
+    for (const run of runs) {
+      if (run.is_treadmill || !run.avg_pace || !run.avg_hr) continue;
+      if ((run.distance_km ?? 0) < 3 || run.avg_hr <= 80) continue;
+      const month = weekStartKey(run.date);
+      if (!month) continue;
+      const bucket = buckets.get(month) ?? [];
+      bucket.push(run);
+      buckets.set(month, bucket);
+    }
+
+    return Array.from(buckets.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, group]) => {
+        const best = group.reduce((prev, cur) => (cur.avg_hr ?? 0) > (prev.avg_hr ?? 0) ? cur : prev);
+        return {
+          month,
+          pace: Math.round(parsePaceDecimal(best.avg_pace) * 60),
+          hr: best.avg_hr ?? 0,
+          samples: group.length,
+        };
+      })
+      .filter((row) => row.pace > 0 && row.hr > 0);
+  }, [runs, weekStartKey]);
+
   const atTrendDetailData = React.useMemo(() => {
     const backend = toThresholdTrendData(proCharts.threshold_progression?.series_detail);
-    return backend.length ? backend : atTrendData;
-  }, [atTrendData, proCharts, toThresholdTrendData]);
+    return backend.length ? backend : weeklyAtFallbackData.length ? weeklyAtFallbackData : atTrendData;
+  }, [atTrendData, proCharts, toThresholdTrendData, weeklyAtFallbackData]);
 
   // ── VDOT estimator ────────────────────────────────────────────────────
   function estimateVdotV2(distanceKm: number, durationMin: number): number | null {
@@ -1179,10 +1328,45 @@ export function AnalyticsV2({
     }).filter((d): d is { name: string; vdot: number } => d.vdot !== null);
   }, [vdotHistory, proCharts, toVdotTrendData]);
 
+  const weeklyVdotFallbackData = React.useMemo(() => {
+    const buckets = new Map<string, number[]>();
+    for (const run of runs) {
+      if (run.is_treadmill) continue;
+      const distanceKm = run.distance_km ?? 0;
+      const paceMinKm = run.avg_pace ? parsePaceDecimal(run.avg_pace) : 99;
+      const hrPct = run.avg_hr_pct ?? (maxHr && run.avg_hr ? run.avg_hr / maxHr : 0);
+      if (distanceKm < 5 || (hrPct < 0.80 && paceMinKm > 5.75)) continue;
+      const durationMin = run.duration_minutes > 0 ? run.duration_minutes : paceMinKm * distanceKm;
+      const estimate = estimateVdotV2(distanceKm, durationMin);
+      const name = weekStartKey(run.date);
+      if (!estimate || !name) continue;
+      const bucket = buckets.get(name) ?? [];
+      bucket.push(estimate);
+      buckets.set(name, bucket);
+    }
+
+    const rows = Array.from(buckets.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([name, values]) => {
+        const avg = values.reduce((sum, value) => sum + value, 0) / Math.max(1, values.length);
+        return {
+          name,
+          vdot: Math.round(avg * 10) / 10,
+          vo2max: Math.round(avg * 10) / 10,
+          samples: values.length,
+        };
+      });
+
+    if (rows.length && vdot !== null && vdot !== undefined) {
+      rows[rows.length - 1] = { ...rows[rows.length - 1], vdot, vo2max: vdot };
+    }
+    return rows;
+  }, [runs, vdot, maxHr, weekStartKey]);
+
   const vdotDetailData = React.useMemo(() => {
     const backend = toVdotTrendData(proCharts.vo2_vdot_trend?.series_detail);
-    return backend.length ? backend : vdotChartData;
-  }, [proCharts, toVdotTrendData, vdotChartData]);
+    return backend.length ? backend : weeklyVdotFallbackData.length ? weeklyVdotFallbackData : vdotChartData;
+  }, [proCharts, toVdotTrendData, vdotChartData, weeklyVdotFallbackData]);
 
   const atPanel = React.useMemo(() => {
     const latest = atTrendData[atTrendData.length - 1] ?? null;
@@ -2235,7 +2419,7 @@ export function AnalyticsV2({
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-                    <XAxis dataKey="month" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} interval="preserveStartEnd" minTickGap={22} />
+                    <XAxis dataKey="month" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} interval="preserveStartEnd" minTickGap={22} tickFormatter={(value) => formatWeekBucketLabel(String(value))} />
                     <YAxis yAxisId="pace" reversed stroke="#555" fontSize={12} tickLine={false} axisLine={false}
                       tickFormatter={formatPaceSecs} domain={['dataMin - 15', 'dataMax + 15']}
                       label={{ value: 'Pace (min/km)', angle: -90, position: 'insideLeft', fill: '#555', dy: 55, fontSize: 10 }} />
@@ -2261,21 +2445,31 @@ export function AnalyticsV2({
               </div>
 
               {/* Info panels */}
-              <div className="grid grid-cols-3 gap-4 mt-6">
-                <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo Iniziale</div>
-                  <div className="text-xl font-mono font-black text-white">{first ? formatPaceSecs(first.pace) : '--'}</div>
-                </div>
-                <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo Attuale</div>
-                  <div className="text-xl font-mono font-black" style={{ color: NEON }}>{last ? formatPaceSecs(last.pace) : '--'}</div>
-                </div>
-                <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Miglioramento</div>
-                  <div className="text-xl font-mono font-black" style={{ color: improvement > 0 ? NEON : '#F43F5E' }}>
-                    {improvement > 0 ? '-' : '+'}{formatPaceSecs(Math.abs(improvement))} /km
+              <div className="space-y-4 mt-6 shrink-0">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
+                    <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo Iniziale</div>
+                    <div className="text-xl font-mono font-black text-white">{first ? formatPaceSecs(first.pace) : '--'}</div>
+                  </div>
+                  <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
+                    <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo Attuale</div>
+                    <div className="text-xl font-mono font-black" style={{ color: NEON }}>{last ? formatPaceSecs(last.pace) : '--'}</div>
+                  </div>
+                  <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
+                    <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Miglioramento</div>
+                    <div className="text-xl font-mono font-black" style={{ color: improvement > 0 ? NEON : '#F43F5E' }}>
+                      {improvement > 0 ? '-' : '+'}{formatPaceSecs(Math.abs(improvement))} /km
+                    </div>
                   </div>
                 </div>
+                <WeeklyDetailTable
+                  rows={expandedAtData}
+                  columns={[
+                    { key: 'pace', label: 'Passo soglia', color: NEON, render: (row) => `${formatPaceSecs(Number(row.pace))} /km` },
+                    { key: 'hr', label: 'FC soglia', color: '#EC4899', render: (row) => row.hr ? `${Math.round(Number(row.hr))} bpm` : '--' },
+                    { key: 'samples', label: 'Campioni', render: (row) => Number(row.samples ?? 0) > 0 ? Number(row.samples ?? 0) : '--' },
+                  ]}
+                />
               </div>
 
             </div>
@@ -2381,7 +2575,7 @@ export function AnalyticsV2({
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-                    <XAxis dataKey="month" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} interval="preserveStartEnd" minTickGap={22} />
+                    <XAxis dataKey="month" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} interval="preserveStartEnd" minTickGap={22} tickFormatter={(value) => formatWeekBucketLabel(String(value))} />
                     <YAxis stroke="#555" fontSize={12} tickLine={false} axisLine={false} reversed
                       domain={['dataMin - 0.2', 'dataMax + 0.2']}
                       tickFormatter={(v) => { const m = Math.floor(v); const s = Math.round((v - m) * 60); return `${m}:${s.toString().padStart(2, '0')}`; }} />
@@ -2416,6 +2610,15 @@ export function AnalyticsV2({
                     {trendSecs == null ? '—' : `${trendSecs > 0 ? '-' : '+'}${Math.abs(trendSecs)}s`}
                   </div>
                 </div>
+              </div>
+              <div className="mt-4 shrink-0">
+                <WeeklyDetailTable
+                  rows={expandedPaceData}
+                  columns={[
+                    { key: 'pace', label: 'Passo medio', color: NEON, render: (row) => `${formatPaceStr(Number(row.pace))} /km` },
+                    { key: 'runs', label: 'Corse', render: (row) => Number(row.runs ?? 0) > 0 ? Number(row.runs ?? 0) : '--' },
+                  ]}
+                />
               </div>
             </div>
           </div>
@@ -2688,7 +2891,7 @@ export function AnalyticsV2({
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-                    <XAxis dataKey="name" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} interval="preserveStartEnd" minTickGap={22} />
+                    <XAxis dataKey="name" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} interval="preserveStartEnd" minTickGap={22} tickFormatter={(value) => formatWeekBucketLabel(String(value))} />
                     <YAxis stroke="#555" fontSize={12} tickLine={false} axisLine={false}
                       domain={['dataMin - 2', 'dataMax + 2']} tickFormatter={(v) => v.toFixed(0)} />
                     <Tooltip content={({ active, payload }) => {
@@ -2724,6 +2927,17 @@ export function AnalyticsV2({
                   <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">T-Pace</div>
                   <div className="text-xl font-mono font-black text-white">{tPace ?? '—'} {tPace ? '/km' : ''}</div>
                 </div>
+              </div>
+              <div className="mt-4 shrink-0">
+                <WeeklyDetailTable
+                  rows={expandedVdotData}
+                  columns={[
+                    { key: 'vdot', label: 'VDOT', color: NEON, render: (row) => Number(row.vdot).toFixed(1) },
+                    { key: 'vo2max', label: 'VO2 max', render: (row) => row.vo2max ? Number(row.vo2max).toFixed(1) : Number(row.vdot).toFixed(1) },
+                    { key: 'tpace', label: 'T-Pace', render: (row) => row.vdot ? `${calcTPaceV2(Number(row.vdot))} /km` : '--' },
+                    { key: 'samples', label: 'Campioni', render: (row) => Number(row.samples ?? 0) > 0 ? Number(row.samples ?? 0) : '--' },
+                  ]}
+                />
               </div>
             </div>
           </div>

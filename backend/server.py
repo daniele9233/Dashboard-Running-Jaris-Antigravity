@@ -35,7 +35,7 @@ FISH_AUDIO_API_KEY = os.environ.get("FISH_AUDIO_API_KEY", "")
 GARMIN_EMAIL       = os.environ.get("GARMIN_EMAIL", "")
 GARMIN_PASSWORD    = os.environ.get("GARMIN_PASSWORD", "")
 APP_VERSION        = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT") or os.environ.get("COMMIT_SHA") or "local"
-ANALYTICS_SCHEMA_VERSION = "pro-v8-2026-04-18"
+ANALYTICS_SCHEMA_VERSION = "pro-v9-2026-04-19"
 
 # Build the callback URL from the current host (set via Render env or default)
 BACKEND_URL        = os.environ.get("BACKEND_URL", "https://dani-backend-ea0s.onrender.com")
@@ -3061,7 +3061,13 @@ def _build_vdot_chart(
         threshold_detail = []
         for p in detail:
             threshold = _pace_at_vo2_pct(p.get("vdot"), 0.88)
-            threshold_detail.append({"date": p["date"], "threshold_pace": round(threshold, 1) if threshold else None, "threshold_label": _pace_label(threshold), "vdot": p.get("vdot")})
+            threshold_detail.append({
+                "date": p["date"],
+                "threshold_pace": round(threshold, 1) if threshold else None,
+                "threshold_label": _pace_label(threshold),
+                "vdot": p.get("vdot"),
+                "sample_size": p.get("sample_size", 0),
+            })
         threshold_chart = _chart("threshold_progression", "Soglia / Progressione Temporale", "sec/km", {}, threshold_detail[-12:], threshold_detail, sample_size=len(threshold_detail))
 
     race_chart = None

@@ -40,6 +40,14 @@ const tag  = (txt: string, c = DM) => (
   <span style={{ ...mono, fontSize: 8, fontWeight: 900, letterSpacing: '0.25em', textTransform: 'uppercase', color: c }}>{txt}</span>
 );
 
+function periodLabel(value: string): string {
+  if (!value) return '--';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return `Week ${date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })}`;
+}
+
 /** Left-border accent panel */
 function LBPanel({ children, accent = N, className = '', style = {} }: {
   children: React.ReactNode; accent?: string; className?: string; style?: React.CSSProperties;
@@ -532,12 +540,49 @@ function SeasonalMatrix() {
 export function AnalyticsV5BestEffortsProgression({ chart, onRequestDetail }: { chart?: ProAnalyticsChart; onRequestDetail?: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const fmt = (s?: number) => s ? `${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}` : '—';
-  const toPoint = (d: Record<string, any>): Record<string, any> & { mo: string } => ({ ...d, mo: String(d.date ?? '') });
+  const toPoint = (d: Record<string, any>): Record<string, any> & { mo: string; periodLabel: string } => {
+    const rawDate = String(d.date ?? '');
+    return { ...d, mo: rawDate, periodLabel: periodLabel(rawDate) };
+  };
   const cardData = (chart?.series_card ?? []).map(toPoint);
   const detailData = (chart?.series_detail?.length ? chart.series_detail : chart?.series_card ?? []).map(toPoint);
   const best5 = Math.min(...detailData.map((d) => Number(d.k5)).filter(Boolean));
   const best10 = Math.min(...detailData.map((d) => Number(d.k10)).filter(Boolean));
   const bestHm = Math.min(...detailData.map((d) => Number(d.hm)).filter(Boolean));
+  const weeklyRows = detailData.slice(-8).reverse();
+  const details = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display:'flex', gap:28, flexWrap: 'wrap' }}>
+        <Stat label="5K best" val={Number.isFinite(best5) ? fmt(best5) : 'â€”'} c={N} />
+        <Stat label="10K best" val={Number.isFinite(best10) ? fmt(best10) : 'â€”'} c={CY} />
+        <Stat label="Half best" val={Number.isFinite(bestHm) ? fmt(bestHm) : 'â€”'} c={PU} />
+        <Stat label="Campioni" val={`${chart?.quality?.sample_size ?? 0}`} c={N} />
+      </div>
+      {weeklyRows.length > 0 && (
+        <div style={{ border: `1px solid ${MT}`, background: '#101010', padding: '12px 14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 10 }}>
+            <span style={{ ...mono, fontSize: 9, fontWeight: 900, letterSpacing: '0.22em', textTransform: 'uppercase', color: PU }}>Dettaglio settimana per settimana</span>
+            <span style={{ ...mono, fontSize: 8, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', color: DM }}>ultime {weeklyRows.length}</span>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <div style={{ minWidth: 560, display: 'grid', gridTemplateColumns: '1.3fr repeat(3, minmax(90px, 1fr))', columnGap: 18, rowGap: 8 }}>
+              {['Settimana', '5K', '10K', 'Half'].map((label) => (
+                <div key={label} style={{ ...mono, fontSize: 8, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', color: DM }}>{label}</div>
+              ))}
+              {weeklyRows.map((row, index) => (
+                <React.Fragment key={`${row.mo}-${index}`}>
+                  <div style={{ ...mono, fontSize: 11, fontWeight: 900, color: '#fff' }}>{row.periodLabel}</div>
+                  <div style={{ ...mono, fontSize: 11, fontWeight: 900, color: N }}>{fmt(Number(row.k5))}</div>
+                  <div style={{ ...mono, fontSize: 11, fontWeight: 900, color: CY }}>{fmt(Number(row.k10))}</div>
+                  <div style={{ ...mono, fontSize: 11, fontWeight: 900, color: PU }}>{fmt(Number(row.hm))}</div>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
   const renderChart = (isExpanded = false) => {
     const data = isExpanded ? detailData : cardData;
     if (!data.length) {
@@ -547,7 +592,7 @@ export function AnalyticsV5BestEffortsProgression({ chart, onRequestDetail }: { 
     <ResponsiveContainer width="100%" height="100%">
       <LineChart data={data} margin={{ top:isExpanded ? 20 : 4, right:isExpanded ? 20 : 8, bottom:isExpanded ? 20 : 0, left:isExpanded ? 0 : -8 }}>
         <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-        <XAxis dataKey="mo" tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
+        <XAxis dataKey="mo" tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} tickFormatter={(value) => isExpanded ? periodLabel(String(value)) : String(value)} />
         <YAxis yAxisId="left"  tick={{ fill:DM, fontSize:isExpanded ? 11 : 8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} domain={['dataMin - 60', 'dataMax + 60']} />
         <YAxis yAxisId="right" orientation="right" tick={{ fill:DM, fontSize:isExpanded ? 11 : 8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} domain={['dataMin - 120', 'dataMax + 120']} />
         <Tooltip content={({ active, payload, label }) => {
@@ -592,9 +637,9 @@ export function AnalyticsV5BestEffortsProgression({ chart, onRequestDetail }: { 
         open={expanded}
         onClose={() => setExpanded(false)}
         title="Best Efforts Progression"
-        subtitle="Monthly personal bests — 5K / 10K / Half Marathon"
+        subtitle="Dettaglio settimanale best efforts - 5K / 10K / Half Marathon"
         accent={PU}
-        details={<div style={{ display:'flex', gap:28 }}><Stat label="5K best" val={Number.isFinite(best5) ? fmt(best5) : '—'} c={N} /><Stat label="10K best" val={Number.isFinite(best10) ? fmt(best10) : '—'} c={CY} /><Stat label="Half best" val={Number.isFinite(bestHm) ? fmt(bestHm) : '—'} c={PU} /><Stat label="Campioni" val={`${chart?.quality?.sample_size ?? 0}`} c={N} /></div>}
+        details={details}
       >
         {renderChart(true)}
       </ChartFullscreenModal>
