@@ -7,6 +7,7 @@ import { useEffect, Suspense } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { JarvisProvider, useJarvisContext } from "./context/JarvisContext";
+import { LayoutProvider } from "./context/LayoutContext";
 import { Sidebar } from "./components/Sidebar";
 import { DashboardView } from "./components/DashboardView";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -199,8 +200,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <JarvisProvider>
-      <AppContent />
-    </JarvisProvider>
+    <LayoutProvider>
+      <JarvisProvider>
+        <AppContent />
+      </JarvisProvider>
+    </LayoutProvider>
   );
 }

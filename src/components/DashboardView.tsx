@@ -1,9 +1,30 @@
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-  Wind, TrendingDown, Activity, Target, Timer, Zap, Flame, Shield, Trophy, Info,
+  Wind, TrendingDown, Activity, Target, Timer, Zap, Flame, Shield, Trophy, Info, RotateCcw,
 } from "lucide-react";
+// Use v1-compat API from `/legacy` entry (Responsive + WidthProvider HOC with flat props).
+import { Responsive, WidthProvider } from "react-grid-layout/legacy";
+
+const ResponsiveGrid = WidthProvider(Responsive);
+import { GridCard } from "./GridCard";
+import { useLayout } from "../context/LayoutContext";
+
+// ─── media query hook (mobile detection) ─────────────────────────────────────
+function useMediaQuery(query: string): boolean {
+  const [match, setMatch] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia(query).matches : false,
+  );
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia(query);
+    const onChange = () => setMatch(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [query]);
+  return match;
+}
 
 // ─── Info Tooltip ─────────────────────────────────────────────────────────────
 function InfoTooltip({ title, lines }: { title: string; lines: string[] }) {
@@ -36,10 +57,349 @@ function InfoTooltip({ title, lines }: { title: string; lines: string[] }) {
   );
 }
 import { LastRunMap } from "./LastRunMap";
+
+// ─────────────────── Fitness Chart — CTL over time (Strava-style) ───────────────
+type FFRange = "1m" | "3m" | "6m" | "1y" | "2y";
+const FF_RANGE_DAYS: Record<FFRange, number> = { "1m": 30, "3m": 90, "6m": 182, "1y": 365, "2y": 730 };
+const FF_TAB_LABELS: Record<FFRange, string> = { "1m": "1 mese", "3m": "3 mesi", "6m": "6 mesi", "1y": "1 anno", "2y": "2 anni" };
+
+function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }) {
+  const [range, setRange] = useState<FFRange>("1y");
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  const data = useMemo(() => {
+    if (!ff?.length) return [] as FitnessFreshnessPoint[];
+    const cutoff = Date.now() - FF_RANGE_DAYS[range] * 86400000;
+    return ff
+      .filter((p) => new Date(p.date).getTime() >= cutoff)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [ff, range]);
+
+  // SVG viewport (preserveAspectRatio="none" stretches horizontally)
+  const W = 1000, H = 260;
+  const padL = 42, padR = 18, padT = 16, padB = 28;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+
+  const { maxY, minY } = useMemo(() => {
+    if (!data.length) return { maxY: 60, minY: 0 };
+    const vals = data.map((d) => d.ctl);
+    const mx = Math.max(...vals);
+    const mn = Math.min(...vals, 0);
+    const top = Math.ceil((mx + 5) / 10) * 10;
+    return { maxY: Math.max(top, 10), minY: Math.floor(mn / 10) * 10 };
+  }, [data]);
+
+  const x = (i: number) => padL + (data.length <= 1 ? plotW / 2 : (i / (data.length - 1)) * plotW);
+  const y = (v: number) => padT + (1 - (v - minY) / (maxY - minY || 1)) * plotH;
+
+  const linePath = useMemo(() => {
+    if (!data.length) return "";
+    return data.map((d, i) => `${i === 0 ? "M" : "L"} ${x(i).toFixed(2)} ${y(d.ctl).toFixed(2)}`).join(" ");
+  }, [data, maxY, minY]);
+
+  const areaPath = useMemo(() => {
+    if (!data.length) return "";
+    const top = data.map((d, i) => `${i === 0 ? "M" : "L"} ${x(i).toFixed(2)} ${y(d.ctl).toFixed(2)}`).join(" ");
+    return `${top} L ${x(data.length - 1).toFixed(2)} ${padT + plotH} L ${padL} ${padT + plotH} Z`;
+  }, [data, maxY, minY]);
+
+  const yTicks = useMemo(() => {
+    const step = Math.max(10, Math.ceil((maxY - minY) / 4 / 10) * 10);
+    const arr: number[] = [];
+    for (let v = minY; v <= maxY; v += step) arr.push(v);
+    return arr;
+  }, [maxY, minY]);
+
+  const xLabels = useMemo(() => {
+    if (data.length < 2) return [] as { i: number; label: string }[];
+    const want = 5;
+    const step = Math.max(1, Math.floor(data.length / want));
+    const out: { i: number; label: string }[] = [];
+    const fmt = (s: string) => {
+      const d = new Date(s);
+      return d.toLocaleDateString("it", { month: "short" }).replace(".", "");
+    };
+    for (let i = 0; i < data.length; i += step) out.push({ i, label: fmt(data[i].date) });
+    out.push({ i: data.length - 1, label: "Oggi" });
+    return out;
+  }, [data]);
+
+  const current = data.length ? data[data.length - 1].ctl : null;
+  const first = data.length ? data[0].ctl : null;
+  const delta = current !== null && first !== null ? current - first : null;
+  const rangeLabel = data.length
+    ? `dal ${new Date(data[0].date).toLocaleDateString("it", { day: "numeric", month: "short", year: "numeric" })} al ${new Date(data[data.length - 1].date).toLocaleDateString("it", { day: "numeric", month: "short", year: "numeric" })}`
+    : "—";
+
+  const onMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!data.length || !svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const px = ((e.clientX - rect.left) / rect.width) * W;
+    const rel = (px - padL) / plotW;
+    const idx = Math.round(rel * (data.length - 1));
+    setHoverIdx(Math.max(0, Math.min(data.length - 1, idx)));
+  };
+
+  const hov = hoverIdx !== null ? data[hoverIdx] : null;
+
+  return (
+    <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-4 flex-wrap gap-4">
+        <div>
+          <h3 className="text-white text-lg font-black tracking-tight">Condizione fisica</h3>
+          <p className="text-[#A0A0A0] text-[11px] tracking-wide">Allenamento e recupero sommati nel tempo (CTL)</p>
+        </div>
+        <div className="flex gap-1 bg-[#111] border border-white/[0.06] rounded-full p-1">
+          {(Object.keys(FF_TAB_LABELS) as FFRange[]).map((k) => (
+            <button
+              key={k}
+              onClick={() => { setRange(k); setHoverIdx(null); }}
+              className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase transition-colors ${
+                range === k ? "bg-[#F97316] text-white" : "text-[#A0A0A0] hover:text-white"
+              }`}
+            >
+              {FF_TAB_LABELS[k]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Current value + delta */}
+      <div className="mb-2">
+        <div className="flex items-baseline gap-3">
+          <span className="text-white text-4xl font-black">{current !== null ? current.toFixed(0) : "—"}</span>
+          <span className="text-[#A0A0A0] text-xs tracking-widest">CTL</span>
+          {delta !== null && (
+            <span className={`text-xs font-black ${delta >= 0 ? "text-[#F97316]" : "text-[#60A5FA]"}`}>
+              {delta >= 0 ? "+" : ""}{delta.toFixed(0)} punti
+            </span>
+          )}
+        </div>
+        <p className="text-[#666] text-[10px] tracking-wider">{rangeLabel}</p>
+      </div>
+
+      {/* Chart */}
+      <div className="relative flex-1 min-h-[260px]">
+        {data.length === 0 ? (
+          <div className="absolute inset-0 flex items-center justify-center text-[#666] text-xs font-black tracking-widest uppercase">
+            nessun dato in questo periodo
+          </div>
+        ) : (
+          <svg
+            ref={svgRef}
+            viewBox={`0 0 ${W} ${H}`}
+            preserveAspectRatio="none"
+            className="w-full h-full"
+            style={{ cursor: "crosshair" }}
+            onMouseMove={onMove}
+            onMouseLeave={() => setHoverIdx(null)}
+          >
+            <defs>
+              <linearGradient id="ffGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#F97316" stopOpacity="0.55" />
+                <stop offset="100%" stopColor="#F97316" stopOpacity="0.02" />
+              </linearGradient>
+            </defs>
+
+            {/* Y grid + labels */}
+            {yTicks.map((v) => (
+              <g key={v}>
+                <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke="#26262b" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                <text x={padL - 8} y={y(v) + 3} textAnchor="end" fontSize="10" fill="#666" style={{ fontFamily: "JetBrains Mono" }}>
+                  {v}
+                </text>
+              </g>
+            ))}
+
+            {/* Area + line */}
+            <path d={areaPath} fill="url(#ffGrad)" />
+            <path d={linePath} fill="none" stroke="#F97316" strokeWidth={2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+
+            {/* X labels */}
+            {xLabels.map((l, k) => (
+              <text
+                key={k}
+                x={x(l.i)}
+                y={H - 8}
+                textAnchor="middle"
+                fontSize="10"
+                fill="#888"
+                style={{ fontFamily: "JetBrains Mono" }}
+              >
+                {l.label}
+              </text>
+            ))}
+
+            {/* Hover marker */}
+            {hov && hoverIdx !== null && (
+              <g>
+                <line
+                  x1={x(hoverIdx)}
+                  x2={x(hoverIdx)}
+                  y1={padT}
+                  y2={padT + plotH}
+                  stroke="#F97316"
+                  strokeWidth={1.5}
+                  vectorEffect="non-scaling-stroke"
+                />
+                <circle cx={x(hoverIdx)} cy={y(hov.ctl)} r={12} fill="#F97316" fillOpacity={0.25} />
+                <circle cx={x(hoverIdx)} cy={y(hov.ctl)} r={5} fill="#F97316" stroke="#fff" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+                {/* Tooltip pill */}
+                <g transform={`translate(${x(hoverIdx) - 30}, ${Math.max(padT + 4, y(hov.ctl) - 38)})`}>
+                  <rect width={60} height={26} rx={6} fill="#F97316" />
+                  <text x={30} y={17} textAnchor="middle" fontSize="13" fontWeight="900" fill="#fff" style={{ fontFamily: "JetBrains Mono" }}>
+                    {hov.ctl.toFixed(0)}
+                  </text>
+                </g>
+              </g>
+            )}
+          </svg>
+        )}
+
+        {/* Hover date overlay (HTML, not scaled) */}
+        {hov && (
+          <div className="absolute top-0 right-0 bg-[#111] border border-white/[0.08] rounded-lg px-3 py-1.5 pointer-events-none">
+            <div className="text-[10px] tracking-widest uppercase text-[#A0A0A0] font-black">
+              {new Date(hov.date).toLocaleDateString("it", { day: "numeric", month: "short", year: "numeric" })}
+            </div>
+            <div className="text-sm font-black text-white" style={{ fontFamily: "JetBrains Mono" }}>
+              CTL {hov.ctl.toFixed(1)} · ATL {hov.atl.toFixed(1)} · TSB {hov.tsb >= 0 ? "+" : ""}{hov.tsb.toFixed(1)}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────── HR Zones donut (adapted to dark theme) ───────────────────
+function HRZones({ lastRun }: { lastRun: Run | null }) {
+  const [active, setActive] = useState(2);
+
+  const zones = useMemo(() => {
+    const maxHr = lastRun?.max_hr ?? 190;
+    const ranges = [
+      { n: "Z1", label: "Recovery", low: 0.5, high: 0.69, color: "#60A5FA" },
+      { n: "Z2", label: "Endurance", low: 0.69, high: 0.78, color: "#34D399" },
+      { n: "Z3", label: "Tempo", low: 0.78, high: 0.86, color: "#FBBF24" },
+      { n: "Z4", label: "Threshold", low: 0.86, high: 0.92, color: "#FB923C" },
+      { n: "Z5", label: "VO₂", low: 0.92, high: 1.0, color: "#F43F5E" },
+    ];
+    const secs = ranges.map(() => 0);
+    for (const sp of lastRun?.splits ?? []) {
+      if (sp.hr == null) continue;
+      const pct = sp.hr / maxHr;
+      const zi = ranges.findIndex((r) => pct >= r.low && pct < r.high);
+      if (zi >= 0) secs[zi] += sp.elapsed_time || 60;
+    }
+    const total = secs.reduce((s, v) => s + v, 0);
+    return ranges.map((r, i) => {
+      const pct = total > 0 ? (secs[i] / total) * 100 : 0;
+      return {
+        ...r,
+        pct: Math.round(pct),
+        range: `${Math.round(r.low * maxHr)}-${Math.round(r.high * maxHr)}`,
+      };
+    });
+  }, [lastRun]);
+
+  const total = zones.reduce((s, z) => s + z.pct, 0) || 1;
+  const R = 70, r = 48;
+  const cx = 96, cy = 96;
+  let startAngle = -90;
+  const gap = 2;
+  const maxPct = Math.max(...zones.map((z) => z.pct), 1);
+
+  return (
+    <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 h-full flex flex-col">
+      <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase mb-4">
+        Heart Rate Zones
+      </div>
+      <div className="flex justify-center mb-4">
+        <svg viewBox="0 0 192 192" className="w-full" style={{ maxWidth: '160px' }}>
+          {zones.map((z, i) => {
+            const a1 = startAngle + gap / 2;
+            const a2 = startAngle + (z.pct / total) * 360 - gap / 2;
+            startAngle += (z.pct / total) * 360;
+            const large = a2 - a1 > 180 ? 1 : 0;
+            const rad = (p: number) => (p * Math.PI) / 180;
+            const isActive = i === active;
+            const rr = isActive ? R + 5 : R;
+            const x1 = cx + rr * Math.cos(rad(a1));
+            const y1 = cy + rr * Math.sin(rad(a1));
+            const x2 = cx + rr * Math.cos(rad(a2));
+            const y2 = cy + rr * Math.sin(rad(a2));
+            const x3 = cx + r * Math.cos(rad(a2));
+            const y3 = cy + r * Math.sin(rad(a2));
+            const x4 = cx + r * Math.cos(rad(a1));
+            const y4 = cy + r * Math.sin(rad(a1));
+            if (z.pct === 0) return null;
+            const d = `M ${x1} ${y1} A ${rr} ${rr} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${r} ${r} 0 ${large} 0 ${x4} ${y4} Z`;
+            return (
+              <path
+                key={i}
+                d={d}
+                fill={z.color}
+                opacity={isActive ? 1 : 0.6}
+                style={{ cursor: "pointer", transition: "all .3s ease" }}
+                onMouseEnter={() => setActive(i)}
+              />
+            );
+          })}
+          <circle cx={cx} cy={cy} r={r - 4} fill="#111" />
+          <text x={cx} y={cy - 4} textAnchor="middle" fontSize="8" fontWeight="800" fill="#A0A0A0" letterSpacing="1.5">
+            {zones[active].n} · {zones[active].label.toUpperCase()}
+          </text>
+          <text x={cx} y={cy + 14} textAnchor="middle" fontSize="20" fontWeight="900" fill="#fff" style={{ fontFamily: "JetBrains Mono" }}>
+            {zones[active].pct}%
+          </text>
+          <text x={cx} y={cy + 28} textAnchor="middle" fontSize="8" fill="#666" style={{ fontFamily: "JetBrains Mono" }}>
+            {zones[active].range} bpm
+          </text>
+        </svg>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {zones.map((z, i) => (
+          <div
+            key={z.n}
+            onMouseEnter={() => setActive(i)}
+            className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors"
+            style={{
+              background: i === active ? "rgba(255,255,255,0.05)" : "transparent",
+              border: i === active ? "1px solid rgba(255,255,255,0.08)" : "1px solid transparent",
+            }}
+          >
+            <div style={{ width: 4, height: 18, borderRadius: 2, background: z.color }} />
+            <div style={{ flex: 1 }}>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-white text-[10px] font-black tracking-widest uppercase">
+                  {z.n} · {z.label}
+                </span>
+                <span className="text-[#A0A0A0] text-[10px]" style={{ fontFamily: "JetBrains Mono" }}>
+                  {z.pct}%
+                </span>
+              </div>
+              <div className="h-1 bg-[#333] rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${(z.pct / maxPct) * 100}%`, background: z.color, transition: "width .6s ease" }}
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useApi } from "../hooks/useApi";
 import { getDashboard, getRuns, getAnalytics, getBestEfforts } from "../api";
-import type { DashboardResponse, RunsResponse, AnalyticsResponse, Run, BestEffort } from "../types/api";
+import type { DashboardResponse, RunsResponse, AnalyticsResponse, Run, BestEffort, FitnessFreshnessPoint } from "../types/api";
 
 function fmtPbTime(minutes: number): string {
   const h = Math.floor(minutes / 60);
@@ -91,6 +451,16 @@ function secsToPaceStr(secs: number): string {
   const m = Math.floor(secs / 60);
   const s = Math.round(secs % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+// Parse "h:mm:ss" or "mm:ss" to seconds
+function hmsToSecs(s: string): number | null {
+  if (!s) return null;
+  const parts = s.split(":").map(x => parseInt(x, 10));
+  if (parts.some(isNaN)) return null;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return null;
 }
 
 function formatDuration(minutes: number): string {
@@ -196,65 +566,80 @@ function NextOptimalSessionWidget({
     ? '#C0FF00' : recommendation === 'moderate'
     ? '#F59E0B' : '#60A5FA';
 
+  const ringColor = isReady ? "#C0FF00" : arcColor;
+
+  // Semicircular arc path length
+  const arcLen = Math.PI * 85;
+
   return (
-    <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-5 flex flex-col">
+    <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 h-full flex flex-col">
+      {/* Header */}
       <div className="flex items-center gap-2 mb-3">
-        <Timer style={{ color: faticaColor }} size={13} />
-        <span className="text-[#A0A0A0] text-[9px] font-black tracking-widest uppercase">{t("dashboard.nextOptimalSession")}</span>
+        <Timer className="text-[#C0FF00]" size={14} />
+        <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest">NEXT OPTIMAL SESSION</span>
       </div>
 
-      <div className="flex items-center gap-5 flex-1">
-        {/* Arc timer */}
-        <div className="relative w-[90px] h-[90px] shrink-0">
-          <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="38" stroke="#2a2a2a" strokeWidth="7" fill="none" />
-            <circle
-              cx="50" cy="50" r="38"
-              stroke={arcColor}
-              strokeWidth="7"
+      <div className="flex-1 flex flex-col items-center justify-center">
+        {/* Semicircle gauge — Garmin-style */}
+        <div className="relative w-full mx-auto" style={{ maxWidth: '220px', aspectRatio: '200 / 120' }}>
+          <svg viewBox="0 0 200 120" className="w-full h-full overflow-visible">
+            <defs>
+              <linearGradient id="nos-grad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%"   stopColor={ringColor} stopOpacity="0.35" />
+                <stop offset="100%" stopColor={ringColor} stopOpacity="1" />
+              </linearGradient>
+            </defs>
+            {/* Track */}
+            <path d="M 15 105 A 85 85 0 0 1 185 105" stroke="#242424" strokeWidth="9" fill="none" strokeLinecap="round" />
+            {/* Fill */}
+            <path
+              d="M 15 105 A 85 85 0 0 1 185 105"
+              stroke="url(#nos-grad)"
+              strokeWidth="9"
               fill="none"
-              strokeDasharray={`${circ}`}
-              strokeDashoffset={offset}
               strokeLinecap="round"
-              style={{ filter: `drop-shadow(0 0 6px ${arcColor}88)` }}
+              strokeDasharray={`${arcLen}`}
+              strokeDashoffset={arcLen * (1 - pct)}
+              style={{ transition: "stroke-dashoffset .6s ease" }}
             />
+            {/* Tick marks at 0/50/100% */}
+            <line x1="15"  y1="105" x2="15"  y2="115" stroke="#444" strokeWidth="1" />
+            <line x1="100" y1="20"  x2="100" y2="10"  stroke="#444" strokeWidth="1" />
+            <line x1="185" y1="105" x2="185" y2="115" stroke="#444" strokeWidth="1" />
           </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
+
+          {/* Center content — anchored inside arc */}
+          <div className="absolute inset-x-0 bottom-0 flex flex-col items-center">
             {isReady ? (
-              <span className="text-[#C0FF00] text-xs font-black">NOW</span>
+              <>
+                <Zap size={30} className="text-[#C0FF00] mb-1" />
+                <span className="text-[#C0FF00] text-[10px] font-black tracking-widest">READY NOW</span>
+              </>
             ) : (
               <>
-                <span className="text-white font-black font-mono text-lg leading-none">
-                  {String(h).padStart(2, '0')}h
-                </span>
-                <span className="text-[#666] text-[8px] font-black mt-0.5">LEFT</span>
+                <span className="text-white font-black font-mono text-[40px] leading-none">{h}</span>
+                <span className="text-[#666] text-[9px] font-black tracking-widest mt-1">ORE AL RECUPERO</span>
               </>
             )}
           </div>
         </div>
 
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <Shield size={11} className="text-orange-400 shrink-0" />
-            <span className="text-orange-400 text-[9px] font-black tracking-widest uppercase">{t("dashboard.injuryPreventionBuffer")}</span>
+        {/* Recommendation + date */}
+        <div
+          className="flex flex-col items-center gap-1 px-4 py-2.5 rounded-2xl mt-5 w-full"
+          style={{ background: `${recColor}14`, border: `1px solid ${recColor}44` }}
+        >
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: recColor, boxShadow: `0 0 6px ${recColor}` }} />
+            <span className="text-[10px] font-black tracking-widest uppercase" style={{ color: recColor }}>
+              {recLabel}
+            </span>
           </div>
-          <div className="text-white text-xs font-black mb-1">
-            {isReady ? t("dashboard.readyToTrain") : readyAtLabel ? `Ready by ${readyAtLabel}` : `~${h}h remaining`}
-          </div>
-          <div className="text-[#666] text-[9px] leading-relaxed">
-            {isReady
-              ? <>{t("dashboard.recommended")}: <span style={{ color: recColor }} className="font-black">{recLabel}</span></>
-              : t("dashboard.recoveryInProgress")}
-          </div>
-          {/* Recovery bar */}
-          <div className="mt-2 h-1 bg-[#2a2a2a] rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all"
-              style={{ width: `${Math.round(pct * 100)}%`, backgroundColor: arcColor }}
-            />
-          </div>
-          <div className="text-[#555] text-[8px] mt-0.5">{Math.round(pct * 100)}% {t("dashboard.recovered")}</div>
+          {readyAtLabel && (
+            <div className="text-[10px] tracking-wider font-black" style={{ color: `${recColor}BB` }}>
+              {readyAtLabel}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -270,6 +655,8 @@ export function DashboardView() {
 
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { layouts, onLayoutChange, resetLayout } = useLayout();
+  const isMobile = useMediaQuery("(max-width: 767px)");
   const [chartPeriod, setChartPeriod] = useState<'7d' | 'month' | 'year'>('year');
   const runs = runsData?.runs ?? [];
   const vdot = analyticsData?.vdot ?? null;
@@ -284,7 +671,9 @@ export function DashboardView() {
   const faticaColor = atl > 50 ? "#F43F5E" : atl > 30 ? "#F59E0B" : "#C0FF00";
   const faticaLabel = atl > 50 ? "HIGH" : atl > 30 ? "MODERATE" : "LOW";
 
-  const readiness = tsb !== null ? Math.max(0, Math.min(100, 50 + tsb * 3)) : null;
+  // Peak Score — map TSB [-40..+30] → [0..100]. Linear, clamped.
+  // tsb=-30 → ~14, tsb=-10 → ~43, tsb=0 → ~57, tsb=+20 → ~86
+  const readiness = tsb !== null ? Math.max(0, Math.min(100, ((tsb + 40) / 70) * 100)) : null;
   const gaugeOffset = readiness !== null ? 251.2 * (1 - readiness / 100) : 251.2;
 
   const status =
@@ -356,6 +745,7 @@ export function DashboardView() {
     return secsToPaceStr(avg);
   }, [runs]);
 
+
   const profile = dashData?.profile;
   const maxHr = profile?.max_hr ?? 180;
   const atHr = Math.round(maxHr * 0.92);
@@ -376,16 +766,10 @@ export function DashboardView() {
   const metaboBar = Math.min(100, atl);
   const struttBar = tsb !== null ? Math.min(100, Math.max(0, 50 + tsb * 2)) : 0;
 
-  const lastDrift = useMemo(() => {
-    const qualifying = runs.find(r =>
-      r.distance_km >= 4 &&
-      r.splits.length >= 4 &&
-      r.splits.some(s => s.hr && s.hr > 80)
-    );
-    if (!qualifying) return null;
-    const splits = qualifying.splits.filter(
-      s => s.hr && s.hr > 80 && s.pace && s.pace.includes(":")
-    );
+  // Compute drift % for a single run (first-half vs second-half HR)
+  const computeDrift = (r: Run): number | null => {
+    if (r.distance_km < 4 || !r.splits || r.splits.length < 4) return null;
+    const splits = r.splits.filter(s => s.hr && s.hr > 80 && s.pace && s.pace.includes(":"));
     if (splits.length < 4) return null;
     const mid = Math.floor(splits.length / 2);
     const avgHr = (arr: typeof splits) => arr.reduce((s, x) => s + (x.hr ?? 0), 0) / arr.length;
@@ -393,7 +777,46 @@ export function DashboardView() {
     const hr2 = avgHr(splits.slice(mid));
     if (!hr1) return null;
     return Math.round(((hr2 - hr1) / hr1) * 1000) / 10;
+  };
+
+  const lastDrift = useMemo(() => {
+    const qualifying = runs.find(r => r.distance_km >= 4 && r.splits?.length >= 4);
+    return qualifying ? computeDrift(qualifying) : null;
   }, [runs]);
+
+  // Drift over last N qualifying runs (for Cardiac Drift card sparkline)
+  const driftSeries = useMemo(() => {
+    const out: { date: string; drift: number }[] = [];
+    for (const r of runs) {
+      if (out.length >= 12) break;
+      const d = computeDrift(r);
+      if (d !== null) out.push({ date: r.date, drift: d });
+    }
+    return out.reverse(); // oldest → newest
+  }, [runs]);
+
+  // Threshold pace — median pace of recent runs at threshold effort (HR 82-92% of max)
+  const thresholdPace = useMemo(() => {
+    const tempoRuns = runs.filter(r => {
+      if (r.is_treadmill || !r.avg_hr_pct || r.distance_km < 3) return false;
+      const pct = r.avg_hr_pct > 1 ? r.avg_hr_pct / 100 : r.avg_hr_pct;
+      return pct >= 0.82 && pct <= 0.92;
+    }).slice(0, 8);
+    if (tempoRuns.length) {
+      const paces = tempoRuns
+        .map(r => parsePaceToSecs(r.avg_pace))
+        .filter(s => s > 0)
+        .sort((a, b) => a - b);
+      if (paces.length) {
+        return secsToPaceStr(paces[Math.floor(paces.length / 2)]);
+      }
+    }
+    // Fallback: Daniels T-pace from VDOT (linear interp of published table)
+    const v = analyticsData?.vdot;
+    if (!v) return null;
+    const secs = Math.round(340 - Math.max(0, v - 30) * 4.1);
+    return secsToPaceStr(Math.max(150, Math.min(500, secs)));
+  }, [runs, analyticsData?.vdot]);
 
   const gpsRuns = runs.filter(r => !r.is_treadmill);
   const recentRuns = runs.slice(0, 7);
@@ -420,6 +843,98 @@ export function DashboardView() {
     return targets.map(dist => allEfforts.find(e => e.distance === dist) ?? null);
   }, [allEfforts]);
 
+  // ─── Race Predictions (Strava-style multi-distance) ────────────────────────
+  // Target 4 distances: 5K, 10K, Half Marathon, Marathon.
+  // Match loosely against prediction keys returned by /api/analytics.
+  // Delta = impatto della ULTIMA corsa sulla previsione.
+  //   Confronto pace ultima corsa vs mediana pace ultime 5 precedenti.
+  //   Proiezione su distanza target via Riegel (deltaSec ≈ paceDelta_sec/km × D_km × (D_km/lastD)^0.06)
+  const predictions = analyticsData?.race_predictions ?? {};
+
+  // ── Previsione Gara — stimolo fisiologico dell'ultima corsa proiettato su 5K/10K/21K/42K
+  //   Classifica ultima corsa (intervals / tempo / medium_long / long_endurance / easy)
+  //   Moltiplica benefit table[stim][target] × magnitudine volume × boost intensità
+  //   Esempio target: 10K @ 5:50 @ 147bpm (tempo, magnitude≈1) → 5K≈-5s, 10K≈-13s, 21K≈-40s, 42K≈-62s
+  const racePredictions = useMemo(() => {
+    const keys = Object.keys(predictions);
+    const norm = (s: string) => s.toLowerCase().replace(/\s+/g, "").replace("kilometre", "k").replace("km", "k");
+    const findKey = (patterns: string[]) =>
+      keys.find(k => patterns.some(p => norm(k).includes(p))) ?? null;
+
+    const targets: { label: string; short: '5K'|'10K'|'21K'|'42K'; km: number; patterns: string[] }[] = [
+      { label: "5K",       short: "5K",  km: 5,       patterns: ["5k"] },
+      { label: "10K",      short: "10K", km: 10,      patterns: ["10k"] },
+      { label: "Mezza",    short: "21K", km: 21.0975, patterns: ["half", "mezza", "21"] },
+      { label: "Maratona", short: "42K", km: 42.195,  patterns: ["marathon", "maratona", "42"] },
+    ];
+
+    // Identifica ultima corsa outdoor valida
+    const valid = runs.filter(r =>
+      !r.is_treadmill && r.avg_pace && parsePaceToSecs(r.avg_pace) > 180 && r.distance_km >= 3
+    );
+    const last = valid[0] ?? null;
+
+    type Stim = 'intervals' | 'tempo' | 'medium_long' | 'long_endurance' | 'easy';
+
+    // Benefit table: secondi stimati per stimolo "tipico" (magnitudine 1.0) su ogni distanza
+    // Calibrato su esempio utente: tempo 10km @ threshold → -5/-13/-40/-62
+    const BENEFIT: Record<Stim, Record<'5K'|'10K'|'21K'|'42K', number>> = {
+      intervals:      { '5K': 8,  '10K': 6,  '21K': 3,  '42K': 2   },
+      tempo:          { '5K': 5,  '10K': 13, '21K': 40, '42K': 62  },
+      medium_long:    { '5K': 2,  '10K': 8,  '21K': 45, '42K': 95  },
+      long_endurance: { '5K': 1,  '10K': 4,  '21K': 30, '42K': 130 },
+      easy:           { '5K': 1,  '10K': 2,  '21K': 6,  '42K': 12  },
+    };
+    const TYPICAL_KM: Record<Stim, number> = {
+      intervals: 6, tempo: 10, medium_long: 18, long_endurance: 30, easy: 8,
+    };
+
+    let stim: Stim | null = null;
+    let magnitude = 0;
+    if (last) {
+      const distKm = last.distance_km;
+      const paceSec = parsePaceToSecs(last.avg_pace);
+      const hrPct = last.avg_hr_pct != null
+        ? (last.avg_hr_pct > 1 ? last.avg_hr_pct / 100 : last.avg_hr_pct)
+        : null;
+      // paceRatio: 1.0 = a soglia, >1 più veloce (più duro), <1 più lento (facile)
+      const tPaceSec = thresholdPace ? parsePaceToSecs(thresholdPace) : null;
+      const paceRatio = tPaceSec && paceSec > 0
+        ? tPaceSec / paceSec
+        : hrPct !== null
+          ? hrPct / 0.87  // 87% HR ~ soglia
+          : 1.0;
+
+      // Classifica stimolo
+      if (distKm >= 25) stim = 'long_endurance';
+      else if (distKm >= 15 && paceRatio < 1.03) stim = 'medium_long';
+      else if (paceRatio >= 1.05 && distKm < 8) stim = 'intervals';
+      else if (paceRatio >= 0.92) stim = 'tempo';
+      else if (hrPct !== null && hrPct < 0.72) stim = 'easy';
+      else stim = 'tempo';
+
+      // Magnitudine = volume relativo vs sessione "tipica" del suo stimolo, clamp [0.2, 2.0]
+      magnitude = Math.max(0.2, Math.min(2.0, distKm / TYPICAL_KM[stim]));
+      // Boost intensità se pace > soglia
+      if (paceRatio > 1.0) magnitude *= 1 + (paceRatio - 1) * 0.8;
+      magnitude = Math.min(2.5, magnitude);
+    }
+
+    return targets.map(t => {
+      const key = findKey(t.patterns);
+      const timeStr = key ? predictions[key] : null;
+      const secs = timeStr ? hmsToSecs(timeStr) : null;
+      let deltaSec: number | null = null;
+      if (stim) {
+        const base = BENEFIT[stim][t.short];
+        const d = Math.round(base * magnitude);
+        // Miglioramento = negativo; filtro valori troppo piccoli come null
+        deltaSec = d >= 1 ? -d : null;
+      }
+      return { label: t.label, short: t.short, km: t.km, key, timeStr, secs, deltaSec };
+    });
+  }, [predictions, runs, thresholdPace]);
+
   return (
     <main className="flex-1 overflow-y-auto custom-scrollbar">
       <div className="px-14 py-6 max-w-[2200px] mx-auto space-y-6">
@@ -432,24 +947,54 @@ export function DashboardView() {
           </div>
         )}
         {dashData && (
-          <div className="mb-2">
-            <h2 className="text-2xl font-black italic tracking-tight text-white uppercase">
-              {t("dashboard.greeting")}, {profile?.name || t("dashboard.runner")} 👋
-            </h2>
-            <p className="text-sm text-gray-500 font-medium mt-1">
-              {profile?.race_goal}
-              {raceDate && ` — ${raceDate}`}
-              {daysToRace !== null && (
-                <span className="ml-3 text-[#C0FF00] font-black">{t("dashboard.daysToRace", { days: daysToRace })}</span>
-              )}
-            </p>
+          <div className="mb-2 flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-black italic tracking-tight text-white uppercase">
+                {t("dashboard.greeting")}, {profile?.name || t("dashboard.runner")} 👋
+              </h2>
+              <p className="text-sm text-gray-500 font-medium mt-1">
+                {profile?.race_goal}
+                {raceDate && ` — ${raceDate}`}
+                {daysToRace !== null && (
+                  <span className="ml-3 text-[#C0FF00] font-black">{t("dashboard.daysToRace", { days: daysToRace })}</span>
+                )}
+              </p>
+            </div>
+            {!isMobile && (
+              <button
+                onClick={() => {
+                  if (confirm("Ripristinare il layout predefinito?")) resetLayout();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[#666] hover:text-[#C0FF00] hover:border-[#C0FF00]/30 text-[10px] font-black tracking-widest transition-colors shrink-0"
+                title="Ripristina posizioni widget"
+              >
+                <RotateCcw size={12} />
+                RESET LAYOUT
+              </button>
+            )}
           </div>
         )}
 
-        <div className="grid grid-cols-12 gap-6">
+        <ResponsiveGrid
+          className="layout"
+          layouts={layouts as any}
+          breakpoints={{ lg: 1200, md: 768, sm: 0 }}
+          cols={{ lg: 12, md: 6, sm: 1 }}
+          rowHeight={60}
+          margin={[24, 24]}
+          containerPadding={[0, 0]}
+          isDraggable={!isMobile}
+          isResizable={!isMobile}
+          draggableHandle=".drag-handle"
+          resizeHandles={['se']}
+          onLayoutChange={onLayoutChange as any}
+          useCSSTransforms={true}
+        >
 
-          {/* ── Status of Form — col 1-6, row 1-2 ── */}
-          <div className="col-span-6 row-span-2 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 relative overflow-hidden flex flex-col justify-between">
+          {/* ── Status of Form ── */}
+          <div key="status-form">
+           <GridCard disabled={isMobile}>
+            <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 relative overflow-hidden flex flex-col justify-between">
             <div className="flex justify-between items-start mb-6">
               <div>
                 <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-2">LIVE BIO-FEED</div>
@@ -461,7 +1006,7 @@ export function DashboardView() {
                     "TSB −5 → +10: Neutro — zona di mantenimento.",
                     "TSB −20 → −5: Affaticato — adattamento in corso.",
                     "TSB < −20: Sovraccarico — rischio infortuni.",
-                    "PEAK SCORE = 50 + TSB×3, scala 0-100.",
+                    "PEAK SCORE = map TSB [-40..+30] → [0..100]. Scala 0-100.",
                     "Modello Banister 1975, costanti Coggan 2003."
                   ]} />
                 </div>
@@ -551,10 +1096,14 @@ export function DashboardView() {
                 </div>
               </div>
             </div>
+            </div>
+           </GridCard>
           </div>
 
-          {/* ── VO2 Max — col 7-9, row 1 ── */}
-          <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] border-t-4 border-t-[#C0FF00] rounded-3xl p-6 flex flex-col justify-between">
+          {/* ── VO2 Max ── */}
+          <div key="vo2max">
+           <GridCard disabled={isMobile}>
+            <div className="h-full bg-[#1a1a1a] border border-white/[0.06] border-t-4 border-t-[#C0FF00] rounded-3xl p-6 flex flex-col justify-between">
             <div className="flex justify-between items-start">
               <Wind className="text-[#C0FF00]" size={24} />
               <div className="bg-white/10 text-[#A0A0A0] px-2 py-1 rounded text-[10px] font-black tracking-widest">
@@ -570,38 +1119,77 @@ export function DashboardView() {
                 <span className="text-[#A0A0A0] text-sm font-semibold">ml/kg/min</span>
               </div>
             </div>
+            </div>
+           </GridCard>
           </div>
 
-          {/* ── Hall of Fame — col 10-12, row 1 ── */}
-          <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col justify-between">
-            <div className="flex items-center gap-2 mb-3">
-              <Trophy className="text-[#C0FF00]" size={14} />
-              <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest">{t("dashboard.hallOfFame").toUpperCase()}</span>
+          {/* ── Previsione Gara ── */}
+          <div key="previsione-gara">
+           <GridCard disabled={isMobile}>
+            <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col">
+            <div className="flex items-center gap-2 mb-4">
+              <Target className="text-[#C0FF00]" size={14} />
+              <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest">PREVISIONE GARA</span>
             </div>
-            <div className="space-y-3 flex-1 flex flex-col justify-center">
-              {[
-                { label: '5K',   effort: hofEfforts[0] },
-                { label: '10K',  effort: hofEfforts[1] },
-                { label: 'HALF', effort: hofEfforts[2] },
-              ].map(({ label, effort }) => (
-                <div key={label} className="flex items-center justify-between">
-                  <span className="text-[#A0A0A0] text-sm font-black">{label}</span>
-                  <div className="text-right">
-                    <span className="text-white text-lg font-black">{effort?.time ?? '—'}</span>
-                    {effort?.pace && (
-                      <div className="text-[#555] text-[9px]">{effort.pace}</div>
+
+            <div className="flex-1 flex flex-col gap-1.5">
+              {racePredictions.map(p => {
+                const delta = p.deltaSec;
+                const improved = delta !== null && delta < 0;
+                const worsened = delta !== null && delta > 0;
+                const deltaColor = improved ? "#16A34A" : worsened ? "#F43F5E" : "#64748B";
+                const deltaBg    = improved ? "rgba(22,163,74,0.18)" : worsened ? "rgba(244,63,94,0.15)" : "rgba(100,116,139,0.12)";
+                // Strava-style: "8m 22sec" when ≥60s, else "45sec"
+                const fmtDelta = (s: number) => {
+                  const a = Math.abs(s);
+                  if (a >= 60) {
+                    const m = Math.floor(a / 60);
+                    const ss = a % 60;
+                    return `${m}m ${ss.toString().padStart(2, "0")}sec`;
+                  }
+                  return `${a}sec`;
+                };
+                return (
+                  <div
+                    key={p.short}
+                    className="flex items-center justify-between py-2 px-3 rounded-xl bg-white/[0.02] border border-white/[0.04]"
+                  >
+                    <span className="text-[#A0A0A0] text-[11px] font-black tracking-widest w-10">
+                      {p.short}
+                    </span>
+                    <span className="text-white text-sm font-black font-mono flex-1 text-center">
+                      {p.timeStr ?? "—"}
+                    </span>
+                    {delta !== null && delta !== 0 ? (
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold"
+                        style={{ background: deltaBg, color: deltaColor }}
+                      >
+                        <span className="leading-none">{improved ? "▼" : "▲"}</span>
+                        <span className="leading-none font-mono">{fmtDelta(delta)}</span>
+                      </span>
+                    ) : (
+                      <span className="text-[#555] text-[9px] font-black tracking-widest uppercase">—</span>
                     )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
+
+            <div className="text-[#555] text-[9px] tracking-wider mt-3 text-center">
+              stimolo fisiologico ultima corsa → beneficio per distanza
+            </div>
+            </div>
+           </GridCard>
           </div>
 
-          {/* ── Fatigue ATL — col 7-9, row 2 ── */}
-          <div
-            className="col-span-3 rounded-3xl p-6 flex flex-col justify-between"
-            style={{ backgroundColor: faticaColor }}
-          >
+          {/* ── Fatigue ATL ── */}
+          <div key="fatigue-atl">
+           <GridCard disabled={isMobile}>
+            <div
+              className="h-full rounded-3xl p-6 flex flex-col justify-between"
+              style={{ backgroundColor: faticaColor }}
+            >
             <div className="flex justify-between items-start">
               <TrendingDown className="text-black/70" size={24} />
               <div className="bg-black/10 text-black/70 px-2 py-1 rounded text-[10px] font-black tracking-widest">
@@ -627,101 +1215,123 @@ export function DashboardView() {
                 <span className="text-black/60 text-sm font-black">{faticaLabel}</span>
               </div>
             </div>
+            </div>
+           </GridCard>
           </div>
 
-          {/* ── Target / Countdown — col 10-12, row 2 ── */}
-          <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col justify-between">
-            <div className="flex items-center gap-2 mb-3">
-              <Target className="text-[#C0FF00]" size={16} />
-              <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase truncate">
-                {profile?.race_goal || t("dashboard.noRaceSet")}
-              </span>
-            </div>
-            <div className="flex-1 flex items-center">
-              {timeToRace !== null ? (
-                <div className="flex items-baseline gap-3">
-                  <div className="text-center">
-                    <span className="text-white text-4xl font-black">{timeToRace.days}</span>
-                    <div className="text-[#A0A0A0] text-[9px] font-black tracking-widest mt-0.5">D</div>
-                  </div>
-                  <div className="text-center">
-                    <span className="text-white text-4xl font-black">{timeToRace.hours}</span>
-                    <div className="text-[#A0A0A0] text-[9px] font-black tracking-widest mt-0.5">H</div>
-                  </div>
-                  <div className="text-center">
-                    <span className="text-white text-4xl font-black">{timeToRace.minutes}</span>
-                    <div className="text-[#A0A0A0] text-[9px] font-black tracking-widest mt-0.5">M</div>
-                  </div>
+          {/* ── Soglia Anaerobica ── */}
+          <div key="soglia">
+           <GridCard disabled={isMobile}>
+            <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col justify-between">
+            <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">{t("dashboard.anaerobicThreshold").toUpperCase()}</div>
+            <div className="flex items-stretch gap-5 mb-4">
+              <div className="flex-1">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-white text-3xl font-black">{atHr}</span>
+                  <span className="text-[#A0A0A0] text-xs">BPM</span>
                 </div>
-              ) : (
-                <span className="text-[#A0A0A0] text-2xl font-black">—</span>
-              )}
-            </div>
-            {weekProgress && (
-              <div className="mt-3">
-                <div className="flex justify-between text-[10px] font-black tracking-widest mb-2">
-                  <span className="text-[#A0A0A0]">{t("dashboard.weeklyPlan").toUpperCase()}</span>
-                  <span className="text-[#C0FF00]">{weekProgress.pct.toFixed(0)}%</span>
-                </div>
-                <div className="h-1.5 bg-[#333] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[#C0FF00] rounded-full"
-                    style={{ width: `${Math.min(100, weekProgress.pct)}%` }}
-                  />
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="w-2 h-2 rounded-full bg-[#F43F5E] inline-block" />
+                  <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">FC</span>
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* ── 4 Metric Cards — 3 cols each ── */}
-          <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col justify-between">
-            <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">{t("dashboard.anaerobicThreshold").toUpperCase()}</div>
-            <div className="flex items-baseline gap-2 mb-4">
-              <span className="text-white text-3xl font-black">{atHr}</span>
-              <span className="text-[#A0A0A0] text-xs">BPM</span>
+              <div className="w-px bg-white/[0.08]" />
+              <div className="flex-1">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-white text-3xl font-black">{thresholdPace ?? "—"}</span>
+                  <span className="text-[#A0A0A0] text-xs">/km</span>
+                </div>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="w-2 h-2 rounded-full bg-[#60A5FA] inline-block" />
+                  <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">Passo</span>
+                </div>
+              </div>
             </div>
             <div className="flex gap-1 h-1.5 mt-auto">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className={`flex-1 rounded-full ${i < 4 ? "bg-[#C0FF00]" : "bg-[#333]"}`} />
+                <div key={i} className={`flex-1 rounded-full ${i < 4 ? "bg-[#F43F5E]" : "bg-[#333]"}`} />
               ))}
             </div>
+            </div>
+           </GridCard>
           </div>
 
-          <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col justify-between">
-            <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">{t("dashboard.lactateThreshold").toUpperCase()}</div>
-            <div className="flex items-baseline gap-2 mb-4">
-              <span className="text-white text-3xl font-black">{ltHr}</span>
-              <span className="text-[#A0A0A0] text-xs">BPM</span>
+          {/* ── Deriva Cardiaca ── */}
+          <div key="deriva">
+           <GridCard disabled={isMobile}>
+            <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest">
+                {t("dashboard.cardiacDrift").toUpperCase()}
+              </div>
+              {lastDrift !== null && (() => {
+                const abs = Math.abs(lastDrift);
+                const col = abs < 3.5 ? "#C0FF00" : abs < 5 ? "#F59E0B" : "#F43F5E";
+                const lbl = abs < 3.5 ? "Ottima" : abs < 5 ? "Normale" : "Elevata";
+                return (
+                  <span
+                    className="px-2 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase"
+                    style={{ background: `${col}15`, border: `1px solid ${col}44`, color: col }}
+                  >
+                    {lbl}
+                  </span>
+                );
+              })()}
             </div>
-            <div className="flex gap-1 h-1.5 mt-auto">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className={`flex-1 rounded-full ${i < 5 ? "bg-[#555]" : "bg-[#333]"}`} />
-              ))}
-            </div>
-          </div>
 
-          <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col justify-between">
-            <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">{t("dashboard.avgPace").toUpperCase()}</div>
-            <div className="flex items-baseline gap-2 mb-4">
-              <span className="text-white text-3xl font-black">{avgPace}</span>
-              <span className="text-[#A0A0A0] text-xs">/km</span>
-            </div>
-            <div className="flex gap-1 h-1.5 mt-auto">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className={`flex-1 rounded-full ${i === 3 ? "bg-[#C0FF00]" : "bg-[#333]"}`} />
-              ))}
-            </div>
-          </div>
-
-          <div className="col-span-3 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col justify-between">
-            <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">{t("dashboard.cardiacDrift").toUpperCase()}</div>
-            <div className="flex items-baseline gap-2 mb-4">
-              <span className="text-white text-3xl font-black">
-                {lastDrift !== null ? (lastDrift >= 0 ? "+" : "") + lastDrift.toFixed(1) : "--"}
+            {/* Big value */}
+            <div className="flex items-baseline gap-2 mb-1">
+              <span
+                className="text-5xl font-black"
+                style={{
+                  color: lastDrift === null ? "#666"
+                    : Math.abs(lastDrift) < 3.5 ? "#C0FF00"
+                    : Math.abs(lastDrift) < 5 ? "#F59E0B" : "#F43F5E",
+                }}
+              >
+                {lastDrift !== null ? (lastDrift >= 0 ? "+" : "") + lastDrift.toFixed(1) : "—"}
               </span>
-              <span className="text-[#A0A0A0] text-xs">%</span>
+              <span className="text-[#A0A0A0] text-sm font-black">%</span>
             </div>
-            <div className="flex gap-1 h-1.5 mt-auto">
+            <div className="text-[#666] text-[10px] tracking-wider mb-4">
+              ΔFC 2ª metà vs 1ª metà · ultima corsa
+            </div>
+
+            {/* Stats grid — media / migliore / peggiore over last qualifying runs */}
+            {driftSeries.length >= 2 ? (() => {
+              const vals = driftSeries.map(d => Math.abs(d.drift));
+              const media = vals.reduce((s, v) => s + v, 0) / vals.length;
+              const best = Math.min(...vals);
+              const worst = Math.max(...vals);
+              const colorFor = (v: number) => v < 3.5 ? "#C0FF00" : v < 5 ? "#F59E0B" : "#F43F5E";
+              const Row = ({ label, value, color }: { label: string; value: string; color: string }) => (
+                <div className="flex items-center justify-between py-2.5 border-b border-white/[0.04] last:border-0">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
+                    <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">{label}</span>
+                  </div>
+                  <span className="text-white text-sm font-black font-mono" style={{ color }}>{value}</span>
+                </div>
+              );
+              return (
+                <div className="flex-1 flex flex-col justify-center">
+                  <div className="text-[#A0A0A0] text-[9px] font-black tracking-widest uppercase mb-1">
+                    Ultime {driftSeries.length} corse
+                  </div>
+                  <Row label="Media"    value={`${media.toFixed(1)}%`} color={colorFor(media)} />
+                  <Row label="Migliore" value={`${best.toFixed(1)}%`}  color={colorFor(best)} />
+                  <Row label="Peggiore" value={`${worst.toFixed(1)}%`} color={colorFor(worst)} />
+                </div>
+              );
+            })() : (
+              <div className="flex-1 flex items-center justify-center text-[#666] text-[10px] font-black tracking-widest uppercase">
+                dati insufficienti
+              </div>
+            )}
+
+            {/* Scale bar */}
+            <div className="flex gap-1 h-1 mt-3">
               {[...Array(6)].map((_, i) => {
                 const driftPct = lastDrift !== null ? Math.abs(lastDrift) : 0;
                 const filled = Math.round(Math.min(6, driftPct / 2));
@@ -729,10 +1339,14 @@ export function DashboardView() {
                 return <div key={i} className="flex-1 rounded-full" style={{ backgroundColor: i < filled ? color : "#333" }} />;
               })}
             </div>
+            </div>
+           </GridCard>
           </div>
 
-          {/* ── Weekly KM Chart — col-span-5 ── */}
-          <div className="col-span-5 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 flex flex-col h-[420px]">
+          {/* ── Weekly KM Chart ── */}
+          <div key="weekly-km">
+           <GridCard disabled={isMobile}>
+            <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 flex flex-col">
             <div className="flex items-center justify-between mb-2">
               <div>
                 <div className="text-[#A0A0A0] text-xs font-black tracking-widest">
@@ -777,73 +1391,51 @@ export function DashboardView() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </div>
-
-          {/* ── Last Run Map — col-span-4 ── */}
-          <div className="col-span-4 rounded-3xl overflow-hidden relative h-[420px]">
-            <div className="absolute inset-0">
-              <LastRunMap run={lastRun} />
             </div>
+           </GridCard>
           </div>
 
-          {/* ── Right widgets stack — col-span-3 ── */}
-          <div className="col-span-3 flex flex-col justify-between gap-6">
-            {/* Next Optimal Session */}
-            <NextOptimalSessionWidget tsb={tsb} atl={atl} ctl={ctl} runs={runs} faticaColor={faticaColor} />
-
-            {/* Adaptation Summary */}
-            <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex-1 flex flex-col">
-              <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase mb-5">
-                {t("dashboard.adaptationSummary")}
-              </div>
-              <div className="space-y-5">
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center gap-2">
-                      <Zap className="text-[#C0FF00]" size={14} />
-                      <span className="text-white text-xs font-black uppercase">Neuro (CTL)</span>
-                    </div>
-                    <span className="text-[#A0A0A0] text-[10px]">{ctl > 0 ? ctl.toFixed(0) : "—"}</span>
-                  </div>
-                  <div className="h-1.5 bg-[#333] rounded-full overflow-hidden">
-                    <div className="h-full bg-[#C0FF00] rounded-full" style={{ width: `${neuroBar}%` }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center gap-2">
-                      <Flame className="text-orange-500" size={14} />
-                      <span className="text-white text-xs font-black uppercase">Metabo (ATL)</span>
-                    </div>
-                    <span className="text-[#A0A0A0] text-[10px]">{atl > 0 ? atl.toFixed(0) : "—"}</span>
-                  </div>
-                  <div className="h-1.5 bg-[#333] rounded-full overflow-hidden">
-                    <div className="h-full bg-orange-500 rounded-full" style={{ width: `${metaboBar}%` }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center gap-2">
-                      <Activity className="text-purple-500" size={14} />
-                      <span className="text-white text-xs font-black uppercase">Form (TSB)</span>
-                    </div>
-                    <span className="text-[#A0A0A0] text-[10px]">
-                      {tsb !== null ? (tsb >= 0 ? "+" : "") + tsb.toFixed(0) : "—"}
-                    </span>
-                  </div>
-                  <div className="h-1.5 bg-[#333] rounded-full overflow-hidden">
-                    <div className="h-full bg-purple-500 rounded-full" style={{ width: `${struttBar}%` }} />
-                  </div>
-                </div>
+          {/* ── Last Run Map ── */}
+          <div key="last-run-map">
+           <GridCard disabled={isMobile}>
+            <div className="h-full rounded-3xl overflow-hidden relative">
+              <div className="absolute inset-0">
+                <LastRunMap run={lastRun} />
               </div>
             </div>
+           </GridCard>
           </div>
 
-        </div>{/* end main grid */}
+          {/* ── Next Optimal Session ── */}
+          <div key="next-optimal">
+           <GridCard disabled={isMobile}>
+            <div className="h-full">
+              <NextOptimalSessionWidget tsb={tsb} atl={atl} ctl={ctl} runs={runs} faticaColor={faticaColor} />
+            </div>
+           </GridCard>
+          </div>
 
-        {/* Session Logs — full width */}
-        {recentRuns.length > 0 && (
-          <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 w-full">
+          {/* ── HR Zones ── */}
+          <div key="hr-zones">
+           <GridCard disabled={isMobile}>
+            <div className="h-full">
+              <HRZones lastRun={lastRun} />
+            </div>
+           </GridCard>
+          </div>
+
+          {/* ── Fitness Chart ── */}
+          <div key="fitness-chart">
+           <GridCard disabled={isMobile}>
+            <FitnessChart ff={dashData?.fitness_freshness} />
+           </GridCard>
+          </div>
+
+          {/* ── Session Logs ── */}
+          <div key="session-logs">
+           <GridCard disabled={isMobile}>
+          {recentRuns.length > 0 ? (
+            <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 w-full overflow-auto">
             <div className="mb-8">
               <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-2">{t("dashboard.sessionLogs").toUpperCase()}</div>
               <h2 className="text-white text-2xl font-black tracking-tighter italic">{t("dashboard.performanceHistory")}</h2>
@@ -901,8 +1493,16 @@ export function DashboardView() {
                 })}
               </div>
             </div>
+            </div>
+          ) : (
+            <div className="h-full flex items-center justify-center text-[#666] text-[10px] font-black tracking-widest">
+              NESSUNA CORSA RECENTE
+            </div>
+          )}
+           </GridCard>
           </div>
-        )}
+
+        </ResponsiveGrid>
       </div>
     </main>
   );

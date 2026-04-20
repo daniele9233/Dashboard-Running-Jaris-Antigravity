@@ -197,6 +197,29 @@ export const analyzeRun = (runId: string) =>
 export const getRunnerDna = () => api.get<any>('/api/runner-dna');
 export const clearRunnerDnaCache = () => api.delete<{ ok: boolean }>('/api/runner-dna/cache');
 
+// ─── USER LAYOUT (dashboard grid persistence) ────────────────────────────────
+export type GridLayoutItem = {
+  i: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  minW?: number;
+  minH?: number;
+  maxW?: number;
+  maxH?: number;
+  static?: boolean;
+};
+export type GridLayouts = {
+  lg?: GridLayoutItem[];
+  md?: GridLayoutItem[];
+  sm?: GridLayoutItem[];
+};
+export const getUserLayout = () =>
+  api.get<{ layouts: GridLayouts | null }>('/api/user/layout');
+export const putUserLayout = (layouts: GridLayouts) =>
+  api.put<{ ok: boolean }>('/api/user/layout', { layouts });
+
 // ─── JARVIS ──────────────────────────────────────────────────────────────────
 import type { JarvisResponse } from '../types/jarvis';
 export const jarvisChat = (transcript: string) =>

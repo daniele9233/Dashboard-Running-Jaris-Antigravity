@@ -742,6 +742,32 @@ async def update_profile(request: Request):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  USER LAYOUT (dashboard grid persistence)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/user/layout")
+async def get_user_layout():
+    athlete_id = await _get_athlete_id()
+    q = {"athlete_id": athlete_id} if athlete_id else {"athlete_id": None}
+    doc = await db.user_layout.find_one(q)
+    return {"layouts": (doc.get("layouts") if doc else None)}
+
+
+@app.put("/api/user/layout")
+async def put_user_layout(request: Request):
+    body = await request.json()
+    layouts = body.get("layouts")
+    athlete_id = await _get_athlete_id()
+    q = {"athlete_id": athlete_id} if athlete_id else {"athlete_id": None}
+    await db.user_layout.update_one(
+        q,
+        {"$set": {"layouts": layouts, "updated_at": dt.datetime.utcnow()}},
+        upsert=True,
+    )
+    return {"ok": True}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  RUNS
 # ═══════════════════════════════════════════════════════════════════════════════
 
