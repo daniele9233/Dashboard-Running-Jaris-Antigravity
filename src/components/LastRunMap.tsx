@@ -1,5 +1,6 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import Map, { Source, Layer, Marker } from "react-map-gl/mapbox";
+import type { MapRef } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import polylineDecode from "@mapbox/polyline";
 import { MapPin, Zap, Clock, TrendingUp } from "lucide-react";
@@ -28,6 +29,20 @@ function formatDuration(minutes: number): string {
 
 export function LastRunMap({ run }: LastRunMapProps) {
   const [mapLoaded, setMapLoaded] = useState(false);
+  const mapRef = useRef<MapRef>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Resize map canvas when RGL changes widget dimensions
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      mapRef.current?.resize();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const handleMapLoad = useCallback((e: any) => {
     const map = e.target;
     map.setConfigProperty('basemap', 'lightPreset', 'dusk');
@@ -160,8 +175,9 @@ export function LastRunMap({ run }: LastRunMapProps) {
   }
 
   return (
-    <div className="relative rounded-3xl overflow-hidden h-full border border-white/[0.04]">
+    <div ref={containerRef} className="relative rounded-3xl overflow-hidden h-full border border-white/[0.04]">
       <Map
+        ref={mapRef}
         mapboxAccessToken={MAPBOX_TOKEN}
         mapStyle="mapbox://styles/mapbox/standard"
         initialViewState={{

@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
+@import 'react-grid-layout/css/styles.css';
+@import 'react-resizable/css/styles.css';
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -101,4 +103,53 @@ body {
 /* Prevent transition flicker on SVG elements */
 html[data-theme="dark"] svg * {
   transition-property: none !important;
+}
+
+/* ─── react-grid-layout dark theme override ─────────────────────────────── */
+.react-grid-item.react-grid-placeholder {
+  background: rgba(192, 255, 0, 0.12) !important;
+  border: 2px dashed #C0FF00 !important;
+  border-radius: 24px !important;
+  opacity: 0.8;
+  transition-duration: 100ms;
+}
+
+.react-grid-item > .react-resizable-handle {
+  width: 24px;
+  height: 24px;
+  bottom: 6px;
+  right: 6px;
+  cursor: se-resize;
+  opacity: 0.35;
+  transition: opacity 0.15s ease, filter 0.15s ease;
+}
+.react-grid-item > .react-resizable-handle:hover {
+  opacity: 1;
+  filter: drop-shadow(0 0 6px #C0FF00);
+}
+.react-grid-item > .react-resizable-handle::after {
+  content: '';
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid #888;
+  border-bottom: 2px solid #888;
+  transition: border-color 0.15s ease;
+}
+.react-grid-item > .react-resizable-handle:hover::after {
+  border-right-color: #C0FF00;
+  border-bottom-color: #C0FF00;
+}
+
+.react-grid-item.react-draggable-dragging {
+  z-index: 50;
+  cursor: grabbing !important;
+  transition: none !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(192, 255, 0, 0.25);
+}
+.react-grid-item.resizing {
+  z-index: 50;
+  opacity: 0.92;
 }
