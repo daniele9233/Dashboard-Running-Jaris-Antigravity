@@ -4293,7 +4293,14 @@ async def analyze_run(request: Request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 async def _call_ai_async(prompt: str, max_tokens: int = 900) -> str:
-    """Try Claude Haiku 4.5, then Gemini 2.0 Flash, then raise."""
+    """Multi-provider AI with exhaustive fallback chain:
+
+    L1: Claude Haiku 4.5 (if ANTHROPIC_API_KEY has credits)
+    L2: Gemini — tries BOTH keys (JARVIS_GEMINI_KEY, GEMINI_API_KEY) against
+        multiple models in order of free-tier generosity:
+        gemini-2.5-flash-lite → gemini-flash-lite-latest → gemini-flash-latest
+        → gemini-2.5-flash → gemini-2.0-flash
+    """
     # Level 1: Claude Haiku
     if ANTHROPIC_API_KEY:
         try:
@@ -4309,19 +4316,35 @@ async def _call_ai_async(prompt: str, max_tokens: int = 900) -> str:
         except Exception as e:
             print(f"[AI-L1] Claude failed: {type(e).__name__}: {e}")
 
-    # Level 2: Gemini — uses JARVIS_GEMINI_KEY (same key/model as Jarvis, proven working)
-    _gemini_key = JARVIS_GEMINI_KEY or GEMINI_API_KEY
-    if _gemini_key:
-        for _gmodel in ("gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"):
-            try:
-                from google import genai as ggenai
-                gclient2 = ggenai.Client(api_key=_gemini_key)
-                gresp2 = await gclient2.aio.models.generate_content(
-                    model=_gmodel, contents=prompt
-                )
-                return gresp2.text.strip()
-            except Exception as e:
-                print(f"[AI-L2] Gemini {_gmodel} failed: {type(e).__name__}: {e}")
+    # Level 2: Gemini — iterate over (key, model) pairs until one succeeds.
+    # Order: lite models first (highest free-tier RPD), then heavier ones.
+    _keys = []
+    if JARVIS_GEMINI_KEY:
+        _keys.append(("JARVIS", JARVIS_GEMINI_KEY))
+    if GEMINI_API_KEY and GEMINI_API_KEY != JARVIS_GEMINI_KEY:
+        _keys.append(("MAIN", GEMINI_API_KEY))
+
+    _models = (
+        "gemini-2.5-flash-lite",
+        "gemini-flash-lite-latest",
+        "gemini-flash-latest",
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+    )
+    if _keys:
+        from google import genai as ggenai
+        for _kname, _kval in _keys:
+            for _gmodel in _models:
+                try:
+                    gclient2 = ggenai.Client(api_key=_kval)
+                    gresp2 = await gclient2.aio.models.generate_content(
+                        model=_gmodel, contents=prompt
+                    )
+                    txt = (gresp2.text or "").strip()
+                    if txt:
+                        return txt
+                except Exception as e:
+                    print(f"[AI-L2] Gemini {_kname}/{_gmodel} failed: {type(e).__name__}: {e}")
 
     raise RuntimeError("All AI providers unavailable")
 
