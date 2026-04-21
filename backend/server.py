@@ -750,20 +750,28 @@ async def get_user_layout():
     athlete_id = await _get_athlete_id()
     q = {"athlete_id": athlete_id} if athlete_id else {"athlete_id": None}
     doc = await db.user_layout.find_one(q)
-    return {"layouts": (doc.get("layouts") if doc else None)}
+    if not doc:
+        return {"layouts": None, "hidden_keys": []}
+    hidden = doc.get("hidden_keys") or []
+    if not isinstance(hidden, list):
+        hidden = []
+    return {
+        "layouts": doc.get("layouts"),
+        "hidden_keys": [h for h in hidden if isinstance(h, str)],
+    }
 
 
 @app.put("/api/user/layout")
 async def put_user_layout(request: Request):
     body = await request.json()
     layouts = body.get("layouts")
+    hidden_keys_in = body.get("hidden_keys")
+    update: dict = {"layouts": layouts, "updated_at": dt.datetime.utcnow()}
+    if isinstance(hidden_keys_in, list):
+        update["hidden_keys"] = [k for k in hidden_keys_in if isinstance(k, str)]
     athlete_id = await _get_athlete_id()
     q = {"athlete_id": athlete_id} if athlete_id else {"athlete_id": None}
-    await db.user_layout.update_one(
-        q,
-        {"$set": {"layouts": layouts, "updated_at": dt.datetime.utcnow()}},
-        upsert=True,
-    )
+    await db.user_layout.update_one(q, {"$set": update}, upsert=True)
     return {"ok": True}
 
 
@@ -1677,6 +1685,7 @@ async def generate_training_plan(request: Request):
     runs = await db.runs.find(q).sort("date", -1).to_list(500)
 
     max_hr = int((profile or {}).get("max_hr", 190))
+    resting_hr = int((profile or {}).get("resting_hr", 50))
     defaults_km = {"5K": 40.0, "10K": 50.0, "Half Marathon": 60.0, "Marathon": 70.0}
     raw_max_km = (profile or {}).get("max_weekly_km")
     max_weekly_km = float(raw_max_km) if raw_max_km else defaults_km.get(goal_race, 55.0)
@@ -1685,7 +1694,7 @@ async def generate_training_plan(request: Request):
     q_gps = {**q, "is_treadmill": {"$ne": True}}
     all_runs = await db.runs.find(q_gps).sort("date", -1).to_list(None)
     dist_km = RACE_DISTANCES.get(goal_race, 5.0)
-    history = _calc_vdot_with_history(all_runs, max_hr, weeks_window=8, goal_dist_km=dist_km)
+    history = _calc_vdot_with_history(all_runs, max_hr, weeks_window=8, goal_dist_km=dist_km, resting_hr=resting_hr)
     # current_vdot is ALWAYS the same regardless of goal distance —
     # it's derived from best recent runs (all qualifying distances).
     # race_specific_vdot was causing different VDOT per distance → removed.
@@ -1860,7 +1869,8 @@ async def evaluate_test(request: Request):
     # Fetch all runs for history context
     all_runs = await db.runs.find(q).sort("date", -1).to_list(None)
     max_hr = int((profile or {}).get("max_hr", 190))
-    history = _calc_vdot_with_history(all_runs, max_hr, weeks_window=8, goal_dist_km=dist_km)
+    resting_hr = int((profile or {}).get("resting_hr", 50))
+    history = _calc_vdot_with_history(all_runs, max_hr, weeks_window=8, goal_dist_km=dist_km, resting_hr=resting_hr)
 
     # Use test VDOT as the new current VDOT for plan generation
     effective_current_vdot = test_vdot
@@ -1930,6 +1940,7 @@ async def adapt_training_plan():
 
     profile = await db.profile.find_one(q)
     max_hr = int((profile or {}).get("max_hr", 190))
+    resting_hr = int((profile or {}).get("resting_hr", 50))
 
     recent_runs = await db.runs.find(q).sort("date", -1).to_list(120)
     all_weeks   = await db.training_plan.find(q).sort("week_number", 1).to_list(100)
@@ -2049,7 +2060,7 @@ async def adapt_training_plan():
     # ═══════════════════════════════════════════════════════════════════════════
     #  MODEL 3 — VDOT Drift (Daniels pace correction)
     # ═══════════════════════════════════════════════════════════════════════════
-    vdot_all = _calc_vdot(recent_runs, max_hr)
+    vdot_all = _calc_vdot(recent_runs, max_hr, resting_hr=resting_hr)
     if vdot_all:
         ideal = _tp_daniels_paces(vdot_all)
         ideal_easy_s = pace_s(ideal.get("easy"))
@@ -2214,8 +2225,9 @@ async def _auto_adapt_on_sync(athlete_id) -> Optional[dict]:
         return None
 
     max_hr = int(profile.get("max_hr", 190))
+    resting_hr = int(profile.get("resting_hr", 50))
     runs = await db.runs.find(q).sort("date", -1).to_list(500)
-    actual_vdot = _calc_vdot(runs, max_hr)
+    actual_vdot = _calc_vdot(runs, max_hr, resting_hr=resting_hr)
     if not actual_vdot:
         return None
 
@@ -2365,23 +2377,28 @@ async def recalculate_fitness_freshness():
 #  ANALYTICS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _vdot_from_run(r: dict, max_hr: int = 190) -> Optional[float]:
-    """Calculate VDOT from a single run using Daniels' VO2 formula (2013).
+def _vdot_from_run(r: dict, max_hr: int = 190, resting_hr: int = 50) -> Optional[float]:
+    """Calculate VDOT from a single run — Daniels VO2 (2013) + HR-based effort correction.
 
-    Per il PRD (RF-VDOT-01):
-    - Input: migliore prestazione su distanze 4-21km
-    - Validazione: distanza >= 4km, FC >= 85% FCmax, passo 2:30-9:00/km
-    - Cap: VDOT max 55
+    Scientific basis:
+    - Daniels: VO2 = -4.60 + 0.182258·v + 0.000104·v²   (v in m/min)
+    - Daniels duration-%VO2max: %max(t) = 0.8 + 0.1894393·e^(−0.012778·t) + 0.2989558·e^(−0.1932605·t)
+      This assumes a *race effort*. For sub-maximal training runs it overstates %VO2max
+      and therefore *under*-estimates VDOT.
+    - Karvonen %HRR ≈ %VO2max (Swain & Leutholtz 1997, ACSM). Used when resting HR known.
+    - Swain 1994 linear: %VO2max = 1.1094·%HRmax − 0.142.  Fallback when resting HR absent.
 
-    VO2 = -4.60 + 0.182258·v + 0.000104·v²  (v in m/min)
-    %max = 0.8 + 0.1894393·e^(-0.012778·t) + 0.2989558·e^(-0.1932605·t)
-    VDOT = VO2 / %max
+    Logic:
+    - Reject obvious non-efforts (easy/recovery) via HRmax% < 75%.
+    - Near-max effort (HR% ≥ 92% OR no HR data) → use Daniels race-effort %VO2max(t).
+    - Sub-max effort (HR% 75–92%) → use HR-derived %VO2max. This is the fix that
+      unlocks VDOT from tempo/threshold runs, not only races.
+    - Gates: distanza 4–21km, passo 2:30–9:00/km, durata ≥10min.
     """
     # Tapis roulant: escludi da tutte le metriche (nessun GPS, passo non affidabile)
     if r.get("is_treadmill"):
         return None
     dist = r.get("distance_km", 0)
-    # PRD: distanza >= 4km (non 3km) per VDOT affidabile
     if dist < 4 or dist > 21:
         return None
     pace_str = r.get("avg_pace", "")
@@ -2392,33 +2409,60 @@ def _vdot_from_run(r: dict, max_hr: int = 190) -> Optional[float]:
         pace_s = int(parts[0]) * 60 + int(parts[1])
     except (ValueError, IndexError):
         return None
-    # PRD: passo 2:30-9:00/km (150-540 sec/km)
     if pace_s < 150 or pace_s > 540:
         return None
     duration_min = r.get("duration_minutes", 0) or 0
-    # Minimo 10 minuti per VDOT affidabile (corse brevi distorcono)
     if duration_min < 10:
         return None
-    avg_hr = r.get("avg_hr")
-    # PRD: FC >= 85% FCmax (non 80%) — solo sforzi significativi
-    if avg_hr and avg_hr < 0.85 * max_hr:
-        return None
+
     speed_mpm = 60000 / pace_s
     vo2 = -4.60 + 0.182258 * speed_mpm + 0.000104 * speed_mpm ** 2
-    pct_max = (0.8 + 0.1894393 * math.exp(-0.012778 * duration_min)
-               + 0.2989558 * math.exp(-0.1932605 * duration_min))
-    return vo2 / pct_max if pct_max > 0 else None
+
+    avg_hr = r.get("avg_hr")
+    pct_max_duration = (0.8 + 0.1894393 * math.exp(-0.012778 * duration_min)
+                        + 0.2989558 * math.exp(-0.1932605 * duration_min))
+
+    if avg_hr and max_hr > 0:
+        hr_pct = avg_hr / max_hr
+        # Scartare corse davvero facili: non utili per stimare VDOT
+        if hr_pct < 0.75:
+            return None
+        if hr_pct >= 0.92:
+            # Sforzo quasi-massimale: formula Daniels di durata affidabile
+            pct_max = pct_max_duration
+        else:
+            # Sforzo sub-massimale: mapping HR%→VO2% calibrato sulle zone Daniels.
+            # Tabella Daniels (HRmax% medio → VO2max%):
+            #   E-pace 0.715 → 0.70  | M-pace 0.825 → 0.80
+            #   T-pace 0.895 → 0.88  | I-pace 0.975 → 0.98
+            # Fit lineare pratico: pct ≈ HR% − 0.02 nel range sub-soglia.
+            # Più conservativo di Karvonen/Swain che tendono a sovrastimare VDOT
+            # nelle corse medie (HR 80-85%).
+            pct_max = max(0.55, min(1.0, hr_pct - 0.02))
+            # Su corse lunghe (≥15min) scegli la più conservativa fra durata-Daniels e HR
+            # per evitare che un tempo run breve ma vicino al massimale gonfi il VDOT.
+            if duration_min >= 15:
+                pct_max = min(pct_max_duration, pct_max)
+    else:
+        # No HR: assumi sforzo vicino al massimale per la durata data (Daniels race-effort)
+        pct_max = pct_max_duration
+
+    if pct_max <= 0:
+        return None
+    return vo2 / pct_max
 
 
-def _calc_vdot(runs: list, max_hr: int = 190, weeks_window: int = 8) -> Optional[float]:
+def _calc_vdot(runs: list, max_hr: int = 190, weeks_window: int = 8,
+               resting_hr: int = 50) -> Optional[float]:
     """Estimate current VDOT (backward compat wrapper)."""
-    h = _calc_vdot_with_history(runs, max_hr, weeks_window)
+    h = _calc_vdot_with_history(runs, max_hr, weeks_window, resting_hr=resting_hr)
     return h["current"]
 
 
 def _calc_vdot_with_history(runs: list, max_hr: int = 190,
                              weeks_window: int = 8,
-                             goal_dist_km: float = 0) -> dict:
+                             goal_dist_km: float = 0,
+                             resting_hr: int = 50) -> dict:
     """Full athlete history analysis for training plan calibration.
 
     Returns:
@@ -2433,9 +2477,9 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
 
     run_vdots = []
     for r in runs:
-        v = _vdot_from_run(r, max_hr)
+        v = _vdot_from_run(r, max_hr, resting_hr)
         if v:
-            run_vdots.append((r, min(v, 55.0)))
+            run_vdots.append((r, min(v, 65.0)))
 
     if not run_vdots:
         return {"current": None, "peak": None, "peak_date": None,
@@ -3052,6 +3096,7 @@ def _build_vdot_chart(
     max_hr: int,
     resolution: str,
     only_chart: Optional[str] = None,
+    resting_hr: int = 50,
 ) -> tuple[Optional[dict], Optional[dict], Optional[dict]]:
     want_all = only_chart is None
     want_vdot = want_all or only_chart == "vo2_vdot_trend"
@@ -3061,10 +3106,10 @@ def _build_vdot_chart(
     buckets: dict[str, list] = {}
     month_buckets: dict[str, list] = {}
     for r in runs:
-        value = _vdot_from_run(r, max_hr)
+        value = _vdot_from_run(r, max_hr, resting_hr)
         if not value:
             continue
-        capped = min(value, 55.0)
+        capped = min(value, 65.0)
         date = r.get("date", "")
         detail_key = _bucket_key(date, resolution)
         month_key = _bucket_key(date, "month")
@@ -3422,6 +3467,7 @@ async def get_pro_analytics(
     profile_q = {"athlete_id": athlete_id}
     profile = await db.profile.find_one(profile_q) or {}
     max_hr = int(profile.get("max_hr", 190) or 190)
+    resting_hr = int(profile.get("resting_hr", 50) or 50)
 
     sections: dict = {}
     if tab in {"all", "load_form"}:
@@ -3451,7 +3497,7 @@ async def get_pro_analytics(
         vdot_chart_ids = {"vo2_vdot_trend", "threshold_progression", "race_evolution"}
         if not chart or chart in vdot_chart_ids:
             only_vdot_chart = chart if chart in vdot_chart_ids else None
-            vdot_chart, threshold_chart, race_chart = _build_vdot_chart(runs, max_hr, resolved_resolution, only_vdot_chart)
+            vdot_chart, threshold_chart, race_chart = _build_vdot_chart(runs, max_hr, resolved_resolution, only_vdot_chart, resting_hr=resting_hr)
             vdot_charts = {}
             if vdot_chart:
                 vdot_charts["vo2_vdot_trend"] = vdot_chart
@@ -3471,7 +3517,7 @@ async def get_pro_analytics(
     if tab in {"all", "biomechanics"}:
         current_vdot = None
         if not chart or chart == "athletic_profile":
-            current_vdot = _calc_vdot(runs, max_hr) or _calc_vdot(all_runs, max_hr)
+            current_vdot = _calc_vdot(runs, max_hr, resting_hr=resting_hr) or _calc_vdot(all_runs, max_hr, resting_hr=resting_hr)
         csv_chart_ids = {
             "ground_contact_stability",
             "athletic_profile",
@@ -3542,8 +3588,9 @@ async def get_analytics():
     runs = await db.runs.find(q_stats).sort("date", -1).to_list(500)
     profile = await db.profile.find_one(q)
     max_hr = int(profile.get("max_hr", 190)) if profile else 190
+    resting_hr = int(profile.get("resting_hr", 50)) if profile else 50
 
-    vdot = _calc_vdot(runs, max_hr)
+    vdot = _calc_vdot(runs, max_hr, resting_hr=resting_hr)
 
     # Pace trend (last 20 runs)
     pace_trend = []
@@ -3607,7 +3654,8 @@ async def get_vdot_paces():
     runs = await db.runs.find(q_stats).sort("date", -1).to_list(500)
     profile = await db.profile.find_one(q)
     max_hr = int(profile.get("max_hr", 190)) if profile else 190
-    vdot = _calc_vdot(runs, max_hr)
+    resting_hr = int(profile.get("resting_hr", 50)) if profile else 50
+    vdot = _calc_vdot(runs, max_hr, resting_hr=resting_hr)
     if not vdot:
         return {"vdot": None, "paces": {}, "race_predictions": {}}
 
@@ -4276,6 +4324,74 @@ async def _call_ai_async(prompt: str, max_tokens: int = 900) -> str:
     raise RuntimeError("All AI providers unavailable")
 
 
+# ─── Dashboard Insight (AI commento Status Forma) ────────────────────────────
+@app.get("/api/ai/dashboard-insight")
+async def get_dashboard_insight():
+    """Genera un commento AI 3-4 righe sul Status di Forma corrente.
+
+    Cache su MongoDB per (athlete_id, last_run_id, ff_date) → rigenera
+    automaticamente quando arriva una nuova corsa o il calcolo CTL/ATL si aggiorna.
+    """
+    athlete_id = await _get_athlete_id()
+    q = {"athlete_id": athlete_id} if athlete_id else {}
+
+    last_run = await db.runs.find_one(q, sort=[("date", -1)])
+    ff_latest = await db.fitness_freshness.find_one(q, sort=[("date", -1)])
+
+    if not ff_latest or not last_run:
+        return {"insight": None, "cached": False}
+
+    cache_key = {
+        "athlete_id": athlete_id or "",
+        "last_run_id": str(last_run.get("_id")),
+        "ff_date": str(ff_latest.get("date", "")),
+    }
+    cached = await db.ai_dashboard_insight.find_one(cache_key)
+    if cached and cached.get("insight"):
+        return {"insight": cached["insight"], "cached": True}
+
+    tsb = float(ff_latest.get("tsb", 0) or 0)
+    ctl = float(ff_latest.get("ctl", 0) or 0)
+    atl = float(ff_latest.get("atl", 0) or 0)
+    efficiency = max(70, min(100, 85 + tsb * 1.05))
+    run_dist = float(last_run.get("distance_km", 0) or 0)
+    run_pace = last_run.get("avg_pace", "—") or "—"
+    run_hr = int(last_run.get("avg_hr", 0) or 0)
+
+    prompt = f"""Sei un coach sportivo che scrive per un runner principiante in italiano.
+Analizza questi dati e scrivi 3-4 righe MAX (max 60 parole totali) con:
+- 1 frase di diagnosi del momento (ALTA/MEDIA/BASSA fatica)
+- 1 spiegazione semplice dei numeri
+- 1 consiglio pratico per domani
+Usa un tono amichevole, 1 emoji max, no jargon tecnico.
+
+Dati:
+- TSB (freschezza): {tsb:.1f}  [positivo=fresco, negativo=stanco]
+- CTL (fitness base): {ctl:.1f}
+- ATL (fatica recente): {atl:.1f}
+- Efficienza: {efficiency:.0f}%
+- Ultima corsa: {run_dist:.1f}km a {run_pace}/km, FC media {run_hr}bpm
+
+Rispondi SOLO con il testo del commento, niente preamboli."""
+
+    try:
+        insight = await _call_ai_async(prompt, max_tokens=300)
+    except Exception as e:
+        print(f"[AI-insight] all providers failed: {type(e).__name__}: {e}")
+        return {"insight": None, "cached": False, "error": str(e)}
+
+    try:
+        await db.ai_dashboard_insight.update_one(
+            cache_key,
+            {"$set": {"insight": insight, "updated_at": datetime.utcnow(), **cache_key}},
+            upsert=True,
+        )
+    except Exception as e:
+        print(f"[AI-insight] cache write failed: {e}")
+
+    return {"insight": insight, "cached": False}
+
+
 def _algorithmic_dna(
     vdot: float, consistency_score: float, eff_score: int,
     ctl: float, tsb: float, zone_dist: dict, freq: float, age: int,
@@ -4407,6 +4523,7 @@ async def get_runner_dna():
     total_runs = len(runs)
     total_km   = sum(r.get("distance_km", 0) for r in runs)
     max_hr     = profile.get("max_hr", 190)
+    resting_hr = int(profile.get("resting_hr", 50) or 50)
     age        = profile.get("age", 30)
     sex        = profile.get("sex", "M")
 
@@ -4434,13 +4551,13 @@ async def get_runner_dna():
 
     # ── VDOT — use best of: window-based (current form) vs best-efforts (true peak) ──
     be_efforts = be_doc.get("efforts", [])
-    vdot_from_runs   = _calc_vdot(runs, max_hr, weeks_window=8)
+    vdot_from_runs   = _calc_vdot(runs, max_hr, weeks_window=8, resting_hr=resting_hr)
     vdot_from_be     = _vdot_from_best_efforts(be_efforts)
     vdot_current     = max(vdot_from_runs or 28.0, vdot_from_be or 28.0)
 
     cutoff_old   = (date.today() - timedelta(weeks=24)).isoformat()
     older_runs   = [r for r in runs if r.get("date", "") < cutoff_old]
-    older_vdot   = _calc_vdot(older_runs, max_hr, weeks_window=16) if len(older_runs) >= 3 else None
+    older_vdot   = _calc_vdot(older_runs, max_hr, weeks_window=16, resting_hr=resting_hr) if len(older_runs) >= 3 else None
     vdot_delta   = round(vdot_current - older_vdot, 1) if older_vdot else None
 
     # Frequency / weeks active
@@ -4499,7 +4616,7 @@ async def get_runner_dna():
     lm_pace_str = f"{int(lm_pace_sec // 60)}:{int(lm_pace_sec % 60):02d}" if lm_pace_sec > 0 else None
     lm_hr_runs  = [r for r in lm_runs if (r.get("avg_hr") or 0) > 0]
     lm_avg_hr   = round(sum(r["avg_hr"] for r in lm_hr_runs) / len(lm_hr_runs)) if lm_hr_runs else None
-    lm_vdot     = _calc_vdot(lm_runs, max_hr, weeks_window=4) if len(lm_runs) >= 2 else None
+    lm_vdot     = _calc_vdot(lm_runs, max_hr, weeks_window=4, resting_hr=resting_hr) if len(lm_runs) >= 2 else None
     lm_freq     = round(len(lm_runs) / 4, 1)  # runs per week over ~4 weeks
 
     # Level benchmarks (avg runner at same level and next level)
@@ -5327,7 +5444,8 @@ async def jarvis_chat(request: Request):
 
     # Compute VDOT
     max_hr = int(profile.get("max_hr", 190))
-    vdot = _calc_vdot(recent_runs_docs, max_hr)
+    resting_hr = int(profile.get("resting_hr", 50))
+    vdot = _calc_vdot(recent_runs_docs, max_hr, resting_hr=resting_hr)
 
     # Weekly km
     week_start = (dt.date.today() - dt.timedelta(days=dt.date.today().weekday())).isoformat()

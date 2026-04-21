@@ -197,6 +197,9 @@ export const analyzeRun = (runId: string) =>
 export const getRunnerDna = () => api.get<any>('/api/runner-dna');
 export const clearRunnerDnaCache = () => api.delete<{ ok: boolean }>('/api/runner-dna/cache');
 
+export const getDashboardInsight = () =>
+  api.get<{ insight: string | null; cached?: boolean; error?: string }>('/api/ai/dashboard-insight');
+
 // ─── USER LAYOUT (dashboard grid persistence) ────────────────────────────────
 export type GridLayoutItem = {
   i: string;
@@ -216,9 +219,9 @@ export type GridLayouts = {
   sm?: GridLayoutItem[];
 };
 export const getUserLayout = () =>
-  api.get<{ layouts: GridLayouts | null }>('/api/user/layout');
-export const putUserLayout = (layouts: GridLayouts) =>
-  api.put<{ ok: boolean }>('/api/user/layout', { layouts });
+  api.get<{ layouts: GridLayouts | null; hidden_keys?: string[] }>('/api/user/layout');
+export const putUserLayout = (payload: { layouts: GridLayouts; hidden_keys?: string[] }) =>
+  api.put<{ ok: boolean }>('/api/user/layout', payload);
 
 // ─── JARVIS ──────────────────────────────────────────────────────────────────
 import type { JarvisResponse } from '../types/jarvis';

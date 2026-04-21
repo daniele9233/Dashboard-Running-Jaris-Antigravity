@@ -32,6 +32,7 @@ export interface Layouts {
 import { getUserLayout, putUserLayout } from "../api";
 
 const STORAGE_KEY = "metic:layout";
+const HIDDEN_STORAGE_KEY = "metic:hidden";
 const DEBOUNCE_MS = 500;
 
 /**
@@ -60,7 +61,8 @@ export const DEFAULT_LAYOUTS: Layouts = {
     { i: "last-run-map",    x: 8, y:  7, w: 4, h: 7, minW: 3, minH: 5 },
     { i: "next-optimal",    x: 0, y: 14, w: 3, h: 4, minW: 2, minH: 4 },
     { i: "hr-zones",        x: 0, y: 18, w: 3, h: 3, minW: 2, minH: 3 },
-    { i: "fitness-chart",   x: 3, y: 14, w: 9, h: 7, minW: 4, minH: 5 },
+    { i: "fitness-chart",   x: 3, y: 14, w: 5, h: 7, minW: 4, minH: 5 },
+    { i: "training-paces",  x: 8, y: 14, w: 4, h: 7, minW: 3, minH: 5 },
     { i: "session-logs",    x: 0, y: 21, w: 12, h: 6, minW: 6, minH: 4 },
   ],
   md: [
@@ -74,7 +76,8 @@ export const DEFAULT_LAYOUTS: Layouts = {
     { i: "last-run-map",    x: 0, y: 21, w: 6, h: 7 },
     { i: "next-optimal",    x: 0, y: 28, w: 3, h: 4 },
     { i: "hr-zones",        x: 3, y: 28, w: 3, h: 4 },
-    { i: "fitness-chart",   x: 0, y: 32, w: 6, h: 7 },
+    { i: "fitness-chart",   x: 0, y: 32, w: 4, h: 7 },
+    { i: "training-paces",  x: 4, y: 32, w: 2, h: 7 },
     { i: "session-logs",    x: 0, y: 39, w: 6, h: 6 },
   ],
   sm: [
@@ -89,7 +92,8 @@ export const DEFAULT_LAYOUTS: Layouts = {
     { i: "next-optimal",    x: 0, y: 40, w: 1, h: 4 },
     { i: "hr-zones",        x: 0, y: 44, w: 1, h: 4 },
     { i: "fitness-chart",   x: 0, y: 48, w: 1, h: 7 },
-    { i: "session-logs",    x: 0, y: 55, w: 1, h: 6 },
+    { i: "training-paces",  x: 0, y: 55, w: 1, h: 6 },
+    { i: "session-logs",    x: 0, y: 61, w: 1, h: 6 },
   ],
 };
 
@@ -98,6 +102,9 @@ interface LayoutContextValue {
   ready: boolean;
   onLayoutChange: (current: Layout[], all: Layouts) => void;
   resetLayout: () => void;
+  hiddenKeys: string[];
+  hideWidget: (key: string) => void;
+  restoreWidget: (key: string) => void;
 }
 
 const LayoutContext = createContext<LayoutContextValue | null>(null);
@@ -124,6 +131,28 @@ function writeLocal(layouts: Layouts) {
   }
 }
 
+function readHidden(): string[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(HIDDEN_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.filter((x) => typeof x === "string");
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function writeHidden(keys: string[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(HIDDEN_STORAGE_KEY, JSON.stringify(keys));
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
  * Merge defaults with a stored layout so newly added widget keys appear
  * automatically at default positions instead of disappearing from the grid.
@@ -143,8 +172,11 @@ function mergeWithDefaults(stored: Layouts | null | undefined): Layouts {
 
 export function LayoutProvider({ children }: { children: ReactNode }) {
   const [layouts, setLayouts] = useState<Layouts>(() => mergeWithDefaults(readLocal()));
+  const [hiddenKeys, setHiddenKeys] = useState<string[]>(() => readHidden() ?? []);
   const [ready, setReady] = useState(false);
   const saveTimer = useRef<number | null>(null);
+  const latestLayouts = useRef<Layouts>(layouts);
+  const latestHidden = useRef<string[]>(hiddenKeys);
 
   // Hydrate from backend on mount (backend wins over localStorage).
   useEffect(() => {
@@ -156,7 +188,14 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
         if (res?.layouts) {
           const merged = mergeWithDefaults(res.layouts as Layouts);
           setLayouts(merged);
+          latestLayouts.current = merged;
           writeLocal(merged);
+        }
+        if (Array.isArray(res?.hidden_keys)) {
+          const hk = res.hidden_keys.filter((x: unknown): x is string => typeof x === "string");
+          setHiddenKeys(hk);
+          latestHidden.current = hk;
+          writeHidden(hk);
         }
       } catch {
         /* offline / unauth — keep local */
@@ -169,10 +208,15 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const scheduleBackendSync = useCallback((next: Layouts) => {
+  const scheduleBackendSync = useCallback((nextLayouts: Layouts, nextHidden: string[]) => {
+    latestLayouts.current = nextLayouts;
+    latestHidden.current = nextHidden;
     if (saveTimer.current) window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(() => {
-      putUserLayout(next).catch(() => {
+      putUserLayout({
+        layouts: latestLayouts.current,
+        hidden_keys: latestHidden.current,
+      }).catch(() => {
         /* ignore — localStorage already saved */
       });
     }, DEBOUNCE_MS);
@@ -182,19 +226,49 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     (_current: Layout[], all: Layouts) => {
       setLayouts(all);
       writeLocal(all);
-      scheduleBackendSync(all);
+      scheduleBackendSync(all, latestHidden.current);
     },
     [scheduleBackendSync],
   );
 
   const resetLayout = useCallback(() => {
     setLayouts(DEFAULT_LAYOUTS);
+    setHiddenKeys([]);
     writeLocal(DEFAULT_LAYOUTS);
-    scheduleBackendSync(DEFAULT_LAYOUTS);
+    writeHidden([]);
+    scheduleBackendSync(DEFAULT_LAYOUTS, []);
   }, [scheduleBackendSync]);
 
+  const hideWidget = useCallback(
+    (key: string) => {
+      setHiddenKeys((prev) => {
+        if (prev.includes(key)) return prev;
+        const next = [...prev, key];
+        writeHidden(next);
+        scheduleBackendSync(latestLayouts.current, next);
+        return next;
+      });
+    },
+    [scheduleBackendSync],
+  );
+
+  const restoreWidget = useCallback(
+    (key: string) => {
+      setHiddenKeys((prev) => {
+        if (!prev.includes(key)) return prev;
+        const next = prev.filter((k) => k !== key);
+        writeHidden(next);
+        scheduleBackendSync(latestLayouts.current, next);
+        return next;
+      });
+    },
+    [scheduleBackendSync],
+  );
+
   return (
-    <LayoutContext.Provider value={{ layouts, ready, onLayoutChange, resetLayout }}>
+    <LayoutContext.Provider
+      value={{ layouts, ready, onLayoutChange, resetLayout, hiddenKeys, hideWidget, restoreWidget }}
+    >
       {children}
     </LayoutContext.Provider>
   );

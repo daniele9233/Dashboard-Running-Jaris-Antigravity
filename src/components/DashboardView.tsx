@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   Wind, TrendingDown, Activity, Target, Timer, Zap, Flame, Shield, Trophy, Info, RotateCcw,
+  Sparkles, Plus, X,
 } from "lucide-react";
 // Use v1-compat API from `/legacy` entry (Responsive + WidthProvider HOC with flat props).
 import { Responsive, WidthProvider } from "react-grid-layout/legacy";
@@ -10,6 +11,7 @@ import { Responsive, WidthProvider } from "react-grid-layout/legacy";
 const ResponsiveGrid = WidthProvider(Responsive);
 import { GridCard } from "./GridCard";
 import { useLayout } from "../context/LayoutContext";
+import { WIDGET_REGISTRY } from "./dashboard/widgetRegistry";
 
 // ─── media query hook (mobile detection) ─────────────────────────────────────
 function useMediaQuery(query: string): boolean {
@@ -247,17 +249,41 @@ function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }) {
                 />
                 <circle cx={x(hoverIdx)} cy={y(hov.ctl)} r={12} fill="#F97316" fillOpacity={0.25} />
                 <circle cx={x(hoverIdx)} cy={y(hov.ctl)} r={5} fill="#F97316" stroke="#fff" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-                {/* Tooltip pill */}
-                <g transform={`translate(${x(hoverIdx) - 30}, ${Math.max(padT + 4, y(hov.ctl) - 38)})`}>
-                  <rect width={60} height={26} rx={6} fill="#F97316" />
-                  <text x={30} y={17} textAnchor="middle" fontSize="13" fontWeight="900" fill="#fff" style={{ fontFamily: "JetBrains Mono" }}>
-                    {hov.ctl.toFixed(0)}
-                  </text>
-                </g>
               </g>
             )}
           </svg>
         )}
+
+        {/* CTL badge — HTML so it never stretches */}
+        {hov && hoverIdx !== null && (() => {
+          const badgeLeft = (x(hoverIdx) / W) * 100;
+          const badgeTop  = (Math.max(padT + 4, y(hov.ctl) - 38) / H) * 100;
+          return (
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: `calc(${badgeLeft}% - 22px)`,
+                top: `${badgeTop}%`,
+              }}
+            >
+              <div
+                style={{
+                  background: '#F97316',
+                  borderRadius: 8,
+                  width: 44,
+                  height: 28,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <span style={{ fontFamily: 'JetBrains Mono', fontSize: 14, fontWeight: 900, color: '#fff', lineHeight: 1 }}>
+                  {hov.ctl.toFixed(0)}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Hover date overlay (HTML, not scaled) */}
         {hov && (
@@ -314,83 +340,108 @@ function HRZones({ lastRun }: { lastRun: Run | null }) {
   const maxPct = Math.max(...zones.map((z) => z.pct), 1);
 
   return (
-    <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 h-full flex flex-col">
-      <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase mb-4">
+    <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-5 h-full flex flex-col overflow-hidden">
+      {/* ── top label ── */}
+      <div className="text-[#A0A0A0] text-[9px] font-black tracking-[0.2em] uppercase mb-3 shrink-0">
         Heart Rate Zones
       </div>
-      <div className="flex justify-center mb-4">
-        <svg viewBox="0 0 192 192" className="w-full" style={{ maxWidth: '160px' }}>
-          {zones.map((z, i) => {
-            const a1 = startAngle + gap / 2;
-            const a2 = startAngle + (z.pct / total) * 360 - gap / 2;
-            startAngle += (z.pct / total) * 360;
-            const large = a2 - a1 > 180 ? 1 : 0;
-            const rad = (p: number) => (p * Math.PI) / 180;
-            const isActive = i === active;
-            const rr = isActive ? R + 5 : R;
-            const x1 = cx + rr * Math.cos(rad(a1));
-            const y1 = cy + rr * Math.sin(rad(a1));
-            const x2 = cx + rr * Math.cos(rad(a2));
-            const y2 = cy + rr * Math.sin(rad(a2));
-            const x3 = cx + r * Math.cos(rad(a2));
-            const y3 = cy + r * Math.sin(rad(a2));
-            const x4 = cx + r * Math.cos(rad(a1));
-            const y4 = cy + r * Math.sin(rad(a1));
-            if (z.pct === 0) return null;
-            const d = `M ${x1} ${y1} A ${rr} ${rr} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${r} ${r} 0 ${large} 0 ${x4} ${y4} Z`;
-            return (
-              <path
-                key={i}
-                d={d}
-                fill={z.color}
-                opacity={isActive ? 1 : 0.6}
-                style={{ cursor: "pointer", transition: "all .3s ease" }}
-                onMouseEnter={() => setActive(i)}
-              />
-            );
-          })}
-          <circle cx={cx} cy={cy} r={r - 4} fill="#111" />
-          <text x={cx} y={cy - 4} textAnchor="middle" fontSize="8" fontWeight="800" fill="#A0A0A0" letterSpacing="1.5">
-            {zones[active].n} · {zones[active].label.toUpperCase()}
-          </text>
-          <text x={cx} y={cy + 14} textAnchor="middle" fontSize="20" fontWeight="900" fill="#fff" style={{ fontFamily: "JetBrains Mono" }}>
-            {zones[active].pct}%
-          </text>
-          <text x={cx} y={cy + 28} textAnchor="middle" fontSize="8" fill="#666" style={{ fontFamily: "JetBrains Mono" }}>
-            {zones[active].range} bpm
-          </text>
-        </svg>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        {zones.map((z, i) => (
-          <div
-            key={z.n}
-            onMouseEnter={() => setActive(i)}
-            className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors"
-            style={{
-              background: i === active ? "rgba(255,255,255,0.05)" : "transparent",
-              border: i === active ? "1px solid rgba(255,255,255,0.08)" : "1px solid transparent",
-            }}
-          >
-            <div style={{ width: 4, height: 18, borderRadius: 2, background: z.color }} />
-            <div style={{ flex: 1 }}>
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-white text-[10px] font-black tracking-widest uppercase">
-                  {z.n} · {z.label}
-                </span>
-                <span className="text-[#A0A0A0] text-[10px]" style={{ fontFamily: "JetBrains Mono" }}>
-                  {z.pct}%
-                </span>
-              </div>
-              <div className="h-1 bg-[#333] rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full"
-                  style={{ width: `${(z.pct / maxPct) * 100}%`, background: z.color, transition: "width .6s ease" }}
+
+      {/* ── body: donut left / list right ── */}
+      <div className="flex gap-4 flex-1 min-h-0">
+
+        {/* Donut */}
+        <div className="flex items-center justify-center shrink-0" style={{ width: '44%' }}>
+          <svg viewBox="0 0 200 200" className="w-full h-full" style={{ maxWidth: 200, maxHeight: 200 }}>
+            {zones.map((z, i) => {
+              const a1 = startAngle + gap / 2;
+              const a2 = startAngle + (z.pct / total) * 360 - gap / 2;
+              startAngle += (z.pct / total) * 360;
+              const large = a2 - a1 > 180 ? 1 : 0;
+              const rad = (p: number) => (p * Math.PI) / 180;
+              const isActive = i === active;
+              const rr = isActive ? R + 6 : R;
+              const ri = isActive ? r - 2 : r;
+              const x1 = cx + rr * Math.cos(rad(a1));
+              const y1 = cy + rr * Math.sin(rad(a1));
+              const x2 = cx + rr * Math.cos(rad(a2));
+              const y2 = cy + rr * Math.sin(rad(a2));
+              const x3 = cx + ri * Math.cos(rad(a2));
+              const y3 = cy + ri * Math.sin(rad(a2));
+              const x4 = cx + ri * Math.cos(rad(a1));
+              const y4 = cy + ri * Math.sin(rad(a1));
+              if (z.pct === 0) return null;
+              const d = `M ${x1} ${y1} A ${rr} ${rr} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${ri} ${ri} 0 ${large} 0 ${x4} ${y4} Z`;
+              return (
+                <path
+                  key={i}
+                  d={d}
+                  fill={z.color}
+                  opacity={isActive ? 1 : 0.55}
+                  style={{ cursor: "pointer", transition: "all .25s ease", filter: isActive ? `drop-shadow(0 0 6px ${z.color}88)` : "none" }}
+                  onMouseEnter={() => setActive(i)}
                 />
-              </div>
-            </div>
+              );
+            })}
+            {/* dark inner circle */}
+            <circle cx={cx} cy={cy} r={r - 5} fill="#111" />
+            {/* center text */}
+            <text x={cx} y={cy - 8} textAnchor="middle" fontSize="7.5" fontWeight="800" fill="#888" letterSpacing="1.2">
+              {zones[active].n} · {zones[active].label.toUpperCase()}
+            </text>
+            <text x={cx} y={cy + 12} textAnchor="middle" fontSize="22" fontWeight="900" fill="#fff">
+              {zones[active].pct}%
+            </text>
+            <text x={cx} y={cy + 26} textAnchor="middle" fontSize="7.5" fill="#555">
+              {zones[active].range} bpm
+            </text>
+          </svg>
+        </div>
+
+        {/* Distribution list */}
+        <div className="flex flex-col flex-1 min-w-0 min-h-0">
+          <div className="text-white text-xl font-black italic tracking-tight mb-3 shrink-0">
+            Distribution
           </div>
-        ))}
+          <div className="flex flex-col gap-1.5 flex-1 justify-evenly">
+            {zones.map((z, i) => (
+              <div
+                key={z.n}
+                onMouseEnter={() => setActive(i)}
+                className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl cursor-pointer transition-all"
+                style={{
+                  background: i === active ? "rgba(255,255,255,0.06)" : "transparent",
+                  border: i === active ? `1px solid ${z.color}30` : "1px solid transparent",
+                }}
+              >
+                {/* color pill */}
+                <div style={{
+                  width: 5, height: 22, borderRadius: 3,
+                  background: z.color,
+                  opacity: i === active ? 1 : 0.65,
+                  flexShrink: 0,
+                  boxShadow: i === active ? `0 0 8px ${z.color}66` : "none",
+                }} />
+                {/* label + bar */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-white text-[10px] font-black tracking-widest uppercase truncate">
+                      {z.n} · {z.label}
+                    </span>
+                    <span className="text-[#A0A0A0] text-[10px] font-bold ml-2 shrink-0" style={{ fontFamily: "JetBrains Mono" }}>
+                      {z.pct}%
+                    </span>
+                  </div>
+                  <div className="h-[3px] rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${(z.pct / maxPct) * 100}%`, background: z.color, transition: "width .6s ease", opacity: i === active ? 1 : 0.6 }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -398,8 +449,8 @@ function HRZones({ lastRun }: { lastRun: Run | null }) {
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useApi } from "../hooks/useApi";
-import { getDashboard, getRuns, getAnalytics, getBestEfforts } from "../api";
-import type { DashboardResponse, RunsResponse, AnalyticsResponse, Run, BestEffort, FitnessFreshnessPoint } from "../types/api";
+import { getDashboard, getRuns, getAnalytics, getBestEfforts, getVdotPaces, getDashboardInsight } from "../api";
+import type { DashboardResponse, RunsResponse, AnalyticsResponse, Run, BestEffort, FitnessFreshnessPoint, VdotPacesResponse } from "../types/api";
 
 function fmtPbTime(minutes: number): string {
   const h = Math.floor(minutes / 60);
@@ -652,10 +703,25 @@ export function DashboardView() {
   const { data: runsData } = useApi<RunsResponse>(getRuns);
   const { data: analyticsData } = useApi<AnalyticsResponse>(getAnalytics);
   const { data: effortsData } = useApi<{ efforts: BestEffort[] }>(getBestEfforts);
+  const { data: vdotPacesData } = useApi<VdotPacesResponse>(getVdotPaces);
+  const { data: insightData } = useApi<{ insight: string | null }>(getDashboardInsight);
 
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { layouts, onLayoutChange, resetLayout } = useLayout();
+  const { layouts, onLayoutChange, resetLayout, hiddenKeys, hideWidget, restoreWidget } = useLayout();
+  const [openAddMenu, setOpenAddMenu] = useState(false);
+  const addMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!openAddMenu) return;
+    const onClick = (e: MouseEvent) => {
+      if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
+        setOpenAddMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [openAddMenu]);
+  const hiddenMeta = WIDGET_REGISTRY.filter((w) => hiddenKeys.includes(w.key));
   const isMobile = useMediaQuery("(max-width: 767px)");
   const [chartPeriod, setChartPeriod] = useState<'7d' | 'month' | 'year'>('year');
   const runs = runsData?.runs ?? [];
@@ -748,8 +814,10 @@ export function DashboardView() {
 
   const profile = dashData?.profile;
   const maxHr = profile?.max_hr ?? 180;
-  const atHr = Math.round(maxHr * 0.92);
-  const ltHr = Math.round(maxHr * 0.87);
+  // Anaerobic threshold HR — Daniels: T-pace ~88% VO2max ≈ 88-90% HRmax
+  // (not 92% → that's already VO2max / I-pace territory)
+  const atHr = Math.round(maxHr * 0.88);
+  const ltHr = Math.round(maxHr * 0.85);
 
   const raceDate = profile?.race_date;
   const timeToRace = raceDate ? timeUntil(raceDate) : null;
@@ -795,14 +863,30 @@ export function DashboardView() {
     return out.reverse(); // oldest → newest
   }, [runs]);
 
-  // Threshold pace — median pace of recent runs at threshold effort (HR 82-92% of max)
+  // Threshold pace — Daniels T-pace dal VDOT (88% VO2max).
+  // Fonte primaria = VDOT corrente (sempre affidabile).
+  // Override solo se ≥3 corse recenti nel range HR 86–91% HRmax (vera soglia),
+  // altrimenti il filtro largo mescola M-pace/I-pace e distorce la mediana.
   const thresholdPace = useMemo(() => {
+    const v = analyticsData?.vdot;
+    let vdotPaceSecs: number | null = null;
+    if (v) {
+      // Daniels: T-pace = pace @ 88% VO2max. Risolvi VO2 = -4.60 + 0.182258·v + 0.000104·v²
+      const vo2 = v * 0.88;
+      const disc = 0.182258 ** 2 + 4 * 0.000104 * (vo2 + 4.60);
+      if (disc >= 0) {
+        const speedMpm = (-0.182258 + Math.sqrt(disc)) / (2 * 0.000104);
+        if (speedMpm > 0) vdotPaceSecs = Math.round(60000 / speedMpm); // sec/km
+      }
+    }
+
     const tempoRuns = runs.filter(r => {
       if (r.is_treadmill || !r.avg_hr_pct || r.distance_km < 3) return false;
       const pct = r.avg_hr_pct > 1 ? r.avg_hr_pct / 100 : r.avg_hr_pct;
-      return pct >= 0.82 && pct <= 0.92;
+      return pct >= 0.86 && pct <= 0.91;
     }).slice(0, 8);
-    if (tempoRuns.length) {
+
+    if (tempoRuns.length >= 3) {
       const paces = tempoRuns
         .map(r => parsePaceToSecs(r.avg_pace))
         .filter(s => s > 0)
@@ -811,11 +895,9 @@ export function DashboardView() {
         return secsToPaceStr(paces[Math.floor(paces.length / 2)]);
       }
     }
-    // Fallback: Daniels T-pace from VDOT (linear interp of published table)
-    const v = analyticsData?.vdot;
-    if (!v) return null;
-    const secs = Math.round(340 - Math.max(0, v - 30) * 4.1);
-    return secsToPaceStr(Math.max(150, Math.min(500, secs)));
+
+    if (vdotPaceSecs) return secsToPaceStr(Math.max(150, Math.min(500, vdotPaceSecs)));
+    return null;
   }, [runs, analyticsData?.vdot]);
 
   const gpsRuns = runs.filter(r => !r.is_treadmill);
@@ -961,16 +1043,56 @@ export function DashboardView() {
               </p>
             </div>
             {!isMobile && (
-              <button
-                onClick={() => {
-                  if (confirm("Ripristinare il layout predefinito?")) resetLayout();
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[#666] hover:text-[#C0FF00] hover:border-[#C0FF00]/30 text-[10px] font-black tracking-widest transition-colors shrink-0"
-                title="Ripristina posizioni widget"
-              >
-                <RotateCcw size={12} />
-                RESET LAYOUT
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="relative" ref={addMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenAddMenu((v) => !v)}
+                    disabled={hiddenMeta.length === 0}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[#666] hover:text-[#C0FF00] hover:border-[#C0FF00]/30 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-[#666] disabled:hover:border-white/[0.06] text-[10px] font-black tracking-widest transition-colors"
+                    title="Ripristina widget nascosti"
+                  >
+                    <Plus size={12} />
+                    AGGIUNGI WIDGET
+                    {hiddenMeta.length > 0 && (
+                      <span className="bg-[#C0FF00] text-black rounded-full px-1.5 text-[9px] leading-4">
+                        {hiddenMeta.length}
+                      </span>
+                    )}
+                  </button>
+                  {openAddMenu && hiddenMeta.length > 0 && (
+                    <div className="absolute right-0 mt-2 w-64 bg-[#1a1a1a] border border-white/[0.08] rounded-2xl shadow-2xl z-40 p-2">
+                      <div className="text-[#666] text-[9px] font-black tracking-widest uppercase px-3 py-2">
+                        Archivio ({hiddenMeta.length})
+                      </div>
+                      {hiddenMeta.map((w) => (
+                        <button
+                          key={w.key}
+                          type="button"
+                          onClick={() => {
+                            restoreWidget(w.key);
+                            setOpenAddMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-2 text-[12px] text-white hover:bg-white/[0.06] rounded-xl flex items-center justify-between group"
+                        >
+                          <span>{w.label}</span>
+                          <Plus size={12} className="text-[#666] group-hover:text-[#C0FF00]" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    if (confirm("Ripristinare il layout predefinito?")) resetLayout();
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[#666] hover:text-[#C0FF00] hover:border-[#C0FF00]/30 text-[10px] font-black tracking-widest transition-colors"
+                  title="Ripristina posizioni widget"
+                >
+                  <RotateCcw size={12} />
+                  RESET LAYOUT
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -992,8 +1114,9 @@ export function DashboardView() {
         >
 
           {/* ── Status of Form ── */}
+          {!hiddenKeys.includes("status-form") && (
           <div key="status-form">
-           <GridCard disabled={isMobile}>
+           <GridCard disabled={isMobile} onRemove={() => hideWidget("status-form")}>
             <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 relative overflow-hidden flex flex-col justify-between">
             <div className="flex justify-between items-start mb-6">
               <div>
@@ -1058,9 +1181,6 @@ export function DashboardView() {
                 </div>
               </div>
 
-              {/* Divider */}
-              <div className="w-px self-stretch bg-white/[0.06]" />
-
               {/* Stats col 1: TSB + Efficiency */}
               <div className="flex flex-col gap-6">
                 <div>
@@ -1076,9 +1196,6 @@ export function DashboardView() {
                   </div>
                 </div>
               </div>
-
-              {/* Divider */}
-              <div className="w-px self-stretch bg-white/[0.06]" />
 
               {/* Stats col 2: CTL + ATL */}
               <div className="flex flex-col gap-6">
@@ -1096,13 +1213,25 @@ export function DashboardView() {
                 </div>
               </div>
             </div>
+            {insightData?.insight && (
+              <div className="mt-6 pt-5 border-t border-white/[0.06]">
+                <div className="flex items-start gap-2.5">
+                  <Sparkles className="text-[#C0FF00] mt-0.5 shrink-0" size={14} />
+                  <p className="text-[#A0A0A0] text-[13px] leading-relaxed whitespace-pre-line">
+                    {insightData.insight}
+                  </p>
+                </div>
+              </div>
+            )}
             </div>
            </GridCard>
           </div>
+          )}
 
           {/* ── VO2 Max ── */}
+          {!hiddenKeys.includes("vo2max") && (
           <div key="vo2max">
-           <GridCard disabled={isMobile}>
+           <GridCard disabled={isMobile} onRemove={() => hideWidget("vo2max")}>
             <div className="h-full bg-[#1a1a1a] border border-white/[0.06] border-t-4 border-t-[#C0FF00] rounded-3xl p-6 flex flex-col justify-between">
             <div className="flex justify-between items-start">
               <Wind className="text-[#C0FF00]" size={24} />
@@ -1122,10 +1251,12 @@ export function DashboardView() {
             </div>
            </GridCard>
           </div>
+          )}
 
           {/* ── Previsione Gara ── */}
+          {!hiddenKeys.includes("previsione-gara") && (
           <div key="previsione-gara">
-           <GridCard disabled={isMobile}>
+           <GridCard disabled={isMobile} onRemove={() => hideWidget("previsione-gara")}>
             <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col">
             <div className="flex items-center gap-2 mb-4">
               <Target className="text-[#C0FF00]" size={14} />
@@ -1182,10 +1313,12 @@ export function DashboardView() {
             </div>
            </GridCard>
           </div>
+          )}
 
           {/* ── Fatigue ATL ── */}
+          {!hiddenKeys.includes("fatigue-atl") && (
           <div key="fatigue-atl">
-           <GridCard disabled={isMobile}>
+           <GridCard disabled={isMobile} onRemove={() => hideWidget("fatigue-atl")}>
             <div
               className="h-full rounded-3xl p-6 flex flex-col justify-between"
               style={{ backgroundColor: faticaColor }}
@@ -1218,10 +1351,12 @@ export function DashboardView() {
             </div>
            </GridCard>
           </div>
+          )}
 
           {/* ── Soglia Anaerobica ── */}
+          {!hiddenKeys.includes("soglia") && (
           <div key="soglia">
-           <GridCard disabled={isMobile}>
+           <GridCard disabled={isMobile} onRemove={() => hideWidget("soglia")}>
             <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col justify-between">
             <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">{t("dashboard.anaerobicThreshold").toUpperCase()}</div>
             <div className="flex items-stretch gap-5 mb-4">
@@ -1255,10 +1390,12 @@ export function DashboardView() {
             </div>
            </GridCard>
           </div>
+          )}
 
           {/* ── Deriva Cardiaca ── */}
+          {!hiddenKeys.includes("deriva") && (
           <div key="deriva">
-           <GridCard disabled={isMobile}>
+           <GridCard disabled={isMobile} onRemove={() => hideWidget("deriva")}>
             <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
@@ -1342,10 +1479,12 @@ export function DashboardView() {
             </div>
            </GridCard>
           </div>
+          )}
 
           {/* ── Weekly KM Chart ── */}
+          {!hiddenKeys.includes("weekly-km") && (
           <div key="weekly-km">
-           <GridCard disabled={isMobile}>
+           <GridCard disabled={isMobile} onRemove={() => hideWidget("weekly-km")}>
             <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 flex flex-col">
             <div className="flex items-center justify-between mb-2">
               <div>
@@ -1394,10 +1533,12 @@ export function DashboardView() {
             </div>
            </GridCard>
           </div>
+          )}
 
           {/* ── Last Run Map ── */}
+          {!hiddenKeys.includes("last-run-map") && (
           <div key="last-run-map">
-           <GridCard disabled={isMobile}>
+           <GridCard disabled={isMobile} onRemove={() => hideWidget("last-run-map")}>
             <div className="h-full rounded-3xl overflow-hidden relative">
               <div className="absolute inset-0">
                 <LastRunMap run={lastRun} />
@@ -1405,35 +1546,158 @@ export function DashboardView() {
             </div>
            </GridCard>
           </div>
+          )}
 
           {/* ── Next Optimal Session ── */}
+          {!hiddenKeys.includes("next-optimal") && (
           <div key="next-optimal">
-           <GridCard disabled={isMobile}>
+           <GridCard disabled={isMobile} onRemove={() => hideWidget("next-optimal")}>
             <div className="h-full">
               <NextOptimalSessionWidget tsb={tsb} atl={atl} ctl={ctl} runs={runs} faticaColor={faticaColor} />
             </div>
            </GridCard>
           </div>
+          )}
 
           {/* ── HR Zones ── */}
+          {!hiddenKeys.includes("hr-zones") && (
           <div key="hr-zones">
-           <GridCard disabled={isMobile}>
+           <GridCard disabled={isMobile} onRemove={() => hideWidget("hr-zones")}>
             <div className="h-full">
               <HRZones lastRun={lastRun} />
             </div>
            </GridCard>
           </div>
+          )}
 
           {/* ── Fitness Chart ── */}
+          {!hiddenKeys.includes("fitness-chart") && (
           <div key="fitness-chart">
-           <GridCard disabled={isMobile}>
+           <GridCard disabled={isMobile} onRemove={() => hideWidget("fitness-chart")}>
             <FitnessChart ff={dashData?.fitness_freshness} />
            </GridCard>
           </div>
+          )}
+
+          {/* ── Training Paces ── */}
+          {!hiddenKeys.includes("training-paces") && (
+          <div key="training-paces">
+           <GridCard disabled={isMobile} onRemove={() => hideWidget("training-paces")}>
+            {(() => {
+              const vdot = vdotPacesData?.vdot ?? analyticsData?.vdot;
+              const paces = vdotPacesData?.paces;
+
+              const zones: { key: string; label: string; abbr: string; color: string; desc: string }[] = [
+                { key: "easy",       label: "Easy / Long Run",        abbr: "E", color: "#60A5FA", desc: "Corsa facile, recupero" },
+                { key: "marathon",   label: "Marathon Pace",          abbr: "M", color: "#34D399", desc: "Lungo specifico maratona" },
+                { key: "threshold",  label: "Threshold / Tempo",      abbr: "T", color: "#F59E0B", desc: "Tempo run 20-40 min" },
+                { key: "interval",   label: "Interval (VO2max)",      abbr: "I", color: "#F43F5E", desc: "Ripetute 800m-1600m" },
+                { key: "repetition", label: "Repetition / Speed",     abbr: "R", color: "#C0FF00", desc: "Ripetizioni 200-400m" },
+              ];
+
+              // Compute range ±5% intorno al passo centrale Daniels
+              const parseSecsPace = (p: string | null | undefined): number | null => {
+                if (!p || !p.includes(":")) return null;
+                const [m, s] = p.split(":").map(Number);
+                return m * 60 + s;
+              };
+              const fmtSecs = (s: number): string =>
+                `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+
+              return (
+                <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-5 flex flex-col overflow-hidden">
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-4 shrink-0">
+                    <div>
+                      <div className="text-[#A0A0A0] text-[9px] font-black tracking-[0.2em] uppercase">
+                        Training Paces
+                      </div>
+                      <div className="text-white text-xs font-black italic tracking-tight mt-0.5">
+                        Zone Daniels personalizzate
+                      </div>
+                    </div>
+                    {vdot && (
+                      <div className="flex flex-col items-end">
+                        <span className="text-[#A0A0A0] text-[9px] font-black tracking-widest uppercase">VDOT</span>
+                        <span className="text-[#C0FF00] text-xl font-black leading-none">{vdot.toFixed(1)}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Column headers */}
+                  {paces ? (
+                    <>
+                      <div className="grid grid-cols-[28px_1fr_auto] gap-x-3 text-[9px] font-black tracking-widest text-[#555] uppercase mb-2 px-1 shrink-0">
+                        <div />
+                        <div>Zone</div>
+                        <div className="text-right">Passo</div>
+                      </div>
+
+                      <div className="flex flex-col gap-2 flex-1 overflow-hidden">
+                        {zones.map(z => {
+                          const centerSecs = parseSecsPace(paces[z.key as keyof typeof paces]);
+                          if (!centerSecs) return null;
+                          const loSecs = Math.round(centerSecs * 0.97);
+                          const hiSecs = Math.round(centerSecs * 1.03);
+                          return (
+                            <div key={z.key}
+                              className="grid grid-cols-[28px_1fr_auto] gap-x-3 items-center px-1 py-2 rounded-xl"
+                              style={{ background: `${z.color}08`, border: `1px solid ${z.color}18` }}
+                            >
+                              {/* Abbr badge */}
+                              <div
+                                className="w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black"
+                                style={{ background: `${z.color}22`, color: z.color }}
+                              >
+                                {z.abbr}
+                              </div>
+
+                              {/* Name + desc */}
+                              <div className="min-w-0">
+                                <div className="text-white text-[11px] font-black truncate">{z.label}</div>
+                                <div className="text-[#555] text-[9px] truncate">{z.desc}</div>
+                              </div>
+
+                              {/* Pace range */}
+                              <div className="text-right">
+                                <div className="font-black font-mono text-[11px]" style={{ color: z.color }}>
+                                  {fmtSecs(loSecs)} – {fmtSecs(hiSecs)}
+                                </div>
+                                <div className="text-[#555] text-[9px]">min/km</div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Footer note */}
+                      <div className="text-[#444] text-[9px] tracking-wider mt-3 shrink-0 text-center">
+                        basate su formula Daniels 2013 · aggiornate automaticamente
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center gap-2">
+                      <div className="text-[#555] text-[9px] font-black tracking-widest uppercase text-center">
+                        {vdot ? "Calcolo paces…" : "Nessun dato VDOT disponibile"}
+                      </div>
+                      {!vdot && (
+                        <div className="text-[#444] text-[9px] text-center">
+                          Registra una corsa a sforzo medio-alto per calibrare il VDOT
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+           </GridCard>
+          </div>
+          )}
 
           {/* ── Session Logs ── */}
+          {!hiddenKeys.includes("session-logs") && (
           <div key="session-logs">
-           <GridCard disabled={isMobile}>
+           <GridCard disabled={isMobile} onRemove={() => hideWidget("session-logs")}>
           {recentRuns.length > 0 ? (
             <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 w-full overflow-auto">
             <div className="mb-8">
@@ -1501,6 +1765,7 @@ export function DashboardView() {
           )}
            </GridCard>
           </div>
+          )}
 
         </ResponsiveGrid>
       </div>
