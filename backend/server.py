@@ -4366,10 +4366,12 @@ async def get_dashboard_insight():
     if not ff_latest or not last_run:
         return {"insight": None, "cached": False}
 
+    # Bump prompt_v when prompt changes → invalidates old cached entries
     cache_key = {
         "athlete_id": athlete_id or "",
         "last_run_id": str(last_run.get("_id")),
         "ff_date": str(ff_latest.get("date", "")),
+        "prompt_v": "v2-metaphors",
     }
     cached = await db.ai_dashboard_insight.find_one(cache_key)
     if cached and cached.get("insight"):
@@ -4383,21 +4385,54 @@ async def get_dashboard_insight():
     run_pace = last_run.get("avg_pace", "—") or "—"
     run_hr = int(last_run.get("avg_hr", 0) or 0)
 
-    prompt = f"""Sei un coach sportivo che scrive per un runner principiante in italiano.
-Analizza questi dati e scrivi 3-4 righe MAX (max 60 parole totali) con:
-- 1 frase di diagnosi del momento (ALTA/MEDIA/BASSA fatica)
-- 1 spiegazione semplice dei numeri
-- 1 consiglio pratico per domani
-Usa un tono amichevole, 1 emoji max, no jargon tecnico.
+    # Stato in parole (non numeri)
+    if tsb > 10:
+        stato = "molto fresco, picco prestativo"
+    elif tsb > -5:
+        stato = "equilibrio, carico/recupero bilanciati"
+    elif tsb > -20:
+        stato = "affaticato, adattamento in corso"
+    else:
+        stato = "sovraccarico, rischio infortunio alto"
 
-Dati:
-- TSB (freschezza): {tsb:.1f}  [positivo=fresco, negativo=stanco]
-- CTL (fitness base): {ctl:.1f}
-- ATL (fatica recente): {atl:.1f}
-- Efficienza: {efficiency:.0f}%
-- Ultima corsa: {run_dist:.1f}km a {run_pace}/km, FC media {run_hr}bpm
+    # 8 stili metafora diversi — l'AI ne sceglie uno ogni volta per variare
+    import random as _rnd
+    stili = [
+        ("Motore & Benzina",
+         "Parla come se il corpo fosse un motore: surriscaldamento, centralina, benzina, garage, folle, autostrada. Le 'calorie/sforzo' sono il carburante."),
+        ("Cantiere & Costruzione",
+         "Parla come se l'allenamento fosse un cantiere: demolizione dei vecchi limiti, polvere/mattoni = stanchezza, operai che costruiscono nella notte, fondamenta, cemento che si asciuga, muratori, mattoni."),
+        ("Banca & Investimento",
+         "Parla come se l'energia fosse denaro: conto energetico, debito, investimento, capitale, ritorno sull'investimento, conto in rosso, risparmio, interessi."),
+        ("Batteria & Centralina",
+         "Parla come se il corpo fosse un dispositivo elettronico: batteria scarica/piena, centralina che taglia la potenza, modalità risparmio energetico, ricarica, bluetooth, firmware."),
+        ("Giardino & Crescita",
+         "Parla come se l'allenamento fosse coltivare un giardino: semi piantati, radici profonde, potatura, acqua, crescita lenta, fioritura, stagione dormiente, giardiniere."),
+        ("Orchestra & Musicista",
+         "Parla come se il corpo fosse un musicista: strumenti accordati, prova generale, stonato, pausa tra due concerti, direttore d'orchestra, spartito, armonia."),
+        ("Guerriero & Battaglia",
+         "Parla come se il runner fosse un guerriero: battaglia vinta, scudo abbassato, armi da riparare, fucina, accampamento, cicatrici che rendono più forti, campo di addestramento."),
+        ("Cuoco & Ricetta",
+         "Parla come se l'allenamento fosse cucina: ingredienti, forno caldo, riposare l'impasto, lievitazione, ricetta perfetta, chef, tempo di cottura, sale quanto basta."),
+    ]
+    stile_nome, stile_desc = _rnd.choice(stili)
 
-Rispondi SOLO con il testo del commento, niente preamboli."""
+    prompt = f"""Sei un coach sportivo italiano creativo. Scrivi un consiglio (3-4 righe MAX, 50-70 parole) per un runner principiante.
+
+STATO ATTUALE del runner: {stato}
+ULTIMA CORSA: {run_dist:.1f}km a {run_pace}/km, FC media {run_hr}bpm
+
+REGOLE TASSATIVE:
+- NON usare MAI i termini tecnici: TSB, CTL, ATL, TRIMP, VO2, VDOT, banister, trainingpeaks
+- NON nominare numeri come "70%", "-14.5", "fitness 25" — l'utente vede già i dati, tu dai il SIGNIFICATO
+- Usa OBBLIGATORIAMENTE la metafora "{stile_nome}"
+- {stile_desc}
+- Inizia con una frase d'impatto (non "Oggi il tuo..." — varia!)
+- Chiudi con un consiglio pratico per domani (riposo/leggero/medio/forte)
+- Massimo 1 emoji, tono caldo e amichevole, seconda persona ("tu")
+- NO preamboli tipo "Ecco il consiglio:", vai diretto al contenuto
+
+Rispondi SOLO con il testo, niente titoli, niente virgolette."""
 
     try:
         insight = await _call_ai_async(prompt, max_tokens=300)

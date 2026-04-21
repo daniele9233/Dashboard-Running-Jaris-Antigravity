@@ -447,7 +447,7 @@ function HRZones({ lastRun }: { lastRun: Run | null }) {
   );
 }
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Line, CartesianGrid, Area, ComposedChart } from "recharts";
 import { useApi } from "../hooks/useApi";
 import { getDashboard, getRuns, getAnalytics, getBestEfforts, getVdotPaces, getDashboardInsight } from "../api";
 import type { DashboardResponse, RunsResponse, AnalyticsResponse, Run, BestEffort, FitnessFreshnessPoint, VdotPacesResponse } from "../types/api";
@@ -830,6 +830,52 @@ export function DashboardView() {
     ? Math.max(70, Math.min(100, 85 + tsb * 1.05))
     : null;
 
+  // ─── Human-friendly metaphors (no jargon) ─────────────────────────────
+  const tsbMeta = (() => {
+    if (tsb === null) return { icon: "🪫", label: "—", sub: "Dati non disponibili", color: "#64748B" };
+    if (tsb > 10)   return { icon: "🔋", label: "Pieno",    sub: "Sei fresco, spingi!",        color: "#C0FF00" };
+    if (tsb > -5)   return { icon: "🔋", label: "Buono",    sub: "Equilibrio perfetto",        color: "#14B8A6" };
+    if (tsb > -15)  return { icon: "🪫", label: "Medio",    sub: "Fase di allenamento",        color: "#F59E0B" };
+    if (tsb > -25)  return { icon: "🪫", label: "Scarico",  sub: "Recupera!",                  color: "#F59E0B" };
+    return              { icon: "🔴", label: "Critico",  sub: "Stop, rischio infortuni",     color: "#F43F5E" };
+  })();
+
+  const ctlMeta = (() => {
+    if (ctl <= 0)  return { icon: "🚗", label: "—",         sub: "Nessun dato"         };
+    if (ctl < 20)  return { icon: "🛴", label: "Base",      sub: "In crescita"         };
+    if (ctl < 35)  return { icon: "🚗", label: "Discreto",  sub: "Solido, continua"    };
+    if (ctl < 55)  return { icon: "🏎️", label: "Potente",  sub: "Ottima base"         };
+    if (ctl < 75)  return { icon: "🏎️", label: "Forte",    sub: "Atleta evoluto"      };
+    return             { icon: "🚀", label: "Elite",     sub: "Top form"            };
+  })();
+
+  const atlMeta = (() => {
+    if (atl <= 0)  return { icon: "💤", label: "—",         sub: "Nessun dato"            };
+    if (atl < 20)  return { icon: "💨", label: "Leggero",   sub: "Molto calmo"            };
+    if (atl < 35)  return { icon: "🔥", label: "Medio",     sub: "Attivo"                 };
+    if (atl < 55)  return { icon: "🔥", label: "Alto",      sub: "Hai dato molto"         };
+    return             { icon: "🌋", label: "Estremo",   sub: "Attenzione al recupero" };
+  })();
+
+  const effMeta = (() => {
+    if (efficiency === null) return { icon: "⚡", label: "—",        sub: "Dati non disponibili" };
+    if (efficiency >= 92)    return { icon: "⚡", label: "Piena",    sub: "Motore al top"        };
+    if (efficiency >= 82)    return { icon: "⚡", label: "Buona",    sub: "Ritmo sostenibile"    };
+    if (efficiency >= 75)    return { icon: "⚠️", label: "Ridotta",  sub: "Sei un po' stanco"    };
+    return                       { icon: "⚠️", label: "Bassa",    sub: "Centralina in protezione" };
+  })();
+
+  // ─── PMC (Performance Management Chart) — last 30 days ────────────────
+  const pmcData = useMemo(() => {
+    const ff = dashData?.fitness_freshness ?? [];
+    return ff.slice(-30).map((d) => ({
+      date: d.date.slice(5),
+      ctl: Number(d.ctl?.toFixed?.(1) ?? 0),
+      atl: Number(d.atl?.toFixed?.(1) ?? 0),
+      tsb: Number(d.tsb?.toFixed?.(1) ?? 0),
+    }));
+  }, [dashData?.fitness_freshness]);
+
   const neuroBar = Math.min(100, ctl);
   const metaboBar = Math.min(100, atl);
   const struttBar = tsb !== null ? Math.min(100, Math.max(0, 50 + tsb * 2)) : 0;
@@ -1181,38 +1227,86 @@ export function DashboardView() {
                 </div>
               </div>
 
-              {/* Stats col 1: TSB + Efficiency */}
-              <div className="flex flex-col gap-6">
+              {/* Metaphor stats col 1: Serbatoio (TSB) + Potenza (Efficiency) */}
+              <div className="flex flex-col gap-6 min-w-[180px]">
                 <div>
-                  <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-1">TSB</div>
-                  <div className="text-3xl font-black" style={{ color: status.color }}>
-                    {tsb !== null ? (tsb >= 0 ? "+" : "") + tsb.toFixed(1) : "—"}
+                  <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-1 uppercase">Il tuo serbatoio</div>
+                  <div className="text-xl font-black whitespace-nowrap" style={{ color: tsbMeta.color }}>
+                    <span className="mr-1.5">{tsbMeta.icon}</span>{tsbMeta.label}
                   </div>
+                  <div className="text-[#666] text-[11px] font-medium mt-0.5">{tsbMeta.sub}</div>
                 </div>
                 <div>
-                  <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-1">EFFICIENCY</div>
-                  <div className="text-white text-3xl font-black">
-                    {efficiency !== null ? efficiency.toFixed(1) + "%" : "—"}
+                  <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-1 uppercase">Potenza attuale</div>
+                  <div className="text-white text-xl font-black whitespace-nowrap">
+                    <span className="mr-1.5">{effMeta.icon}</span>{effMeta.label}
                   </div>
+                  <div className="text-[#666] text-[11px] font-medium mt-0.5">{effMeta.sub}</div>
                 </div>
               </div>
 
-              {/* Stats col 2: CTL + ATL */}
-              <div className="flex flex-col gap-6">
+              {/* Metaphor stats col 2: Motore (CTL) + Lavoro svolto (ATL) */}
+              <div className="flex flex-col gap-6 min-w-[180px]">
                 <div>
-                  <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-1">CTL</div>
-                  <div className="text-white text-3xl font-black">
-                    {ctl > 0 ? ctl.toFixed(0) : "—"}
+                  <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-1 uppercase">Il tuo motore</div>
+                  <div className="text-white text-xl font-black whitespace-nowrap">
+                    <span className="mr-1.5">{ctlMeta.icon}</span>{ctlMeta.label}
                   </div>
+                  <div className="text-[#666] text-[11px] font-medium mt-0.5">{ctlMeta.sub}</div>
                 </div>
                 <div>
-                  <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-1">ATL</div>
-                  <div className="text-white text-3xl font-black">
-                    {atl > 0 ? atl.toFixed(0) : "—"}
+                  <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-1 uppercase">Lavoro svolto</div>
+                  <div className="text-white text-xl font-black whitespace-nowrap">
+                    <span className="mr-1.5">{atlMeta.icon}</span>{atlMeta.label}
                   </div>
+                  <div className="text-[#666] text-[11px] font-medium mt-0.5">{atlMeta.sub}</div>
                 </div>
               </div>
             </div>
+
+            {/* PMC — Performance Management Chart (30d) */}
+            {pmcData.length > 1 && (
+              <div className="mt-6 pt-5 border-t border-white/[0.06]">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">
+                    Andamento 30 giorni
+                  </div>
+                  <div className="flex items-center gap-3 text-[9px] font-bold tracking-wider uppercase">
+                    <span className="flex items-center gap-1 text-[#3B82F6]"><span className="w-2 h-2 rounded-full bg-[#3B82F6]" />Motore</span>
+                    <span className="flex items-center gap-1 text-[#F43F5E]"><span className="w-2 h-2 rounded-full bg-[#F43F5E]" />Fatica</span>
+                    <span className="flex items-center gap-1 text-[#F59E0B]"><span className="w-2 h-2 rounded-full bg-[#F59E0B]" />Serbatoio</span>
+                  </div>
+                </div>
+                <div style={{ width: "100%", height: 140 }}>
+                  <ResponsiveContainer>
+                    <ComposedChart data={pmcData} margin={{ top: 5, right: 6, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="tsbFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.35} />
+                          <stop offset="100%" stopColor="#F59E0B" stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
+                      <XAxis dataKey="date" tick={{ fill: "#666", fontSize: 9 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                      <YAxis tick={{ fill: "#666", fontSize: 9 }} tickLine={false} axisLine={false} width={36} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#0f0f0f",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          borderRadius: 12,
+                          fontSize: 11,
+                        }}
+                        labelStyle={{ color: "#A0A0A0", fontWeight: 700 }}
+                      />
+                      <Area type="monotone" dataKey="tsb" stroke="#F59E0B" strokeWidth={1.5} fill="url(#tsbFill)" name="Serbatoio" dot={false} />
+                      <Line type="monotone" dataKey="ctl" stroke="#3B82F6" strokeWidth={2} dot={false} name="Motore" />
+                      <Line type="monotone" dataKey="atl" stroke="#F43F5E" strokeWidth={2} dot={false} name="Fatica" />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
             {insightData?.insight && (
               <div className="mt-6 pt-5 border-t border-white/[0.06]">
                 <div className="flex items-start gap-2.5">
