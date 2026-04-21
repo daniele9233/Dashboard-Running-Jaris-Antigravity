@@ -1228,63 +1228,74 @@ export function DashboardView() {
               </div>
 
               {/* Metaphor stats col 1: Serbatoio (TSB) + Potenza (Efficiency) */}
-              <div className="flex flex-col gap-6 min-w-[180px]">
+              <div className="flex flex-col gap-5 min-w-[180px]">
                 <div>
-                  <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-1 uppercase">Il tuo serbatoio</div>
+                  <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">Il tuo serbatoio</div>
+                  <div className="text-[#555] text-[9px] font-semibold tracking-wide italic mb-1">energia fresca disponibile</div>
                   <div className="text-xl font-black whitespace-nowrap" style={{ color: tsbMeta.color }}>
                     <span className="mr-1.5">{tsbMeta.icon}</span>{tsbMeta.label}
                   </div>
-                  <div className="text-[#666] text-[11px] font-medium mt-0.5">{tsbMeta.sub}</div>
+                  <div className="text-[#888] text-[11px] font-medium mt-0.5">{tsbMeta.sub}</div>
                 </div>
                 <div>
-                  <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-1 uppercase">Potenza attuale</div>
+                  <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">Potenza attuale</div>
+                  <div className="text-[#555] text-[9px] font-semibold tracking-wide italic mb-1">efficienza del cuore</div>
                   <div className="text-white text-xl font-black whitespace-nowrap">
                     <span className="mr-1.5">{effMeta.icon}</span>{effMeta.label}
                   </div>
-                  <div className="text-[#666] text-[11px] font-medium mt-0.5">{effMeta.sub}</div>
+                  <div className="text-[#888] text-[11px] font-medium mt-0.5">{effMeta.sub}</div>
                 </div>
               </div>
 
               {/* Metaphor stats col 2: Motore (CTL) + Lavoro svolto (ATL) */}
-              <div className="flex flex-col gap-6 min-w-[180px]">
+              <div className="flex flex-col gap-5 min-w-[180px]">
                 <div>
-                  <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-1 uppercase">Il tuo motore</div>
+                  <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">Il tuo motore</div>
+                  <div className="text-[#555] text-[9px] font-semibold tracking-wide italic mb-1">fitness di base costruita</div>
                   <div className="text-white text-xl font-black whitespace-nowrap">
                     <span className="mr-1.5">{ctlMeta.icon}</span>{ctlMeta.label}
                   </div>
-                  <div className="text-[#666] text-[11px] font-medium mt-0.5">{ctlMeta.sub}</div>
+                  <div className="text-[#888] text-[11px] font-medium mt-0.5">{ctlMeta.sub}</div>
                 </div>
                 <div>
-                  <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-1 uppercase">Lavoro svolto</div>
+                  <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">Lavoro svolto</div>
+                  <div className="text-[#555] text-[9px] font-semibold tracking-wide italic mb-1">fatica accumulata di recente</div>
                   <div className="text-white text-xl font-black whitespace-nowrap">
                     <span className="mr-1.5">{atlMeta.icon}</span>{atlMeta.label}
                   </div>
-                  <div className="text-[#666] text-[11px] font-medium mt-0.5">{atlMeta.sub}</div>
+                  <div className="text-[#888] text-[11px] font-medium mt-0.5">{atlMeta.sub}</div>
                 </div>
               </div>
             </div>
 
             {/* PMC — Performance Management Chart (30d) */}
             {pmcData.length > 1 && (
-              <div className="mt-6 pt-5 border-t border-white/[0.06]">
-                <div className="flex items-center justify-between mb-2">
+              <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                <div className="flex items-center justify-between mb-1">
                   <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">
                     Andamento 30 giorni
                   </div>
                   <div className="flex items-center gap-3 text-[9px] font-bold tracking-wider uppercase">
-                    <span className="flex items-center gap-1 text-[#3B82F6]"><span className="w-2 h-2 rounded-full bg-[#3B82F6]" />Motore</span>
-                    <span className="flex items-center gap-1 text-[#F43F5E]"><span className="w-2 h-2 rounded-full bg-[#F43F5E]" />Fatica</span>
-                    <span className="flex items-center gap-1 text-[#F59E0B]"><span className="w-2 h-2 rounded-full bg-[#F59E0B]" />Serbatoio</span>
+                    <span className="flex items-center gap-1 text-[#22D3EE]"><span className="w-2 h-2 rounded-full bg-[#22D3EE]" style={{ boxShadow: "0 0 6px #22D3EE" }} />Motore</span>
+                    <span className="flex items-center gap-1 text-[#FF2E9A]"><span className="w-2 h-2 rounded-full bg-[#FF2E9A]" style={{ boxShadow: "0 0 6px #FF2E9A" }} />Fatica</span>
+                    <span className="flex items-center gap-1 text-[#C0FF00]"><span className="w-2 h-2 rounded-full bg-[#C0FF00]" style={{ boxShadow: "0 0 6px #C0FF00" }} />Serbatoio</span>
                   </div>
                 </div>
-                <div style={{ width: "100%", height: 140 }}>
+                <div style={{ width: "100%", height: 105 }}>
                   <ResponsiveContainer>
-                    <ComposedChart data={pmcData} margin={{ top: 5, right: 6, left: -20, bottom: 0 }}>
+                    <ComposedChart data={pmcData} margin={{ top: 4, right: 6, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="tsbFill" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.35} />
-                          <stop offset="100%" stopColor="#F59E0B" stopOpacity={0.02} />
+                          <stop offset="0%" stopColor="#C0FF00" stopOpacity={0.35} />
+                          <stop offset="100%" stopColor="#C0FF00" stopOpacity={0.02} />
                         </linearGradient>
+                        <filter id="neonGlow" x="-50%" y="-50%" width="200%" height="200%">
+                          <feGaussianBlur stdDeviation="1.5" result="blur" />
+                          <feMerge>
+                            <feMergeNode in="blur" />
+                            <feMergeNode in="SourceGraphic" />
+                          </feMerge>
+                        </filter>
                       </defs>
                       <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
                       <XAxis dataKey="date" tick={{ fill: "#666", fontSize: 9 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
@@ -1298,9 +1309,9 @@ export function DashboardView() {
                         }}
                         labelStyle={{ color: "#A0A0A0", fontWeight: 700 }}
                       />
-                      <Area type="monotone" dataKey="tsb" stroke="#F59E0B" strokeWidth={1.5} fill="url(#tsbFill)" name="Serbatoio" dot={false} />
-                      <Line type="monotone" dataKey="ctl" stroke="#3B82F6" strokeWidth={2} dot={false} name="Motore" />
-                      <Line type="monotone" dataKey="atl" stroke="#F43F5E" strokeWidth={2} dot={false} name="Fatica" />
+                      <Area type="monotone" dataKey="tsb" stroke="#C0FF00" strokeWidth={1.5} fill="url(#tsbFill)" name="Serbatoio" dot={false} filter="url(#neonGlow)" />
+                      <Line type="monotone" dataKey="ctl" stroke="#22D3EE" strokeWidth={2.2} dot={false} name="Motore" filter="url(#neonGlow)" />
+                      <Line type="monotone" dataKey="atl" stroke="#FF2E9A" strokeWidth={2.2} dot={false} name="Fatica" filter="url(#neonGlow)" />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
@@ -1308,10 +1319,10 @@ export function DashboardView() {
             )}
 
             {insightData?.insight && (
-              <div className="mt-6 pt-5 border-t border-white/[0.06]">
+              <div className="mt-3 pt-3 border-t border-white/[0.06]">
                 <div className="flex items-start gap-2.5">
-                  <Sparkles className="text-[#C0FF00] mt-0.5 shrink-0" size={14} />
-                  <p className="text-[#A0A0A0] text-[13px] leading-relaxed whitespace-pre-line">
+                  <Sparkles className="text-[#C0FF00] mt-0.5 shrink-0" size={14} style={{ filter: "drop-shadow(0 0 4px #C0FF00)" }} />
+                  <p className="text-[#B8B8B8] text-[13px] leading-relaxed whitespace-pre-line">
                     {insightData.insight}
                   </p>
                 </div>
