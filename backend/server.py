@@ -4309,17 +4309,19 @@ async def _call_ai_async(prompt: str, max_tokens: int = 900) -> str:
         except Exception as e:
             print(f"[AI-L1] Claude failed: {type(e).__name__}: {e}")
 
-    # Level 2: Gemini (free tier)
-    if GEMINI_API_KEY:
-        try:
-            from google import genai as ggenai
-            gclient2 = ggenai.Client(api_key=GEMINI_API_KEY)
-            gresp2 = await gclient2.aio.models.generate_content(
-                model="gemini-2.0-flash", contents=prompt
-            )
-            return gresp2.text.strip()
-        except Exception as e:
-            print(f"[AI-L2] Gemini failed: {type(e).__name__}: {e}")
+    # Level 2: Gemini — uses JARVIS_GEMINI_KEY (same key/model as Jarvis, proven working)
+    _gemini_key = JARVIS_GEMINI_KEY or GEMINI_API_KEY
+    if _gemini_key:
+        for _gmodel in ("gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"):
+            try:
+                from google import genai as ggenai
+                gclient2 = ggenai.Client(api_key=_gemini_key)
+                gresp2 = await gclient2.aio.models.generate_content(
+                    model=_gmodel, contents=prompt
+                )
+                return gresp2.text.strip()
+            except Exception as e:
+                print(f"[AI-L2] Gemini {_gmodel} failed: {type(e).__name__}: {e}")
 
     raise RuntimeError("All AI providers unavailable")
 
