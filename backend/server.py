@@ -21,6 +21,7 @@ import io
 import base64
 
 load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"), override=False)
 
 # ── ENV ──────────────────────────────────────────────────────────────────────
 MONGO_URL          = os.environ.get("MONGO_URL", "")
@@ -36,6 +37,8 @@ GARMIN_EMAIL       = os.environ.get("GARMIN_EMAIL", "")
 GARMIN_PASSWORD    = os.environ.get("GARMIN_PASSWORD", "")
 APP_VERSION        = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT") or os.environ.get("COMMIT_SHA") or "local"
 ANALYTICS_SCHEMA_VERSION = "pro-v9-2026-04-19"
+RUNNER_DNA_SCHEMA_VERSION = "runner-dna-v4-2026-04-22"
+GARMIN_CSV_REPAIR_VERSION = "garmin-csv-repair-v2-2026-04-22"
 
 # Build the callback URL from the current host (set via Render env or default)
 BACKEND_URL        = os.environ.get("BACKEND_URL", "https://dani-backend-ea0s.onrender.com")
@@ -89,6 +92,11 @@ async def _invalidate_analytics_cache(athlete_id: Optional[int]):
         await db.analytics_cache.delete_many({"athlete_id": athlete_id})
 
 
+async def _invalidate_runner_dna_cache(athlete_id: Optional[int]):
+    if athlete_id:
+        await db.runner_dna_cache.delete_many({"athlete_id": athlete_id})
+
+
 async def _ensure_indexes():
     """Create non-destructive indexes used by sync + analytics."""
     try:
@@ -99,6 +107,7 @@ async def _ensure_indexes():
         await db.garmin_csv_data.create_index([("athlete_id", 1), ("date", -1)])
         await db.garmin_csv_data.create_index([("athlete_id", 1), ("matched_run_id", 1)])
         await db.analytics_cache.create_index([("athlete_id", 1), ("cache_key", 1)], unique=True, sparse=True)
+        await db.runner_dna_cache.create_index("athlete_id", unique=True, sparse=True)
     except Exception as e:
         print(f"[indexes] non-fatal index setup error: {e}")
 
@@ -132,6 +141,70 @@ def valid_outdoor_runs_query(athlete_id=None, min_distance_km: float = 0) -> dic
     return q
 
 
+FITNESS_CTL_DAYS = 42
+FITNESS_ATL_DAYS = 7
+FITNESS_ALPHA_CTL = 2.0 / (FITNESS_CTL_DAYS + 1)
+FITNESS_ALPHA_ATL = 2.0 / (FITNESS_ATL_DAYS + 1)
+
+
+def _parse_datetime(value) -> Optional[dt.datetime]:
+    if isinstance(value, dt.datetime):
+        return value.replace(tzinfo=None)
+    if isinstance(value, str):
+        try:
+            return dt.datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
+        except ValueError:
+            return None
+    return None
+
+
+def _project_fitness_freshness_doc(doc: Optional[dict], as_of: Optional[dt.datetime] = None) -> Optional[dict]:
+    """Project latest CTL/ATL/TSB forward with zero training load since last computation."""
+    if not doc:
+        return doc
+
+    now = as_of or dt.datetime.now()
+    projected = dict(doc)
+    last_calc = _parse_datetime(projected.get("computed_at"))
+    elapsed_days = 0.0
+
+    if last_calc:
+        elapsed_days = max(0.0, (now - last_calc).total_seconds() / 86400.0)
+    else:
+        try:
+            doc_date = dt.date.fromisoformat(str(projected.get("date", ""))[:10])
+            elapsed_days = max(0.0, float((now.date() - doc_date).days))
+        except ValueError:
+            elapsed_days = 0.0
+
+    if elapsed_days > 0:
+        ctl = float(projected.get("ctl", 0) or 0) * ((1 - FITNESS_ALPHA_CTL) ** elapsed_days)
+        atl = float(projected.get("atl", 0) or 0) * ((1 - FITNESS_ALPHA_ATL) ** elapsed_days)
+        projected["ctl"] = round(ctl, 2)
+        projected["atl"] = round(atl, 2)
+        projected["tsb"] = round(ctl - atl, 2)
+        projected["projected"] = True
+
+    projected["as_of"] = now.isoformat(timespec="seconds")
+    return projected
+
+
+async def _ensure_fitness_freshness_current(athlete_id: Optional[int]) -> None:
+    """Refresh persisted fitness/freshness if the saved series does not reach today."""
+    q = {"athlete_id": athlete_id} if athlete_id else {}
+    latest = await db.fitness_freshness.find_one(q, sort=[("date", -1)])
+    today = dt.date.today().isoformat()
+    if latest and str(latest.get("date", ""))[:10] >= today:
+        return
+
+    profile_doc = await db.profile.find_one(q)
+    max_hr_p = int(profile_doc.get("max_hr", 190)) if profile_doc else 190
+    resting_hr_p = int(profile_doc.get("resting_hr", 50)) if profile_doc else 50
+    await _compute_fitness_freshness(athlete_id, max_hr_p, resting_hr_p)
+    await _invalidate_analytics_cache(athlete_id)
+    await _invalidate_runner_dna_cache(athlete_id)
+
+
 def fast_valid_outdoor_runs_query(athlete_id=None, min_distance_km: float = 0) -> dict:
     """Lean analytics-valid query that avoids scanning heavy streams arrays."""
     q: dict = {"is_treadmill": {"$ne": True}}
@@ -162,6 +235,7 @@ def analytics_run_projection(include_splits: bool = False) -> dict:
         "run_type": 1,
         "notes": 1,
         "avg_cadence": 1,
+        "avg_cadence_spm": 1,
         "elevation_gain": 1,
         "is_treadmill": 1,
         "has_gps": 1,
@@ -194,6 +268,12 @@ def garmin_csv_projection() -> dict:
         "avg_vertical_ratio_pct": 1,
         "avg_stride_length_m": 1,
         "avg_cadence_spm": 1,
+        "max_cadence_spm": 1,
+        "matched_run_id": 1,
+        "match_status": 1,
+        "linked_at": 1,
+        "imported_at": 1,
+        "inactive_duplicate": 1,
     }
 
 
@@ -233,9 +313,9 @@ def _normalise_run_quality_fields(run_doc: dict) -> dict:
     }
 
     avg_cad = run_doc.get("avg_cadence")
-    avg_cad_spm = None
-    if avg_cad:
-        avg_cad_spm = round(avg_cad * 2) if avg_cad < 120 else round(avg_cad)
+    avg_cad_spm = _cadence_spm_from_run(run_doc) or _normalise_strava_cadence_spm(avg_cad)
+    if avg_cad_spm is not None:
+        run_doc["avg_cadence_spm"] = avg_cad_spm
 
     biomech = dict(run_doc.get("biomechanics") or {})
     fallback_bio = {
@@ -433,11 +513,12 @@ async def _compute_fitness_freshness(athlete_id: str, max_hr_profile: int = 190,
         return
 
     # ── EMA giornaliera: CTL (42gg) / ATL (7gg) ───────────────────────────────
-    ALPHA_CTL = 2.0 / (42 + 1)
-    ALPHA_ATL = 2.0 / (7 + 1)
+    ALPHA_CTL = FITNESS_ALPHA_CTL
+    ALPHA_ATL = FITNESS_ALPHA_ATL
 
     first_date = date.fromisoformat(min(daily_trimp.keys()))
     today = date.today()
+    computed_at = dt.datetime.now().isoformat(timespec="seconds")
 
     ctl = 0.0
     atl = 0.0
@@ -452,7 +533,7 @@ async def _compute_fitness_freshness(athlete_id: str, max_hr_profile: int = 190,
         tsb = ctl - atl
 
         # Salva: giorni con corse + snapshot settimanali (ogni lunedì)
-        if trimp_today > 0 or current.weekday() == 0:
+        if trimp_today > 0 or current.weekday() == 0 or current == today:
             docs.append({
                 "athlete_id": athlete_id,
                 "date": ds,
@@ -460,6 +541,7 @@ async def _compute_fitness_freshness(athlete_id: str, max_hr_profile: int = 190,
                 "ctl": round(ctl, 2),
                 "atl": round(atl, 2),
                 "tsb": round(tsb, 2),
+                "computed_at": computed_at,
             })
         current += timedelta(days=1)
 
@@ -702,14 +784,16 @@ async def strava_sync():
         except Exception as e:
             print(f"[garmin-csv-link] non-fatal relink after Strava sync failed: {e}")
         await _invalidate_analytics_cache(athlete_id)
+        await _invalidate_runner_dna_cache(athlete_id)
 
     # ── Auto-adapt training plan on every sync ───────────────────────────────
     # Recalculate VDOT from latest runs and update future weeks if paces drifted
     adapt_result = None
     if athlete_id and synced > 0:
         try:
-            adapt_result = await _auto_adapt_on_sync(athlete_id)
-        except Exception:
+            adapt_result = await _auto_adapt_plan_after_sync(athlete_id)
+        except Exception as e:
+            print(f"[training-auto-adapt] non-fatal auto adapt after Strava sync failed: {e}")
             pass  # never fail the sync because of adapt
 
     return {"ok": True, "synced": synced, "auto_adapt": adapt_result}
@@ -787,6 +871,7 @@ async def get_runs():
     projection = {"streams": 0}
     cursor = db.runs.find(q, projection).sort("date", -1)
     runs = await cursor.to_list(length=500)
+    runs = [_normalise_run_quality_fields(dict(run)) for run in runs]
     return {"runs": oids(runs)}
 
 
@@ -799,7 +884,7 @@ async def get_run(run_id: str):
         doc = await db.runs.find_one({"strava_id": int(run_id)}) if run_id.isdigit() else None
     if not doc:
         return JSONResponse({"error": "not_found"}, status_code=404)
-    return oid(doc)
+    return oid(_normalise_run_quality_fields(doc))
 
 
 @app.get("/api/runs/{run_id}/splits")
@@ -822,6 +907,7 @@ async def get_run_splits(run_id: str):
 async def get_dashboard():
     athlete_id = await _get_athlete_id()
     q = {"athlete_id": athlete_id} if athlete_id else {}
+    await _ensure_fitness_freshness_current(athlete_id)
     profile = await db.profile.find_one(q)
     if not profile:
         profile = {}
@@ -855,7 +941,8 @@ async def get_dashboard():
     ff_docs = await db.fitness_freshness.find(q).sort("date", -1).to_list(90)
     current_ff = None
     if ff_docs:
-        latest = ff_docs[0]
+        latest = _project_fitness_freshness_doc(ff_docs[0]) or ff_docs[0]
+        ff_docs[0] = latest
         current_ff = {
             "ctl": latest.get("ctl", 0),
             "atl": latest.get("atl", 0),
@@ -1077,6 +1164,106 @@ def _assess_feasibility(current_vdot: float, target_vdot: float, weeks: int,
         return {**base, "feasible": False, "difficulty": "unrealistic",
                 "message": msg, "confidence_pct": confidence,
                 "suggested_weeks": suggested_weeks}
+
+
+PLAN_STRATEGY_CONFIG = {
+    "conservative": {
+        "label": "Conservativo",
+        "focus": "Costanza e prevenzione infortuni",
+        "rate_key": "conservative_rate",
+        "volume_multiplier": 0.85,
+        "completion_base": 92,
+        "success_offset": -6,
+    },
+    "balanced": {
+        "label": "Bilanciato",
+        "focus": "Miglior compromesso tra fatica e risultato",
+        "rate_key": "balanced_rate",
+        "volume_multiplier": 1.0,
+        "completion_base": 80,
+        "success_offset": 0,
+    },
+    "aggressive": {
+        "label": "Sfidante",
+        "focus": "Massima performance",
+        "rate_key": "optimistic_rate",
+        "volume_multiplier": 1.15,
+        "completion_base": 62,
+        "success_offset": 10,
+    },
+}
+
+
+def _clamp_int(value: float, lo: int = 5, hi: int = 95) -> int:
+    return int(max(lo, min(hi, round(value))))
+
+
+def _build_strategy_options(current_vdot: float, target_vdot: float, weeks: int, feasibility: dict) -> list:
+    gap = max(0.0, target_vdot - current_vdot)
+    mesocycles = max(weeks / 3.5, 0.1)
+    conservative_rate = float(feasibility.get("conservative_rate") or 0.5)
+    optimistic_rate = float(feasibility.get("optimistic_rate") or 0.8)
+    balanced_rate = (conservative_rate + optimistic_rate) / 2.0
+    rate_map = {
+        "conservative_rate": conservative_rate,
+        "balanced_rate": balanced_rate,
+        "optimistic_rate": optimistic_rate,
+    }
+
+    score_cfg = {
+        "conservative": {"floor": 28, "ceiling": 86, "margin": 4, "exponent": 1.15, "gap_penalty": 11, "short_penalty": 0.3},
+        "balanced": {"floor": 34, "ceiling": 92, "margin": 4, "exponent": 1.22, "gap_penalty": 14, "short_penalty": 0.5},
+        "aggressive": {"floor": 40, "ceiling": 95, "margin": 4, "exponent": 1.35, "gap_penalty": 19, "short_penalty": 0.8},
+    }
+
+    options = []
+    for key, cfg in PLAN_STRATEGY_CONFIG.items():
+        rate = rate_map[cfg["rate_key"]]
+        capacity = mesocycles * rate
+        scoring = score_cfg[key]
+        ceiling = scoring["ceiling"]
+        if gap <= 0:
+            success_pct = ceiling - (2 if key == "aggressive" else 0)
+        else:
+            ratio = max(0.0, capacity / max(gap, 0.1))
+            if ratio < 1.0:
+                near_ceiling = ceiling - scoring["margin"]
+                success_pct = (
+                    scoring["floor"]
+                    + (near_ceiling - scoring["floor"]) * (ratio ** scoring["exponent"])
+                    - ((1.0 - ratio) * scoring["gap_penalty"])
+                )
+            else:
+                buffer = min(1.0, (ratio - 1.0) / 0.55)
+                success_pct = (ceiling - scoring["margin"]) + buffer * scoring["margin"]
+
+            if weeks < 12:
+                success_pct -= (12 - weeks) * scoring["short_penalty"]
+
+        overreach = max(0.0, gap - capacity)
+        completion_pct = cfg["completion_base"] - overreach * 6
+        if key == "aggressive":
+            completion_pct -= max(0.0, gap - conservative_rate * mesocycles) * 3
+        elif key == "conservative":
+            completion_pct += 4
+
+        options.append({
+            "mode": key,
+            "label": cfg["label"],
+            "focus": cfg["focus"],
+            "success_pct": _clamp_int(success_pct, 15, ceiling),
+            "completion_pct": _clamp_int(completion_pct, 15, 98),
+            "weekly_volume_multiplier": cfg["volume_multiplier"],
+            "projected_vdot": round(min(target_vdot, current_vdot + capacity), 1),
+            "note": (
+                "Incrementi minimi, recupero piu protetto."
+                if key == "conservative"
+                else "Progressione Daniels standard."
+                if key == "balanced"
+                else "Volume piu alto e ritmi piu vicini al limite."
+            ),
+        })
+    return options
 
 
 def _build_vdot_progression(current: float, target: float, weeks_total: int,
@@ -1439,14 +1626,32 @@ def _tp_strength_exercises(phase: str, day_type: str, week_in_phase: int = 0) ->
 
 
 def _tp_build_sessions(week_start, week_km: float, phase: str, goal: str,
-                       paces: dict, week_vdot: float) -> list:
+                       paces: dict, week_vdot: float, plan_mode: str = "balanced") -> list:
     """Build 7-day session list for a training week."""
     from datetime import timedelta
     day_names = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
     ep = paces.get("easy") or "6:00"
 
     # Day layout depends on goal distance (more sessions for longer races)
-    if goal == "5K":
+    if plan_mode == "conservative":
+        if goal == "5K":
+            dist_map = {0: 0.25, 1: 0.30, 5: 0.45}
+        elif goal == "10K":
+            dist_map = {0: 0.24, 1: 0.26, 3: 0.18, 5: 0.32}
+        elif goal == "Half Marathon":
+            dist_map = {0: 0.20, 1: 0.20, 3: 0.15, 5: 0.45}
+        else:
+            dist_map = {0: 0.18, 1: 0.16, 2: 0.12, 3: 0.14, 5: 0.40}
+    elif plan_mode == "aggressive":
+        if goal == "5K":
+            dist_map = {0: 0.18, 1: 0.25, 2: 0.12, 3: 0.18, 5: 0.27}
+        elif goal == "10K":
+            dist_map = {0: 0.17, 1: 0.22, 2: 0.13, 3: 0.18, 4: 0.10, 5: 0.20}
+        elif goal == "Half Marathon":
+            dist_map = {0: 0.16, 1: 0.18, 2: 0.12, 3: 0.16, 4: 0.08, 5: 0.30}
+        else:
+            dist_map = {0: 0.14, 1: 0.14, 2: 0.12, 3: 0.14, 4: 0.12, 5: 0.34}
+    elif goal == "5K":
         dist_map = {0: 0.20, 1: 0.25, 3: 0.20, 5: 0.35}
     elif goal == "10K":
         dist_map = {0: 0.20, 1: 0.22, 2: 0.13, 3: 0.18, 5: 0.27}
@@ -1483,7 +1688,7 @@ def _tp_build_sessions(week_start, week_km: float, phase: str, goal: str,
 
         if day_offset == 1:  # Tuesday = MAIN quality session
             s_type, title, desc, pace = _tp_quality_session(phase, goal, dist_km, paces, week_vdot)
-        elif day_offset == 3:  # Thursday = SECONDARY quality session (shorter intervals/tempo)
+        elif day_offset == 3 and plan_mode != "conservative":  # Thursday = SECONDARY quality session (shorter intervals/tempo)
             s_type, title, desc, pace = _tp_secondary_quality_session(phase, goal, dist_km, paces, week_vdot)
         elif day_offset == 5:  # Saturday = long run
             s_type, title, pace = "long", "Corsa Lunga", ep
@@ -1528,7 +1733,8 @@ def _tp_build_sessions(week_start, week_km: float, phase: str, goal: str,
 def _generate_plan_weeks(goal_race: str, weeks_total: int, max_weekly_km: float,
                           current_vdot: float, target_vdot: float,
                           athlete_id, target_time_str: str,
-                          start_date_str: str = None) -> list:
+                          start_date_str: str = None,
+                          plan_mode: str = "balanced") -> list:
     """Generate goal-driven periodized plan with weekly VDOT progression."""
     from datetime import date, timedelta
 
@@ -1571,7 +1777,15 @@ def _generate_plan_weeks(goal_race: str, weeks_total: int, max_weekly_km: float,
 
     # ── Volume progression with 3:1 loading pattern ──────────────────────────
     # Start at ~60% of max, build to max by end of Intensità, then taper
-    start_km = max(15.0, max_weekly_km * 0.55)
+    if plan_mode not in PLAN_STRATEGY_CONFIG:
+        plan_mode = "balanced"
+    strategy = PLAN_STRATEGY_CONFIG[plan_mode]
+    max_weekly_km = max_weekly_km * strategy["volume_multiplier"]
+    start_factor = 0.50 if plan_mode == "conservative" else 0.60 if plan_mode == "aggressive" else 0.55
+    build_factor = 1.05 if plan_mode == "conservative" else 1.10 if plan_mode == "aggressive" else 1.08
+    recovery_every = 3 if plan_mode == "conservative" else 5 if plan_mode == "aggressive" else 4
+    recovery_drop = 0.58 if plan_mode == "conservative" else 0.72 if plan_mode == "aggressive" else 0.65
+    start_km = max(12.0, max_weekly_km * start_factor)
     current_km = start_km
 
     # Use caller-provided start date if valid, otherwise next Monday
@@ -1606,7 +1820,7 @@ def _generate_plan_weeks(goal_race: str, weeks_total: int, max_weekly_km: float,
             is_recovery = (
                 phase_name not in ("Taper", "Gara") and
                 phase_len >= 3 and
-                (week_in_phase + 1) % 4 == 0  # every 4th week = recovery
+                (week_in_phase + 1) % recovery_every == 0
             )
 
             # Volume strategy
@@ -1617,11 +1831,11 @@ def _generate_plan_weeks(goal_race: str, weeks_total: int, max_weekly_km: float,
             elif phase_name == "Gara":
                 week_km = max_weekly_km * 0.25
             elif is_recovery:
-                week_km = current_km * 0.65  # 35% reduction
+                week_km = current_km * recovery_drop
             else:
                 week_km = min(current_km, max_weekly_km)
                 # Bompa periodization: ~7-10% overload per mesocycle week
-                current_km = min(current_km * 1.08, max_weekly_km)
+                current_km = min(current_km * build_factor, max_weekly_km)
 
             week_km = round(max(10.0, week_km), 1)
             wv = vdot_progression[week_idx] if week_idx < len(vdot_progression) else target_vdot
@@ -1630,7 +1844,7 @@ def _generate_plan_weeks(goal_race: str, weeks_total: int, max_weekly_km: float,
             week_start = current_date
             week_end = current_date + timedelta(days=6)
 
-            sessions = _tp_build_sessions(week_start, week_km, phase_name, goal_race, paces, wv)
+            sessions = _tp_build_sessions(week_start, week_km, phase_name, goal_race, paces, wv, plan_mode)
 
             weeks.append({
                 "athlete_id": athlete_id,
@@ -1645,6 +1859,7 @@ def _generate_plan_weeks(goal_race: str, weeks_total: int, max_weekly_km: float,
                 "sessions": sessions,
                 "goal_race": goal_race,
                 "target_time": target_time_str,
+                "plan_mode": plan_mode,
             })
 
             week_number += 1
@@ -1673,7 +1888,10 @@ async def generate_training_plan(request: Request):
     goal_race = body.get("goal_race", "Half Marathon")
     weeks_to_race = int(body.get("weeks_to_race", 16))
     target_time_str = str(body.get("target_time", ""))
-    plan_mode = body.get("plan_mode")              # None | "conservative" | "aggressive"
+    plan_mode = body.get("plan_mode") or "balanced"
+    if plan_mode not in PLAN_STRATEGY_CONFIG:
+        plan_mode = "balanced"
+    dry_run = bool(body.get("dry_run"))
     test_distance_km = body.get("test_distance_km") # optional test calibration
     test_time_str = body.get("test_time")            # optional test time
     start_date_str = body.get("start_date") or None  # user-chosen start date (ISO)
@@ -1682,7 +1900,6 @@ async def generate_training_plan(request: Request):
     q = {"athlete_id": athlete_id} if athlete_id else {}
 
     profile = await db.profile.find_one(q)
-    runs = await db.runs.find(q).sort("date", -1).to_list(500)
 
     max_hr = int((profile or {}).get("max_hr", 190))
     resting_hr = int((profile or {}).get("resting_hr", 50))
@@ -1692,7 +1909,18 @@ async def generate_training_plan(request: Request):
 
     # ── FULL history analysis — escludi tapis roulant da VDOT ─────────────────
     q_gps = {**q, "is_treadmill": {"$ne": True}}
-    all_runs = await db.runs.find(q_gps).sort("date", -1).to_list(None)
+    vdot_projection = {
+        "name": 1,
+        "date": 1,
+        "distance_km": 1,
+        "duration_minutes": 1,
+        "avg_hr": 1,
+        "avg_pace": 1,
+        "is_treadmill": 1,
+        "strava_id": 1,
+        "activity_id": 1,
+    }
+    all_runs = await db.runs.find(q_gps, vdot_projection).sort("date", -1).to_list(None)
     dist_km = RACE_DISTANCES.get(goal_race, 5.0)
     history = _calc_vdot_with_history(all_runs, max_hr, weeks_window=8, goal_dist_km=dist_km, resting_hr=resting_hr)
     # current_vdot is ALWAYS the same regardless of goal distance —
@@ -1748,11 +1976,41 @@ async def generate_training_plan(request: Request):
         feasibility["suggested_weeks"] = weeks_needed
         feasibility["suggested_months"] = months_needed
 
+    strategy_options = _build_strategy_options(current_vdot, original_target_vdot, weeks_to_race, feasibility)
+
+    if feasibility.get("suggested_weeks"):
+        w = feasibility["suggested_weeks"]
+        m = feasibility.get("suggested_months", 0)
+        feasibility["suggested_timeframe"] = f"{w} settimane" if w <= 4 or m < 2 else f"circa {m} mesi ({w} settimane)"
+
+    if dry_run:
+        return {
+            "ok": True,
+            "dry_run": True,
+            "weeks_generated": 0,
+            "current_vdot": current_vdot,
+            "target_vdot": effective_target_vdot,
+            "peak_vdot": peak_vdot,
+            "peak_date": history["peak_date"],
+            "peak_source": history.get("peak_source"),
+            "training_months": history["training_months"],
+            "weekly_volume": history["weekly_volume"],
+            "test_vdot": test_vdot,
+            "plan_mode": None,
+            "strategy_options": strategy_options,
+            "feasibility": feasibility,
+            "race_predictions": _predict_race(effective_target_vdot),
+            "suggested_weeks": feasibility.get("suggested_weeks"),
+            "suggested_months": feasibility.get("suggested_months"),
+            "suggested_timeframe": feasibility.get("suggested_timeframe"),
+        }
+
     # ── Generate the plan ────────────────────────────────────────────────────
     weeks = _generate_plan_weeks(
         goal_race, suggested_weeks, max_weekly_km,
         current_vdot, effective_target_vdot, athlete_id, target_time_str,
         start_date_str=start_date_str,
+        plan_mode=plan_mode,
     )
 
     await db.training_plan.delete_many(q)
@@ -1765,6 +2023,10 @@ async def generate_training_plan(request: Request):
         "plan_target_vdot": effective_target_vdot,
         "plan_current_vdot": current_vdot,
         "plan_weeks": suggested_weeks,
+        "plan_mode": plan_mode,
+        "plan_generated_at": dt.datetime.now().isoformat(),
+        "plan_last_auto_adapt": None,
+        "plan_last_auto_adapt_run_key": None,
     }})
 
     # Format suggested timeframe in Italian
@@ -1786,9 +2048,12 @@ async def generate_training_plan(request: Request):
         "target_vdot": effective_target_vdot,
         "peak_vdot": peak_vdot,
         "peak_date": history["peak_date"],
+        "peak_source": history.get("peak_source"),
         "training_months": history["training_months"],
         "weekly_volume": history["weekly_volume"],
         "test_vdot": test_vdot,
+        "plan_mode": plan_mode,
+        "strategy_options": strategy_options,
         "feasibility": feasibility,
         "race_predictions": _predict_race(effective_target_vdot),
         "suggested_weeks": feasibility.get("suggested_weeks"),
@@ -2204,6 +2469,267 @@ async def adapt_training_plan():
     }
 
 
+async def _auto_adapt_plan_after_sync(athlete_id) -> Optional[dict]:
+    """Adapt the active plan after a Strava sync using real training behavior.
+
+    It is intentionally idempotent for repeated syncs with the same latest run:
+    paces can be recalibrated from VDOT drift, future volume follows the last
+    14 days of real km vs planned km, and high TSB fatigue softens intensity.
+    """
+    from datetime import date, timedelta
+
+    q = {"athlete_id": athlete_id} if athlete_id else {}
+    profile = await db.profile.find_one(q)
+    if not profile:
+        return None
+
+    max_hr = int(profile.get("max_hr", 190))
+    resting_hr = int(profile.get("resting_hr", 50))
+    runs = await db.runs.find(q).sort("date", -1).to_list(500)
+    actual_vdot = _calc_vdot(runs, max_hr, resting_hr=resting_hr)
+    if not actual_vdot:
+        return None
+
+    all_weeks = await db.training_plan.find(q).sort("week_number", 1).to_list(100)
+    if not all_weeks:
+        return None
+
+    today = date.today()
+    today_s = today.isoformat()
+    latest_run = runs[0] if runs else None
+    latest_run_key = None
+    if latest_run:
+        latest_run_key = ":".join([
+            str(latest_run.get("strava_id") or latest_run.get("_id") or ""),
+            str(latest_run.get("date") or ""),
+            str(latest_run.get("distance_km") or ""),
+            str(latest_run.get("duration_minutes") or ""),
+        ])
+
+    if latest_run_key and latest_run_key == profile.get("plan_last_auto_adapt_run_key"):
+        result = {
+            "ok": True,
+            "actual_vdot": actual_vdot,
+            "action": "already_current",
+            "weeks_updated": 0,
+            "message": "Nessuna nuova corsa Strava da usare per riadattare il piano.",
+        }
+        await db.profile.update_one(q, {"$set": {"plan_current_vdot": actual_vdot}})
+        return result
+
+    current_week = next(
+        (w for w in all_weeks if w.get("week_start", "") <= today_s <= w.get("week_end", "")),
+        None,
+    )
+    anchor_week = current_week or next(
+        (w for w in all_weeks if w.get("week_start", "") > today_s),
+        all_weeks[-1],
+    )
+
+    expected_vdot = float(anchor_week.get("target_vdot") or profile.get("plan_current_vdot") or actual_vdot)
+    target_vdot_plan = float(profile.get("plan_target_vdot") or expected_vdot)
+    delta = round(actual_vdot - expected_vdot, 2)
+
+    await _ensure_fitness_freshness_current(athlete_id)
+    ff_doc = await db.fitness_freshness.find_one(q, sort=[("date", -1)])
+    ff_doc = _project_fitness_freshness_doc(ff_doc) or ff_doc
+    tsb = float(ff_doc.get("tsb", 0)) if ff_doc else 0.0
+    atl = float(ff_doc.get("atl", 0)) if ff_doc else 0.0
+
+    window_start = (today - timedelta(days=14)).isoformat()
+
+    def as_float(value, default: float = 0.0) -> float:
+        try:
+            return float(value or default)
+        except (TypeError, ValueError):
+            return default
+
+    def pace_minutes(pace: Optional[str]) -> Optional[float]:
+        if not pace or ":" not in pace:
+            return None
+        try:
+            m, s = pace.split(":", 1)
+            return int(m) + int(s) / 60.0
+        except (TypeError, ValueError):
+            return None
+
+    def refresh_duration(session: dict) -> None:
+        pace_min = pace_minutes(session.get("target_pace"))
+        distance = as_float(session.get("target_distance_km"))
+        if pace_min and distance > 0:
+            session["target_duration_min"] = round(distance * pace_min)
+
+    planned_14_km = 0.0
+    planned_sessions = 0
+    for w in all_weeks:
+        for s in w.get("sessions", []):
+            if s.get("type") == "rest":
+                continue
+            session_date = str(s.get("date") or w.get("week_start") or "")
+            if window_start <= session_date <= today_s:
+                planned_14_km += as_float(s.get("target_distance_km"))
+                planned_sessions += 1
+
+    actual_14_km = sum(
+        as_float(r.get("distance_km"))
+        for r in runs
+        if window_start <= str(r.get("date") or "") <= today_s
+    )
+    compliance_ratio = round(actual_14_km / planned_14_km, 2) if planned_14_km >= 3 else None
+
+    volume_scale = 1.0
+    compliance_reason = None
+    if compliance_ratio is not None:
+        if compliance_ratio < 0.55:
+            volume_scale = 0.82
+            compliance_reason = "low_compliance"
+        elif compliance_ratio < 0.80:
+            volume_scale = 0.92
+            compliance_reason = "partial_compliance"
+        elif compliance_ratio > 1.45:
+            volume_scale = 0.88
+            compliance_reason = "too_much_load"
+        elif compliance_ratio > 1.20:
+            volume_scale = 0.95
+            compliance_reason = "high_load"
+
+    fatigue_scale = 1.0
+    fatigue_reason = None
+    if tsb < -18:
+        fatigue_scale = 0.82
+        fatigue_reason = "high_fatigue"
+    elif tsb < -10:
+        fatigue_scale = 0.92
+        fatigue_reason = "moderate_fatigue"
+
+    distance_scale = min(volume_scale, fatigue_scale)
+    pace_recalibration = abs(delta) >= 0.5
+    reasons = []
+    if pace_recalibration:
+        reasons.append("vdot_ahead" if delta > 0 else "vdot_behind")
+    if compliance_reason:
+        reasons.append(compliance_reason)
+    if fatigue_reason:
+        reasons.append(fatigue_reason)
+
+    result = {
+        "ok": True,
+        "actual_vdot": actual_vdot,
+        "expected_vdot": expected_vdot,
+        "delta": delta,
+        "actual_14_km": round(actual_14_km, 1),
+        "planned_14_km": round(planned_14_km, 1),
+        "planned_sessions": planned_sessions,
+        "compliance_ratio": compliance_ratio,
+        "tsb": round(tsb, 1),
+        "atl": round(atl, 1),
+        "action": "none",
+        "weeks_updated": 0,
+        "reasons": reasons,
+    }
+
+    async def store_result() -> None:
+        update = {
+            "plan_current_vdot": actual_vdot,
+            "plan_last_auto_adapt": result,
+            "plan_last_auto_adapt_at": dt.datetime.now().isoformat(),
+        }
+        if latest_run_key:
+            update["plan_last_auto_adapt_run_key"] = latest_run_key
+        await db.profile.update_one(q, {"$set": update})
+
+    if not reasons:
+        result["action"] = "within_tolerance"
+        await store_result()
+        return result
+
+    future_weeks = [w for w in all_weeks if w.get("week_end", "") >= today_s]
+    if not future_weeks:
+        result["action"] = "no_future_weeks"
+        await store_result()
+        return result
+
+    updated = 0
+    sessions_updated = 0
+    softened_quality = False
+    for w in future_weeks:
+        old_wv = float(w.get("target_vdot") or expected_vdot)
+        new_wv = old_wv
+        if pace_recalibration:
+            new_wv = round(old_wv + delta, 2)
+            if delta > 0:
+                new_wv = min(new_wv, target_vdot_plan + 1.0)
+            else:
+                new_wv = max(new_wv, actual_vdot - 1.0)
+
+        new_paces = _tp_daniels_paces(new_wv)
+        pace_map = {
+            "easy": new_paces.get("easy"),
+            "long": new_paces.get("easy"),
+            "tempo": new_paces.get("threshold"),
+            "intervals": new_paces.get("interval"),
+        }
+
+        sessions = [dict(s) for s in w.get("sessions", [])]
+        week_modified = False
+        for s in sessions:
+            if s.get("type") == "rest" or s.get("completed"):
+                continue
+            session_date = str(s.get("date") or w.get("week_start") or "")
+            if session_date and session_date < today_s:
+                continue
+
+            if fatigue_reason == "high_fatigue" and not softened_quality and s.get("type") in ("tempo", "intervals"):
+                previous_title = s.get("title") or "Qualita"
+                s["type"] = "easy"
+                s["title"] = "Recupero Attivo (auto-sync)"
+                s["description"] = (
+                    f"Auto-adattato dopo sync Strava: TSB {tsb:.1f}. "
+                    f"{previous_title} trasformata in corsa facile."
+                )
+                softened_quality = True
+                week_modified = True
+
+            if pace_recalibration:
+                np = pace_map.get(s.get("type"))
+                if np and s.get("target_pace") != np:
+                    s["target_pace"] = np
+                    refresh_duration(s)
+                    week_modified = True
+
+            if distance_scale < 0.995 and as_float(s.get("target_distance_km")) > 0:
+                old_distance = as_float(s.get("target_distance_km"))
+                s["target_distance_km"] = round(max(1.0, old_distance * distance_scale), 1)
+                refresh_duration(s)
+                week_modified = True
+
+        if not week_modified and abs(new_wv - old_wv) < 0.2:
+            continue
+
+        new_target_km = round(sum(
+            as_float(s.get("target_distance_km"))
+            for s in sessions
+            if s.get("type") != "rest"
+        ), 1)
+        await db.training_plan.update_one(
+            {"athlete_id": athlete_id, "week_number": w["week_number"]},
+            {"$set": {"target_vdot": new_wv, "sessions": sessions, "target_km": new_target_km}},
+        )
+        updated += 1
+        sessions_updated += sum(1 for s in sessions if s.get("type") != "rest")
+
+    if pace_recalibration:
+        result["action"] = "recalibrated_ahead" if delta > 0 else "recalibrated_behind"
+    elif compliance_reason or fatigue_reason:
+        result["action"] = "volume_or_fatigue_adjusted"
+    result["weeks_updated"] = updated
+    result["sessions_updated"] = sessions_updated
+    result["distance_scale"] = round(distance_scale, 2)
+
+    await store_result()
+    return result
+
+
 async def _auto_adapt_on_sync(athlete_id) -> Optional[dict]:
     """Called automatically after each Strava sync.
 
@@ -2322,12 +2848,14 @@ async def get_fitness_freshness():
     from datetime import date, timedelta
     athlete_id = await _get_athlete_id()
     q = {"athlete_id": athlete_id} if athlete_id else {}
+    await _ensure_fitness_freshness_current(athlete_id)
     cursor = db.fitness_freshness.find(q).sort("date", 1)
     docs = await cursor.to_list(length=1000)
 
     current = None
     if docs:
-        latest = docs[-1]
+        latest = _project_fitness_freshness_doc(docs[-1]) or docs[-1]
+        docs[-1] = latest
         ctl = round(latest.get("ctl", 0), 1)
         atl = round(latest.get("atl", 0), 1)
         tsb = round(latest.get("tsb", 0), 1)
@@ -2370,6 +2898,7 @@ async def recalculate_fitness_freshness():
     resting_hr_p = int(profile_doc.get("resting_hr", 50)) if profile_doc else 50
     await _compute_fitness_freshness(athlete_id, max_hr_p, resting_hr_p)
     await _invalidate_analytics_cache(athlete_id)
+    await _invalidate_runner_dna_cache(athlete_id)
     return {"ok": True}
 
 
@@ -2483,7 +3012,8 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
 
     if not run_vdots:
         return {"current": None, "peak": None, "peak_date": None,
-                "training_months": 0, "weekly_volume": 0, "race_specific_vdot": None}
+                "peak_source": None, "training_months": 0, "weekly_volume": 0,
+                "race_specific_vdot": None}
 
     cutoff_8w = (_dt.date.today() - _dt.timedelta(weeks=weeks_window)).isoformat()
     cutoff_16w = (_dt.date.today() - _dt.timedelta(weeks=16)).isoformat()
@@ -2527,6 +3057,15 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
     peak_run, peak_val = max(run_vdots, key=lambda x: x[1])
     peak = round(peak_val, 1)
     peak_date = peak_run.get("date", "")
+    peak_source = {
+        "date": peak_date,
+        "name": peak_run.get("name"),
+        "distance_km": peak_run.get("distance_km"),
+        "duration_minutes": peak_run.get("duration_minutes"),
+        "avg_pace": peak_run.get("avg_pace"),
+        "avg_hr": peak_run.get("avg_hr"),
+        "strava_id": peak_run.get("strava_id") or peak_run.get("activity_id"),
+    }
 
     # Training age
     dates = sorted(r.get("date", "") for r, _ in run_vdots)
@@ -2548,6 +3087,7 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
         "current": current,
         "peak": peak,
         "peak_date": peak_date,
+        "peak_source": peak_source,
         "training_months": training_months,
         "weekly_volume": weekly_volume,
         "race_specific_vdot": race_specific_vdot,
@@ -2902,6 +3442,8 @@ def _bio_value(run: dict, key: str) -> Optional[float]:
         if value is not None:
             try:
                 value = float(value)
+                if value <= 0:
+                    continue
                 if key == "cadence" and value < 120:
                     value *= 2
                 return value
@@ -3531,6 +4073,7 @@ async def get_pro_analytics(
         if not chart or chart in csv_chart_ids:
             csv_query = {
                 "athlete_id": athlete_id,
+                "inactive_duplicate": {"$ne": True},
                 "$or": [
                     {"avg_ground_contact_time_ms": {"$ne": None}},
                     {"avg_vertical_oscillation_cm": {"$ne": None}},
@@ -3791,14 +4334,7 @@ async def get_supercompensation():
             return default
 
     def _normalised_cadence(run: dict) -> Optional[float]:
-        cadence = run.get("avg_cadence")
-        bio = run.get("biomechanics") or {}
-        cadence = cadence or bio.get("avg_cadence_spm")
-        cadence_f = _safe_float(cadence, 0)
-        if cadence_f <= 0:
-            return None
-        # Strava may store running cadence as one foot/min; UI needs steps/min.
-        return cadence_f * 2 if cadence_f < 120 else cadence_f
+        return _cadence_spm_from_run(run)
 
     def _format_date_label(value: Optional[str]) -> str:
         d = _analytics_date(value or "")
@@ -4554,8 +5090,513 @@ def _algorithmic_dna(
 #  RUNNER DNA — OLYMPIC COACH AI IDENTITY ENGINE
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def _runner_dna_signature(
+    athlete_id: Optional[int],
+    runs: list,
+    ff_docs: list,
+    garmin_csv_docs: list,
+) -> tuple[str, dict]:
+    latest_run = runs[-1] if runs else {}
+    latest_ff = ff_docs[0] if ff_docs else {}
+    latest_csv = max(
+        garmin_csv_docs,
+        key=lambda d: str(d.get("linked_at") or d.get("imported_at") or d.get("date") or ""),
+        default={},
+    )
+    csv_metric_rows = [
+        "|".join([
+            str(doc.get("_id") or doc.get("id") or ""),
+            str(doc.get("date") or ""),
+            str(doc.get("matched_run_id") or ""),
+            str(doc.get("avg_cadence_spm") or ""),
+            str(doc.get("avg_ground_contact_time_ms") or ""),
+            str(doc.get("avg_vertical_oscillation_cm") or ""),
+            str(doc.get("avg_vertical_ratio_pct") or ""),
+            str(doc.get("avg_stride_length_m") or ""),
+        ])
+        for doc in garmin_csv_docs
+    ]
+    payload = {
+        "schema": RUNNER_DNA_SCHEMA_VERSION,
+        "athlete_id": athlete_id,
+        "run_count": len(runs),
+        "last_run": {
+            "id": str(latest_run.get("_id") or latest_run.get("id") or latest_run.get("strava_id") or ""),
+            "date": latest_run.get("date"),
+            "distance": latest_run.get("distance_km"),
+            "duration": latest_run.get("duration_minutes"),
+            "cadence": _cadence_spm_from_run(latest_run),
+            "garmin_csv_id": latest_run.get("garmin_csv_id"),
+        },
+        "latest_csv": {
+            "id": str(latest_csv.get("_id") or latest_csv.get("id") or ""),
+            "date": latest_csv.get("date"),
+            "imported_at": latest_csv.get("imported_at"),
+            "linked_at": latest_csv.get("linked_at"),
+        },
+        "active_csv_count": len(garmin_csv_docs),
+        "matched_csv_count": sum(1 for d in garmin_csv_docs if d.get("matched_run_id")),
+        "csv_metrics": csv_metric_rows,
+        "fitness": {
+            "date": latest_ff.get("date"),
+            "ctl": latest_ff.get("ctl"),
+            "atl": latest_ff.get("atl"),
+            "tsb": latest_ff.get("tsb"),
+        },
+    }
+    raw = json.dumps(payload, sort_keys=True, default=str)
+    signature = hashlib.sha1(raw.encode("utf-8")).hexdigest()
+    freshness = {
+        "schema_version": RUNNER_DNA_SCHEMA_VERSION,
+        "data_signature": signature,
+        "last_run_date": latest_run.get("date"),
+        "last_run_id": str(latest_run.get("_id") or latest_run.get("id") or latest_run.get("strava_id") or ""),
+        "latest_garmin_csv_date": latest_csv.get("date"),
+        "latest_garmin_csv_imported_at": latest_csv.get("imported_at"),
+        "active_garmin_csv": len(garmin_csv_docs),
+        "matched_garmin_csv": sum(1 for d in garmin_csv_docs if d.get("matched_run_id")),
+        "fitness_date": latest_ff.get("date"),
+        "auto_recalculated": True,
+    }
+    return signature, freshness
+
+
+async def _runner_dna_light_signature(athlete_id: Optional[int], q: dict) -> tuple[str, dict]:
+    csv_q = _garmin_csv_active_query(athlete_id) if athlete_id else {}
+    latest_run, latest_ff, latest_csv, run_count, active_csv, matched_csv = await asyncio.gather(
+        db.runs.find_one(
+            q,
+            {"date": 1, "distance_km": 1, "duration_minutes": 1, "avg_cadence": 1, "avg_cadence_spm": 1, "biomechanics": 1, "garmin_csv_id": 1, "strava_id": 1},
+            sort=[("date", -1)],
+        ),
+        db.fitness_freshness.find_one(q, sort=[("date", -1)]),
+        db.garmin_csv_data.find_one(
+            csv_q,
+            {"date": 1, "imported_at": 1, "linked_at": 1, "matched_run_id": 1, "avg_cadence_spm": 1},
+            sort=[("imported_at", -1), ("linked_at", -1), ("date", -1)],
+        ) if athlete_id else asyncio.sleep(0, result={}),
+        db.runs.count_documents(q),
+        db.garmin_csv_data.count_documents(csv_q) if athlete_id else asyncio.sleep(0, result=0),
+        db.garmin_csv_data.count_documents({**csv_q, "matched_run_id": {"$nin": [None, ""]}}) if athlete_id else asyncio.sleep(0, result=0),
+    )
+    payload = {
+        "schema": RUNNER_DNA_SCHEMA_VERSION,
+        "athlete_id": athlete_id,
+        "run_count": run_count,
+        "last_run": {
+            "id": str((latest_run or {}).get("_id") or (latest_run or {}).get("strava_id") or ""),
+            "date": (latest_run or {}).get("date"),
+            "distance": (latest_run or {}).get("distance_km"),
+            "duration": (latest_run or {}).get("duration_minutes"),
+            "cadence": _cadence_spm_from_run(latest_run or {}),
+            "garmin_csv_id": (latest_run or {}).get("garmin_csv_id"),
+        },
+        "latest_csv": {
+            "id": str((latest_csv or {}).get("_id") or ""),
+            "date": (latest_csv or {}).get("date"),
+            "imported_at": (latest_csv or {}).get("imported_at"),
+            "linked_at": (latest_csv or {}).get("linked_at"),
+            "cadence": (latest_csv or {}).get("avg_cadence_spm"),
+        },
+        "active_csv_count": active_csv,
+        "matched_csv_count": matched_csv,
+        "fitness": {
+            "date": (latest_ff or {}).get("date"),
+            "ctl": (latest_ff or {}).get("ctl"),
+            "atl": (latest_ff or {}).get("atl"),
+            "tsb": (latest_ff or {}).get("tsb"),
+        },
+    }
+    raw = json.dumps(payload, sort_keys=True, default=str)
+    signature = hashlib.sha1(raw.encode("utf-8")).hexdigest()
+    freshness = {
+        "schema_version": RUNNER_DNA_SCHEMA_VERSION,
+        "data_signature": signature,
+        "last_run_date": (latest_run or {}).get("date"),
+        "last_run_id": str((latest_run or {}).get("_id") or (latest_run or {}).get("strava_id") or ""),
+        "latest_garmin_csv_date": (latest_csv or {}).get("date"),
+        "latest_garmin_csv_imported_at": (latest_csv or {}).get("imported_at"),
+        "active_garmin_csv": active_csv,
+        "matched_garmin_csv": matched_csv,
+        "fitness_date": (latest_ff or {}).get("date"),
+        "auto_recalculated": True,
+    }
+    return signature, freshness
+
+
+def _build_runner_dna_diagnostics(
+    vdot_current: float,
+    consistency_score: int,
+    load_score: int,
+    eff_score: int,
+    biomech_score: int,
+    avg_cadence: Optional[float],
+    avg_gct: Optional[float],
+    avg_vert_osc: Optional[float],
+    avg_vert_ratio: Optional[float],
+    zone_dist: dict,
+    freq: float,
+    ctl: float,
+    tsb: float,
+) -> dict:
+    easy_pct = int(zone_dist.get("z1", 0) + zone_dist.get("z2", 0))
+    strengths: list[str] = []
+    weaknesses: list[str] = []
+    priorities: list[str] = []
+
+    if vdot_current >= 44:
+        strengths.append(f"Motore aerobico solido: VDOT {vdot_current:.1f}.")
+    else:
+        weaknesses.append(f"Motore aerobico migliorabile: VDOT {vdot_current:.1f}.")
+        priorities.append("Aumenta la base aerobica con 2 uscite facili a settimana.")
+
+    if consistency_score >= 70:
+        strengths.append(f"Costanza buona: {freq:.1f} corse/settimana.")
+    else:
+        weaknesses.append(f"Costanza irregolare: {freq:.1f} corse/settimana.")
+        priorities.append("Stabilizza prima la frequenza: 3 allenamenti/settimana per 4 settimane.")
+
+    if load_score >= 65:
+        strengths.append(f"Capacita di carico in crescita: CTL {ctl:.1f}.")
+    else:
+        weaknesses.append(f"Carico cronico basso: CTL {ctl:.1f}.")
+        priorities.append("Incrementa il volume con progressione moderata, non oltre +8% a settimana.")
+
+    if eff_score >= 70:
+        strengths.append("Efficienza cardiaca buona: produci velocita con costo controllato.")
+    elif eff_score < 55:
+        weaknesses.append("Efficienza cardiaca da migliorare: il passo costa troppi battiti.")
+        priorities.append("Inserisci corsa facile davvero facile e un progressivo corto ogni 7-10 giorni.")
+
+    if avg_cadence:
+        if 165 <= avg_cadence <= 185:
+            strengths.append(f"Cadenza efficace: {round(avg_cadence)} spm.")
+        else:
+            weaknesses.append(f"Cadenza fuori range ideale: {round(avg_cadence)} spm.")
+            priorities.append("Lavora su passi piu rapidi e leggeri con 6 allunghi da 15 secondi.")
+
+    if avg_gct and avg_gct > 280:
+        weaknesses.append(f"Contatto al suolo alto: {round(avg_gct)} ms.")
+        priorities.append("Aggiungi tecnica di corsa e salite brevi per migliorare reattivita.")
+    elif avg_gct:
+        strengths.append(f"Contatto al suolo controllato: {round(avg_gct)} ms.")
+
+    if avg_vert_osc and avg_vert_osc > 10:
+        weaknesses.append(f"Oscillazione verticale alta: {avg_vert_osc:.1f} cm.")
+    if avg_vert_ratio and avg_vert_ratio > 10:
+        weaknesses.append(f"Rapporto verticale alto: {avg_vert_ratio:.1f}%.")
+
+    if easy_pct >= 75:
+        strengths.append(f"Distribuzione facile buona: {easy_pct}% in Z1/Z2.")
+    else:
+        weaknesses.append(f"Troppo lavoro medio/forte: solo {easy_pct}% in Z1/Z2.")
+        priorities.append("Porta almeno il 75% del tempo in Z1/Z2 per assorbire meglio il carico.")
+
+    if tsb < -20:
+        weaknesses.append(f"Stress recente elevato: TSB {tsb:.1f}.")
+        priorities.append("Programma 24-48 ore leggere prima del prossimo lavoro intenso.")
+
+    if biomech_score < 55 and not any("tecnica" in p.lower() for p in priorities):
+        priorities.append("Dedica 10 minuti post-riscaldamento a tecnica, mobilita e allunghi.")
+
+    if not strengths:
+        strengths.append("Hai dati sufficienti per costruire un profilo dinamico affidabile.")
+    if not weaknesses:
+        weaknesses.append("Nessuna carenza critica: il prossimo salto dipende da continuita e precisione.")
+    if not priorities:
+        priorities.append("Mantieni il carico attuale e rivaluta dopo il prossimo sync Strava/Garmin.")
+
+    return {
+        "strengths": strengths[:4],
+        "weaknesses": weaknesses[:4],
+        "priorities": priorities[:4],
+    }
+
+
 @app.get("/api/runner-dna")
 async def get_runner_dna():
+    """Dynamic athletic profile from Strava plus authoritative Garmin CSV telemetry."""
+    athlete_id = await _get_athlete_id()
+    q = {"athlete_id": athlete_id} if athlete_id else {}
+
+    if athlete_id:
+        await _ensure_fitness_freshness_current(athlete_id)
+
+    data_signature, data_freshness = await _runner_dna_light_signature(athlete_id, q)
+    cached = await db.runner_dna_cache.find_one({"athlete_id": athlete_id})
+    if (
+        cached
+        and cached.get("data_signature") == data_signature
+        and cached.get("schema_version") == RUNNER_DNA_SCHEMA_VERSION
+        and cached.get("dna_data")
+    ):
+        return {"dna": cached["dna_data"]}
+
+    runs = await db.runs.find(q, {"streams": 0, "polyline": 0, "splits": 0}).sort("date", 1).to_list(1000)
+    runs = [_normalise_run_quality_fields(dict(run)) for run in runs]
+    profile = await db.profile.find_one(q) or {}
+    ff_docs = await db.fitness_freshness.find(q).sort("date", -1).to_list(30)
+    be_doc = await db.best_efforts.find_one(q) or {}
+    garmin_csv_docs = []
+    if athlete_id:
+        garmin_csv_docs = await db.garmin_csv_data.find(
+            _garmin_csv_active_query(athlete_id),
+            garmin_csv_projection(),
+        ).sort("date", 1).to_list(3000)
+
+    if len(runs) < 5:
+        return JSONResponse({"error": "not_enough_data"}, status_code=400)
+
+    matched_csv_ids = {
+        str(run.get("garmin_csv_id") or (run.get("biomechanics") or {}).get("garmin_csv_id") or "")
+        for run in runs
+    }
+    telemetry_runs = list(runs)
+    for doc in garmin_csv_docs:
+        csv_id = str(doc.get("_id") or doc.get("id") or "")
+        if csv_id and csv_id not in matched_csv_ids:
+            telemetry_runs.append(_garmin_csv_doc_to_run_like(doc))
+
+    total_runs = len(runs)
+    total_km = sum(float(r.get("distance_km") or 0) for r in runs)
+    max_hr = int(profile.get("max_hr", 190) or 190)
+    resting_hr = int(profile.get("resting_hr", 50) or 50)
+    age = int(profile.get("age", 30) or 30)
+
+    hr_runs = [r for r in runs if (r.get("avg_hr") or 0) > 0]
+    avg_hr_all = _avg_number([r.get("avg_hr") for r in hr_runs], 0) or 0
+    cadence_values = [_cadence_spm_from_run(r) for r in telemetry_runs]
+    avg_cad_all = _avg_number(cadence_values, 0) or 0
+
+    total_sec = sum(float(r.get("duration_minutes") or 0) * 60 for r in runs)
+    avg_pace_sec_km = total_sec / total_km if total_km > 0 else 0
+
+    zones = {"z1": 0.0, "z2": 0.0, "z3": 0.0, "z4": 0.0, "z5": 0.0}
+    for run in hr_runs:
+        pct = (float(run["avg_hr"]) / max_hr) * 100 if max_hr else 0
+        dur = float(run.get("duration_minutes") or 0)
+        if pct < 65:
+            zones["z1"] += dur
+        elif pct < 77:
+            zones["z2"] += dur
+        elif pct < 84:
+            zones["z3"] += dur
+        elif pct < 91:
+            zones["z4"] += dur
+        else:
+            zones["z5"] += dur
+    total_zone = sum(zones.values()) or 1
+    zone_dist = {k: round(v / total_zone * 100) for k, v in zones.items()}
+
+    be_efforts = be_doc.get("efforts", [])
+    vdot_from_runs = _calc_vdot(runs, max_hr, weeks_window=8, resting_hr=resting_hr)
+    vdot_from_be = _vdot_from_best_efforts(be_efforts)
+    vdot_current = max(vdot_from_runs or 28.0, vdot_from_be or 28.0)
+
+    cutoff_old = (dt.date.today() - dt.timedelta(weeks=24)).isoformat()
+    older_runs = [r for r in runs if str(r.get("date", "")) < cutoff_old]
+    older_vdot = _calc_vdot(older_runs, max_hr, weeks_window=16, resting_hr=resting_hr) if len(older_runs) >= 3 else None
+    vdot_delta = round(vdot_current - older_vdot, 1) if older_vdot else None
+
+    try:
+        first_run_d = dt.date.fromisoformat(str(runs[0]["date"])[:10])
+        last_run_d = dt.date.fromisoformat(str(runs[-1]["date"])[:10])
+        weeks_active = max(1.0, (last_run_d - first_run_d).days / 7)
+        freq = total_runs / weeks_active
+    except Exception:
+        weeks_active, freq = 1.0, 0.0
+
+    consistency_score = int(max(0, min(100, round((freq / 4.0) * 100))))
+
+    eff_index_val = 0.0
+    if avg_hr_all > 0 and avg_pace_sec_km > 0:
+        speed_mpm = 1000 / avg_pace_sec_km * 60
+        eff_index_val = speed_mpm / avg_hr_all
+    eff_score = _score_range(eff_index_val, 0.9, 1.65) if eff_index_val else 45
+
+    ctl = float(ff_docs[0].get("ctl", 0.0) or 0.0) if ff_docs else 0.0
+    atl = float(ff_docs[0].get("atl", 0.0) or 0.0) if ff_docs else 0.0
+    tsb = float(ff_docs[0].get("tsb", 0.0) or 0.0) if ff_docs else 0.0
+
+    vert_osc_values = [_bio_value(r, "vo") for r in telemetry_runs]
+    vert_ratio_values = [_bio_value(r, "vr") for r in telemetry_runs]
+    gct_values = [_bio_value(r, "gct") for r in telemetry_runs]
+    stride_values = [_bio_value(r, "stride") for r in telemetry_runs]
+
+    def _count_available(values):
+        return len([v for v in values if v is not None])
+
+    avg_vert_osc = _avg_number(vert_osc_values, 1)
+    avg_vert_ratio = _avg_number(vert_ratio_values, 1)
+    avg_gct = _avg_number(gct_values, 0)
+    avg_stride = _avg_number(stride_values, 2)
+
+    cadence_score = _score_centered(avg_cad_all or None, 174, 28)
+    biomech_parts = [cadence_score]
+    if avg_gct is not None:
+        biomech_parts.append(_score_lower_better(avg_gct, 200, 330))
+    if avg_vert_osc is not None:
+        biomech_parts.append(_score_lower_better(avg_vert_osc, 6, 12))
+    if avg_vert_ratio is not None:
+        biomech_parts.append(_score_lower_better(avg_vert_ratio, 6, 12))
+    if avg_stride is not None:
+        biomech_parts.append(_score_range(avg_stride, 0.85, 1.35))
+    biomech_score = int(_avg_number(biomech_parts, 0) or 50)
+
+    aerobic_score = _score_range(vdot_current, 28, 55)
+    load_score = _score_range(ctl, 10, 70)
+    current_strength = int(round(
+        aerobic_score * 0.30
+        + consistency_score * 0.20
+        + load_score * 0.20
+        + eff_score * 0.18
+        + biomech_score * 0.12
+    ))
+
+    age_penalty = max(0.0, (age - 35) * 0.12)
+    ceiling_gain = max(3.0, (100 - current_strength) / 12 + (70 - min(70, ctl)) / 28 - age_penalty)
+    vdot_ceiling = round(max(vdot_current + 2.0, min(58.0, vdot_current + ceiling_gain)), 1)
+    potential_pct = min(99, round((vdot_current / vdot_ceiling) * 100))
+    improvement_potential = int(max(1, min(100, round(100 - current_strength + (vdot_ceiling - vdot_current) * 7))))
+
+    ai_data = _algorithmic_dna(
+        vdot=vdot_current,
+        consistency_score=consistency_score,
+        eff_score=eff_score,
+        ctl=ctl,
+        tsb=tsb,
+        zone_dist=zone_dist,
+        freq=freq,
+        age=age,
+    )
+
+    diagnostics = _build_runner_dna_diagnostics(
+        vdot_current=vdot_current,
+        consistency_score=consistency_score,
+        load_score=load_score,
+        eff_score=eff_score,
+        biomech_score=biomech_score,
+        avg_cadence=avg_cad_all or None,
+        avg_gct=avg_gct,
+        avg_vert_osc=avg_vert_osc,
+        avg_vert_ratio=avg_vert_ratio,
+        zone_dist=zone_dist,
+        freq=freq,
+        ctl=ctl,
+        tsb=tsb,
+    )
+    ai_data["strengths"] = diagnostics["strengths"]
+    ai_data["gaps"] = diagnostics["weaknesses"]
+    ai_data["coach_verdict"] = (
+        f"Forza attuale {current_strength}/100 e margine {improvement_potential}/100. "
+        f"Il profilo si aggiorna automaticamente dopo ogni sync Strava o import Garmin CSV."
+    )
+    ai_data["unlock_message"] = " ".join(diagnostics["priorities"][:2])
+
+    pace_str = f"{int(avg_pace_sec_km // 60)}:{int(avg_pace_sec_km % 60):02d}/km" if avg_pace_sec_km > 0 else "N/D"
+    dna_scores = {
+        "aerobic_engine": aerobic_score,
+        "biomechanics": biomech_score,
+        "consistency": consistency_score,
+        "load_capacity": load_score,
+        "efficiency": eff_score,
+    }
+
+    dna = {
+        "profile": {
+            "level": ai_data.get("profile_level", ""),
+            "type": ai_data.get("profile_type", ""),
+            "archetype_description": ai_data.get("archetype_description", ""),
+            "vdot_current": round(vdot_current, 1),
+            "vdot_delta": vdot_delta,
+        },
+        "stats": {
+            "avg_pace": pace_str,
+            "avg_hr": int(avg_hr_all) if avg_hr_all else 0,
+            "avg_cadence": int(avg_cad_all) if avg_cad_all else 0,
+            "zone_distribution": zone_dist,
+            "total_runs": total_runs,
+            "total_km": round(total_km, 1),
+            "weeks_active": round(weeks_active),
+        },
+        "performance": {
+            "trend_status": ai_data.get("trend_status", ""),
+            "trend_detail": "Aggiornato da firma dati Strava + Garmin CSV + fitness freshness.",
+            "total_km": round(total_km, 1),
+        },
+        "consistency": {
+            "score_pct": consistency_score,
+            "label": ai_data.get("consistency_label", ""),
+            "runs_per_week": round(freq, 1),
+        },
+        "efficiency": {
+            "score_pct": int(eff_score),
+            "label": ai_data.get("efficiency_label", ""),
+            "cadence": int(avg_cad_all) if avg_cad_all else 0,
+        },
+        "current_state": {
+            "form_label": ai_data.get("form_label", ""),
+            "fitness_ctl": round(ctl, 1),
+            "atl": round(atl, 1),
+            "tsb": round(tsb, 1),
+        },
+        "potential": {
+            "vdot_ceiling": vdot_ceiling,
+            "potential_pct": potential_pct,
+            "ideal_distance": ai_data.get("ideal_distance", ""),
+            "predictions": _predict_race(vdot_ceiling),
+            "current_predictions": _predict_race(vdot_current),
+        },
+        "ai_coach": {
+            "coach_verdict": ai_data.get("coach_verdict", ""),
+            "strengths": diagnostics["strengths"],
+            "gaps": diagnostics["weaknesses"],
+            "unlock_message": ai_data.get("unlock_message", ""),
+        },
+        "dna_scores": dna_scores,
+        "scores": {
+            "current_strength": current_strength,
+            "improvement_potential": improvement_potential,
+            "breakdown": [
+                {"key": "aerobic_engine", "label": "Motore aerobico", "score": aerobic_score},
+                {"key": "consistency", "label": "Costanza", "score": consistency_score},
+                {"key": "load_capacity", "label": "Capacita di carico", "score": load_score},
+                {"key": "efficiency", "label": "Efficienza", "score": eff_score},
+                {"key": "biomechanics", "label": "Biomeccanica", "score": biomech_score},
+            ],
+        },
+        "diagnostics": diagnostics,
+        "running_dynamics": {
+            "vertical_oscillation_cm": avg_vert_osc,
+            "vertical_ratio_pct": avg_vert_ratio,
+            "ground_contact_ms": avg_gct,
+            "stride_length_m": avg_stride,
+            "sample_runs": len(telemetry_runs),
+            "cadence_runs": _count_available(cadence_values),
+            "vertical_oscillation_runs": _count_available(vert_osc_values),
+            "vertical_ratio_runs": _count_available(vert_ratio_values),
+            "ground_contact_runs": _count_available(gct_values),
+            "stride_runs": _count_available(stride_values),
+        },
+        "data_freshness": data_freshness,
+    }
+
+    await db.runner_dna_cache.update_one(
+        {"athlete_id": athlete_id},
+        {"$set": {
+            "athlete_id": athlete_id,
+            "schema_version": RUNNER_DNA_SCHEMA_VERSION,
+            "data_signature": data_signature,
+            "dna_data": dna,
+            "updated_at": dt.datetime.now().isoformat(),
+        }},
+        upsert=True,
+    )
+    return {"dna": dna}
+
+
+@app.get("/api/runner-dna-legacy")
+async def get_runner_dna_legacy():
     """Full physiological identity profile — Claude Haiku → Gemini → Algorithmic."""
     import json
     from datetime import date, timedelta
@@ -5631,30 +6672,147 @@ def _parse_garmin_time(time_str: str) -> Optional[float]:
 
 
 def _parse_garmin_number(val: str) -> Optional[float]:
-    """Parse a number string, handling '--' and commas."""
-    if not val or val == "--":
+    """Parse Garmin CSV numbers with dot or comma decimals/thousands."""
+    if val is None:
         return None
+    text = str(val).strip()
+    if not text or text == "--":
+        return None
+    text = (
+        text.replace("\u00a0", "")
+        .replace(" ", "")
+        .replace("%", "")
+        .replace("bpm", "")
+        .replace("W", "")
+    )
+    text = re.sub(r"[^0-9,.\-]", "", text)
+    if not text or text in {"-", ".", ","}:
+        return None
+    if "," in text and "." in text:
+        if text.rfind(",") > text.rfind("."):
+            text = text.replace(".", "").replace(",", ".")
+        else:
+            text = text.replace(",", "")
+    elif "," in text:
+        if re.fullmatch(r"-?\d{1,3}(,\d{3})+", text):
+            text = text.replace(",", "")
+        else:
+            text = text.replace(",", ".")
     try:
-        return float(val.replace(",", ""))
+        return float(text)
     except (ValueError, TypeError):
         return None
 
 
 def _parse_garmin_int(val: str) -> Optional[int]:
     """Parse an integer string, handling '--'."""
-    if not val or val == "--":
+    number = _parse_garmin_number(val)
+    if number is None:
+        return None
+    return int(round(number))
+
+
+def _range_or_none(value: Optional[float], lo: float, hi: float, digits: int = 0):
+    """Keep imported metrics only when they are physiologically plausible."""
+    if value is None:
         return None
     try:
-        return int(float(val.replace(",", "")))
-    except (ValueError, TypeError):
+        number = float(value)
+    except (TypeError, ValueError):
         return None
+    if not math.isfinite(number) or number < lo or number > hi:
+        return None
+    return round(number, digits) if digits > 0 else int(round(number))
+
+
+def _normalise_strava_cadence_spm(value: Optional[float]) -> Optional[int]:
+    """Strava running cadence is often steps from one foot, so values <120 become SPM."""
+    if value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(number) or number <= 0:
+        return None
+    spm = number * 2 if number < 120 else number
+    return _range_or_none(spm, 50, 240)
 
 
 def _normalise_cadence_spm(value: Optional[float]) -> Optional[int]:
-    """Normalise cadence to steps per minute."""
-    if value is None or value <= 0:
+    """Legacy wrapper: normalise Strava-style cadence to steps per minute."""
+    return _normalise_strava_cadence_spm(value)
+
+
+def _normalise_garmin_cadence_spm(value: Optional[float]) -> Optional[int]:
+    """Garmin CSV cadence is authoritative; only repair legacy half-cadence values."""
+    if value is None:
         return None
-    return int(round(value * 2 if value < 120 else value))
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(number) or number <= 0:
+        return None
+    spm = number * 2 if 45 <= number < 120 else number
+    return _range_or_none(spm, 50, 240)
+
+
+def _cadence_spm_from_run(run: dict) -> Optional[int]:
+    """Read canonical cadence SPM from a run, preserving legacy compatibility."""
+    bio = run.get("biomechanics") or {}
+    for value, source in (
+        (bio.get("avg_cadence_spm"), "spm"),
+        (run.get("avg_cadence_spm"), "spm"),
+        (run.get("avg_cadence"), "legacy"),
+    ):
+        if value is None:
+            continue
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            continue
+        if number <= 0:
+            continue
+        if source == "legacy":
+            return _normalise_strava_cadence_spm(number)
+        return _range_or_none(number, 50, 240)
+    return None
+
+
+def _avg_number(values: list, digits: int = 1):
+    clean = []
+    for value in values:
+        if value is None:
+            continue
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(number):
+            clean.append(number)
+    if not clean:
+        return None
+    result = sum(clean) / len(clean)
+    return round(result, digits) if digits > 0 else int(round(result))
+
+
+def _score_range(value: Optional[float], low: float, high: float) -> int:
+    if value is None:
+        return 45
+    return int(max(0, min(100, round((float(value) - low) / (high - low) * 100))))
+
+
+def _score_lower_better(value: Optional[float], excellent: float, poor: float) -> int:
+    if value is None:
+        return 50
+    return int(max(0, min(100, round((poor - float(value)) / (poor - excellent) * 100))))
+
+
+def _score_centered(value: Optional[float], ideal: float, tolerance: float) -> int:
+    if value is None:
+        return 50
+    return int(max(0, min(100, round(100 - (abs(float(value) - ideal) / tolerance) * 100))))
 
 
 def _garmin_csv_fingerprint(doc: dict) -> str:
@@ -5681,6 +6839,170 @@ def _garmin_biomechanics_from_doc(doc: dict) -> dict:
         "garmin_csv_id": str(doc.get("_id") or doc.get("id") or ""),
     }
     return {k: v for k, v in bio.items() if v is not None}
+
+
+def _garmin_csv_active_query(athlete_id: int) -> dict:
+    return {"athlete_id": athlete_id, "inactive_duplicate": {"$ne": True}}
+
+
+def _normalised_garmin_csv_fields(doc: dict) -> dict:
+    raw = doc.get("raw") or {}
+
+    def _raw_number(key: str, current_key: str):
+        parsed = _parse_garmin_number(raw.get(key, ""))
+        return parsed if parsed is not None else doc.get(current_key)
+
+    avg_cad_raw = _raw_number("Cadenza di corsa media", "avg_cadence_spm")
+    max_cad_raw = _raw_number("Cadenza di corsa max", "max_cadence_spm")
+
+    fields = {
+        "avg_cadence_spm": _normalise_garmin_cadence_spm(avg_cad_raw),
+        "max_cadence_spm": _normalise_garmin_cadence_spm(max_cad_raw),
+        "avg_ground_contact_time_ms": _range_or_none(
+            _raw_number("Tempo medio di contatto con il suolo", "avg_ground_contact_time_ms"),
+            120, 450,
+        ),
+        "avg_vertical_oscillation_cm": _range_or_none(
+            _raw_number("Oscillazione verticale media", "avg_vertical_oscillation_cm"),
+            3, 20, 1,
+        ),
+        "avg_vertical_ratio_pct": _range_or_none(
+            _raw_number("Rapporto verticale medio", "avg_vertical_ratio_pct"),
+            3, 20, 1,
+        ),
+        "avg_stride_length_m": _range_or_none(
+            _raw_number("Lunghezza media passo", "avg_stride_length_m"),
+            0.4, 2.5, 2,
+        ),
+        "avg_hr": _range_or_none(
+            _raw_number("FC Media", "avg_hr"),
+            35, 240,
+        ),
+        "max_hr": _range_or_none(
+            _raw_number("FC max", "max_hr"),
+            35, 245,
+        ),
+        "avg_power_w": _range_or_none(
+            _raw_number("Potenza media", "avg_power_w"),
+            1, 800,
+        ),
+        "max_power_w": _range_or_none(
+            _raw_number("Potenza max", "max_power_w"),
+            1, 1200,
+        ),
+    }
+
+    if fields["avg_hr"] and fields["max_hr"] and fields["max_hr"] < fields["avg_hr"]:
+        fields["max_hr"] = fields["avg_hr"]
+
+    fields["fingerprint"] = _garmin_csv_fingerprint({**doc, **fields})
+    return fields
+
+
+def _garmin_csv_quality_score(doc: dict) -> tuple:
+    metric_keys = [
+        "avg_cadence_spm", "avg_ground_contact_time_ms",
+        "avg_vertical_oscillation_cm", "avg_vertical_ratio_pct",
+        "avg_stride_length_m", "avg_hr", "avg_power_w",
+    ]
+    metric_count = sum(1 for key in metric_keys if doc.get(key) is not None)
+    matched = 1 if doc.get("match_status") == "matched" and doc.get("matched_run_id") else 0
+    return (matched, metric_count, str(doc.get("linked_at") or ""), str(doc.get("imported_at") or ""))
+
+
+async def _repair_garmin_csv_docs(athlete_id: int) -> dict:
+    latest = await db.garmin_csv_data.find_one(
+        {"athlete_id": athlete_id},
+        {"imported_at": 1, "linked_at": 1},
+        sort=[("imported_at", -1), ("linked_at", -1)],
+    )
+    latest_key = "|".join([
+        str((latest or {}).get("imported_at") or ""),
+        str((latest or {}).get("linked_at") or ""),
+    ])
+    checkpoint_key = {
+        "athlete_id": athlete_id,
+        "key": "garmin_csv_repair",
+        "schema_version": GARMIN_CSV_REPAIR_VERSION,
+    }
+    checkpoint = await db.maintenance_state.find_one(checkpoint_key)
+    if checkpoint and checkpoint.get("latest_key") == latest_key:
+        return {"checked": 0, "corrected": 0, "duplicates_inactivated": 0, "corrected_ids": [], "skipped": True}
+
+    docs = await db.garmin_csv_data.find({"athlete_id": athlete_id}).to_list(5000)
+    result = {"checked": len(docs), "corrected": 0, "duplicates_inactivated": 0, "corrected_ids": []}
+    if not docs:
+        await db.maintenance_state.update_one(
+            checkpoint_key,
+            {"$set": {**checkpoint_key, "latest_key": latest_key, "updated_at": dt.datetime.now().isoformat()}},
+            upsert=True,
+        )
+        return result
+
+    groups: dict[str, list] = {}
+    for doc in docs:
+        fields = _normalised_garmin_csv_fields(doc)
+        group_key = fields["fingerprint"]
+        value_fields = {k: v for k, v in fields.items() if k != "fingerprint"}
+        changed = any(doc.get(key) != value for key, value in value_fields.items())
+        doc.update(fields)
+        groups.setdefault(group_key, []).append(doc)
+        if changed:
+            await db.garmin_csv_data.update_one({"_id": doc["_id"]}, {"$set": value_fields})
+            result["corrected"] += 1
+            result["corrected_ids"].append(doc["_id"])
+
+    for group_key, group_docs in groups.items():
+        winner = max(group_docs, key=_garmin_csv_quality_score)
+        duplicates = [doc for doc in group_docs if doc["_id"] != winner["_id"]]
+        for doc in duplicates:
+            duplicate_of = str(winner["_id"])
+            needs_duplicate_update = (
+                doc.get("active") is not False
+                or doc.get("inactive_duplicate") is not True
+                or doc.get("duplicate_of") != duplicate_of
+                or doc.get("match_status") != "duplicate"
+                or doc.get("fingerprint") is not None
+            )
+            if needs_duplicate_update:
+                await db.garmin_csv_data.update_one(
+                    {"_id": doc["_id"]},
+                    {
+                        "$set": {
+                            "active": False,
+                            "inactive_duplicate": True,
+                            "duplicate_of": duplicate_of,
+                            "match_status": "duplicate",
+                        },
+                        "$unset": {"fingerprint": ""},
+                    },
+                )
+            if needs_duplicate_update and not doc.get("inactive_duplicate"):
+                result["duplicates_inactivated"] += 1
+        for doc in group_docs:
+            if doc["_id"] != winner["_id"]:
+                continue
+            needs_winner_update = (
+                doc.get("active") is not True
+                or doc.get("inactive_duplicate") is not False
+                or doc.get("fingerprint") != group_key
+                or doc.get("duplicate_of") is not None
+            )
+            if needs_winner_update:
+                await db.garmin_csv_data.update_one(
+                    {"_id": doc["_id"]},
+                    {
+                        "$set": {"active": True, "inactive_duplicate": False, "fingerprint": group_key},
+                        "$unset": {"duplicate_of": ""},
+                    },
+                )
+
+    await db.maintenance_state.update_one(
+        checkpoint_key,
+        {"$set": {**checkpoint_key, "latest_key": latest_key, "updated_at": dt.datetime.now().isoformat()}},
+        upsert=True,
+    )
+    return result
 
 
 def _match_confidence(csv_doc: dict, run_doc: dict) -> float:
@@ -5782,6 +7104,7 @@ async def _enrich_run_from_garmin_csv(run_doc: dict, csv_doc: dict, confidence: 
         set_fields["avg_stride_length"] = biomechanics["avg_stride_length_m"]
     if biomechanics.get("avg_cadence_spm") is not None:
         set_fields["avg_cadence"] = biomechanics["avg_cadence_spm"]
+        set_fields["avg_cadence_spm"] = biomechanics["avg_cadence_spm"]
 
     await db.runs.update_one({"_id": run_doc["_id"]}, {"$set": set_fields})
     await db.garmin_csv_data.update_one(
@@ -5798,17 +7121,32 @@ async def _enrich_run_from_garmin_csv(run_doc: dict, csv_doc: dict, confidence: 
 
 async def _link_garmin_csv_docs(athlete_id: int) -> dict:
     """Link imported Garmin CSV rows to Strava runs and enrich biomechanics."""
-    docs = await db.garmin_csv_data.find({"athlete_id": athlete_id}).sort("date", -1).to_list(3000)
+    repair = await _repair_garmin_csv_docs(athlete_id)
+    total_active = await db.garmin_csv_data.count_documents(_garmin_csv_active_query(athlete_id))
+    corrected_ids = repair.get("corrected_ids", [])
+    process_query = {
+        **_garmin_csv_active_query(athlete_id),
+        "$or": [
+            {"match_status": {"$exists": False}},
+            {"match_status": {"$in": ["new"]}},
+        ],
+    }
+    if corrected_ids:
+        process_query["$or"].append({"_id": {"$in": corrected_ids}})
+    docs = await db.garmin_csv_data.find(process_query).sort("date", -1).to_list(750)
     result = {
         "ok": True,
-        "total_csv": len(docs),
+        "total_csv": total_active,
+        "processable_csv": len(docs),
+        "repaired": repair.get("corrected", 0),
+        "duplicates_inactivated": repair.get("duplicates_inactivated", 0),
         "matched": 0,
         "enriched": 0,
         "already_linked": 0,
         "unmatched": 0,
         "ambiguous": 0,
         "low_confidence": 0,
-        "no_csv": len(docs) == 0,
+        "no_csv": total_active == 0,
         "status_counts": {},
         "message": "",
         "errors": [],
@@ -5817,9 +7155,18 @@ async def _link_garmin_csv_docs(athlete_id: int) -> dict:
     for doc in docs:
         try:
             if doc.get("match_status") == "matched" and doc.get("matched_run_id"):
-                result["already_linked"] += 1
-                result["status_counts"]["already_linked"] = result["status_counts"].get("already_linked", 0) + 1
-                continue
+                run = None
+                try:
+                    from bson import ObjectId
+                    run = await db.runs.find_one({"_id": ObjectId(doc["matched_run_id"]), "athlete_id": athlete_id})
+                except Exception:
+                    run = None
+                if run:
+                    result["already_linked"] += 1
+                    result["status_counts"]["already_linked"] = result["status_counts"].get("already_linked", 0) + 1
+                    if await _enrich_run_from_garmin_csv(run, doc, float(doc.get("match_confidence") or 1.0)):
+                        result["enriched"] += 1
+                    continue
 
             run, confidence, status = await _find_matching_run_for_garmin_csv(athlete_id, doc)
             result["status_counts"][status] = result["status_counts"].get(status, 0) + 1
@@ -5844,12 +7191,16 @@ async def _link_garmin_csv_docs(athlete_id: int) -> dict:
             result["errors"].append(str(e))
 
     await _invalidate_analytics_cache(athlete_id)
+    await _invalidate_runner_dna_cache(athlete_id)
     if result["total_csv"] == 0:
         result["message"] = "Nessun CSV Garmin importato in Activities."
+    elif result["processable_csv"] == 0:
+        result["message"] = f"{result['total_csv']} CSV Garmin attivi gia allineati."
     elif result["enriched"] > 0:
-        result["message"] = f"{result['matched']} CSV abbinati, {result['enriched']} corse arricchite."
+        aligned = result["matched"] + result["already_linked"]
+        result["message"] = f"{aligned} CSV abbinati, {result['enriched']} corse arricchite."
     elif result["already_linked"] > 0:
-        result["message"] = f"{result['already_linked']} CSV Garmin gia collegati."
+        result["message"] = f"{result['already_linked']} CSV Garmin gia collegati e riallineati."
     elif result["matched"] > 0:
         result["message"] = f"{result['matched']} CSV abbinati, ma nessun nuovo campo biomeccanico da arricchire."
     elif result["ambiguous"] > 0:
@@ -5947,6 +7298,8 @@ async def garmin_csv_import(request: Request):
                 "athlete_id": athlete_id,
                 "source": "garmin_csv_import",
                 "imported_at": dt.datetime.now().isoformat(),
+                "active": True,
+                "inactive_duplicate": False,
                 # Core fields
                 "titolo": titolo if titolo else None,
                 "date": date_part,
@@ -5955,24 +7308,24 @@ async def garmin_csv_import(request: Request):
                 "avg_pace": avg_pace,
                 "avg_pace_sec": pace_sec,
                 # Heart rate
-                "avg_hr": fc_media,
-                "max_hr": fc_max,
+                "avg_hr": _range_or_none(fc_media, 35, 240),
+                "max_hr": _range_or_none(fc_max, 35, 245),
                 # Running dynamics (Garmin)
-                "avg_vertical_oscillation_cm": oscillazione_verticale,
-                "avg_vertical_ratio_pct": rapporto_verticale,
-                "avg_ground_contact_time_ms": tempo_contatto,
-                "avg_stride_length_m": lunghezza_passo,
+                "avg_vertical_oscillation_cm": _range_or_none(oscillazione_verticale, 3, 20, 1),
+                "avg_vertical_ratio_pct": _range_or_none(rapporto_verticale, 3, 20, 1),
+                "avg_ground_contact_time_ms": _range_or_none(tempo_contatto, 120, 450),
+                "avg_stride_length_m": _range_or_none(lunghezza_passo, 0.4, 2.5, 2),
                 # Cadence
-                "avg_cadence_spm": _normalise_cadence_spm(cadenza_media),
-                "max_cadence_spm": _normalise_cadence_spm(cadenza_max),
+                "avg_cadence_spm": _normalise_garmin_cadence_spm(cadenza_media),
+                "max_cadence_spm": _normalise_garmin_cadence_spm(cadenza_max),
                 # Elevation
                 "elevation_gain_m": ascesa,
                 "elevation_loss_m": discesa,
                 "min_elevation_m": quota_min,
                 "max_elevation_m": quota_max,
                 # Power
-                "avg_power_w": potenza_media,
-                "max_power_w": potenza_max,
+                "avg_power_w": _range_or_none(potenza_media, 1, 800),
+                "max_power_w": _range_or_none(potenza_max, 1, 1200),
                 # Additional Garmin fields
                 "calories": calorie,
                 "best_pace_sec": _parse_garmin_pace(passo_migliore_str),
@@ -6015,6 +7368,8 @@ async def garmin_csv_import(request: Request):
         "imported": imported,
         "skipped": skipped,
         "duplicates": duplicates,
+        "repaired": link_result.get("repaired", 0),
+        "duplicates_inactivated": link_result.get("duplicates_inactivated", 0),
         "matched": link_result.get("matched", 0),
         "enriched": link_result.get("enriched", 0),
         "unmatched": link_result.get("unmatched", 0),
@@ -6068,6 +7423,7 @@ async def delete_garmin_csv_data(doc_id: str):
         if result.deleted_count == 0:
             return JSONResponse({"error": "not_found"}, status_code=404)
         await _invalidate_analytics_cache(athlete_id)
+        await _invalidate_runner_dna_cache(athlete_id)
         return {"ok": True}
     except Exception:
         return JSONResponse({"error": "invalid_id"}, status_code=400)
@@ -6095,6 +7451,7 @@ async def get_gct_analysis():
     # Fetch all Garmin CSV data for this athlete
     cursor = db.garmin_csv_data.find({
         "athlete_id": athlete_id,
+        "inactive_duplicate": {"$ne": True},
         "avg_ground_contact_time_ms": {"$ne": None},
         "distance_km": {"$gte": 0.4},  # Filter runs < 400m
     }).sort("date", 1)

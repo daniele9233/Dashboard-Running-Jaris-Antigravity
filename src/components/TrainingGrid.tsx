@@ -437,9 +437,20 @@ interface GenerateResult {
   dry_run?: boolean;
   peak_vdot?: number;
   peak_date?: string;
+  peak_source?: {
+    date?: string;
+    name?: string;
+    distance_km?: number;
+    duration_minutes?: number;
+    avg_pace?: string;
+    avg_hr?: number | null;
+    strava_id?: string | number;
+  } | null;
   training_months?: number;
   weekly_volume?: number;
   test_vdot?: number | null;
+  plan_mode?: PlanMode | null;
+  strategy_options?: StrategyOption[];
   feasibility: {
     feasible: boolean;
     difficulty: string;
@@ -459,6 +470,19 @@ interface GenerateResult {
   race_predictions: Record<string, string>;
 }
 
+type PlanMode = 'conservative' | 'balanced' | 'aggressive';
+type CalibrationMode = 'strava' | '3k' | 'cooper';
+interface StrategyOption {
+  mode: PlanMode;
+  label: string;
+  focus: string;
+  success_pct: number;
+  completion_pct: number;
+  weekly_volume_multiplier: number;
+  projected_vdot: number;
+  note: string;
+}
+
 const TIME_PLACEHOLDERS: Record<string, string> = {
   "5K": "es. 25:00",
   "10K": "es. 52:00",
@@ -466,7 +490,7 @@ const TIME_PLACEHOLDERS: Record<string, string> = {
   "Marathon": "es. 4:10:00",
 };
 
-type ModalPhase = 'input' | 'done';
+type ModalPhase = 'input' | 'calibration' | 'strategy' | 'done';
 
 function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [phase, setPhase] = useState<ModalPhase>('input');
@@ -484,43 +508,87 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerateResult | null>(null);
+  const [calibrationMode, setCalibrationMode] = useState<CalibrationMode>('strava');
+  const [testTime, setTestTime] = useState("");
+  const [cooperMeters, setCooperMeters] = useState("");
 
-  const handleGenerate = async () => {
+  const validateGoal = () => {
     if (!targetTime.trim()) {
       setError("Inserisci il tempo obiettivo (mm:ss o h:mm:ss).");
+      return false;
+    }
+    setError(null);
+    return true;
+  };
+
+  const testPayload = () => {
+    if (calibrationMode === '3k' && testTime.trim()) {
+      return { test_distance_km: 3, test_time: testTime.trim() };
+    }
+    if (calibrationMode === 'cooper' && cooperMeters.trim()) {
+      const meters = Number(cooperMeters.replace(",", "."));
+      if (Number.isFinite(meters) && meters > 0) {
+        return { test_distance_km: meters / 1000, test_time: "12:00" };
+      }
+    }
+    return {};
+  };
+
+  const baseParams = () => ({
+    goal_race: goalRace,
+    weeks_to_race: weeksToRace,
+    target_time: targetTime.trim(),
+    start_date: startDate,
+    ...testPayload(),
+  });
+
+  const handleAnalyze = async () => {
+    if (!validateGoal()) return;
+    if (calibrationMode === '3k' && !testTime.trim()) {
+      setError("Inserisci il tempo del test 3 km oppure scegli Solo Strava.");
       return;
+    }
+    if (calibrationMode === 'cooper' && !cooperMeters.trim()) {
+      setError("Inserisci i metri del Cooper oppure scegli Solo Strava.");
+      return;
+    }
+    if (calibrationMode === 'cooper') {
+      const meters = Number(cooperMeters.replace(",", "."));
+      if (!Number.isFinite(meters) || meters <= 0) {
+        setError("Inserisci una distanza Cooper valida in metri.");
+        return;
+      }
     }
     setLoading(true);
     setError(null);
     try {
-      const params: Parameters<typeof generateTrainingPlan>[0] = {
-        goal_race: goalRace,
-        weeks_to_race: weeksToRace,
-        target_time: targetTime.trim(),
-        start_date: startDate,
-      };
-      const res = await generateTrainingPlan(params);
-      setResult(res as unknown as GenerateResult);
-      setPhase('done');
+      const res = await generateTrainingPlan({ ...baseParams(), dry_run: true });
+      const analysis = res as unknown as GenerateResult;
+      setResult(analysis);
+      if (analysis.weeks_generated > 0 && analysis.dry_run === false) {
+        setPhase('done');
+        return;
+      }
+      if (!analysis.strategy_options?.length) {
+        const generated = await generateTrainingPlan({ ...baseParams(), plan_mode: 'balanced' });
+        setResult(generated as unknown as GenerateResult);
+        setPhase('done');
+        return;
+      }
+      setPhase('strategy');
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Errore nella generazione del piano.");
+      setError(e instanceof Error ? e.message : "Errore nell'analisi del piano.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChoose = async (mode: 'conservative' | 'aggressive') => {
+  const handleGenerate = async (mode: PlanMode) => {
+    if (!validateGoal()) return;
     setLoading(true);
     setError(null);
     try {
-      const params: Parameters<typeof generateTrainingPlan>[0] = {
-        goal_race: goalRace,
-        weeks_to_race: weeksToRace,
-        target_time: targetTime.trim(),
-        plan_mode: mode,
-        start_date: startDate,
-      };
-      const res = await generateTrainingPlan(params);
+      const res = await generateTrainingPlan({ ...baseParams(), plan_mode: mode });
       setResult(res as unknown as GenerateResult);
       setPhase('done');
     } catch (e: unknown) {
@@ -534,24 +602,43 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
     : result?.feasibility.difficulty === "realistic" ? "text-[#3B82F6]"
     : result?.feasibility.difficulty === "challenging" ? "text-amber-400"
     : "text-red-400";
+  const strategyOptions = result?.strategy_options ?? [];
+  const defaultStrategy = strategyOptions.find(option => option.mode === 'balanced') ?? strategyOptions[0];
+  const selectedStrategy = result?.plan_mode
+    ? strategyOptions.find(option => option.mode === result.plan_mode)
+    : undefined;
+  const selectedSuccessPct = selectedStrategy?.success_pct ?? result?.feasibility.confidence_pct ?? 0;
+  const selectedCompletionPct = selectedStrategy?.completion_pct;
+  const selectedColor = selectedSuccessPct >= 80 ? "text-[#10B981]"
+    : selectedSuccessPct >= 60 ? "text-[#C0FF00]"
+    : selectedSuccessPct >= 45 ? "text-amber-400"
+    : "text-red-400";
+  const peakSource = result?.peak_source;
+  const peakDetails = peakSource
+    ? [
+        peakSource.name,
+        peakSource.distance_km ? `${Number(peakSource.distance_km).toFixed(2)} km` : null,
+        peakSource.avg_pace ? `${peakSource.avg_pace}/km` : null,
+      ].filter(Boolean).join(" - ")
+    : "";
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
+      <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh]">
 
         {/* Header */}
         <div className="p-6 pb-4 border-b border-[#2A2A2A] shrink-0">
           <h2 className="text-xl font-bold text-white mb-1">
-            'Genera Piano di Allenamento'
+            Genera Piano di Allenamento
           </h2>
           <p className="text-gray-500 text-sm mb-3">
-            'Piano scientifico — Daniels VDOT + storia completa dell\'atleta.'
+            Obiettivo, calibrazione e strategia prima di creare il piano.
           </p>
           {phase === 'input' && (
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
               <p className="text-[11px] text-blue-300 leading-relaxed">
-                <span className="font-bold uppercase mr-1">Auto-Adapt:</span>
-                Ogni sync da Strava ricalcola il tuo VDOT e aggiorna i passi futuri automaticamente.
+                <span className="font-bold uppercase mr-1">Flusso:</span>
+                configura l'obiettivo, calibra il VDOT con test opzionale, scegli il profilo di allenamento.
               </p>
             </div>
           )}
@@ -639,6 +726,123 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
             </>
           )}
 
+          {/* ── PHASE: CALIBRATION ── */}
+          {phase === 'calibration' && (
+            <div className="space-y-5">
+              <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Calibrazione VDOT</div>
+                <p className="text-sm text-gray-400 leading-relaxed">
+                  Per un piano piu preciso puoi inserire un test massimale. Se lo salti, il sistema usa lo storico Strava ed e meno certo.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                {([
+                  { mode: 'strava' as const, title: 'Solo Strava', body: 'Usa le corse recenti. Piu rapido, meno preciso.' },
+                  { mode: '3k' as const, title: 'Test 3 km', body: 'Tempo sui 3.000 metri come anchor test.' },
+                  { mode: 'cooper' as const, title: 'Cooper 12 min', body: 'Metri percorsi in 12 minuti.' },
+                ]).map((card) => (
+                  <button
+                    key={card.mode}
+                    type="button"
+                    onClick={() => setCalibrationMode(card.mode)}
+                    className={`text-left rounded-xl border p-4 transition-colors ${
+                      calibrationMode === card.mode
+                        ? 'bg-[#3B82F6]/10 border-[#3B82F6] text-white'
+                        : 'bg-[#121212] border-[#2A2A2A] text-gray-400 hover:border-gray-500'
+                    }`}
+                  >
+                    <div className="text-sm font-bold mb-1">{card.title}</div>
+                    <div className="text-xs leading-relaxed">{card.body}</div>
+                  </button>
+                ))}
+              </div>
+
+              {calibrationMode === '3k' && (
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Tempo test 3 km</label>
+                  <input
+                    type="text"
+                    value={testTime}
+                    onChange={e => setTestTime(e.target.value)}
+                    placeholder="es. 12:45"
+                    className="w-full bg-[#121212] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white text-lg font-mono placeholder:text-gray-600 focus:border-[#3B82F6] focus:outline-none"
+                  />
+                </div>
+              )}
+
+              {calibrationMode === 'cooper' && (
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Metri percorsi in 12 minuti</label>
+                  <input
+                    type="number"
+                    value={cooperMeters}
+                    onChange={e => setCooperMeters(e.target.value)}
+                    placeholder="es. 2850"
+                    className="w-full bg-[#121212] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white text-lg font-mono placeholder:text-gray-600 focus:border-[#3B82F6] focus:outline-none"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── PHASE: STRATEGY ── */}
+          {phase === 'strategy' && result && (
+            <div className="space-y-5">
+              <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Scegli una strategia
+                </div>
+                <p className="text-sm text-gray-400 leading-relaxed">
+                  L'analisi e pronta: ora scegli un profilo oppure usa il piano bilanciato consigliato.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">VDOT attuale</div>
+                  <div className="text-2xl font-bold text-white">{result.current_vdot}</div>
+                  {result.test_vdot && <div className="text-[10px] text-[#C0FF00] mt-1">da anchor test</div>}
+                </div>
+                <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">VDOT obiettivo</div>
+                  <div className="text-2xl font-bold text-[#3B82F6]">{result.target_vdot}</div>
+                </div>
+                <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Gap</div>
+                  <div className={`text-2xl font-bold ${feasColor}`}>+{Math.max(0, result.target_vdot - result.current_vdot).toFixed(1)}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                {strategyOptions.map((option) => (
+                  <button
+                    key={option.mode}
+                    type="button"
+                    onClick={() => handleGenerate(option.mode)}
+                    disabled={loading}
+                    className="text-left bg-[#121212] hover:bg-[#171717] border border-[#2A2A2A] hover:border-[#3B82F6]/60 rounded-xl p-4 transition-colors disabled:opacity-50"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-bold text-white">{option.label}</span>
+                      <span className="text-lg font-black text-[#C0FF00]">{option.success_pct}%</span>
+                    </div>
+                    <p className="text-xs text-gray-400 leading-relaxed mb-3">{option.focus}</p>
+                    <div className="space-y-2 text-[11px]">
+                      <div className="flex justify-between"><span className="text-gray-500">Successo obiettivo</span><span className="text-white font-bold">{option.success_pct}%</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500">Tenuta fisica</span><span className="text-white font-bold">{option.completion_pct}%</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500">VDOT stimato</span><span className="text-white font-bold">{option.projected_vdot}</span></div>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-3 leading-relaxed">{option.note}</p>
+                    <div className="mt-4 rounded-lg bg-[#3B82F6] px-3 py-2 text-center text-xs font-bold text-white">
+                      Genera {option.label}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
 
           {/* ── PHASE: DONE ── */}
           {phase === 'done' && result && (
@@ -658,12 +862,41 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
 
               {/* Peak context */}
               {result.peak_vdot && result.peak_vdot !== result.current_vdot && (
-                <div className="flex items-center gap-2 text-[10px] text-gray-500 bg-[#121212] border border-[#2A2A2A] rounded-lg px-3 py-2">
+                <div className="flex flex-wrap items-center gap-2 text-[10px] text-gray-500 bg-[#121212] border border-[#2A2A2A] rounded-lg px-3 py-2">
                   <span>Picco storico: <strong className="text-[#8B5CF6]">{result.peak_vdot}</strong></span>
                   {result.peak_date && (
                     <span>({new Date(result.peak_date).toLocaleDateString('it', { month: 'short', year: 'numeric' })})</span>
                   )}
-                  {result.feasibility.is_recovery && <span className="text-[#8B5CF6] font-bold">· Recovery Mode</span>}
+                  {peakDetails && <span>- {peakDetails}</span>}
+                  {result.feasibility.is_recovery && <span className="text-[#8B5CF6] font-bold">- Recovery Mode</span>}
+                </div>
+              )}
+
+              {selectedStrategy && (
+                <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <div>
+                      <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Strategia scelta</div>
+                      <div className="text-lg font-bold text-white">{selectedStrategy.label}</div>
+                      <p className="text-xs text-gray-400 mt-1">{selectedStrategy.focus}</p>
+                    </div>
+                    <div className={`text-3xl font-black ${selectedColor}`}>{selectedStrategy.success_pct}%</div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-[11px]">
+                    <div className="bg-[#1E1E1E] rounded-lg px-3 py-2">
+                      <div className="text-gray-500 uppercase mb-1">Successo obiettivo</div>
+                      <div className="text-white font-bold">{selectedStrategy.success_pct}%</div>
+                    </div>
+                    <div className="bg-[#1E1E1E] rounded-lg px-3 py-2">
+                      <div className="text-gray-500 uppercase mb-1">Tenuta fisica</div>
+                      <div className="text-white font-bold">{selectedStrategy.completion_pct}%</div>
+                    </div>
+                    <div className="bg-[#1E1E1E] rounded-lg px-3 py-2">
+                      <div className="text-gray-500 uppercase mb-1">VDOT stimato</div>
+                      <div className="text-white font-bold">{selectedStrategy.projected_vdot}</div>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-3 leading-relaxed">{selectedStrategy.note}</p>
                 </div>
               )}
 
@@ -678,7 +911,7 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
                 <div className="w-full h-2 bg-[#2A2A2A] rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-[#3B82F6] to-[#10B981] transition-all"
-                    style={{ width: `${Math.min(100, result.feasibility.confidence_pct)}%` }}
+                    style={{ width: `${Math.min(100, selectedSuccessPct)}%` }}
                   />
                 </div>
                 <p className={`text-xs mt-2 ${feasColor}`}>{result.feasibility.message}</p>
@@ -706,7 +939,7 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
               )}
 
               {/* Success probability when infeasible */}
-              {!result.feasibility.feasible && (
+              {!result.feasibility.feasible && !selectedStrategy && (
                 <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <AlertTriangle className="w-4 h-4 text-red-400" />
@@ -728,6 +961,28 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
                 </div>
               )}
 
+              {!result.feasibility.feasible && selectedStrategy && (
+                <div className="bg-[#3B82F6]/10 border border-[#3B82F6]/20 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Info className="w-4 h-4 text-[#3B82F6]" />
+                    <span className="text-sm font-bold text-[#3B82F6]">
+                      Obiettivo ambizioso, strategia {selectedStrategy.label}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mb-3">{result.feasibility.message}</p>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <div className="text-[10px] text-gray-500 uppercase mb-1">Probabilita piano scelto</div>
+                      <div className={`text-2xl font-bold ${selectedColor}`}>{selectedStrategy.success_pct}%</div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[10px] text-gray-500 uppercase mb-1">Tenuta fisica</div>
+                      <div className="text-2xl font-bold text-white">{selectedCompletionPct}%</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Plan summary */}
               <div className="flex items-center gap-2 text-[#10B981] bg-[#10B981]/10 border border-[#10B981]/20 rounded-lg p-3">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
@@ -744,20 +999,49 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
           <button
             type="button"
             onClick={() => {
-              onClose(); if (phase === 'done') onDone();
+              if (phase === 'done') {
+                onClose();
+                onDone();
+              } else if (phase === 'strategy') {
+                setPhase('calibration');
+              } else if (phase === 'calibration') {
+                setPhase('input');
+              } else {
+                onClose();
+              }
             }}
             className="flex-1 py-3 rounded-lg bg-[#121212] border border-[#2A2A2A] text-gray-400 hover:text-white transition-colors text-sm font-medium"
           >
-            {phase === 'done' ? 'Chiudi' : 'Annulla'}
+            {phase === 'done' ? 'Chiudi' : phase === 'input' ? 'Annulla' : 'Indietro'}
           </button>
           {phase === 'input' && (
             <button
               type="button"
-              onClick={handleGenerate}
+              onClick={() => { if (validateGoal()) setPhase('calibration'); }}
               disabled={loading}
               className="flex-1 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loading ? <span>Analizzando…</span> : <><Sparkles className="w-4 h-4" /> Genera Piano</>}
+              Continua
+            </button>
+          )}
+          {phase === 'calibration' && (
+            <button
+              type="button"
+              onClick={handleAnalyze}
+              disabled={loading}
+              className="flex-1 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading ? <span>Analizzando...</span> : <><Sparkles className="w-4 h-4" /> Mostra Strategie</>}
+            </button>
+          )}
+          {phase === 'strategy' && (
+            <button
+              type="button"
+              onClick={() => defaultStrategy && handleGenerate(defaultStrategy.mode)}
+              disabled={loading || !defaultStrategy}
+              className="flex-1 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading ? <span>Generando...</span> : <><Sparkles className="w-4 h-4" /> Genera Piano Bilanciato</>}
             </button>
           )}
           {phase === 'done' && (
@@ -783,7 +1067,6 @@ export function TrainingGrid() {
   const [previousView, setPreviousView] = useState<'Week' | 'Month' | 'Year' | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showAdaptModal, setShowAdaptModal] = useState(false);
-  const [showTestModal, setShowTestModal] = useState(false);
 
   const goToDay = (date: Date, fromView: 'Week' | 'Month' | 'Year') => {
     setCurrentDate(date);
@@ -1148,11 +1431,6 @@ export function TrainingGrid() {
                 <span className="text-xs text-gray-500 bg-[#1E1E1E] border border-[#2A2A2A] px-3 py-1 rounded-full">
                   {planData!.weeks.length} sett. · {firstW?.phase}
                 </span>
-                {firstW?.target_vdot && lastW?.target_vdot && (
-                  <span className="text-xs text-[#3B82F6] bg-[#3B82F6]/10 border border-[#3B82F6]/20 px-3 py-1 rounded-full font-mono">
-                    VDOT {firstW.target_vdot} → {lastW.target_vdot}
-                  </span>
-                )}
                 {firstW?.goal_race && firstW?.target_time && (
                   <span className="text-xs text-[#10B981] bg-[#10B981]/10 border border-[#10B981]/20 px-3 py-1 rounded-full">
                     🎯 {firstW.goal_race} in {firstW.target_time}
@@ -1164,26 +1442,6 @@ export function TrainingGrid() {
         </div>
 
         <div className="flex items-center gap-4">
-          {hasPlan && (
-            <button
-              type="button"
-              onClick={() => setShowTestModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-sm font-medium rounded-lg transition-colors"
-            >
-              <Timer className="w-4 h-4" />
-              Test
-            </button>
-          )}
-          {hasPlan && (
-            <button
-              type="button"
-              onClick={() => setShowAdaptModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-sm font-medium rounded-lg transition-colors"
-            >
-              <Zap className="w-4 h-4" />
-              Adatta Piano
-            </button>
-          )}
           <button
             type="button"
             onClick={() => setShowModal(true)}
@@ -1278,14 +1536,6 @@ export function TrainingGrid() {
         <AdaptPlanModal
           onClose={() => setShowAdaptModal(false)}
           onDone={() => { setShowAdaptModal(false); refetchPlan(); }}
-        />
-      )}
-
-      {/* Test Modal */}
-      {showTestModal && (
-        <EvaluateTestModal
-          onClose={() => setShowTestModal(false)}
-          onDone={() => { setShowTestModal(false); refetchPlan(); }}
         />
       )}
     </div>

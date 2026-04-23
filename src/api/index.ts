@@ -16,6 +16,7 @@ import type {
   AdaptResponse,
   ProAnalyticsResponse,
   GarminCsvLinkResult,
+  RunnerDnaResponse,
 } from '../types/api';
 
 // ─── PROFILE ────────────────────────────────────────────────────────────────
@@ -46,7 +47,8 @@ export const generateTrainingPlan = (data: {
   goal_race: string;
   weeks_to_race: number;
   target_time?: string;
-  plan_mode?: 'conservative' | 'aggressive';
+  plan_mode?: 'conservative' | 'balanced' | 'aggressive';
+  dry_run?: boolean;
   test_distance_km?: number;
   test_time?: string;
   start_date?: string;       // ISO date YYYY-MM-DD — user-chosen plan start
@@ -59,9 +61,29 @@ export const generateTrainingPlan = (data: {
     target_vdot: number;
     peak_vdot?: number;
     peak_date?: string;
+    peak_source?: {
+      date?: string;
+      name?: string;
+      distance_km?: number;
+      duration_minutes?: number;
+      avg_pace?: string;
+      avg_hr?: number | null;
+      strava_id?: string | number;
+    } | null;
     training_months?: number;
     weekly_volume?: number;
     test_vdot?: number | null;
+    plan_mode?: 'conservative' | 'balanced' | 'aggressive' | null;
+    strategy_options?: Array<{
+      mode: 'conservative' | 'balanced' | 'aggressive';
+      label: string;
+      focus: string;
+      success_pct: number;
+      completion_pct: number;
+      weekly_volume_multiplier: number;
+      projected_vdot: number;
+      note: string;
+    }>;
     feasibility: {
       feasible: boolean;
       difficulty: string;
@@ -176,8 +198,8 @@ export const getHeatmap = () => api.get<HeatmapResponse>('/api/heatmap');
 // ─── GARMIN ──────────────────────────────────────────────────────────────────
 export const getGarminStatus = () => api.get<{ configured: boolean; email: string | null }>('/api/garmin/status');
 export interface GarminSyncResult { ok: boolean; hr_updated: number; dynamics_updated: number; updated: number; skipped: number; skipped_no_match: number; skipped_complete: number; total_garmin_runs: number; errors: string[]; }
-export interface GarminCsvImportResult { ok: boolean; imported: number; skipped: number; duplicates?: number; matched?: number; enriched?: number; unmatched?: number; ambiguous?: number; total_received: number; collection: string; errors: string[]; }
-export interface GarminCsvData { id: string; athlete_id: number; source: string; imported_at: string; date: string; distance_km: number; duration_minutes: number | null; avg_pace: string | null; avg_hr: number | null; max_hr: number | null; avg_vertical_oscillation_cm: number | null; avg_vertical_ratio_pct: number | null; avg_ground_contact_time_ms: number | null; avg_stride_length_m: number | null; avg_cadence_spm: number | null; elevation_gain_m: number | null; elevation_loss_m: number | null; min_elevation_m: number | null; max_elevation_m: number | null; avg_power_w: number | null; max_power_w: number | null; calories: number | null; steps: number | null; raw: Record<string, string>; }
+export interface GarminCsvImportResult { ok: boolean; imported: number; skipped: number; duplicates?: number; repaired?: number; duplicates_inactivated?: number; matched?: number; enriched?: number; unmatched?: number; ambiguous?: number; total_received: number; collection: string; errors: string[]; }
+export interface GarminCsvData { id: string; athlete_id: number; source: string; imported_at: string; date: string; distance_km: number; duration_minutes: number | null; avg_pace: string | null; avg_hr: number | null; max_hr: number | null; avg_vertical_oscillation_cm: number | null; avg_vertical_ratio_pct: number | null; avg_ground_contact_time_ms: number | null; avg_stride_length_m: number | null; avg_cadence_spm: number | null; max_cadence_spm?: number | null; inactive_duplicate?: boolean; active?: boolean; elevation_gain_m: number | null; elevation_loss_m: number | null; min_elevation_m: number | null; max_elevation_m: number | null; avg_power_w: number | null; max_power_w: number | null; calories: number | null; steps: number | null; raw: Record<string, string>; }
 export const syncGarmin = (limit = 50, force = false) => api.post<GarminSyncResult>(`/api/garmin/sync?limit=${limit}&force=${force}`);
 export const syncGarminAll = (force = false) => api.post<GarminSyncResult>(`/api/garmin/sync-all?force=${force}`);
 export const getGarminAuthUrl = () => api.get<{ auth_url: string; service: string }>(`/api/garmin/auth-start?frontend_origin=${encodeURIComponent(window.location.origin)}`);
@@ -194,7 +216,7 @@ export const getGctAnalysis = () => api.get<GctAnalysisResponse>('/api/garmin/gc
 export const analyzeRun = (runId: string) =>
   api.post<{ analysis: string }>('/api/ai/analyze-run', { run_id: runId });
 
-export const getRunnerDna = () => api.get<any>('/api/runner-dna');
+export const getRunnerDna = () => api.get<RunnerDnaResponse>('/api/runner-dna');
 export const clearRunnerDnaCache = () => api.delete<{ ok: boolean }>('/api/runner-dna/cache');
 
 export const getDashboardInsight = () =>

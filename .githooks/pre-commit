@@ -1,0 +1,19 @@
+#!/bin/sh
+set -e
+
+echo "[AI context] Checking repo-map freshness..."
+
+NPM_BIN="npm"
+if npm.cmd --version >/dev/null 2>&1; then
+  NPM_BIN="npm.cmd"
+fi
+
+if ! "$NPM_BIN" run context:check; then
+  echo ""
+  echo "[AI context] repo-map.md / repo-map.json are not updated."
+  echo "[AI context] Run: npm run context:update"
+  echo "[AI context] Then stage the generated context files and commit again."
+  exit 1
+fi
+
+echo "[AI context] OK"

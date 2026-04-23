@@ -18,6 +18,7 @@ import { cn } from '../lib/utils';
 import { useApi } from '../hooks/useApi';
 import { getRun, getRunSplits } from '../api';
 import type { Run, Split } from '../types/api';
+import { cadenceSpmFromRun } from '../utils/cadence';
 
 // ── Polyline decoder (Google algorithm) ──────────────────────────────────────
 function decodePolyline(encoded: string): [number, number][] {
@@ -545,10 +546,10 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                   <span className="text-[8px] font-bold text-gray-500 uppercase">Type</span>
                   <span className="text-[10px] font-black text-[#C0FF00] uppercase">{run.run_type}</span>
                 </div>
-                {run.avg_cadence && (
+                {cadenceSpmFromRun(run) != null && (
                   <div className="flex justify-between items-center">
                     <span className="text-[8px] font-bold text-gray-500 uppercase">Cadence</span>
-                    <span className="text-[10px] font-black text-amber-400">{Math.round(run.avg_cadence * 2)} spm</span>
+                    <span className="text-[10px] font-black text-amber-400">{cadenceSpmFromRun(run)} spm</span>
                   </div>
                 )}
                 {run.avg_hr_pct && (
@@ -608,7 +609,7 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                     {([
                       { key: 'pace', label: 'Pace', color: '#C0FF00', value: run.avg_pace + '/km' },
                       { key: 'hr', label: 'Heart Rate', color: '#F43F5E', value: run.avg_hr ? `${Math.round(run.avg_hr)} bpm` : '—' },
-                      { key: 'cadence', label: 'Cadence', color: '#8B5CF6', value: run.avg_cadence ? `${Math.round(run.avg_cadence * 2)} spm` : '—' },
+                      { key: 'cadence', label: 'Cadence', color: '#8B5CF6', value: cadenceSpmFromRun(run) ? `${cadenceSpmFromRun(run)} spm` : '—' },
                     ] as const).map(({ key, label, color, value }) => (
                       <button
                         key={key}

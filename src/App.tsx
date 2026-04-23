@@ -17,6 +17,7 @@ import { StatisticsView } from "./components/statistics/StatisticsView";
 import { RoutesView } from "./components/RoutesView";
 import { ActivitiesView } from "./components/ActivitiesView";
 import { RunnerDnaView } from "./components/RunnerDnaView";
+import { RunnerDnaV2View } from "./components/RunnerDnaV2View";
 import { SettingsControls } from "./components/SettingsControls";
 import { Search, Bell, Settings } from "lucide-react";
 import { useParams } from "react-router-dom";
@@ -50,6 +51,7 @@ function AppContent() {
     { path: "/activities",  label: t("nav.activities") },
     { path: "/statistics",  label: t("nav.statistics") },
     { path: "/runner-dna",  label: t("nav.runnerDna")  },
+    { path: "/runner-dna-v2", label: "RUNNER DNA V2"  },
     { path: "/profile",     label: t("nav.profile")    },
   ];
 
@@ -93,11 +95,11 @@ function AppContent() {
             backgroundColor: "var(--app-bg-alt)",
           }}
         >
-          <div className="flex items-center gap-12">
+          <div className="flex items-center gap-8">
             <div className="flex items-center gap-2">
               <span className="text-xl font-black italic tracking-tighter" style={{ color: "var(--app-accent)" }}>METIC LAB</span>
             </div>
-            <nav className="flex items-center gap-8">
+            <nav className="flex items-center gap-5">
               {NAV_ITEMS.map((item) => {
                 const active = isNavActive(item.path);
                 return (
@@ -125,7 +127,7 @@ function AppContent() {
               <input
                 type="text"
                 placeholder={t("header.search")}
-                className="border rounded-xl pl-10 pr-4 py-2 text-xs font-medium focus:outline-none w-64 transition-all"
+                className="border rounded-xl pl-10 pr-4 py-2 text-xs font-medium focus:outline-none w-56 transition-all"
                 style={{
                   backgroundColor: "var(--app-input-bg)",
                   borderColor: "var(--app-border)",
@@ -182,6 +184,7 @@ function AppContent() {
                 <Route path="/activities/:runId" element={<RoutesViewWrapper />} />
                 <Route path="/training"         element={<TrainingView />} />
                 <Route path="/runner-dna"       element={<RunnerDnaView />} />
+                <Route path="/runner-dna-v2"    element={<RunnerDnaV2View />} />
                 <Route path="/statistics"       element={<StatisticsView />} />
                 <Route path="/profile"          element={<ProfileView />} />
                 <Route path="/recovery"         element={<ComingSoonView label="Recovery" />} />

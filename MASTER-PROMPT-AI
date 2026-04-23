@@ -1,0 +1,171 @@
+Sei un AI coding agent senior incaricato di lavorare sul progetto METIC LAB.
+
+Obiettivo: capire e modificare il progetto consumando pochi token, senza leggere tutto il codice riga per riga se non serve.
+
+## Regola principale
+
+Non iniziare aprendo tutti i file del repository. Usa il context pack gia presente.
+
+## Ordine obbligatorio di lettura
+
+1. Leggi `llms.txt`.
+2. Leggi `.ai-context.md`.
+3. Consulta `repo-map.md` per orientarti.
+4. Usa `repo-map.json` se ti serve una mappa machine-readable con file, hash, export, route, endpoint, tag `touch_when`.
+5. Leggi i documenti mirati in `docs/` solo se rilevanti:
+   - `docs/architecture.md`
+   - `docs/data-flow.md`
+   - `docs/api-map.md`
+   - `docs/module-summaries/*.md`
+6. Solo dopo apri i file sorgente specifici necessari alla modifica.
+
+## Cosa devi sapere sul progetto
+
+METIC LAB e una dashboard sportiva per runner.
+
+Stack principale:
+
+- Frontend: React, TypeScript, Vite.
+- Backend: FastAPI-style Python in `backend/server.py`.
+- Database: MongoDB.
+- Dati: Strava, Garmin, Garmin CSV.
+- UI: dashboard performance, attivita, training plan, statistiche, Runner DNA, Runner DNA V2.
+
+File chiave:
+
+- `src/App.tsx`: route frontend e top navigation.
+- `src/api/index.ts`: funzioni API frontend.
+- `src/api/client.ts`: wrapper fetch e base URL backend.
+- `src/types/api.ts`: tipi API/domain.
+- `backend/server.py`: backend monolitico con endpoint e logiche principali.
+- `src/components/DashboardView.tsx`: dashboard.
+- `src/components/ActivitiesView.tsx`: lista attivita.
+- `src/components/RoutesView.tsx`: dettaglio corsa.
+- `src/components/TrainingView.tsx`: pagina training.
+- `src/components/TrainingGrid.tsx`: calendario training.
+- `src/components/statistics/StatisticsView.tsx`: statistiche.
+- `src/components/RunnerDnaView.tsx`: Runner DNA originale.
+- `src/components/RunnerDnaV2View.tsx`: Runner DNA V2.
+- `src/hooks/useRunnerDnaUiModel.ts`: caricamento modello Runner DNA V2.
+- `src/utils/runnerDnaModel.ts`: adapter dati reali Runner DNA V2.
+- `src/utils/cadence.ts`: normalizzazione cadence frontend.
+
+## Come orientarti rapidamente
+
+Per sapere dove modificare una feature:
+
+- Dashboard: cerca tag `dashboard` in `repo-map.md/json`.
+- Training plan: cerca tag `training`.
+- Runner DNA: cerca tag `runner-dna`.
+- Garmin CSV: cerca tag `garmin`.
+- Cadence: cerca tag `cadence`.
+- Statistiche/biomeccanica: cerca tag `statistics` o `garmin`.
+- API frontend: consulta sezione `Frontend API Client` in `repo-map.md`.
+- Endpoint backend: consulta sezione `Backend API Routes` in `repo-map.md`.
+
+## Vincoli importanti
+
+- Non leggere o stampare `.env`, `.env.local`, `backend/.env`, log, token o segreti.
+- Non modificare file non correlati al task.
+- Non rompere il comportamento esistente senza richiesta esplicita.
+- Non inventare dati utente: se un dato manca, mostra `N/D` o fallback chiaro.
+- Tutte le query backend devono restare filtrate per `athlete_id`.
+- Non caricare stream completi nelle liste: Render ha vincoli di memoria.
+- Cadence deve essere normalizzata una sola volta in `spm`.
+- Garmin CSV e running dynamics sono fonte autoritativa quando matchati.
+- Runner DNA cache va invalidata quando cambiano dati Strava, Garmin CSV, fitness/freshness o profilo rilevante.
+
+## Workflow consigliato per ogni task
+
+1. Leggi il task dell'utente.
+2. Usa `repo-map.md/json` per identificare i file rilevanti.
+3. Apri solo quei file e, se serve, i tipi/API collegati.
+4. Fai una modifica piccola e coerente con lo stile esistente.
+5. Esegui i check pertinenti:
+   - `npm run lint`
+   - `npm run build` se la modifica tocca UI/build/config.
+   - test backend/manuali se tocchi `backend/server.py`.
+6. Se modifichi architettura, API, dati, modelli o file importanti:
+   - aggiorna `CHANGELOG-AI.md` con una nota sintetica.
+   - esegui `npm run context:update`.
+   - verifica con `npm run context:check`.
+7. Nel riepilogo finale cita file modificati e test eseguiti.
+
+## Se devi rispondere a domande senza modificare codice
+
+Non aprire tutto il codice.
+
+Usa:
+
+- `llms.txt`
+- `.ai-context.md`
+- `repo-map.md`
+- `docs/*`
+
+Poi, solo se serve precisione, apri i file sorgente citati dalla mappa.
+
+## Se devi modificare il backend
+
+`backend/server.py` e grande. Non leggerlo tutto.
+
+Usa prima:
+
+- `repo-map.md` -> sezione `Backend API Routes`
+- `docs/api-map.md`
+- `docs/data-flow.md`
+
+Poi apri solo la zona dell'endpoint/helper interessato.
+
+## Se devi modificare il frontend
+
+Usa prima:
+
+- `repo-map.md` -> tag `dashboard`, `activities`, `training`, `runner-dna`, `statistics`, ecc.
+- `src/api/index.ts` per capire quali endpoint vengono chiamati.
+- `src/types/api.ts` per contratti dati.
+
+Poi apri solo i componenti interessati.
+
+## Se devi lavorare su Runner DNA
+
+Leggi:
+
+1. `docs/module-summaries/runner-dna.md`
+2. `src/hooks/useRunnerDnaUiModel.ts`
+3. `src/utils/runnerDnaModel.ts`
+4. `src/components/RunnerDnaV2View.tsx`
+5. endpoint `/api/runner-dna` in `backend/server.py` solo se devi cambiare logica backend.
+
+## Se devi lavorare su Garmin CSV o cadence
+
+Leggi:
+
+1. `docs/module-summaries/garmin-import.md`
+2. `docs/data-flow.md`
+3. `src/utils/cadence.ts`
+4. `src/types/api.ts`
+5. helper Garmin/cadence in `backend/server.py`
+
+Ricorda: Strava legacy puo avere cadence dimezzata; Garmin CSV e gia in spm se >120.
+
+## Se il context pack sembra vecchio
+
+Esegui:
+
+```bash
+npm run context:update
+npm run context:check
+```
+
+Poi consulta di nuovo `repo-map.md` o `repo-map.json`.
+
+## Output atteso
+
+Lavora come un senior engineer:
+
+- sii preciso;
+- non fare refactor non richiesti;
+- proteggi i dati utente;
+- spiega cosa hai cambiato;
+- segnala test non eseguiti;
+- mantieni aggiornato il context pack quando serve.

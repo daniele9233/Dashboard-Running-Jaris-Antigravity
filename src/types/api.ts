@@ -64,6 +64,7 @@ export interface Run {
   location: string | null;
   strava_id: number | null;
   avg_cadence: number | null;
+  avg_cadence_spm?: number | null;
   elevation_gain: number;
   splits: Split[];
   polyline: string | null;
@@ -141,6 +142,7 @@ export interface TrainingWeek {
   sessions: Session[];
   goal_race?: string;
   target_time?: string;
+  plan_mode?: string;
 }
 
 export interface TrainingPlanResponse {
@@ -395,6 +397,8 @@ export interface ProAnalyticsResponse {
 export interface GarminCsvLinkResult {
   ok: boolean;
   total_csv: number;
+  repaired?: number;
+  duplicates_inactivated?: number;
   matched: number;
   enriched: number;
   already_linked?: number;
@@ -408,6 +412,38 @@ export interface GarminCsvLinkResult {
 }
 
 // ─── TRAINING PLAN ADAPT ─────────────────────────────────────────────────────
+
+export interface RunnerDnaBreakdownScore {
+  key: string;
+  label: string;
+  score: number;
+}
+
+export interface RunnerDnaResponse {
+  dna: {
+    scores?: {
+      current_strength: number;
+      improvement_potential: number;
+      breakdown: RunnerDnaBreakdownScore[];
+    };
+    diagnostics?: {
+      strengths: string[];
+      weaknesses: string[];
+      priorities: string[];
+    };
+    data_freshness?: {
+      schema_version: string;
+      data_signature: string;
+      last_run_date?: string | null;
+      latest_garmin_csv_imported_at?: string | null;
+      active_garmin_csv: number;
+      matched_garmin_csv: number;
+      fitness_date?: string | null;
+      auto_recalculated: boolean;
+    };
+    [key: string]: unknown;
+  };
+}
 
 export interface AdaptAdaptation {
   model: string;

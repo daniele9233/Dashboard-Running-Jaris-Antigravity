@@ -1,0 +1,75 @@
+# METIC LAB LLM Context Entrypoint
+
+This is the first file every AI coding agent should read.
+
+## Project
+
+METIC LAB is a running performance dashboard for a runner. It combines Strava sync, Garmin running dynamics, scientific training logic, dashboard analytics, Runner DNA, training plan generation, and AI coaching.
+
+The product goal is not only tracking. It should explain form, fatigue, fitness, biomechanics, race readiness, and training decisions in a way that is useful to a serious amateur runner.
+
+## Stack
+
+- Frontend: React, TypeScript, Vite, Tailwind-style utility classes.
+- Routing: React Router in `src/App.tsx`.
+- Backend: FastAPI-style Python app in `backend/server.py`.
+- Database: MongoDB via Motor async client.
+- Maps: Mapbox/MapLibre stack via `react-map-gl`, `mapbox-gl`, `maplibre-gl`.
+- Charts: Recharts and custom SVG/React components.
+- AI: backend integrations with Claude/Gemini/fallback algorithmic logic.
+
+## Commands
+
+- Install frontend deps: `npm install`
+- Start frontend: `npm run dev`
+- Type check: `npm run lint`
+- Build frontend: `npm run build`
+- Update AI context pack: `npm run context:update`
+- Check AI context pack freshness: `npm run context:check`
+- Backend deps: `pip install -r backend/requirements.txt`
+- Backend dev command depends on local env; inspect `backend/server.py` and `render.yaml`.
+
+## Read Order For Any LLM
+
+1. Read this file.
+2. Read `.ai-context.md`.
+3. Read `repo-map.md` or query `repo-map.json`.
+4. For architecture questions, read `docs/architecture.md` and `docs/data-flow.md`.
+5. For endpoint questions, read `docs/api-map.md`.
+6. For feature work, read the matching file in `docs/module-summaries/`.
+7. Only then open the relevant source files.
+
+## Most Important Source Files
+
+- `src/App.tsx`: frontend routes and top navigation.
+- `src/api/index.ts`: frontend API wrappers.
+- `src/types/api.ts`: API response and domain types used by the frontend.
+- `backend/server.py`: backend routes, Strava/Garmin sync, analytics, Runner DNA, training plan.
+- `src/components/DashboardView.tsx`: main dashboard.
+- `src/components/TrainingView.tsx`, `src/components/TrainingGrid.tsx`: training calendar.
+- `src/components/ActivitiesView.tsx`, `src/components/RoutesView.tsx`: activities and run detail.
+- `src/components/RunnerDnaView.tsx`: original Runner DNA page.
+- `src/components/RunnerDnaV2View.tsx`: premium Runner DNA V2 page.
+- `src/utils/runnerDnaModel.ts`: real-data adapter for Runner DNA V2.
+- `src/utils/cadence.ts`: frontend cadence normalization.
+
+## Operational Rules
+
+- Do not read or print `.env`, `.env.local`, `backend/.env`, tokens, logs, database dumps, or secrets.
+- Do not assume Garmin cadence is half-cadence. Use canonical `avg_cadence_spm` when present.
+- Do not load full activity streams in list views; this project has Render memory constraints.
+- All backend data queries should remain athlete-scoped by `athlete_id`.
+- Runner DNA cache must be invalidated after data changes that affect profile, Garmin CSV, fitness/freshness, or synced runs.
+- After meaningful architecture/API/model changes, run `npm run context:update` and add a note to `CHANGELOG-AI.md`.
+
+## Where To Change What
+
+- Dashboard cards/layout: `src/components/DashboardView.tsx`, `src/components/dashboard/widgetRegistry.ts`.
+- Activities list/map/detail: `src/components/ActivitiesView.tsx`, `src/components/RoutesView.tsx`, `src/components/LiveTelemetry3DMap.tsx`.
+- Training plan UI: `src/components/TrainingView.tsx`, `src/components/TrainingGrid.tsx`, `src/components/TrainingSidebar.tsx`.
+- Training plan backend logic: `backend/server.py` around `/api/training-plan/*`.
+- Runner DNA backend logic: `backend/server.py` around `/api/runner-dna`.
+- Runner DNA V2 UI/model: `src/components/RunnerDnaV2View.tsx`, `src/hooks/useRunnerDnaUiModel.ts`, `src/utils/runnerDnaModel.ts`.
+- Garmin CSV import/link: `backend/server.py` around `/api/garmin/csv-*`.
+- Cadence normalization: `backend/server.py` Garmin/Strava cadence helpers and `src/utils/cadence.ts`.
+- API type updates: `src/types/api.ts` and `src/api/index.ts`.

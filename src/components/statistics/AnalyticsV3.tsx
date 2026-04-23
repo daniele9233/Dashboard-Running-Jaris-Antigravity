@@ -162,14 +162,6 @@ function PentagonRadar({ axes }: { axes: RadarAxis[] }) {
   );
 }
 
-const radarAxes: RadarAxis[] = [
-  { label: 'Power',     value: 94.2 },
-  { label: 'Speed',     value: 82.1 },
-  { label: 'Technique', value: 91.0 },
-  { label: 'Recovery',  value: 76.4 },
-  { label: 'Stamina',   value: 88.5 },
-];
-
 // ─── Spatial Force Distribution ──────────────────────────────────────────────
 
 function SpatialForceMap() {
@@ -363,6 +355,72 @@ function DarkTooltip({ active, payload, label }: { active?: boolean; payload?: {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+function stabilityVerdict(score: number, hasData: boolean) {
+  if (!hasData) return { label: 'Dati insufficienti', color: '#64748b', text: 'Importa e collega CSV Garmin con GCT per calcolare la stabilita.' };
+  if (score >= 85) return { label: 'Ottimo', color: NEON_GREEN, text: 'Appoggio stabile: GCT, cadenza e rapporto verticale sono ben allineati.' };
+  if (score >= 70) return { label: 'Buono', color: '#22c55e', text: 'Buona base: resta da ridurre piccole oscillazioni o variabilita tra uscite.' };
+  if (score >= 55) return { label: 'Da monitorare', color: '#facc15', text: 'Stabilita discreta ma migliorabile: controlla reattivita e regolarita degli appoggi.' };
+  return { label: 'Da migliorare', color: NEON_ORANGE, text: 'Appoggio poco economico o variabile: utile tecnica, forza piede-caviglia e salite brevi.' };
+}
+
+function metricVerdict(kind: 'gct' | 'cadence' | 'ratio' | 'score', value: number, hasData: boolean) {
+  if (!hasData || !Number.isFinite(value) || value <= 0) return { label: 'Non disponibile', color: '#64748b' };
+  if (kind === 'gct') {
+    if (value <= 235) return { label: 'Molto reattivo', color: NEON_GREEN };
+    if (value <= 265) return { label: 'Buono', color: '#22c55e' };
+    if (value <= 285) return { label: 'Da monitorare', color: '#facc15' };
+    return { label: 'Da migliorare', color: NEON_ORANGE };
+  }
+  if (kind === 'cadence') {
+    if (value >= 170 && value <= 182) return { label: 'Ottimale', color: NEON_GREEN };
+    if (value >= 164 && value <= 188) return { label: 'Buona', color: '#22c55e' };
+    return { label: 'Da regolare', color: '#facc15' };
+  }
+  if (kind === 'ratio') {
+    if (value <= 7.5) return { label: 'Economico', color: NEON_GREEN };
+    if (value <= 8.8) return { label: 'Buono', color: '#22c55e' };
+    if (value <= 10) return { label: 'Alto', color: '#facc15' };
+    return { label: 'Da ridurre', color: NEON_ORANGE };
+  }
+  if (value >= 85) return { label: 'Ottimo', color: NEON_GREEN };
+  if (value >= 70) return { label: 'Buono', color: '#22c55e' };
+  if (value >= 55) return { label: 'Da monitorare', color: '#facc15' };
+  return { label: 'Da migliorare', color: NEON_ORANGE };
+}
+
+function TelemetryMetricCard({
+  label,
+  value,
+  unit,
+  verdict,
+  accent,
+}: {
+  label: string;
+  value: string;
+  unit: string;
+  verdict: { label: string; color: string };
+  accent: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-gray-800/70 bg-white/[0.025] p-5">
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">{label}</span>
+        <span className="h-2 w-2 rounded-full shadow-[0_0_12px_currentColor]" style={{ color: accent, backgroundColor: accent }} />
+      </div>
+      <div className="mt-4 flex min-w-0 flex-wrap items-end gap-2">
+        <span className="text-4xl font-black leading-none text-white">{value}</span>
+        <span className="pb-1 text-sm font-bold text-gray-500">{unit}</span>
+      </div>
+      <div
+        className="mt-4 inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em]"
+        style={{ color: verdict.color, borderColor: `${verdict.color}44`, backgroundColor: `${verdict.color}14` }}
+      >
+        {verdict.label}
+      </div>
+    </div>
+  );
+}
+
 function GroundContactStability({
   chart,
   onTelemetrySync,
@@ -381,6 +439,13 @@ function GroundContactStability({
   const verticalRatio = Number(latest.vertical_ratio ?? 0);
   const hasData = chart?.quality?.status === 'ok' && score > 0;
   const evolution = (chart?.series_card?.length ? chart.series_card : chart?.series_detail ?? []).slice(-7);
+  const sampleSize = chart?.quality?.sample_size ?? chart?.series_detail?.length ?? chart?.series_card?.length ?? 0;
+  const verdict = stabilityVerdict(score, hasData);
+  const latestRuns = Number(latest.runs ?? sampleSize ?? 0);
+  const gctVerdict = metricVerdict('gct', gct, hasData);
+  const cadenceVerdict = metricVerdict('cadence', cadence, hasData);
+  const ratioVerdict = metricVerdict('ratio', verticalRatio, hasData);
+  const scoreVerdict = metricVerdict('score', score, hasData);
 
   const handleSync = async () => {
     if (syncState === 'syncing') return;
@@ -411,16 +476,21 @@ function GroundContactStability({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 sm:p-8 border-b border-gray-800/60 ml-2">
         <div className="flex items-center gap-3">
           <Activity size={24} color={NEON_GREEN} className="opacity-90" />
-          <h2 className="text-xl sm:text-2xl font-black italic tracking-wide text-white">
-            GROUND CONTACT STABILITY
-          </h2>
+          <div>
+            <h2 className="text-xl sm:text-2xl font-black italic tracking-wide text-white">
+              GROUND CONTACT STABILITY
+            </h2>
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+              Calcolo reale da GCT, cadenza, rapporto verticale e variabilita su {sampleSize} campioni.
+            </p>
+          </div>
         </div>
 
-        <div className="mt-4 sm:mt-0 flex items-center gap-4 bg-[#ccff00]/10 border border-[#ccff00]/20 rounded-full px-5 py-2">
-          <span className="text-xs font-bold tracking-wider text-[#ccff00]">STABILITY SCORE</span>
+        <div className="mt-4 sm:mt-0 flex items-center gap-4 rounded-full border px-5 py-2" style={{ backgroundColor: `${verdict.color}16`, borderColor: `${verdict.color}33` }}>
+          <span className="text-xs font-bold tracking-wider" style={{ color: verdict.color }}>{verdict.label}</span>
           <div className="flex items-baseline gap-1 shadow-sm">
-            <span className="text-xl font-black text-[#ccff00]">{hasData ? score.toFixed(1) : '--'}</span>
-            <span className="text-sm font-bold text-[#ccff00] opacity-80">%</span>
+            <span className="text-xl font-black" style={{ color: verdict.color }}>{hasData ? score.toFixed(1) : '--'}</span>
+            <span className="text-sm font-bold opacity-80" style={{ color: verdict.color }}>%</span>
           </div>
         </div>
       </div>
@@ -429,10 +499,10 @@ function GroundContactStability({
         <div className="p-6 sm:p-10 flex flex-col relative group">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-6 text-xs font-bold tracking-wider text-gray-500 uppercase">
-              <span>Spatial Force Distribution</span>
+              <span>Real Telemetry Snapshot</span>
               <div className="flex gap-4">
-                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#ccff00]" /> Optimal</div>
-                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#ff5b00]" /> Imbalance</div>
+                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#ccff00]" /> Positivo</div>
+                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#facc15]" /> Da monitorare</div>
               </div>
             </div>
             <button className="text-gray-500 hover:text-white transition-colors bg-white/[0.03] p-1.5 rounded-full border border-gray-800/50 hover:bg-white/[0.1]">
@@ -440,29 +510,81 @@ function GroundContactStability({
             </button>
           </div>
 
-          <div className="relative w-full p-8 sm:p-14 border border-gray-800/40 bg-[#060606] rounded-3xl flex items-center justify-center gap-12 sm:gap-24 overflow-hidden isolate shadow-inner">
-            <div className="absolute top-[10%] bottom-[10%] left-1/2 w-px bg-gradient-to-b from-transparent via-gray-800 to-transparent -translate-x-1/2" />
-            <SensorPad side="L" color={NEON_GREEN} load="48.5" peak="1.4" />
-            <SensorPad side="R" color={NEON_ORANGE} load="51.5" peak="1.6" />
+          <div className="relative w-full overflow-hidden rounded-3xl border border-gray-800/40 bg-[#060606] p-6 shadow-inner">
+            <div className="pointer-events-none absolute inset-0 opacity-25" style={{
+              backgroundImage: 'linear-gradient(rgba(204,255,0,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(204,255,0,0.05) 1px, transparent 1px)',
+              backgroundSize: '28px 28px',
+            }} />
+            <div className="relative grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <TelemetryMetricCard
+                label="Ground contact"
+                value={hasData ? String(Math.round(gct)) : '--'}
+                unit="ms"
+                verdict={gctVerdict}
+                accent={gctVerdict.color}
+              />
+              <TelemetryMetricCard
+                label="Cadence"
+                value={cadence ? cadence.toFixed(0) : '--'}
+                unit="spm"
+                verdict={cadenceVerdict}
+                accent={cadenceVerdict.color}
+              />
+              <TelemetryMetricCard
+                label="Vertical ratio"
+                value={verticalRatio ? verticalRatio.toFixed(1) : '--'}
+                unit="%"
+                verdict={ratioVerdict}
+                accent={ratioVerdict.color}
+              />
+              <TelemetryMetricCard
+                label="Stability score"
+                value={hasData ? score.toFixed(1) : '--'}
+                unit="%"
+                verdict={scoreVerdict}
+                accent={scoreVerdict.color}
+              />
+            </div>
+
+            <div className="relative mt-5 rounded-2xl border border-[#ccff00]/20 bg-[#ccff00]/[0.04] p-4">
+              <div className="mb-2 flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
+                <span>Stability confidence</span>
+                <span className="text-[#ccff00]">{latestRuns || sampleSize} campioni</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                <motion.div
+                  className="h-full rounded-full bg-[#ccff00] shadow-[0_0_14px_rgba(204,255,0,0.7)]"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${hasData ? Math.max(8, Math.min(100, score)) : 0}%` }}
+                  transition={{ duration: 0.9, ease: 'easeOut' }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-gray-800/70 bg-white/[0.025] p-4 text-xs leading-5 text-gray-500">
+            <span className="font-black uppercase tracking-wider text-gray-300">Come leggerlo: </span>
+            GCT piu basso e stabile e positivo. Cadenza e rapporto verticale aiutano a capire se l'appoggio e reattivo o dispersivo.
+            I dati L/R Load e Peak Force non arrivano dai CSV Garmin/API attuali, quindi non vengono mostrati come numeri principali.
           </div>
 
           <div className="flex justify-between mt-6 text-xs text-gray-500 font-bold uppercase tracking-wider pt-6 border-t border-gray-800/40">
             <div className="flex flex-col gap-2 w-1/3">
-              <span>Pronation Deviation</span>
+              <span>Contact Stability</span>
               <div className="flex items-end justify-between text-[#ccff00]">
                 <div className="w-full h-1 bg-[#ccff00]/20 rounded-full overflow-hidden mr-4">
-                  <div className="h-full w-[40%] bg-[#ccff00] rounded-full shadow-[0_0_10px_#ccff00]" />
+                  <div className="h-full rounded-full shadow-[0_0_10px_#ccff00]" style={{ width: hasData ? `${Math.max(8, Math.min(100, score))}%` : '0%', backgroundColor: hasData ? '#ccff00' : '#334155' }} />
                 </div>
-                <span>+1.2%</span>
+                <span>{hasData ? `${score.toFixed(1)}%` : '--'}</span>
               </div>
             </div>
             <div className="flex flex-col gap-2 w-1/3">
-              <span className="text-right">Peak Impact Force</span>
+              <span className="text-right">Vertical Economy</span>
               <div className="flex flex-row-reverse items-end justify-between text-[#ff5b00]">
                 <div className="w-full h-1 bg-[#ff5b00]/20 rounded-full overflow-hidden ml-4">
-                  <div className="h-full w-[85%] bg-[#ff5b00] rounded-full shadow-[0_0_10px_#ff5b00]" />
+                  <div className="h-full rounded-full shadow-[0_0_10px_#ff5b00]" style={{ width: verticalRatio ? `${Math.max(8, Math.min(100, 100 - verticalRatio * 7))}%` : '0%', backgroundColor: verticalRatio <= 8.8 ? '#ccff00' : '#ff5b00' }} />
                 </div>
-                <span>3.48 G</span>
+                <span>{verticalRatio ? `${verticalRatio.toFixed(1)}%` : '--'}</span>
               </div>
             </div>
           </div>
@@ -476,7 +598,7 @@ function GroundContactStability({
               <span className="text-xl sm:text-2xl text-gray-500 font-bold">ms</span>
             </div>
             <p className="text-sm text-gray-500">
-              {hasData ? 'Stability calcolata da GCT, cadenza, vertical ratio e consistenza.' : 'Importa il CSV Garmin in Activities e collega la telemetria.'}
+              {hasData ? verdict.text : 'Importa il CSV Garmin in Activities e collega la telemetria.'}
             </p>
           </div>
 
@@ -514,25 +636,25 @@ function GroundContactStability({
               {syncState === 'idle' && (
                 <>
                   <RefreshCcw size={18} className="group-hover:-rotate-180 transition-transform duration-500" />
-                  Sync Telemetry Data
+                  Aggiorna telemetria Garmin
                 </>
               )}
               {syncState === 'syncing' && (
                 <>
                   <RefreshCcw size={18} className="animate-spin" />
-                  Syncing...
+                  Collegamento...
                 </>
               )}
               {syncState === 'success' && (
                 <>
                   <Check size={18} />
-                  Sync Successful
+                  Telemetria aggiornata
                 </>
               )}
               {syncState === 'error' && (
                 <>
                   <AlertTriangle size={18} />
-                  Sync Error - Retry
+                  Errore sync - riprova
                 </>
               )}
             </button>
@@ -549,62 +671,6 @@ function GroundContactStability({
         </div>
       </div>
     </main>
-  );
-}
-
-function SensorPad({ side, color, load, peak }: { side: string; color: string; load: string; peak: string }) {
-  const rawForceData = [12, 24, 38, 75, 95, 82, 30, 15, 12, 25, 60, 92, 55, 18];
-
-  return (
-    <div className="relative w-[110px] h-[240px] sm:w-[130px] sm:h-[300px] flex flex-col justify-between z-10 group">
-      <div className="flex justify-between items-start w-full">
-        <span className="text-4xl sm:text-6xl font-light text-white/90 font-mono tracking-tighter">
-          {side}
-        </span>
-        <div className="text-right">
-          <span className="text-[9px] text-gray-500 uppercase tracking-widest block font-bold mb-0.5">Load</span>
-          <span className="text-xl font-mono text-white font-medium leading-none">{load}<span className="text-sm text-gray-500">%</span></span>
-        </div>
-      </div>
-
-      <div className={`relative w-full flex-grow my-8 flex flex-col justify-between ${side === 'L' ? 'items-end' : 'items-start'}`}>
-        <div className={`absolute top-0 bottom-0 w-px bg-gray-800/80 ${side === 'L' ? 'right-0' : 'left-0'}`} />
-        {rawForceData.map((val, idx) => {
-          const variation = side === 'L' ? 0 : (idx % 2 === 0 ? -6 : 8);
-          const finalVal = Math.min(100, Math.max(5, val + variation));
-
-          return (
-            <div
-              key={idx}
-              className="relative flex items-center w-full"
-              style={{ justifyContent: side === 'L' ? 'flex-end' : 'flex-start' }}
-            >
-              <div
-                className="h-[2px] sm:h-[3px] rounded-full transition-all duration-300 group-hover:opacity-100"
-                style={{
-                  width: `${finalVal}%`,
-                  backgroundColor: color,
-                  opacity: (finalVal / 100) * 0.8 + 0.2,
-                  boxShadow: finalVal > 80 ? `0 0 12px ${color}` : 'none',
-                }}
-              />
-
-              {finalVal > 75 && (
-                <div
-                  className="absolute w-1 h-1 rounded-full bg-white opacity-90 shadow-[0_0_8px_white]"
-                  style={{ [side === 'L' ? 'right' : 'left']: `calc(${finalVal}% + 6px)` }}
-                />
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="flex justify-between items-end w-full border-b border-gray-800/40 pb-2">
-        <span className="text-[9px] text-gray-500 uppercase tracking-widest font-bold">Peak Force</span>
-        <span className="text-sm font-mono text-gray-300">{peak} <span className="text-[10px] text-gray-600">xBW</span></span>
-      </div>
-    </div>
   );
 }
 

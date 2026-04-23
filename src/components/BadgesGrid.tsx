@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Trophy } from "lucide-react";
 import type { Run } from "../types/api";
+import { cadenceSpmFromRun } from "../utils/cadence";
 
 // ─── Badge Definitions ───────────────────────────────────────────────────────
 
@@ -796,9 +797,9 @@ function buildContext(runs: Run[], vdot: number, vdotPeak: number, vdotDelta: nu
   const polarizedPct = hrRuns.length > 0 ? (z1z2Runs.length / hrRuns.length) * 100 : 0;
 
   // Avg cadence
-  const cadRuns = runs2026.filter(r => r.avg_cadence && r.avg_cadence > 0);
+  const cadRuns = runs2026.filter(r => cadenceSpmFromRun(r) != null);
   const avgCadence = cadRuns.length > 0
-    ? cadRuns.reduce((s, r) => s + (r.avg_cadence! * 2), 0) / cadRuns.length
+    ? cadRuns.reduce((s, r) => s + (cadenceSpmFromRun(r) ?? 0), 0) / cadRuns.length
     : 0;
 
   // Has intervals, hills, etc.

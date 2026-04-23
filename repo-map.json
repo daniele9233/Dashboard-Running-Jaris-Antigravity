@@ -1,0 +1,3618 @@
+{
+  "version": 1,
+  "generated_at": "2026-04-23T04:48:27.657Z",
+  "project": {
+    "name": "webapp-antiG",
+    "stack": [
+      "React",
+      "Vite",
+      "TypeScript",
+      "FastAPI",
+      "MongoDB",
+      "Mapbox",
+      "Recharts"
+    ]
+  },
+  "counts": {
+    "files": 107,
+    "backend_routes": 55,
+    "frontend_routes": 12,
+    "api_clients": 48
+  },
+  "files": [
+    {
+      "path": ".ai-context.md",
+      "kind": "documentation",
+      "purpose": "METIC LAB AI Context",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "cadence",
+        "context-pack",
+        "dashboard",
+        "garmin",
+        "layout",
+        "map",
+        "profile",
+        "runner-dna",
+        "statistics"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "f8144a1f41a184beab3020dae0d45525aa1e96520daba40bf623a18f3f31b5f4",
+      "last_modified": "2026-04-22T22:09:51.184Z",
+      "size_bytes": 4548
+    },
+    {
+      "path": ".githooks/pre-commit",
+      "kind": "project-file",
+      "purpose": "project-file pre-commit.",
+      "touch_when": [
+        "ai",
+        "context-pack"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "7e43ce340add4273c4de5969edbf0f9bddd3157f3d42cc9ff4c495c72ea1b226",
+      "last_modified": "2026-04-23T04:48:27.658Z",
+      "size_bytes": 433
+    },
+    {
+      "path": "backend/analyze_all_months.py",
+      "kind": "backend-script",
+      "purpose": "Backend helper or diagnostic script analyze_all_months.py.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "profile"
+      ],
+      "exports": [
+        "_calc_run_score",
+        "_estimate_threshold",
+        "_format_pace",
+        "_pace_to_sec",
+        "main"
+      ],
+      "routes": [],
+      "imports": [
+        "collections",
+        "datetime",
+        "dotenv"
+      ],
+      "hash": "4983948e314e1732eae03188bbf0dd1438350383f1dbc0d096f407f7c578c579",
+      "last_modified": "2026-04-06T17:10:02.646Z",
+      "size_bytes": 7095
+    },
+    {
+      "path": "backend/analyze_runs.py",
+      "kind": "backend-script",
+      "purpose": "Backend helper or diagnostic script analyze_runs.py.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "profile"
+      ],
+      "exports": [
+        "_calc_run_score",
+        "_estimate_threshold_from_run",
+        "_format_pace",
+        "_pace_to_sec",
+        "main"
+      ],
+      "routes": [],
+      "imports": [
+        "collections",
+        "datetime",
+        "dotenv"
+      ],
+      "hash": "3d421966b842b4548098bd94ed4051880d27e323ba33f8901264acbd01796a26",
+      "last_modified": "2026-04-06T17:08:42.892Z",
+      "size_bytes": 15331
+    },
+    {
+      "path": "backend/analyze_soglia_correct.py",
+      "kind": "backend-script",
+      "purpose": "Backend helper or diagnostic script analyze_soglia_correct.py.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "profile"
+      ],
+      "exports": [
+        "_format_pace",
+        "_pace_to_sec",
+        "main"
+      ],
+      "routes": [],
+      "imports": [
+        "collections",
+        "dotenv"
+      ],
+      "hash": "714801aa052a15c5b7c3932703e0625d39d47666e55f4c7e5de9b87a1228eb98",
+      "last_modified": "2026-04-06T17:21:41.345Z",
+      "size_bytes": 9742
+    },
+    {
+      "path": "backend/check_garmin_token.py",
+      "kind": "backend-script",
+      "purpose": "Backend helper or diagnostic script check_garmin_token.py.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "dashboard",
+        "garmin"
+      ],
+      "exports": [
+        "check"
+      ],
+      "routes": [],
+      "imports": [
+        "motor.motor_asyncio"
+      ],
+      "hash": "254edac9bb2f9b71aa936382e7c2d037c0abc37631f921a0251f599f7075a155",
+      "last_modified": "2026-04-06T20:55:56.872Z",
+      "size_bytes": 2101
+    },
+    {
+      "path": "backend/extract_soglia_data.py",
+      "kind": "backend-script",
+      "purpose": "Backend helper or diagnostic script extract_soglia_data.py.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "profile",
+        "statistics"
+      ],
+      "exports": [
+        "_pace_to_sec",
+        "main"
+      ],
+      "routes": [],
+      "imports": [
+        "collections",
+        "dotenv"
+      ],
+      "hash": "4443f7a627f1ef871f7737424736bd71b44c5b67c08050eceef507b9c740cc0d",
+      "last_modified": "2026-04-06T17:35:04.174Z",
+      "size_bytes": 4924
+    },
+    {
+      "path": "backend/garth_from_browser_token.py",
+      "kind": "backend-script",
+      "purpose": "Backend helper or diagnostic script garth_from_browser_token.py.",
+      "touch_when": [
+        "ai",
+        "api",
+        "garmin",
+        "profile",
+        "strava"
+      ],
+      "exports": [
+        "main"
+      ],
+      "routes": [],
+      "imports": [
+        "dotenv",
+        "garth.auth_tokens"
+      ],
+      "hash": "f0f57486134224054ea0b3629e127221ba29bfd81f4149c21a121cad91d4d692",
+      "last_modified": "2026-03-30T20:20:02.680Z",
+      "size_bytes": 2390
+    },
+    {
+      "path": "backend/garth_generate_token.py",
+      "kind": "backend-script",
+      "purpose": "Backend helper or diagnostic script garth_generate_token.py.",
+      "touch_when": [
+        "ai",
+        "api",
+        "garmin",
+        "strava"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "dotenv",
+        "garminconnect"
+      ],
+      "hash": "211632a1415cea274d36df2049c114d7da275b58b8e96318232be900ae3340c0",
+      "last_modified": "2026-03-30T15:22:26.573Z",
+      "size_bytes": 998
+    },
+    {
+      "path": "backend/garth_ticket_auth.py",
+      "kind": "backend-script",
+      "purpose": "Backend helper or diagnostic script garth_ticket_auth.py.",
+      "touch_when": [
+        "api",
+        "garmin",
+        "strava"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "dotenv",
+        "garth",
+        "garth.sso",
+        "http.server",
+        "urllib.parse"
+      ],
+      "hash": "d8ed28513d728b7bd108e7c2a04295698cd6203caffdf70f5434f226bbb2587b",
+      "last_modified": "2026-04-05T06:10:44.849Z",
+      "size_bytes": 1831
+    },
+    {
+      "path": "backend/requirements.txt",
+      "kind": "documentation",
+      "purpose": "Project documentation.",
+      "touch_when": [
+        "ai",
+        "api",
+        "garmin"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "b0b51ff11a27ef399f72520cb6e1d57ae3122b99aa637f9f37a3bf5f8c82e95a",
+      "last_modified": "2026-04-07T13:54:42.870Z",
+      "size_bytes": 192
+    },
+    {
+      "path": "backend/server.py",
+      "kind": "backend-monolith",
+      "purpose": "FastAPI backend monolith: Strava/Garmin sync, dashboard, analytics, training plan, Runner DNA and AI endpoints.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "cadence",
+        "dashboard",
+        "garmin",
+        "layout",
+        "map",
+        "profile",
+        "runner-dna",
+        "statistics",
+        "strava"
+      ],
+      "exports": [
+        "_algorithmic_dna",
+        "_analytics_date",
+        "_analytics_run_diagnostics",
+        "_assess_feasibility",
+        "_auto_adapt_on_sync",
+        "_auto_adapt_plan_after_sync",
+        "_avg",
+        "_avg_number",
+        "_best_effort_candidate",
+        "_best_effort_from_splits",
+        "_best_effort_from_streams",
+        "_bio_value",
+        "_bucket_key",
+        "_build_best_efforts_progression_chart",
+        "_build_biomechanics_charts",
+        "_build_effort_matrix_chart",
+        "_build_fitness_chart",
+        "_build_pace_distribution_chart",
+        "_build_pace_trend_chart",
+        "_build_pace_zone_chart",
+        "_build_runner_dna_diagnostics",
+        "_build_strategy_options",
+        "_build_trend_km_chart",
+        "_build_vdot_chart",
+        "_build_vdot_progression",
+        "_cadence_spm_from_run",
+        "_calc_vdot",
+        "_calc_vdot_with_history",
+        "_call_ai_async",
+        "_chart",
+        "_clamp_int",
+        "_classify_run",
+        "_compute_fitness_freshness",
+        "_enrich_run_from_garmin_csv",
+        "_ensure_fitness_freshness_current",
+        "_ensure_indexes",
+        "_extract_fit_dynamics",
+        "_filter_runs_for_range",
+        "_find_matching_run_for_garmin_csv",
+        "_format_pace",
+        "_garmin_biomechanics_from_doc",
+        "_garmin_csv_active_query",
+        "_garmin_csv_doc_to_run_like",
+        "_garmin_csv_fingerprint",
+        "_garmin_csv_quality_score",
+        "_garmin_login",
+        "_generate_plan_weeks",
+        "_get_athlete_id",
+        "_group_runs_by_bucket",
+        "_invalidate_analytics_cache",
+        "_invalidate_runner_dna_cache",
+        "_latest_analytics_date",
+        "_link_garmin_csv_docs",
+        "_match_confidence",
+        "_normalise_cadence_spm",
+        "_normalise_garmin_cadence_spm",
+        "_normalise_run_quality_fields",
+        "_normalise_strava_cadence_spm",
+        "_normalised_garmin_csv_fields",
+        "_pace_at_vo2_pct"
+      ],
+      "routes": [
+        "DELETE /api/garmin/csv-data/{doc_id}",
+        "DELETE /api/runner-dna/cache",
+        "GET /",
+        "GET /api/ai/dashboard-insight",
+        "GET /api/analytics",
+        "GET /api/analytics/pro",
+        "GET /api/badges",
+        "GET /api/best-efforts",
+        "GET /api/dashboard",
+        "GET /api/fitness-freshness",
+        "GET /api/garmin/auth-start",
+        "GET /api/garmin/csv-data",
+        "GET /api/garmin/gct-analysis",
+        "GET /api/garmin/status",
+        "GET /api/heatmap",
+        "GET /api/injury-risk",
+        "GET /api/prediction-history",
+        "GET /api/profile",
+        "GET /api/recovery-score",
+        "GET /api/runner-dna",
+        "GET /api/runner-dna-legacy",
+        "GET /api/runs",
+        "GET /api/runs/{run_id}",
+        "GET /api/runs/{run_id}/splits",
+        "GET /api/strava/auth-url",
+        "GET /api/strava/callback",
+        "GET /api/supercompensation",
+        "GET /api/test-ai",
+        "GET /api/training-plan",
+        "GET /api/training-plan/current",
+        "GET /api/user/layout",
+        "GET /api/vdot/paces",
+        "GET /api/version",
+        "GET /api/weekly-history",
+        "GET /api/weekly-report",
+        "PATCH /api/profile",
+        "PATCH /api/training-plan/session/complete",
+        "POST /api/admin/backfill-dynamics",
+        "POST /api/ai/analyze-run",
+        "POST /api/fitness-freshness/recalculate",
+        "POST /api/garmin/csv-import",
+        "POST /api/garmin/csv-link",
+        "POST /api/garmin/exchange-ticket",
+        "POST /api/garmin/login",
+        "POST /api/garmin/save-token",
+        "POST /api/garmin/sync",
+        "POST /api/garmin/sync-all",
+        "POST /api/jarvis/chat",
+        "POST /api/recovery-checkin",
+        "POST /api/strava/exchange-code",
+        "POST /api/strava/sync",
+        "POST /api/training-plan/adapt",
+        "POST /api/training-plan/evaluate-test",
+        "POST /api/training-plan/generate",
+        "PUT /api/user/layout"
+      ],
+      "imports": [
+        "anthropic",
+        "bson",
+        "contextlib",
+        "datetime",
+        "dotenv",
+        "fastapi",
+        "fastapi.middleware.cors",
+        "fastapi.responses",
+        "garminconnect",
+        "garth.auth_tokens",
+        "google",
+        "requests_oauthlib",
+        "typing",
+        "urllib.parse"
+      ],
+      "hash": "1e60720249c88901a2b52ae16010416d51ea26b0560433a0e655ef69de567569",
+      "last_modified": "2026-04-22T20:18:35.509Z",
+      "size_bytes": 336712
+    },
+    {
+      "path": "backend/test_models.py",
+      "kind": "backend-script",
+      "purpose": "Backend helper or diagnostic script test_models.py.",
+      "touch_when": [
+        "ai"
+      ],
+      "exports": [
+        "test"
+      ],
+      "routes": [],
+      "imports": [
+        "google"
+      ],
+      "hash": "d98964fe6b740e1a9a450bd5570321c9842857ff574fefb0c9f52e060fa94a23",
+      "last_modified": "2026-04-04T18:22:40.163Z",
+      "size_bytes": 1085
+    },
+    {
+      "path": "CHANGELOG-AI.md",
+      "kind": "documentation",
+      "purpose": "CHANGELOG-AI",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "context-pack"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "736dd2a6891dd140b0fe2bb271f95e0b859227ad9c7f207f47526e07445b7c5c",
+      "last_modified": "2026-04-23T04:46:57.914Z",
+      "size_bytes": 995
+    },
+    {
+      "path": "docs/api-map.md",
+      "kind": "documentation",
+      "purpose": "API Map",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "context-pack",
+        "dashboard",
+        "garmin",
+        "layout",
+        "profile",
+        "runner-dna",
+        "statistics",
+        "strava",
+        "training"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "82cbed83905b1b569859ee5629caee808686eba0b3f36dc3dce7d7df9dff1212",
+      "last_modified": "2026-04-22T22:09:51.185Z",
+      "size_bytes": 2801
+    },
+    {
+      "path": "docs/architecture.md",
+      "kind": "documentation",
+      "purpose": "Architecture",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "context-pack",
+        "dashboard",
+        "garmin",
+        "layout",
+        "map",
+        "profile",
+        "runner-dna",
+        "statistics",
+        "strava"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "2970c59c5c6b9d0312615f0ed840efe4eca123105946520e928f80be61006883",
+      "last_modified": "2026-04-22T22:09:51.184Z",
+      "size_bytes": 2106
+    },
+    {
+      "path": "docs/data-flow.md",
+      "kind": "documentation",
+      "purpose": "Data Flow",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "cadence",
+        "dashboard",
+        "garmin",
+        "profile",
+        "runner-dna",
+        "statistics",
+        "strava",
+        "training"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "4a984acc13e255cf4d7089ebd2b5f26b1d6e7186443465f50540fc65b975c898",
+      "last_modified": "2026-04-22T22:09:51.184Z",
+      "size_bytes": 2350
+    },
+    {
+      "path": "docs/module-summaries/activities.md",
+      "kind": "documentation",
+      "purpose": "Module Summary: Activities",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "cadence",
+        "map"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "c3243336ed4e23da73f307add41f72a7d1a4f3ccfe9ad82ec7d04c5f12e25d25",
+      "last_modified": "2026-04-22T22:09:51.185Z",
+      "size_bytes": 944
+    },
+    {
+      "path": "docs/module-summaries/dashboard.md",
+      "kind": "documentation",
+      "purpose": "Module Summary: Dashboard",
+      "touch_when": [
+        "ai",
+        "api",
+        "dashboard",
+        "layout",
+        "statistics",
+        "training"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "cb362b12f9d6c4d87995eef06283408f66614e7b10df59990283991e363148d0",
+      "last_modified": "2026-04-22T22:09:51.185Z",
+      "size_bytes": 1135
+    },
+    {
+      "path": "docs/module-summaries/garmin-import.md",
+      "kind": "documentation",
+      "purpose": "Module Summary: Garmin Import",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "cadence",
+        "dashboard",
+        "garmin",
+        "layout",
+        "runner-dna",
+        "statistics",
+        "strava",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "f5dd9ab7673bd9dd9a942ed346847b31e93ce82ac20aa3a4f672d4cf0e41f197",
+      "last_modified": "2026-04-22T22:09:51.185Z",
+      "size_bytes": 1387
+    },
+    {
+      "path": "docs/module-summaries/runner-dna.md",
+      "kind": "documentation",
+      "purpose": "Module Summary: Runner DNA",
+      "touch_when": [
+        "ai",
+        "api",
+        "garmin",
+        "profile",
+        "runner-dna",
+        "statistics",
+        "strava"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "e8ae26ae6621ac0a2e8da8510dc0c6e385f3c90720de366fbd402bffdc998c89",
+      "last_modified": "2026-04-22T22:09:51.185Z",
+      "size_bytes": 1153
+    },
+    {
+      "path": "docs/module-summaries/shared-frontend.md",
+      "kind": "documentation",
+      "purpose": "Module Summary: Shared Frontend",
+      "touch_when": [
+        "ai",
+        "api",
+        "context-pack",
+        "layout",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "a7b8d49b6b85eb4d7c41dacf879e3735d93cc735b56c7125d3785c65d0344662",
+      "last_modified": "2026-04-22T22:09:51.186Z",
+      "size_bytes": 865
+    },
+    {
+      "path": "docs/module-summaries/statistics.md",
+      "kind": "documentation",
+      "purpose": "Module Summary: Statistics",
+      "touch_when": [
+        "ai",
+        "api",
+        "garmin",
+        "statistics"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "cd5f9540917e3dffe24321e66389cf2e6c846e368589a77060dc6f7d19417202",
+      "last_modified": "2026-04-22T22:09:51.186Z",
+      "size_bytes": 1310
+    },
+    {
+      "path": "docs/module-summaries/training.md",
+      "kind": "documentation",
+      "purpose": "Module Summary: Training",
+      "touch_when": [
+        "ai",
+        "api",
+        "layout",
+        "strava",
+        "training"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "0cbc544642cf1ec4b0b1bc2ba5a5ba022bae72bb86474dc0635714f75172315a",
+      "last_modified": "2026-04-22T22:09:51.185Z",
+      "size_bytes": 1157
+    },
+    {
+      "path": "index.html",
+      "kind": "project-file",
+      "purpose": "project-file index.html.",
+      "touch_when": [
+        "ai",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "b5a1b4bb457eded1c68ffa133748651b475b26f62f55a4e4b8b9495e18e045d7",
+      "last_modified": "2026-03-27T18:28:13.136Z",
+      "size_bytes": 324
+    },
+    {
+      "path": "llms.txt",
+      "kind": "documentation",
+      "purpose": "METIC LAB LLM Context Entrypoint",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "cadence",
+        "context-pack",
+        "dashboard",
+        "garmin",
+        "layout",
+        "map",
+        "profile",
+        "runner-dna",
+        "statistics"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "4751992e39df722f3424ff1abc530cfed29ed6fe034b0af8a4881ef92e1f0428",
+      "last_modified": "2026-04-22T22:09:51.184Z",
+      "size_bytes": 4085
+    },
+    {
+      "path": "local-whisper/requirements.txt",
+      "kind": "local-ai-service",
+      "purpose": "Project documentation.",
+      "touch_when": [
+        "api"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "84ceac48e24be3caa0921d4fe8e53b3cd41a3f4e01c9c197f5474456b8eef5ff",
+      "last_modified": "2026-04-04T18:22:40.163Z",
+      "size_bytes": 91
+    },
+    {
+      "path": "local-whisper/server.py",
+      "kind": "local-ai-service",
+      "purpose": "local-ai-service server.py.",
+      "touch_when": [
+        "ai",
+        "api"
+      ],
+      "exports": [
+        "load_model",
+        "status",
+        "transcribe"
+      ],
+      "routes": [],
+      "imports": [
+        "fastapi",
+        "fastapi.middleware.cors",
+        "faster_whisper"
+      ],
+      "hash": "ca633cc0aaefce806c40af92eb9d1b4dc020c8515c70819d1ca0cddc4e7467e9",
+      "last_modified": "2026-04-04T18:22:40.163Z",
+      "size_bytes": 2950
+    },
+    {
+      "path": "metadata.json",
+      "kind": "config",
+      "purpose": "Project configuration file metadata.json.",
+      "touch_when": [],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "2cd15ebc4f2bdfa3b42ac4f55be538758b115562481fa91831e01ea6d3a2c901",
+      "last_modified": "2026-03-27T18:28:13.136Z",
+      "size_bytes": 76
+    },
+    {
+      "path": "package.json",
+      "kind": "config",
+      "purpose": "Project configuration file package.json.",
+      "touch_when": [
+        "ai",
+        "context-pack",
+        "layout",
+        "map",
+        "statistics",
+        "strava",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "55a24d6f062d10960a0876297877dfd9b97b19b11aa74c6cd33e0866783b0bf7",
+      "last_modified": "2026-04-23T04:33:12.903Z",
+      "size_bytes": 1547
+    },
+    {
+      "path": "PRD.md",
+      "kind": "documentation",
+      "purpose": "PRD — METIC LAB Running Training Dashboard",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "cadence",
+        "dashboard",
+        "garmin",
+        "layout",
+        "map",
+        "profile",
+        "statistics",
+        "strava",
+        "training"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "f4d216818f353fce5faaf23057a44fb2182ed5973a9df7d9bb58adbf404e1b95",
+      "last_modified": "2026-04-13T14:38:37.405Z",
+      "size_bytes": 16676
+    },
+    {
+      "path": "public/garmin-auth.html",
+      "kind": "public-asset",
+      "purpose": "public-asset garmin-auth.html.",
+      "touch_when": [
+        "ai",
+        "garmin",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "940b7ebad07651d028a33642dd5e4c0f70942453e1a187a51d8557d2031b6e91",
+      "last_modified": "2026-04-06T21:03:45.557Z",
+      "size_bytes": 2866
+    },
+    {
+      "path": "README.md",
+      "kind": "documentation",
+      "purpose": "METIC LAB — Roadmap",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "dashboard",
+        "garmin",
+        "layout",
+        "map",
+        "statistics",
+        "strava",
+        "training"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "39cbbb610268b85028d43b85b9b9e30f0924e351987c17c57eab495e56919bbf",
+      "last_modified": "2026-04-16T18:51:23.209Z",
+      "size_bytes": 3833
+    },
+    {
+      "path": "render.yaml",
+      "kind": "project-file",
+      "purpose": "project-file render.yaml.",
+      "touch_when": [],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "36c3bed1a7833423017d56c9befdf280cc1513de6d8022d570d1464e0f41dd5e",
+      "last_modified": "2026-04-07T13:30:27.220Z",
+      "size_bytes": 1040
+    },
+    {
+      "path": "restyling/src/App.tsx",
+      "kind": "legacy-restyling-source",
+      "purpose": "legacy-restyling-source App.tsx.",
+      "touch_when": [
+        "dashboard",
+        "layout"
+      ],
+      "exports": [
+        "App"
+      ],
+      "routes": [],
+      "imports": [
+        "./components/Dashboard",
+        "./components/Sidebar",
+        "./components/ThemeContext",
+        "./components/Topbar",
+        "react"
+      ],
+      "hash": "5d46cd46969b37358a2ff0f3bdf834e3e4e017a271199940c368aed57a0a282b",
+      "last_modified": "2026-04-12T16:21:58.323Z",
+      "size_bytes": 759
+    },
+    {
+      "path": "restyling/src/components/Dashboard.tsx",
+      "kind": "legacy-restyling-source",
+      "purpose": "legacy-restyling-source Dashboard.tsx.",
+      "touch_when": [
+        "ai",
+        "dashboard",
+        "layout",
+        "map",
+        "statistics",
+        "training"
+      ],
+      "exports": [
+        "Dashboard"
+      ],
+      "routes": [],
+      "imports": [
+        "./MapboxMap",
+        "./ThemeContext",
+        "lucide-react",
+        "react",
+        "recharts"
+      ],
+      "hash": "03f6d3ff9a871771035e473af62804a60aeda409118f30eef47a9268895265be",
+      "last_modified": "2026-04-12T16:21:58.336Z",
+      "size_bytes": 21442
+    },
+    {
+      "path": "restyling/src/components/MapboxMap.tsx",
+      "kind": "legacy-restyling-source",
+      "purpose": "legacy-restyling-source MapboxMap.tsx.",
+      "touch_when": [
+        "ai",
+        "layout",
+        "map",
+        "types"
+      ],
+      "exports": [
+        "MapboxMap"
+      ],
+      "routes": [],
+      "imports": [
+        "./ThemeContext",
+        "mapbox-gl",
+        "react"
+      ],
+      "hash": "00de567d9f1b1b77f411dc6531d4df4b32149f89e2d7426c3403177a3ca55845",
+      "last_modified": "2026-04-12T16:50:53.333Z",
+      "size_bytes": 3158
+    },
+    {
+      "path": "restyling/src/components/Sidebar.tsx",
+      "kind": "legacy-restyling-source",
+      "purpose": "legacy-restyling-source Sidebar.tsx.",
+      "touch_when": [
+        "ai",
+        "layout",
+        "statistics",
+        "training"
+      ],
+      "exports": [
+        "Sidebar"
+      ],
+      "routes": [],
+      "imports": [
+        "lucide-react",
+        "react"
+      ],
+      "hash": "bf1539b6ba60e4fe12d9a97793893eb8b09ab60eb6f43c116341df084bf3c605",
+      "last_modified": "2026-04-12T16:21:58.341Z",
+      "size_bytes": 6167
+    },
+    {
+      "path": "restyling/src/components/ThemeContext.tsx",
+      "kind": "legacy-restyling-source",
+      "purpose": "legacy-restyling-source ThemeContext.tsx.",
+      "touch_when": [
+        "types"
+      ],
+      "exports": [
+        "ThemeProvider",
+        "useTheme"
+      ],
+      "routes": [],
+      "imports": [
+        "react"
+      ],
+      "hash": "a7793e0bf630a29528335b6798c0d2f5ec5178a1adba10e1ef27bc81a10b78d5",
+      "last_modified": "2026-04-12T16:21:58.344Z",
+      "size_bytes": 782
+    },
+    {
+      "path": "restyling/src/components/Topbar.tsx",
+      "kind": "legacy-restyling-source",
+      "purpose": "legacy-restyling-source Topbar.tsx.",
+      "touch_when": [
+        "layout"
+      ],
+      "exports": [
+        "Topbar"
+      ],
+      "routes": [],
+      "imports": [
+        "./ThemeContext",
+        "lucide-react",
+        "react"
+      ],
+      "hash": "6a41c105edafce636ff8f2b30b29a9d9163dd7e99d31c35949fa312096fb633d",
+      "last_modified": "2026-04-12T16:21:58.347Z",
+      "size_bytes": 2155
+    },
+    {
+      "path": "restyling/src/index.css",
+      "kind": "legacy-restyling-source",
+      "purpose": "legacy-restyling-source index.css.",
+      "touch_when": [
+        "ai",
+        "map"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "cc2e5e836531aacf20d36f8968fe2d8dd7f47a523de003caffd5090b0db2aada",
+      "last_modified": "2026-04-12T16:21:58.327Z",
+      "size_bytes": 441
+    },
+    {
+      "path": "restyling/src/main.tsx",
+      "kind": "legacy-restyling-source",
+      "purpose": "legacy-restyling-source main.tsx.",
+      "touch_when": [
+        "ai"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "./App.tsx",
+        "react",
+        "react-dom/client"
+      ],
+      "hash": "5580d48b0fec68698a113d45a640b88d479dc35eb1f4b87c51f67c6cc81cee9b",
+      "last_modified": "2026-04-12T16:21:58.332Z",
+      "size_bytes": 231
+    },
+    {
+      "path": "scripts/update-ai-context.ts",
+      "kind": "tooling-script",
+      "purpose": "Project tooling script update-ai-context.ts.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "cadence",
+        "context-pack",
+        "dashboard",
+        "garmin",
+        "layout",
+        "map",
+        "profile",
+        "runner-dna",
+        "statistics"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "node:crypto",
+        "node:fs",
+        "node:path"
+      ],
+      "hash": "32ea1f5f514e2cb9c163c1b8482de46604b42b569c5cf0015709bb62b10a1d38",
+      "last_modified": "2026-04-23T04:46:50.806Z",
+      "size_bytes": 20275
+    },
+    {
+      "path": "src/api/client.ts",
+      "kind": "frontend-api-core",
+      "purpose": "Fetch wrapper, backend base URL resolution and API error handling.",
+      "touch_when": [
+        "ai",
+        "api"
+      ],
+      "exports": [
+        "api",
+        "ApiError"
+      ],
+      "routes": [],
+      "imports": [],
+      "hash": "2227debda5b40cb2163f338d380ecc8e325af93c29bbcff78f48214a0ca22b7c",
+      "last_modified": "2026-04-20T19:27:01.368Z",
+      "size_bytes": 1738
+    },
+    {
+      "path": "src/api/index.ts",
+      "kind": "frontend-api-client",
+      "purpose": "Typed frontend API wrappers for backend endpoints.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "cadence",
+        "dashboard",
+        "garmin",
+        "layout",
+        "profile",
+        "runner-dna",
+        "statistics",
+        "strava",
+        "training"
+      ],
+      "exports": [
+        "adaptTrainingPlan",
+        "analyzeRun",
+        "clearRunnerDnaCache",
+        "deleteGarminCsvData",
+        "evaluateTest",
+        "exchangeGarminTicket",
+        "exchangeStravaCode",
+        "GarminCsvData",
+        "GarminCsvImportResult",
+        "GarminSyncResult",
+        "GctAnalysisResponse",
+        "generateTrainingPlan",
+        "getAnalytics",
+        "getBadges",
+        "getBestEfforts",
+        "getCurrentWeek",
+        "getDashboard",
+        "getDashboardInsight",
+        "getFitnessFreshness",
+        "getGarminAuthUrl",
+        "getGarminCsvData",
+        "getGarminStatus",
+        "getGctAnalysis",
+        "getHeatmap",
+        "getInjuryRisk",
+        "getPredictionHistory",
+        "getProAnalytics",
+        "getProfile",
+        "getRecoveryScore",
+        "getRun",
+        "getRunnerDna",
+        "getRuns",
+        "getRunSplits",
+        "getStravaAuthUrl",
+        "getSupercompensation",
+        "getTrainingPlan",
+        "getUserLayout",
+        "getVdotPaces",
+        "getWeeklyHistory",
+        "getWeeklyReport",
+        "GridLayoutItem",
+        "GridLayouts",
+        "importGarminCsv",
+        "jarvisChat",
+        "linkGarminCsv",
+        "postRecoveryCheckin",
+        "putUserLayout",
+        "recalculateFitnessFreshness",
+        "saveGarminToken",
+        "syncGarmin",
+        "syncGarminAll",
+        "syncStrava",
+        "toggleSessionComplete",
+        "updateProfile"
+      ],
+      "routes": [
+        "DELETE /api/garmin/csv-data/${docId}",
+        "DELETE /api/runner-dna/cache",
+        "GET /api/ai/dashboard-insight",
+        "GET /api/analytics",
+        "GET /api/analytics/pro${qs ? ",
+        "GET /api/badges",
+        "GET /api/best-efforts",
+        "GET /api/dashboard",
+        "GET /api/fitness-freshness",
+        "GET /api/garmin/auth-start?frontend_origin=${encodeURIComponent(window.location.origin)}",
+        "GET /api/garmin/csv-data",
+        "GET /api/garmin/gct-analysis",
+        "GET /api/garmin/status",
+        "GET /api/heatmap",
+        "GET /api/injury-risk",
+        "GET /api/prediction-history",
+        "GET /api/profile",
+        "GET /api/recovery-score",
+        "GET /api/runner-dna",
+        "GET /api/runs",
+        "GET /api/runs/${id}",
+        "GET /api/runs/${id}/splits",
+        "GET /api/strava/auth-url",
+        "GET /api/supercompensation",
+        "GET /api/training-plan",
+        "GET /api/training-plan/current",
+        "GET /api/user/layout",
+        "GET /api/vdot/paces",
+        "GET /api/weekly-history",
+        "GET /api/weekly-report",
+        "PATCH /api/profile",
+        "PATCH /api/training-plan/session/complete",
+        "POST /api/ai/analyze-run",
+        "POST /api/fitness-freshness/recalculate",
+        "POST /api/garmin/csv-import",
+        "POST /api/garmin/csv-link",
+        "POST /api/garmin/exchange-ticket",
+        "POST /api/garmin/save-token",
+        "POST /api/garmin/sync-all?force=${force}",
+        "POST /api/garmin/sync?limit=${limit}&force=${force}",
+        "POST /api/jarvis/chat",
+        "POST /api/recovery-checkin",
+        "POST /api/strava/exchange-code",
+        "POST /api/strava/sync",
+        "POST /api/training-plan/adapt",
+        "POST /api/training-plan/evaluate-test",
+        "POST /api/training-plan/generate",
+        "PUT /api/user/layout"
+      ],
+      "imports": [
+        "../types/api",
+        "../types/jarvis",
+        "./client"
+      ],
+      "hash": "56e757be5e58db6377fc255879cae7b07f3bb3d9d0a76787a20861c1ac3de5fa",
+      "last_modified": "2026-04-22T13:36:06.866Z",
+      "size_bytes": 14006
+    },
+    {
+      "path": "src/App.tsx",
+      "kind": "frontend-router",
+      "purpose": "React app shell with providers, top navigation and frontend route declarations.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "dashboard",
+        "garmin",
+        "layout",
+        "profile",
+        "runner-dna",
+        "statistics",
+        "strava",
+        "training"
+      ],
+      "exports": [
+        "App"
+      ],
+      "routes": [
+        "*",
+        "/",
+        "/activities",
+        "/activities/:runId",
+        "/biometrics",
+        "/insights",
+        "/profile",
+        "/recovery",
+        "/runner-dna",
+        "/runner-dna-v2",
+        "/statistics",
+        "/training"
+      ],
+      "imports": [
+        "./api",
+        "./components/ActivitiesView",
+        "./components/DashboardView",
+        "./components/ErrorBoundary",
+        "./components/ProfileView",
+        "./components/RoutesView",
+        "./components/RunnerDnaV2View",
+        "./components/RunnerDnaView",
+        "./components/SettingsControls",
+        "./components/Sidebar",
+        "./components/statistics/StatisticsView",
+        "./components/TrainingView",
+        "./context/JarvisContext",
+        "./context/LayoutContext",
+        "lucide-react",
+        "react",
+        "react-i18next",
+        "react-router-dom"
+      ],
+      "hash": "88d2d8448843cb74142c2c89aee84a61f9f12434501dc2321ec0f50c8d1e81de",
+      "last_modified": "2026-04-22T22:03:50.315Z",
+      "size_bytes": 9343
+    },
+    {
+      "path": "src/components/ActivitiesView.tsx",
+      "kind": "frontend-view",
+      "purpose": "Page/view component for Activities.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "garmin",
+        "map",
+        "statistics",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "ActivitiesView"
+      ],
+      "routes": [],
+      "imports": [
+        "../api",
+        "../hooks/useApi",
+        "../lib/utils",
+        "../types/api",
+        "../utils/cardiacDrift",
+        "./TrailRunView",
+        "lucide-react",
+        "motion/react",
+        "react",
+        "react-i18next",
+        "react-map-gl/mapbox"
+      ],
+      "hash": "57f3245b04baeff87762a420c6a77a81da64ca176fcfcb902f3977fe5b4b9fb3",
+      "last_modified": "2026-04-18T18:32:13.945Z",
+      "size_bytes": 49815
+    },
+    {
+      "path": "src/components/AdaptationPanel.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component AdaptationPanel.",
+      "touch_when": [
+        "activities",
+        "types"
+      ],
+      "exports": [
+        "AdaptationPanel"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api",
+        "react"
+      ],
+      "hash": "a2da1a5dc462c4489df02763685fbebd6fe82ec016b8dc3a7b1571839222b073",
+      "last_modified": "2026-04-05T21:12:49.637Z",
+      "size_bytes": 11775
+    },
+    {
+      "path": "src/components/AnaerobicThreshold.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component AnaerobicThreshold.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "garmin",
+        "layout",
+        "statistics",
+        "types"
+      ],
+      "exports": [
+        "AnaerobicThreshold"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api",
+        "react",
+        "recharts"
+      ],
+      "hash": "13821da9c50d59128ab38c0d001b106f98e492f9971641239571e461c65815a1",
+      "last_modified": "2026-04-17T10:01:38.565Z",
+      "size_bytes": 15188
+    },
+    {
+      "path": "src/components/BadgesGrid.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component BadgesGrid.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "layout",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "BadgesGrid"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api",
+        "../utils/cadence",
+        "lucide-react",
+        "react"
+      ],
+      "hash": "87e53039cb38200cfc8950d7e45e106d0cafc0aaec443e78f32f0be6fd84a56c",
+      "last_modified": "2026-04-22T13:30:14.119Z",
+      "size_bytes": 92325
+    },
+    {
+      "path": "src/components/CardiacDrift.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component CardiacDrift.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "garmin",
+        "layout",
+        "statistics",
+        "strava",
+        "types"
+      ],
+      "exports": [
+        "CardiacDrift"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api",
+        "react",
+        "recharts"
+      ],
+      "hash": "8b6be154ff793002f5444f545392e3b3bdcd3d4bc90e84f7919712f2c51d882c",
+      "last_modified": "2026-04-06T05:48:38.673Z",
+      "size_bytes": 11683
+    },
+    {
+      "path": "src/components/dashboard/widgetRegistry.ts",
+      "kind": "frontend-component",
+      "purpose": "React component widgetRegistry.",
+      "touch_when": [
+        "ai",
+        "dashboard",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "WIDGET_REGISTRY",
+        "WidgetMeta"
+      ],
+      "routes": [],
+      "imports": [],
+      "hash": "40002049b8e166d19a601c2f2930ca3594354471668bfc3e0ee684e7e4ef9108",
+      "last_modified": "2026-04-21T10:19:16.393Z",
+      "size_bytes": 843
+    },
+    {
+      "path": "src/components/DashboardView.tsx",
+      "kind": "frontend-view",
+      "purpose": "Page/view component for Dashboard.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "dashboard",
+        "garmin",
+        "layout",
+        "profile",
+        "statistics",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "DashboardView"
+      ],
+      "routes": [],
+      "imports": [
+        "../api",
+        "../context/LayoutContext",
+        "../hooks/useApi",
+        "../types/api",
+        "./dashboard/widgetRegistry",
+        "./GridCard",
+        "./LastRunMap",
+        "lucide-react",
+        "react",
+        "react-dom",
+        "react-grid-layout/legacy",
+        "react-i18next",
+        "react-router-dom",
+        "recharts"
+      ],
+      "hash": "547ebe996f2c611965d6afe9dd34d445350298b1e74ff7f17750e046aa183a33",
+      "last_modified": "2026-04-22T09:13:02.529Z",
+      "size_bytes": 89615
+    },
+    {
+      "path": "src/components/ErrorBoundary.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component ErrorBoundary.",
+      "touch_when": [
+        "dashboard",
+        "types"
+      ],
+      "exports": [
+        "ErrorBoundary"
+      ],
+      "routes": [],
+      "imports": [
+        "react"
+      ],
+      "hash": "78070bb156bff0d405f38ffb7d8a7a5f50b0bf48e8b3cf402d3a29f96f689898",
+      "last_modified": "2026-04-17T21:18:43.474Z",
+      "size_bytes": 1718
+    },
+    {
+      "path": "src/components/FitnessFreshness.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component FitnessFreshness.",
+      "touch_when": [
+        "ai",
+        "garmin",
+        "layout",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "FitnessFreshness"
+      ],
+      "routes": [],
+      "imports": [
+        "../api",
+        "../types/api",
+        "./statistics/ChartFullscreenModal",
+        "lucide-react",
+        "react",
+        "recharts"
+      ],
+      "hash": "d955b35d9f686ed730646692095a8c0bb082139f8db4ded8e73f4c0d72853e61",
+      "last_modified": "2026-04-17T15:27:05.013Z",
+      "size_bytes": 17404
+    },
+    {
+      "path": "src/components/GridCard.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component GridCard.",
+      "touch_when": [
+        "ai",
+        "dashboard",
+        "garmin",
+        "layout",
+        "statistics"
+      ],
+      "exports": [
+        "GridCard"
+      ],
+      "routes": [],
+      "imports": [
+        "lucide-react",
+        "react"
+      ],
+      "hash": "d8df7ff62da98bcd3c8975c20340753f591ca7fc4839f36b0a9ce3c17e09f14b",
+      "last_modified": "2026-04-21T10:20:30.939Z",
+      "size_bytes": 1938
+    },
+    {
+      "path": "src/components/JarvisOrb.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component JarvisOrb.",
+      "touch_when": [
+        "ai",
+        "types"
+      ],
+      "exports": [
+        "JarvisOrb"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/jarvis",
+        "react",
+        "three"
+      ],
+      "hash": "5ebb74ad450973cf5ed07feb0688d6267156a0a27638b97ecf366ad1039b499a",
+      "last_modified": "2026-04-04T18:22:40.166Z",
+      "size_bytes": 10492
+    },
+    {
+      "path": "src/components/JarvisOverlay.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component JarvisOverlay.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "dashboard",
+        "garmin",
+        "layout",
+        "profile",
+        "runner-dna",
+        "statistics",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "JarvisOverlay"
+      ],
+      "routes": [],
+      "imports": [
+        "../api",
+        "../hooks/useJarvis",
+        "../types/jarvis",
+        "./JarvisOrb",
+        "motion/react",
+        "react",
+        "react-dom",
+        "react-router-dom"
+      ],
+      "hash": "1036e4f5b8a3c5baf59e647edc986c07e891c8ac4cd6eb57e3c3b268b67f9ed3",
+      "last_modified": "2026-04-13T08:38:05.794Z",
+      "size_bytes": 12626
+    },
+    {
+      "path": "src/components/LastRunMap.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component LastRunMap.",
+      "touch_when": [
+        "ai",
+        "dashboard",
+        "layout",
+        "map",
+        "strava",
+        "types"
+      ],
+      "exports": [
+        "LastRunMap"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api",
+        "@mapbox/polyline",
+        "lucide-react",
+        "react",
+        "react-map-gl/mapbox"
+      ],
+      "hash": "39514963b8db1ff3a377d656525b46b5c78cb72852cbc7e075c601b5a100fe90",
+      "last_modified": "2026-04-20T19:27:01.369Z",
+      "size_bytes": 10942
+    },
+    {
+      "path": "src/components/LiveTelemetry3DMap.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component LiveTelemetry3DMap.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "layout",
+        "map",
+        "strava",
+        "types"
+      ],
+      "exports": [
+        "LiveTelemetry3DMap"
+      ],
+      "routes": [],
+      "imports": [
+        "../lib/utils",
+        "../types/api",
+        "../utils/cadence",
+        "@turf/turf",
+        "lucide-react",
+        "react",
+        "react-map-gl/mapbox"
+      ],
+      "hash": "db408890211015fdfdb1f21234473fb83bbc29fe0d6a4a4377da790edc8278ad",
+      "last_modified": "2026-04-22T13:30:02.502Z",
+      "size_bytes": 27706
+    },
+    {
+      "path": "src/components/MainChart.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component MainChart.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "garmin",
+        "layout",
+        "statistics",
+        "types"
+      ],
+      "exports": [
+        "MainChart"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api",
+        "./statistics/ChartFullscreenModal",
+        "react",
+        "recharts"
+      ],
+      "hash": "c0288c64d4a7a5e1767a13dc71da22cc960a347a9f45371ebe6fbfa9293afb0f",
+      "last_modified": "2026-04-17T15:39:28.418Z",
+      "size_bytes": 19563
+    },
+    {
+      "path": "src/components/MapFallback.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component MapFallback.",
+      "touch_when": [
+        "types"
+      ],
+      "exports": [
+        "MapFallback"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api",
+        "lucide-react"
+      ],
+      "hash": "de00e2116b6301152c917a21adc64bb25249771237ecf0cfa31df5cebc65ba87",
+      "last_modified": "2026-04-13T08:59:20.288Z",
+      "size_bytes": 1709
+    },
+    {
+      "path": "src/components/ProfileView.tsx",
+      "kind": "frontend-view",
+      "purpose": "Page/view component for Profile.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "dashboard",
+        "layout",
+        "map",
+        "profile",
+        "statistics",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "ProfileView"
+      ],
+      "routes": [],
+      "imports": [
+        "../api",
+        "../context/JarvisContext",
+        "../hooks/useApi",
+        "../types/api",
+        "lucide-react",
+        "react",
+        "react-i18next",
+        "react-map-gl/maplibre",
+        "react-router-dom"
+      ],
+      "hash": "421dbdad491645a6b68310d96ff46db28521b087cd56373c2d6e3dd34e552ce6",
+      "last_modified": "2026-04-16T18:51:23.213Z",
+      "size_bytes": 59352
+    },
+    {
+      "path": "src/components/RacePredictions.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component RacePredictions.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "garmin",
+        "layout",
+        "statistics",
+        "types"
+      ],
+      "exports": [
+        "RacePredictions"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api",
+        "lucide-react",
+        "react",
+        "recharts"
+      ],
+      "hash": "08db6cf0fae58c9fbfb7fe7d0d7a92da441c523d57397abc919d00e440d12c10",
+      "last_modified": "2026-04-17T21:23:48.077Z",
+      "size_bytes": 16436
+    },
+    {
+      "path": "src/components/RecentActivities.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component RecentActivities.",
+      "touch_when": [
+        "activities",
+        "types"
+      ],
+      "exports": [
+        "RecentActivities"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api",
+        "lucide-react",
+        "react",
+        "react-router-dom"
+      ],
+      "hash": "79503f450757c30d691272d5df6109fe9c7d77158774965401a7a356bb83b71a",
+      "last_modified": "2026-03-28T14:22:26.864Z",
+      "size_bytes": 5719
+    },
+    {
+      "path": "src/components/RoutesView.tsx",
+      "kind": "frontend-view",
+      "purpose": "Page/view component for Routes.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "garmin",
+        "layout",
+        "map",
+        "statistics",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "RoutesView"
+      ],
+      "routes": [],
+      "imports": [
+        "../api",
+        "../hooks/useApi",
+        "../lib/utils",
+        "../types/api",
+        "../utils/cadence",
+        "./LiveTelemetry3DMap",
+        "lucide-react",
+        "motion/react",
+        "react",
+        "react-i18next",
+        "react-map-gl/maplibre",
+        "recharts"
+      ],
+      "hash": "6ada40966dd0b52ab6db477d802ada5336f98c2a6d2cf1e6f6d09c765d974a67",
+      "last_modified": "2026-04-22T13:29:49.044Z",
+      "size_bytes": 37301
+    },
+    {
+      "path": "src/components/runner-dna/RunnerDnaLoading.tsx",
+      "kind": "frontend-runner-dna-component",
+      "purpose": "React component RunnerDnaLoading.",
+      "touch_when": [
+        "ai",
+        "garmin",
+        "layout",
+        "profile",
+        "runner-dna",
+        "strava"
+      ],
+      "exports": [
+        "RunnerDnaLoading"
+      ],
+      "routes": [],
+      "imports": [
+        "lucide-react",
+        "motion/react"
+      ],
+      "hash": "486db194a01e9b2d9cffcaf7e91a834e8c49e7b7fc9305d34914c411cedf1149",
+      "last_modified": "2026-04-22T19:30:15.157Z",
+      "size_bytes": 3494
+    },
+    {
+      "path": "src/components/RunnerDnaV2View.tsx",
+      "kind": "frontend-view",
+      "purpose": "Page/view component for RunnerDnaV2.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "garmin",
+        "layout",
+        "profile",
+        "runner-dna",
+        "statistics",
+        "strava",
+        "types"
+      ],
+      "exports": [
+        "RunnerDnaV2View"
+      ],
+      "routes": [],
+      "imports": [
+        "../hooks/useRunnerDnaUiModel",
+        "../utils/runnerDnaModel",
+        "./runner-dna/RunnerDnaLoading",
+        "lucide-react",
+        "motion/react",
+        "react",
+        "recharts"
+      ],
+      "hash": "aec1f562fef74c4b37a86436dc577b9238d353e5c4d9b16041d37158ad7bcfa4",
+      "last_modified": "2026-04-22T20:16:14.173Z",
+      "size_bytes": 42859
+    },
+    {
+      "path": "src/components/RunnerDnaView.tsx",
+      "kind": "frontend-view",
+      "purpose": "Page/view component for RunnerDna.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "garmin",
+        "layout",
+        "profile",
+        "runner-dna",
+        "statistics"
+      ],
+      "exports": [
+        "RunnerDnaView"
+      ],
+      "routes": [],
+      "imports": [
+        "../api",
+        "lucide-react",
+        "react",
+        "react-i18next"
+      ],
+      "hash": "b7788f31611256b5be047ab2da39f3f0336dd3666a9086acbe6930babea11183",
+      "last_modified": "2026-04-22T19:14:37.681Z",
+      "size_bytes": 45328
+    },
+    {
+      "path": "src/components/SettingsControls.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component SettingsControls.",
+      "touch_when": [
+        "dashboard"
+      ],
+      "exports": [
+        "SettingsControls"
+      ],
+      "routes": [],
+      "imports": [
+        "../i18n",
+        "lucide-react",
+        "react-i18next"
+      ],
+      "hash": "9f099f71cdfb92bde0f734b1815768cdde46b26546340ff3dffe33eec1b2c7eb",
+      "last_modified": "2026-04-16T18:51:23.215Z",
+      "size_bytes": 1456
+    },
+    {
+      "path": "src/components/Sidebar.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component Sidebar.",
+      "touch_when": [
+        "ai",
+        "dashboard",
+        "garmin",
+        "layout",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "Sidebar"
+      ],
+      "routes": [],
+      "imports": [
+        "lucide-react",
+        "react-i18next"
+      ],
+      "hash": "721964373a3ff0d5535d6b88862d368e9c28c11ab3f7c0a883c9c814e167cd45",
+      "last_modified": "2026-04-20T04:32:15.247Z",
+      "size_bytes": 6436
+    },
+    {
+      "path": "src/components/statistics/AnalyticsV2.tsx",
+      "kind": "frontend-statistics-component",
+      "purpose": "React component AnalyticsV2.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "dashboard",
+        "garmin",
+        "layout",
+        "profile",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "AnalyticsV2"
+      ],
+      "routes": [],
+      "imports": [
+        "../../api",
+        "../../types/api",
+        "../../utils/cadence",
+        "./ChartFullscreenModal",
+        "lucide-react",
+        "react",
+        "react-i18next",
+        "recharts"
+      ],
+      "hash": "0a7e3fdefc79e31fdce5f9054ef3759e7d94c558d2d6563f0953ff9a81e30da6",
+      "last_modified": "2026-04-22T13:37:05.392Z",
+      "size_bytes": 151594
+    },
+    {
+      "path": "src/components/statistics/AnalyticsV3.tsx",
+      "kind": "frontend-statistics-component",
+      "purpose": "React component AnalyticsV3.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "dashboard",
+        "garmin",
+        "layout",
+        "profile",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "AnalyticsV3"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "./ChartFullscreenModal",
+        "lucide-react",
+        "motion/react",
+        "react",
+        "recharts"
+      ],
+      "hash": "33654a6a5e48395f48438ce3ef684e55290477b691c6e66aeab7ff6f0c179862",
+      "last_modified": "2026-04-22T21:01:12.952Z",
+      "size_bytes": 51883
+    },
+    {
+      "path": "src/components/statistics/AnalyticsV4.tsx",
+      "kind": "frontend-statistics-component",
+      "purpose": "React component AnalyticsV4.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "dashboard",
+        "garmin",
+        "layout",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "AnalyticsV4",
+        "AnalyticsV4CadenceSpeedMatrix",
+        "AnalyticsV4PaceZoneDistribution"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "./ChartFullscreenModal",
+        "react",
+        "recharts"
+      ],
+      "hash": "9f2938c00dcea1909e02521a191384f9cb7fd04f61c3dfa368f4181d0a214a79",
+      "last_modified": "2026-04-18T17:50:54.657Z",
+      "size_bytes": 35045
+    },
+    {
+      "path": "src/components/statistics/AnalyticsV5.tsx",
+      "kind": "frontend-statistics-component",
+      "purpose": "React component AnalyticsV5.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "garmin",
+        "layout",
+        "profile",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "AnalyticsV5",
+        "AnalyticsV5BestEffortsProgression",
+        "AnalyticsV5EffortMatrix",
+        "AnalyticsV5PaceDistributionBell"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "./ChartFullscreenModal",
+        "react",
+        "recharts"
+      ],
+      "hash": "7a2a46f125111e0c537c72412168e4a97fd9e7b894b61672828c612e1a685341",
+      "last_modified": "2026-04-19T05:31:55.765Z",
+      "size_bytes": 45455
+    },
+    {
+      "path": "src/components/statistics/ChartFullscreenModal.tsx",
+      "kind": "frontend-statistics-component",
+      "purpose": "React component ChartFullscreenModal.",
+      "touch_when": [
+        "ai",
+        "statistics",
+        "types"
+      ],
+      "exports": [
+        "ChartExpandButton",
+        "ChartFullscreenModal"
+      ],
+      "routes": [],
+      "imports": [
+        "lucide-react",
+        "react"
+      ],
+      "hash": "5512ce4ae16c54e2852bb2a4f91cd36b1315a2953cf5858e071a77e067398a50",
+      "last_modified": "2026-04-17T15:22:31.826Z",
+      "size_bytes": 2146
+    },
+    {
+      "path": "src/components/statistics/StatisticsView.tsx",
+      "kind": "frontend-statistics-component",
+      "purpose": "React component StatisticsView.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "cadence",
+        "dashboard",
+        "garmin",
+        "layout",
+        "map",
+        "profile",
+        "statistics",
+        "strava",
+        "training"
+      ],
+      "exports": [
+        "StatisticsView"
+      ],
+      "routes": [],
+      "imports": [
+        "../../api",
+        "../../hooks/useApi",
+        "../../types/api",
+        "../../utils/cadence",
+        "../AnaerobicThreshold",
+        "../BadgesGrid",
+        "../FitnessFreshness",
+        "../MainChart",
+        "./AnalyticsV2",
+        "./AnalyticsV3",
+        "./AnalyticsV4",
+        "./AnalyticsV5",
+        "./ChartFullscreenModal",
+        "./StatsDrift",
+        "lucide-react",
+        "react",
+        "react-i18next",
+        "recharts"
+      ],
+      "hash": "9c0fe6eb1a5dc82ea5283008b56651393de7322f8b26f6bfaeb5b93eee072500",
+      "last_modified": "2026-04-22T13:30:25.919Z",
+      "size_bytes": 106756
+    },
+    {
+      "path": "src/components/statistics/StatsCalc.tsx",
+      "kind": "frontend-statistics-component",
+      "purpose": "React component StatsCalc.",
+      "touch_when": [
+        "ai",
+        "layout",
+        "statistics",
+        "training"
+      ],
+      "exports": [
+        "StatsCalc"
+      ],
+      "routes": [],
+      "imports": [
+        "lucide-react",
+        "recharts"
+      ],
+      "hash": "0c42c64127b04d28c2bd601744efc8c8244a29d81f4dcfa08104747eca5d9225",
+      "last_modified": "2026-03-27T18:57:02.550Z",
+      "size_bytes": 12913
+    },
+    {
+      "path": "src/components/statistics/StatsDrift.tsx",
+      "kind": "frontend-statistics-component",
+      "purpose": "React component StatsDrift.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "garmin",
+        "layout",
+        "statistics",
+        "strava",
+        "types"
+      ],
+      "exports": [
+        "StatsDrift"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "../../utils/cardiacDrift",
+        "./ChartFullscreenModal",
+        "react",
+        "recharts"
+      ],
+      "hash": "9b62f2f1e882ac3c784eae73232b9387bbe68bb9775030cb934bb8ccaf2cb7d6",
+      "last_modified": "2026-04-17T15:30:34.920Z",
+      "size_bytes": 17578
+    },
+    {
+      "path": "src/components/statistics/StatsProgress.tsx",
+      "kind": "frontend-statistics-component",
+      "purpose": "React component StatsProgress.",
+      "touch_when": [
+        "ai",
+        "cadence",
+        "garmin",
+        "layout",
+        "statistics"
+      ],
+      "exports": [
+        "StatsProgress"
+      ],
+      "routes": [],
+      "imports": [
+        "lucide-react",
+        "recharts"
+      ],
+      "hash": "b1edcbf8543a6c5b1c8f02c75159a537b2db6fa1060d86d10d0b32d9107df07d",
+      "last_modified": "2026-04-06T21:18:05.829Z",
+      "size_bytes": 13675
+    },
+    {
+      "path": "src/components/statistics/StatsRisk.tsx",
+      "kind": "frontend-statistics-component",
+      "purpose": "React component StatsRisk.",
+      "touch_when": [
+        "ai",
+        "garmin",
+        "layout",
+        "statistics"
+      ],
+      "exports": [
+        "StatsRisk"
+      ],
+      "routes": [],
+      "imports": [
+        "lucide-react",
+        "recharts"
+      ],
+      "hash": "0df8bb89267ab8c5ac270efa89c17b665356d4e307715473e77ddecd08a7b16c",
+      "last_modified": "2026-03-27T18:28:13.141Z",
+      "size_bytes": 9421
+    },
+    {
+      "path": "src/components/SupercompensationChart.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component SupercompensationChart.",
+      "touch_when": [
+        "ai",
+        "garmin",
+        "layout",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "SupercompensationChart"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api",
+        "lucide-react",
+        "react",
+        "recharts"
+      ],
+      "hash": "5fde989616e4a946ecb5d312497ae3d236fe494aa4cc49c2f6c14017aad9a038",
+      "last_modified": "2026-04-05T20:59:12.303Z",
+      "size_bytes": 11604
+    },
+    {
+      "path": "src/components/TopStats.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component TopStats.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "statistics",
+        "types"
+      ],
+      "exports": [
+        "TopStats"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api",
+        "react",
+        "recharts"
+      ],
+      "hash": "4107fafdd1b6d1b6b042e0f06c7eb8383e29ada54d47cb2a3a663bcd6ad8ebce",
+      "last_modified": "2026-04-05T08:56:27.358Z",
+      "size_bytes": 5205
+    },
+    {
+      "path": "src/components/TrailRunView.tsx",
+      "kind": "frontend-view",
+      "purpose": "Page/view component for TrailRun.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "garmin",
+        "layout",
+        "map",
+        "profile",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "TrailRunView"
+      ],
+      "routes": [],
+      "imports": [
+        "lucide-react",
+        "motion/react",
+        "react",
+        "react-map-gl/mapbox",
+        "recharts"
+      ],
+      "hash": "873c16f0e89367f82d8f566a50b59f03e97e1473cb66ca9bb61f12f2d32b1f93",
+      "last_modified": "2026-04-08T19:16:52.323Z",
+      "size_bytes": 55613
+    },
+    {
+      "path": "src/components/TrainingGrid.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component TrainingGrid.",
+      "touch_when": [
+        "ai",
+        "layout",
+        "profile",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "TrainingGrid"
+      ],
+      "routes": [],
+      "imports": [
+        "../api",
+        "../hooks/useApi",
+        "../types/api",
+        "lucide-react",
+        "react"
+      ],
+      "hash": "d5b9bbd2e753b95ea10cad6fa28306c7048b9023c00a8cadf473816f355610d3",
+      "last_modified": "2026-04-22T11:29:58.982Z",
+      "size_bytes": 74887
+    },
+    {
+      "path": "src/components/TrainingSidebar.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component TrainingSidebar.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "layout",
+        "profile",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "TrainingSidebar"
+      ],
+      "routes": [],
+      "imports": [
+        "../api",
+        "../hooks/useApi",
+        "../types/api",
+        "lucide-react",
+        "react",
+        "recharts"
+      ],
+      "hash": "64aeba04a80a73af79266f02e7bee3eb2d40e6b3c4150b2d01de30104832ef12",
+      "last_modified": "2026-03-29T17:28:32.947Z",
+      "size_bytes": 10315
+    },
+    {
+      "path": "src/components/TrainingView.tsx",
+      "kind": "frontend-view",
+      "purpose": "Page/view component for Training.",
+      "touch_when": [
+        "ai",
+        "layout",
+        "training"
+      ],
+      "exports": [
+        "TrainingView"
+      ],
+      "routes": [],
+      "imports": [
+        "./TrainingGrid",
+        "./TrainingSidebar"
+      ],
+      "hash": "6a67dfaddd8c70bd77aab49e8fdd2df651b37892da64d1d383d344e096df8d34",
+      "last_modified": "2026-03-27T18:28:13.140Z",
+      "size_bytes": 562
+    },
+    {
+      "path": "src/components/VO2MaxChart.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component VO2MaxChart.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "garmin",
+        "layout",
+        "statistics",
+        "types"
+      ],
+      "exports": [
+        "VO2MaxChart"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api",
+        "react",
+        "recharts"
+      ],
+      "hash": "bcdd60acd1ece2089a6c743c40e01cde5d3ec05df894c467c443c05d93a367c1",
+      "last_modified": "2026-04-16T19:50:46.363Z",
+      "size_bytes": 12430
+    },
+    {
+      "path": "src/components/WeeklyStatsPanel.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component WeeklyStatsPanel.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "statistics",
+        "types"
+      ],
+      "exports": [
+        "WeeklyStatsPanel"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api",
+        "react",
+        "recharts"
+      ],
+      "hash": "ad6c605d7d414df3da4233eda1f1e61e1eb680b5dfebb64e10533175b12d986f",
+      "last_modified": "2026-04-16T18:34:31.234Z",
+      "size_bytes": 5623
+    },
+    {
+      "path": "src/context/JarvisContext.tsx",
+      "kind": "frontend-context",
+      "purpose": "frontend-context JarvisContext.tsx.",
+      "touch_when": [
+        "ai",
+        "types"
+      ],
+      "exports": [
+        "JarvisProvider",
+        "useJarvisContext"
+      ],
+      "routes": [],
+      "imports": [
+        "../components/JarvisOverlay",
+        "react"
+      ],
+      "hash": "b46ebfaa02d413f57ca278d582155492788fbfad701d1c67558903e39797c871",
+      "last_modified": "2026-04-07T14:55:42.550Z",
+      "size_bytes": 825
+    },
+    {
+      "path": "src/context/LayoutContext.tsx",
+      "kind": "frontend-context",
+      "purpose": "frontend-context LayoutContext.tsx.",
+      "touch_when": [
+        "ai",
+        "dashboard",
+        "layout",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "DEFAULT_LAYOUTS",
+        "Layout",
+        "LayoutProvider",
+        "Layouts",
+        "useLayout"
+      ],
+      "routes": [],
+      "imports": [
+        "../api",
+        "react"
+      ],
+      "hash": "215f2b3086601b4dc9d941d9888b32a3b6d9d0adeb8e1d16fd2bef206b22a74d",
+      "last_modified": "2026-04-21T10:19:53.901Z",
+      "size_bytes": 9425
+    },
+    {
+      "path": "src/context/ThemeContext.tsx",
+      "kind": "frontend-context",
+      "purpose": "frontend-context ThemeContext.tsx.",
+      "touch_when": [
+        "types"
+      ],
+      "exports": [
+        "Theme",
+        "ThemeProvider",
+        "useTheme"
+      ],
+      "routes": [],
+      "imports": [
+        "react"
+      ],
+      "hash": "4360a95a9be53a097ccc4b3bd6ae8a4338dc66b619757aa6379f5bcce2d925f0",
+      "last_modified": "2026-04-16T18:51:23.217Z",
+      "size_bytes": 1295
+    },
+    {
+      "path": "src/hooks/useApi.ts",
+      "kind": "frontend-hook",
+      "purpose": "React hook exporting useApi.",
+      "touch_when": [
+        "api",
+        "types"
+      ],
+      "exports": [
+        "useApi"
+      ],
+      "routes": [],
+      "imports": [
+        "react"
+      ],
+      "hash": "06cb732eb1ba481dfd4bf5c25f187fb6c4c3983ad734a0a8f8ffca2060a99c4d",
+      "last_modified": "2026-04-13T08:34:26.755Z",
+      "size_bytes": 1008
+    },
+    {
+      "path": "src/hooks/useJarvis.ts",
+      "kind": "frontend-hook",
+      "purpose": "React hook exporting useJarvis.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "dashboard",
+        "profile",
+        "runner-dna",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "useJarvis"
+      ],
+      "routes": [],
+      "imports": [
+        "../api",
+        "../types/jarvis",
+        "react"
+      ],
+      "hash": "c9019c3438c2b66ee8a4b0b45fffe3f3f57c5a85f8ede93343e24e028d8fbb8e",
+      "last_modified": "2026-04-17T21:23:20.969Z",
+      "size_bytes": 21160
+    },
+    {
+      "path": "src/hooks/useRunnerDnaUiModel.ts",
+      "kind": "frontend-hook",
+      "purpose": "Hook that loads Runner DNA, profile and best efforts, handles cache clearing and builds the V2 UI model.",
+      "touch_when": [
+        "ai",
+        "profile",
+        "runner-dna",
+        "types"
+      ],
+      "exports": [
+        "useRunnerDnaUiModel"
+      ],
+      "routes": [],
+      "imports": [
+        "../api",
+        "../types/api",
+        "../utils/runnerDnaModel",
+        "react"
+      ],
+      "hash": "bfb48e25e2030e12781104d3d64617a247f9abd84bf91db62530da8c239300cd",
+      "last_modified": "2026-04-22T20:03:20.078Z",
+      "size_bytes": 2279
+    },
+    {
+      "path": "src/i18n/index.ts",
+      "kind": "frontend-i18n",
+      "purpose": "frontend-i18n index.ts.",
+      "touch_when": [],
+      "exports": [
+        "getLanguage",
+        "setLanguage"
+      ],
+      "routes": [],
+      "imports": [
+        "./translations",
+        "i18next",
+        "react-i18next"
+      ],
+      "hash": "0e9dc36fc16acfa014a1d6889d0b7f588974e7d3d319255e60e0543b35e32897",
+      "last_modified": "2026-04-16T18:51:23.217Z",
+      "size_bytes": 991
+    },
+    {
+      "path": "src/i18n/translations.ts",
+      "kind": "frontend-i18n",
+      "purpose": "frontend-i18n translations.ts.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "dashboard",
+        "layout",
+        "profile",
+        "runner-dna",
+        "statistics",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "Language",
+        "TranslationKeys",
+        "translations"
+      ],
+      "routes": [],
+      "imports": [],
+      "hash": "2310b6c35474245ebed6f75331a79a93f7b9161c3f6cb414fc6d40acddc4a944",
+      "last_modified": "2026-04-20T04:32:15.246Z",
+      "size_bytes": 16143
+    },
+    {
+      "path": "src/index.css",
+      "kind": "frontend-source",
+      "purpose": "frontend-source index.css.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "layout",
+        "map",
+        "statistics"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "e1472939f1d3a4fdd2e71c06e56183b95548f21974966654873ad8768dcc4e61",
+      "last_modified": "2026-04-21T05:05:28.779Z",
+      "size_bytes": 4810
+    },
+    {
+      "path": "src/lib/utils.ts",
+      "kind": "frontend-source",
+      "purpose": "frontend-source utils.ts.",
+      "touch_when": [
+        "ai",
+        "types"
+      ],
+      "exports": [
+        "cn"
+      ],
+      "routes": [],
+      "imports": [
+        "clsx",
+        "tailwind-merge"
+      ],
+      "hash": "d1f1e0d62cb8d8d1e04c26e14de842d8a151f75812d81b046c65b5d1fe8e4b27",
+      "last_modified": "2026-03-27T18:28:13.142Z",
+      "size_bytes": 175
+    },
+    {
+      "path": "src/main.tsx",
+      "kind": "frontend-source",
+      "purpose": "frontend-source main.tsx.",
+      "touch_when": [
+        "ai"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "./App.tsx",
+        "./context/ThemeContext",
+        "react",
+        "react-dom/client",
+        "react-router-dom"
+      ],
+      "hash": "edcc868c5fd44b05bc5b756ab21cb861c920b8c5704669190fb9ef8d9f15f536",
+      "last_modified": "2026-04-16T18:51:23.218Z",
+      "size_bytes": 465
+    },
+    {
+      "path": "src/types/api.ts",
+      "kind": "frontend-types",
+      "purpose": "Shared TypeScript contracts for API responses and domain entities.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "cadence",
+        "dashboard",
+        "garmin",
+        "map",
+        "profile",
+        "statistics",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "AdaptAdaptation",
+        "AdaptationKey",
+        "AdaptationType",
+        "AdaptResponse",
+        "AnalyticsResponse",
+        "Badge",
+        "BadgesResponse",
+        "BestEffort",
+        "BestEffortsResponse",
+        "CurrentFF",
+        "DashboardResponse",
+        "FitnessFreshnessPoint",
+        "FitnessFreshnessResponse",
+        "GarminCsvLinkResult",
+        "GoalGap",
+        "HeatmapPoint",
+        "HeatmapResponse",
+        "InjuryRiskResponse",
+        "PB",
+        "PlanFeedback",
+        "ProAnalyticsChart",
+        "ProAnalyticsQuality",
+        "ProAnalyticsResponse",
+        "ProAnalyticsSection",
+        "Profile",
+        "RecoveryScoreResponse",
+        "Run",
+        "RunnerDnaBreakdownScore",
+        "RunnerDnaResponse",
+        "RunsResponse",
+        "Session",
+        "Split",
+        "StrengthExercise",
+        "SupercompensationAdaptationTotal",
+        "SupercompensationInvestment",
+        "SupercompensationProjectionPoint",
+        "SupercompensationResponse",
+        "SupercompensationRun",
+        "TrainingPlanResponse",
+        "TrainingWeek",
+        "VdotPacesResponse",
+        "ZonePoint"
+      ],
+      "routes": [],
+      "imports": [],
+      "hash": "cf080d0179f2a16b1e7a4ff94dc70cac8f7ddd8f84e7444637be89c7cb749805",
+      "last_modified": "2026-04-22T13:35:51.903Z",
+      "size_bytes": 13230
+    },
+    {
+      "path": "src/types/jarvis.ts",
+      "kind": "frontend-types",
+      "purpose": "TypeScript type module exporting JarvisAction, JarvisActionType, JarvisDisplayMode, JarvisResponse, OrbState.",
+      "touch_when": [
+        "ai",
+        "garmin",
+        "strava",
+        "types"
+      ],
+      "exports": [
+        "JarvisAction",
+        "JarvisActionType",
+        "JarvisDisplayMode",
+        "JarvisResponse",
+        "OrbState"
+      ],
+      "routes": [],
+      "imports": [],
+      "hash": "57e762e7860186a5e5fd5fc76bf4cff3a35af0785f7724ddc7610ad119be61a5",
+      "last_modified": "2026-04-04T18:22:40.167Z",
+      "size_bytes": 567
+    },
+    {
+      "path": "src/utils/cadence.ts",
+      "kind": "frontend-utility",
+      "purpose": "Frontend cadence normalization helpers, returning canonical steps per minute.",
+      "touch_when": [
+        "cadence",
+        "statistics",
+        "types"
+      ],
+      "exports": [
+        "cadenceSpmFromRun",
+        "normaliseCadenceSpm"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api"
+      ],
+      "hash": "a925fe4276c78f9beb5dd86a3fab88d6129b8516199d74d2fb832400c453f931",
+      "last_modified": "2026-04-22T13:28:22.172Z",
+      "size_bytes": 731
+    },
+    {
+      "path": "src/utils/cardiacDrift.ts",
+      "kind": "frontend-utility",
+      "purpose": "Shared utility module exporting computeDrift, driftLabel, DriftResult.",
+      "touch_when": [
+        "activities",
+        "types"
+      ],
+      "exports": [
+        "computeDrift",
+        "driftLabel",
+        "DriftResult"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api"
+      ],
+      "hash": "2f90554dec32da9fb6ffe37a0c41de34ce78145e287c59d450a3fb6f711c35bb",
+      "last_modified": "2026-04-06T09:52:27.463Z",
+      "size_bytes": 3275
+    },
+    {
+      "path": "src/utils/runnerDnaModel.ts",
+      "kind": "frontend-utility",
+      "purpose": "Adapter that turns real Runner DNA/profile/best-efforts data into the Runner DNA V2 UI model.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "garmin",
+        "profile",
+        "runner-dna",
+        "statistics",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "buildRunnerDnaUiModel",
+        "displayNumber",
+        "formatRaceTime",
+        "getRunnerDnaRank",
+        "paceToSeconds",
+        "RunnerDnaBiomechanicMetric",
+        "RunnerDnaDistanceTalent",
+        "RunnerDnaEvolutionPoint",
+        "RunnerDnaRank",
+        "RunnerDnaScoreItem",
+        "RunnerDnaUiModel",
+        "secondsToPace"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api"
+      ],
+      "hash": "7ee1a7a5cab759c7956578740eb193a32755f4eeb4e242d7ad0aca988a08d5e9",
+      "last_modified": "2026-04-22T20:07:53.480Z",
+      "size_bytes": 27699
+    },
+    {
+      "path": "tsconfig.json",
+      "kind": "config",
+      "purpose": "Project configuration file tsconfig.json.",
+      "touch_when": [],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "e93e15c3794e43a117964ea191ae985cbedea70c41d3d82b2e20aa8d07374fe4",
+      "last_modified": "2026-03-27T18:28:13.142Z",
+      "size_bytes": 534
+    },
+    {
+      "path": "vite.config.ts",
+      "kind": "config-or-tooling",
+      "purpose": "config-or-tooling vite.config.ts.",
+      "touch_when": [
+        "ai"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "@tailwindcss/vite",
+        "@vitejs/plugin-react",
+        "path",
+        "vite"
+      ],
+      "hash": "36dc668d5acdd80c4aeb3c40c95e311d8eba8512af283cb9344355caa8269f4c",
+      "last_modified": "2026-04-05T05:12:03.616Z",
+      "size_bytes": 729
+    }
+  ],
+  "api_routes": [
+    {
+      "method": "GET",
+      "path": "/",
+      "handler": "health",
+      "file": "backend/server.py",
+      "line": 339
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/backfill-dynamics",
+      "handler": "backfill_dynamics",
+      "file": "backend/server.py",
+      "line": 5972
+    },
+    {
+      "method": "POST",
+      "path": "/api/ai/analyze-run",
+      "handler": "analyze_run",
+      "file": "backend/server.py",
+      "line": 4782
+    },
+    {
+      "method": "GET",
+      "path": "/api/ai/dashboard-insight",
+      "handler": "get_dashboard_insight",
+      "file": "backend/server.py",
+      "line": 4889
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics",
+      "handler": "get_analytics",
+      "file": "backend/server.py",
+      "line": 4125
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/pro",
+      "handler": "get_pro_analytics",
+      "file": "backend/server.py",
+      "line": 3966
+    },
+    {
+      "method": "GET",
+      "path": "/api/badges",
+      "handler": "get_badges",
+      "file": "backend/server.py",
+      "line": 4527
+    },
+    {
+      "method": "GET",
+      "path": "/api/best-efforts",
+      "handler": "get_best_efforts",
+      "file": "backend/server.py",
+      "line": 4695
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard",
+      "handler": "get_dashboard",
+      "file": "backend/server.py",
+      "line": 906
+    },
+    {
+      "method": "GET",
+      "path": "/api/fitness-freshness",
+      "handler": "get_fitness_freshness",
+      "file": "backend/server.py",
+      "line": 2846
+    },
+    {
+      "method": "POST",
+      "path": "/api/fitness-freshness/recalculate",
+      "handler": "recalculate_fitness_freshness",
+      "file": "backend/server.py",
+      "line": 2891
+    },
+    {
+      "method": "GET",
+      "path": "/api/garmin/auth-start",
+      "handler": "garmin_auth_start",
+      "file": "backend/server.py",
+      "line": 6203
+    },
+    {
+      "method": "GET",
+      "path": "/api/garmin/csv-data",
+      "handler": "get_garmin_csv_data",
+      "file": "backend/server.py",
+      "line": 7394
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/garmin/csv-data/{doc_id}",
+      "handler": "delete_garmin_csv_data",
+      "file": "backend/server.py",
+      "line": 7413
+    },
+    {
+      "method": "POST",
+      "path": "/api/garmin/csv-import",
+      "handler": "garmin_csv_import",
+      "file": "backend/server.py",
+      "line": 7213
+    },
+    {
+      "method": "POST",
+      "path": "/api/garmin/csv-link",
+      "handler": "garmin_csv_link",
+      "file": "backend/server.py",
+      "line": 7385
+    },
+    {
+      "method": "POST",
+      "path": "/api/garmin/exchange-ticket",
+      "handler": "garmin_exchange_ticket",
+      "file": "backend/server.py",
+      "line": 6226
+    },
+    {
+      "method": "GET",
+      "path": "/api/garmin/gct-analysis",
+      "handler": "get_gct_analysis",
+      "file": "backend/server.py",
+      "line": 7436
+    },
+    {
+      "method": "POST",
+      "path": "/api/garmin/login",
+      "handler": "garmin_login_direct",
+      "file": "backend/server.py",
+      "line": 6179
+    },
+    {
+      "method": "POST",
+      "path": "/api/garmin/save-token",
+      "handler": "garmin_save_token",
+      "file": "backend/server.py",
+      "line": 6147
+    },
+    {
+      "method": "GET",
+      "path": "/api/garmin/status",
+      "handler": "garmin_status",
+      "file": "backend/server.py",
+      "line": 6136
+    },
+    {
+      "method": "POST",
+      "path": "/api/garmin/sync-all",
+      "handler": "garmin_sync_all",
+      "file": "backend/server.py",
+      "line": 6463
+    },
+    {
+      "method": "POST",
+      "path": "/api/garmin/sync",
+      "handler": "garmin_sync",
+      "file": "backend/server.py",
+      "line": 6311
+    },
+    {
+      "method": "GET",
+      "path": "/api/heatmap",
+      "handler": "get_heatmap",
+      "file": "backend/server.py",
+      "line": 4765
+    },
+    {
+      "method": "GET",
+      "path": "/api/injury-risk",
+      "handler": "get_injury_risk",
+      "file": "backend/server.py",
+      "line": 4248
+    },
+    {
+      "method": "POST",
+      "path": "/api/jarvis/chat",
+      "handler": "jarvis_chat",
+      "file": "backend/server.py",
+      "line": 6521
+    },
+    {
+      "method": "GET",
+      "path": "/api/prediction-history",
+      "handler": "get_prediction_history",
+      "file": "backend/server.py",
+      "line": 4184
+    },
+    {
+      "method": "GET",
+      "path": "/api/profile",
+      "handler": "get_profile",
+      "file": "backend/server.py",
+      "line": 806
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/profile",
+      "handler": "update_profile",
+      "file": "backend/server.py",
+      "line": 816
+    },
+    {
+      "method": "POST",
+      "path": "/api/recovery-checkin",
+      "handler": "post_recovery_checkin",
+      "file": "backend/server.py",
+      "line": 4294
+    },
+    {
+      "method": "GET",
+      "path": "/api/recovery-score",
+      "handler": "get_recovery_score",
+      "file": "backend/server.py",
+      "line": 4231
+    },
+    {
+      "method": "GET",
+      "path": "/api/runner-dna-legacy",
+      "handler": "get_runner_dna_legacy",
+      "file": "backend/server.py",
+      "line": 5598
+    },
+    {
+      "method": "GET",
+      "path": "/api/runner-dna",
+      "handler": "get_runner_dna",
+      "file": "backend/server.py",
+      "line": 5316
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/runner-dna/cache",
+      "handler": "clear_runner_dna_cache",
+      "file": "backend/server.py",
+      "line": 5927
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs",
+      "handler": "get_runs",
+      "file": "backend/server.py",
+      "line": 866
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}",
+      "handler": "get_run",
+      "file": "backend/server.py",
+      "line": 878
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/{run_id}/splits",
+      "handler": "get_run_splits",
+      "file": "backend/server.py",
+      "line": 890
+    },
+    {
+      "method": "GET",
+      "path": "/api/strava/auth-url",
+      "handler": "strava_auth_url",
+      "file": "backend/server.py",
+      "line": 358
+    },
+    {
+      "method": "GET",
+      "path": "/api/strava/callback",
+      "handler": "strava_callback",
+      "file": "backend/server.py",
+      "line": 371
+    },
+    {
+      "method": "POST",
+      "path": "/api/strava/exchange-code",
+      "handler": "strava_exchange_code",
+      "file": "backend/server.py",
+      "line": 384
+    },
+    {
+      "method": "POST",
+      "path": "/api/strava/sync",
+      "handler": "strava_sync",
+      "file": "backend/server.py",
+      "line": 584
+    },
+    {
+      "method": "GET",
+      "path": "/api/supercompensation",
+      "handler": "get_supercompensation",
+      "file": "backend/server.py",
+      "line": 4306
+    },
+    {
+      "method": "GET",
+      "path": "/api/test-ai",
+      "handler": "test_ai_connection",
+      "file": "backend/server.py",
+      "line": 5936
+    },
+    {
+      "method": "GET",
+      "path": "/api/training-plan",
+      "handler": "get_training_plan",
+      "file": "backend/server.py",
+      "line": 975
+    },
+    {
+      "method": "POST",
+      "path": "/api/training-plan/adapt",
+      "handler": "adapt_training_plan",
+      "file": "backend/server.py",
+      "line": 2190
+    },
+    {
+      "method": "GET",
+      "path": "/api/training-plan/current",
+      "handler": "get_current_week",
+      "file": "backend/server.py",
+      "line": 984
+    },
+    {
+      "method": "POST",
+      "path": "/api/training-plan/evaluate-test",
+      "handler": "evaluate_test",
+      "file": "backend/server.py",
+      "line": 2065
+    },
+    {
+      "method": "POST",
+      "path": "/api/training-plan/generate",
+      "handler": "generate_training_plan",
+      "file": "backend/server.py",
+      "line": 1872
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/training-plan/session/complete",
+      "handler": "toggle_session_complete",
+      "file": "backend/server.py",
+      "line": 1000
+    },
+    {
+      "method": "GET",
+      "path": "/api/user/layout",
+      "handler": "get_user_layout",
+      "file": "backend/server.py",
+      "line": 832
+    },
+    {
+      "method": "PUT",
+      "path": "/api/user/layout",
+      "handler": "put_user_layout",
+      "file": "backend/server.py",
+      "line": 848
+    },
+    {
+      "method": "GET",
+      "path": "/api/vdot/paces",
+      "handler": "get_vdot_paces",
+      "file": "backend/server.py",
+      "line": 4191
+    },
+    {
+      "method": "GET",
+      "path": "/api/version",
+      "handler": "api_version",
+      "file": "backend/server.py",
+      "line": 344
+    },
+    {
+      "method": "GET",
+      "path": "/api/weekly-history",
+      "handler": "get_weekly_history",
+      "file": "backend/server.py",
+      "line": 4589
+    },
+    {
+      "method": "GET",
+      "path": "/api/weekly-report",
+      "handler": "get_weekly_report",
+      "file": "backend/server.py",
+      "line": 4564
+    }
+  ],
+  "frontend_routes": [
+    {
+      "path": "*",
+      "element": "ComingSoonView",
+      "file": "src/App.tsx",
+      "line": 193
+    },
+    {
+      "path": "/",
+      "element": "DashboardView",
+      "file": "src/App.tsx",
+      "line": 182
+    },
+    {
+      "path": "/activities",
+      "element": "ActivitiesView",
+      "file": "src/App.tsx",
+      "line": 183
+    },
+    {
+      "path": "/activities/:runId",
+      "element": "RoutesViewWrapper",
+      "file": "src/App.tsx",
+      "line": 184
+    },
+    {
+      "path": "/biometrics",
+      "element": "ComingSoonView",
+      "file": "src/App.tsx",
+      "line": 191
+    },
+    {
+      "path": "/insights",
+      "element": "ComingSoonView",
+      "file": "src/App.tsx",
+      "line": 192
+    },
+    {
+      "path": "/profile",
+      "element": "ProfileView",
+      "file": "src/App.tsx",
+      "line": 189
+    },
+    {
+      "path": "/recovery",
+      "element": "ComingSoonView",
+      "file": "src/App.tsx",
+      "line": 190
+    },
+    {
+      "path": "/runner-dna",
+      "element": "RunnerDnaView",
+      "file": "src/App.tsx",
+      "line": 186
+    },
+    {
+      "path": "/runner-dna-v2",
+      "element": "RunnerDnaV2View",
+      "file": "src/App.tsx",
+      "line": 187
+    },
+    {
+      "path": "/statistics",
+      "element": "StatisticsView",
+      "file": "src/App.tsx",
+      "line": 188
+    },
+    {
+      "path": "/training",
+      "element": "TrainingView",
+      "file": "src/App.tsx",
+      "line": 185
+    }
+  ],
+  "api_clients": [
+    {
+      "name": "adaptTrainingPlan",
+      "method": "POST",
+      "path": "/api/training-plan/adapt",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "analyzeRun",
+      "method": "POST",
+      "path": "/api/ai/analyze-run",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "clearRunnerDnaCache",
+      "method": "DELETE",
+      "path": "/api/runner-dna/cache",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "deleteGarminCsvData",
+      "method": "DELETE",
+      "path": "/api/garmin/csv-data/${docId}",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "evaluateTest",
+      "method": "POST",
+      "path": "/api/training-plan/evaluate-test",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "exchangeGarminTicket",
+      "method": "POST",
+      "path": "/api/garmin/exchange-ticket",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "exchangeStravaCode",
+      "method": "POST",
+      "path": "/api/strava/exchange-code",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "generateTrainingPlan",
+      "method": "POST",
+      "path": "/api/training-plan/generate",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getAnalytics",
+      "method": "GET",
+      "path": "/api/analytics",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getBadges",
+      "method": "GET",
+      "path": "/api/badges",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getBestEfforts",
+      "method": "GET",
+      "path": "/api/best-efforts",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getCurrentWeek",
+      "method": "GET",
+      "path": "/api/training-plan/current",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getDashboard",
+      "method": "GET",
+      "path": "/api/dashboard",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getDashboardInsight",
+      "method": "GET",
+      "path": "/api/ai/dashboard-insight",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getFitnessFreshness",
+      "method": "GET",
+      "path": "/api/fitness-freshness",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getGarminAuthUrl",
+      "method": "GET",
+      "path": "/api/garmin/auth-start?frontend_origin=${encodeURIComponent(window.location.origin)}",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getGarminCsvData",
+      "method": "GET",
+      "path": "/api/garmin/csv-data",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getGarminStatus",
+      "method": "GET",
+      "path": "/api/garmin/status",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getGctAnalysis",
+      "method": "GET",
+      "path": "/api/garmin/gct-analysis",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getHeatmap",
+      "method": "GET",
+      "path": "/api/heatmap",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getInjuryRisk",
+      "method": "GET",
+      "path": "/api/injury-risk",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getPredictionHistory",
+      "method": "GET",
+      "path": "/api/prediction-history",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getProAnalytics",
+      "method": "GET",
+      "path": "/api/analytics/pro${qs ? ",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getProfile",
+      "method": "GET",
+      "path": "/api/profile",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getRecoveryScore",
+      "method": "GET",
+      "path": "/api/recovery-score",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getRun",
+      "method": "GET",
+      "path": "/api/runs/${id}",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getRunnerDna",
+      "method": "GET",
+      "path": "/api/runner-dna",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getRuns",
+      "method": "GET",
+      "path": "/api/runs",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getRunSplits",
+      "method": "GET",
+      "path": "/api/runs/${id}/splits",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getStravaAuthUrl",
+      "method": "GET",
+      "path": "/api/strava/auth-url",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getSupercompensation",
+      "method": "GET",
+      "path": "/api/supercompensation",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getTrainingPlan",
+      "method": "GET",
+      "path": "/api/training-plan",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getUserLayout",
+      "method": "GET",
+      "path": "/api/user/layout",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getVdotPaces",
+      "method": "GET",
+      "path": "/api/vdot/paces",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getWeeklyHistory",
+      "method": "GET",
+      "path": "/api/weekly-history",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getWeeklyReport",
+      "method": "GET",
+      "path": "/api/weekly-report",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "importGarminCsv",
+      "method": "POST",
+      "path": "/api/garmin/csv-import",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "jarvisChat",
+      "method": "POST",
+      "path": "/api/jarvis/chat",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "linkGarminCsv",
+      "method": "POST",
+      "path": "/api/garmin/csv-link",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "postRecoveryCheckin",
+      "method": "POST",
+      "path": "/api/recovery-checkin",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "putUserLayout",
+      "method": "PUT",
+      "path": "/api/user/layout",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "recalculateFitnessFreshness",
+      "method": "POST",
+      "path": "/api/fitness-freshness/recalculate",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "saveGarminToken",
+      "method": "POST",
+      "path": "/api/garmin/save-token",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "syncGarmin",
+      "method": "POST",
+      "path": "/api/garmin/sync?limit=${limit}&force=${force}",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "syncGarminAll",
+      "method": "POST",
+      "path": "/api/garmin/sync-all?force=${force}",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "syncStrava",
+      "method": "POST",
+      "path": "/api/strava/sync",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "toggleSessionComplete",
+      "method": "PATCH",
+      "path": "/api/training-plan/session/complete",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "updateProfile",
+      "method": "PATCH",
+      "path": "/api/profile",
+      "file": "src/api/index.ts"
+    }
+  ]
+}

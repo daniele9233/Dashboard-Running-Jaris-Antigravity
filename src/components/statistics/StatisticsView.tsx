@@ -12,6 +12,7 @@ import { AnalyticsV5BestEffortsProgression, AnalyticsV5EffortMatrix, AnalyticsV5
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 import { useApi } from '../../hooks/useApi';
 import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, getDashboard, getProAnalytics, linkGarminCsv, getSupercompensation, type GctAnalysisResponse } from '../../api';
+import { cadenceSpmFromRun } from '../../utils/cadence';
 import type {
   AnalyticsResponse,
   VdotPacesResponse,
@@ -293,7 +294,7 @@ function classifyBiologyRun(run: Run): {
   const duration = Number(run.duration_minutes ?? 0);
   const distance = Number(run.distance_km ?? 0);
   const hrPct = Number(run.avg_hr_pct ?? 0);
-  const cadence = Number(run.avg_cadence ?? run.biomechanics?.avg_cadence_spm ?? 0);
+  const cadence = Number(cadenceSpmFromRun(run) ?? 0);
   const elevation = Number(run.elevation_gain ?? 0);
   const text = `${run.name ?? ''} ${run.run_type ?? ''} ${run.notes ?? ''}`.toLowerCase();
 

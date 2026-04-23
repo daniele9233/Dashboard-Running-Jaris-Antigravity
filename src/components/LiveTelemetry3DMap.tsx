@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import type { Run, Split } from '../types/api';
+import { cadenceSpmFromRun, normaliseCadenceSpm } from '../utils/cadence';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
 
@@ -91,14 +92,14 @@ export function LiveTelemetry3DMap({ routeCoords, streams, splits, run }: LiveTe
           elevation = s.alt ?? 0;
           heartRate = s.hr ?? 0;
           pace = s.pace ?? 0;
-          cadence = s.cad ? s.cad * 2 : 0;
+          cadence = normaliseCadenceSpm(s.cad) ?? 0;
         } else if (splits.length > 0) {
           const splitIdx = Math.min(Math.floor(dist), splits.length - 1);
           const split = splits[splitIdx];
           elevation = split.elevation_difference ?? 0;
           heartRate = split.hr ?? 0;
           pace = paceToSeconds(split.pace);
-          cadence = split.cadence ? split.cadence * 2 : 0;
+          cadence = normaliseCadenceSpm(split.cadence) ?? 0;
         }
 
         points.push({ id: i, coordinates: coords, distance: dist, elevation, heartRate, pace, cadence });
@@ -115,7 +116,7 @@ export function LiveTelemetry3DMap({ routeCoords, streams, splits, run }: LiveTe
         elevation: 0,
         heartRate: run.avg_hr ?? 0,
         pace: paceToSeconds(run.avg_pace ?? '6:00'),
-        cadence: run.avg_cadence ? run.avg_cadence * 2 : 0,
+        cadence: cadenceSpmFromRun(run) ?? 0,
       }));
       setRunData(points);
     }

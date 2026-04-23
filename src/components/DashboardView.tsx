@@ -1,6 +1,7 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { createPortal } from "react-dom";
 import {
   Wind, TrendingDown, Activity, Target, Timer, Zap, Flame, Shield, Trophy, Info, RotateCcw,
   Sparkles, Plus, X,
@@ -31,29 +32,44 @@ function useMediaQuery(query: string): boolean {
 // ─── Info Tooltip ─────────────────────────────────────────────────────────────
 function InfoTooltip({ title, lines }: { title: string; lines: string[] }) {
   const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
   const ref = useRef<HTMLDivElement>(null);
+  const showTooltip = () => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (rect) {
+      setPosition({
+        top: rect.bottom + 12,
+        left: Math.min(window.innerWidth - 384, Math.max(16, rect.right - 384)),
+      });
+    }
+    setOpen(true);
+  };
   return (
     <div className="relative inline-flex" ref={ref}>
       <button
-        onMouseEnter={() => setOpen(true)}
+        onMouseEnter={showTooltip}
         onMouseLeave={() => setOpen(false)}
-        onFocus={() => setOpen(true)}
+        onFocus={showTooltip}
         onBlur={() => setOpen(false)}
         className="text-[#555] hover:text-[#A0A0A0] transition-colors focus:outline-none"
       >
         <Info size={13} />
       </button>
-      {open && (
-        <div className="absolute z-50 bottom-full right-0 mb-2 w-64 bg-[#111] border border-white/10 rounded-2xl p-4 shadow-2xl pointer-events-none">
+      {open && createPortal(
+        <div
+          className="fixed z-[9999] w-96 max-h-[70vh] overflow-y-auto bg-[#111] border border-white/15 rounded-2xl p-4 shadow-2xl pointer-events-none"
+          style={{ top: position.top, left: position.left }}
+        >
           <div className="text-[#C0FF00] text-[10px] font-black tracking-widest mb-2">{title}</div>
           <ul className="space-y-1.5">
             {lines.map((l, i) => (
-              <li key={i} className="text-[#A0A0A0] text-[10px] leading-relaxed flex gap-1.5">
+              <li key={i} className="text-[#D6D6D6] text-[11px] leading-relaxed flex gap-1.5">
                 <span className="text-[#555] shrink-0">·</span>{l}
               </li>
             ))}
           </ul>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -698,7 +714,7 @@ function NextOptimalSessionWidget({
 }
 
 export function DashboardView() {
-  const { data: dashData, loading: dashLoading, error: dashError } =
+  const { data: dashData, loading: dashLoading, error: dashError, refetch: refetchDashboard } =
     useApi<DashboardResponse>(getDashboard);
   const { data: runsData } = useApi<RunsResponse>(getRuns);
   const { data: analyticsData } = useApi<AnalyticsResponse>(getAnalytics);
@@ -711,6 +727,10 @@ export function DashboardView() {
   const { layouts, onLayoutChange, resetLayout, hiddenKeys, hideWidget, restoreWidget } = useLayout();
   const [openAddMenu, setOpenAddMenu] = useState(false);
   const addMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const interval = window.setInterval(refetchDashboard, 60 * 60 * 1000);
+    return () => window.clearInterval(interval);
+  }, [refetchDashboard]);
   useEffect(() => {
     if (!openAddMenu) return;
     const onClick = (e: MouseEvent) => {
@@ -829,6 +849,10 @@ export function DashboardView() {
   const efficiency = tsb !== null
     ? Math.max(70, Math.min(100, 85 + tsb * 1.05))
     : null;
+  const tsbValue = tsb !== null ? tsb.toFixed(1) : "—";
+  const ctlValue = ctl > 0 ? ctl.toFixed(1) : "—";
+  const effValue = efficiency !== null ? efficiency.toFixed(1) : "—";
+  const atlValue = atl > 0 ? atl.toFixed(1) : "—";
 
   // ─── Human-friendly metaphors (no jargon) ─────────────────────────────
   const tsbMeta = (() => {
@@ -1169,14 +1193,17 @@ export function DashboardView() {
                 <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-2">LIVE BIO-FEED</div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-white text-4xl font-black tracking-tighter italic">{t("dashboard.statusOfForm")}</h2>
-                  <InfoTooltip title="STATUS OF FORM — TSB" lines={[
-                    "TSB (Training Stress Balance) = CTL − ATL. Misura equilibrio carico/recupero.",
-                    "TSB > +10: Fresco — picco prestativo. Ideale pre-gara.",
-                    "TSB −5 → +10: Neutro — zona di mantenimento.",
-                    "TSB −20 → −5: Affaticato — adattamento in corso.",
-                    "TSB < −20: Sovraccarico — rischio infortuni.",
-                    "PEAK SCORE = map TSB [-40..+30] → [0..100]. Scala 0-100.",
-                    "Modello Banister 1975, costanti Coggan 2003."
+                  <InfoTooltip title="STATUS FORMA" lines={[
+                    'CTL (Fitness): e il tuo "motore" costruito nel tempo. Piu e alto, piu sei allenato.',
+                    "ATL (Stanchezza): lo stress accumulato negli ultimi giorni. Indica quanto hai spinto di recente.",
+                    "TSB (Forma): il bilancio tra Fitness e Stanchezza. Ti dice se oggi sei al top o ko.",
+                    "Valore TSB | Stato | Obiettivo",
+                    "Sopra +10 | Fresco | Momento ideale per una gara o un record.",
+                    "Tra -5 e +10 | Neutro | Fase di mantenimento della forma fisica.",
+                    "Tra -20 e -5 | Stanco | Fase di carico: qui e dove diventi piu forte.",
+                    "Sotto -20 | Alert | Troppo stress. Riposa per evitare infortuni.",
+                    'EFF (Efficienza): indica quanto lavoro produci per ogni battito cardiaco. Piu e alta, piu il tuo motore e "economico".',
+                    "PEAK SCORE (0-100): il tuo semaforo della freschezza. Piu e vicino a 100, piu sei pronto a dare il massimo della tua potenza."
                   ]} />
                 </div>
               </div>
@@ -1236,7 +1263,7 @@ export function DashboardView() {
                   </div>
                   <div className="text-[#555] text-[9px] font-semibold italic mb-1">quanto sei fresco oggi</div>
                   <div className="text-xl font-black whitespace-nowrap" style={{ color: tsbMeta.color }}>
-                    <span className="mr-1.5">{tsbMeta.icon}</span>{tsbMeta.label}
+                    <span className="mr-1.5 font-mono tabular-nums">{tsbValue}</span>{tsbMeta.label}
                   </div>
                   <div className="text-[#888] text-[11px] font-medium mt-0.5">{tsbMeta.sub}</div>
                 </div>
@@ -1247,7 +1274,7 @@ export function DashboardView() {
                   </div>
                   <div className="text-[#555] text-[9px] font-semibold italic mb-1">efficienza cuore vs ritmo</div>
                   <div className="text-white text-xl font-black whitespace-nowrap">
-                    <span className="mr-1.5">{effMeta.icon}</span>{effMeta.label}
+                    <span className="mr-1.5 font-mono tabular-nums">{effValue}</span>{effMeta.label}
                   </div>
                   <div className="text-[#888] text-[11px] font-medium mt-0.5">{effMeta.sub}</div>
                 </div>
@@ -1262,7 +1289,7 @@ export function DashboardView() {
                   </div>
                   <div className="text-[#555] text-[9px] font-semibold italic mb-1">fitness media 42 giorni</div>
                   <div className="text-white text-xl font-black whitespace-nowrap">
-                    <span className="mr-1.5">{ctlMeta.icon}</span>{ctlMeta.label}
+                    <span className="mr-1.5 font-mono tabular-nums">{ctlValue}</span>{ctlMeta.label}
                   </div>
                   <div className="text-[#888] text-[11px] font-medium mt-0.5">{ctlMeta.sub}</div>
                 </div>
@@ -1273,7 +1300,7 @@ export function DashboardView() {
                   </div>
                   <div className="text-[#555] text-[9px] font-semibold italic mb-1">carico ultimi 7 giorni</div>
                   <div className="text-white text-xl font-black whitespace-nowrap">
-                    <span className="mr-1.5">{atlMeta.icon}</span>{atlMeta.label}
+                    <span className="mr-1.5 font-mono tabular-nums">{atlValue}</span>{atlMeta.label}
                   </div>
                   <div className="text-[#888] text-[11px] font-medium mt-0.5">{atlMeta.sub}</div>
                 </div>
@@ -1281,48 +1308,6 @@ export function DashboardView() {
             </div>
 
             {/* PMC — Performance Management Chart (30d) */}
-            {pmcData.length > 1 && (
-              <div className="mt-2 pt-2 border-t border-white/[0.06]">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">
-                    Andamento 30 giorni
-                  </div>
-                  <div className="flex items-center gap-3 text-[9px] font-bold tracking-wider uppercase">
-                    <span className="flex items-center gap-1 text-[#3B82F6]"><span className="w-2 h-2 rounded-full bg-[#3B82F6]" />Motore</span>
-                    <span className="flex items-center gap-1 text-[#F43F5E]"><span className="w-2 h-2 rounded-full bg-[#F43F5E]" />Fatica</span>
-                    <span className="flex items-center gap-1 text-[#F59E0B]"><span className="w-2 h-2 rounded-full bg-[#F59E0B]" />Serbatoio</span>
-                  </div>
-                </div>
-                <div style={{ width: "100%", height: 80 }}>
-                  <ResponsiveContainer>
-                    <ComposedChart data={pmcData} margin={{ top: 2, right: 6, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="tsbFill" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.35} />
-                          <stop offset="100%" stopColor="#F59E0B" stopOpacity={0.02} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
-                      <XAxis dataKey="date" tick={{ fill: "#666", fontSize: 9 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                      <YAxis tick={{ fill: "#666", fontSize: 9 }} tickLine={false} axisLine={false} width={36} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#0f0f0f",
-                          border: "1px solid rgba(255,255,255,0.08)",
-                          borderRadius: 12,
-                          fontSize: 11,
-                        }}
-                        labelStyle={{ color: "#A0A0A0", fontWeight: 700 }}
-                      />
-                      <Area type="monotone" dataKey="tsb" stroke="#F59E0B" strokeWidth={1.5} fill="url(#tsbFill)" name="Serbatoio" dot={false} />
-                      <Line type="monotone" dataKey="ctl" stroke="#3B82F6" strokeWidth={2} dot={false} name="Motore" />
-                      <Line type="monotone" dataKey="atl" stroke="#F43F5E" strokeWidth={2} dot={false} name="Fatica" />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-
             {insightData?.insight && (
               <div className="mt-2 pt-2 border-t border-white/[0.06]">
                 <div className="flex items-start gap-2.5">

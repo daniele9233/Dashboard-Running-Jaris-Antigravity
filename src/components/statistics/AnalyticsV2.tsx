@@ -16,6 +16,7 @@ import {
   Target, Radar,
 } from 'lucide-react';
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
+import { cadenceSpmFromRun } from '../../utils/cadence';
 
 // ─────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -997,8 +998,8 @@ export function AnalyticsV2({
       return backend.map((p) => ({ cadence: Math.round(Number(p.cadence)), gct: Math.round(Number(p.gct)) }));
     }
     const real = runs
-      .filter(r => r.avg_cadence != null && r.avg_ground_contact_time != null && !r.is_treadmill)
-      .map(r => ({ cadence: Math.round(r.avg_cadence!), gct: Math.round(r.avg_ground_contact_time!) }));
+      .filter(r => cadenceSpmFromRun(r) != null && r.avg_ground_contact_time != null && !r.is_treadmill)
+      .map(r => ({ cadence: cadenceSpmFromRun(r)!, gct: Math.round(r.avg_ground_contact_time!) }));
     return real;
   }, [runs, proCharts]);
 
