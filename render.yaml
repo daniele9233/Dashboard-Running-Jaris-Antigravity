@@ -21,7 +21,8 @@ services:
     publishDir: dist
     envVars:
       - key: VITE_BACKEND_URL
-        fromService:
-          type: web
-          name: dani-backend-ea0s
-          property: host
+        value: https://dani-backend-ea0s.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
