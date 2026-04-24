@@ -278,7 +278,7 @@ export function MainChart({ runs }: MainChartProps) {
         margin={{ top: isExpanded ? 20 : 20, right: isExpanded ? 20 : 0, left: isExpanded ? -10 : -20, bottom: isExpanded ? 20 : 0 }}
         barSize={isExpanded ? Math.max(10, barSize) : barSize}
       >
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E293B" />
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(192,255,0,0.08)" />
         <XAxis
           dataKey="name"
           axisLine={false}
@@ -295,18 +295,18 @@ export function MainChart({ runs }: MainChartProps) {
           domain={[0, Math.ceil(maxKm * 1.15)]}
         />
         <Tooltip
-          cursor={{ fill: "#1E293B", opacity: 0.4 }}
+          cursor={{ fill: "rgba(192,255,0,0.08)" }}
           content={<CustomTooltip />}
         />
         {avgKm > 0 && (
           <ReferenceLine
             y={avgKm}
-            stroke="#94A3B8"
+            stroke="rgba(192,255,0,0.4)"
             strokeDasharray="3 3"
             label={{
               position: "insideLeft",
               value: `AVG ${avgKm} km`,
-              fill: "#E2E8F0",
+              fill: "#D7FF76",
               fontSize: isExpanded ? 12 : 10,
               dy: -10,
             }}
@@ -324,8 +324,13 @@ export function MainChart({ runs }: MainChartProps) {
 
   return (
     <div
-      className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-xl p-6 flex flex-col h-full group"
-      style={{ borderLeft: "3px solid #3B82F6" }}
+      className="relative overflow-hidden rounded-xl p-6 flex flex-col h-full group"
+      style={{
+        background: "radial-gradient(circle at top left, rgba(192,255,0,0.08), transparent 26%), radial-gradient(circle at bottom right, rgba(34,211,238,0.07), transparent 34%), #0B0B0B",
+        border: "1px solid #20290F",
+        borderLeft: "3px solid #C0FF00",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.02), 0 0 0 1px rgba(192,255,0,0.04)",
+      }}
     >
       {/* ── Header ── */}
       <div className="flex justify-between items-start mb-6">
@@ -408,7 +413,7 @@ export function MainChart({ runs }: MainChartProps) {
       </div>
 
       {/* ── Legenda ── */}
-      <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-[#1E293B] text-[10px] text-text-muted font-semibold tracking-wider justify-center">
+      <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-[#243018] text-[10px] text-text-muted font-semibold tracking-wider justify-center">
         {[
           { color: "#14B8A6", label: "EASY RUN" },
           { color: "#3B82F6", label: "TEMPO" },

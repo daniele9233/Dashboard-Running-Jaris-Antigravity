@@ -16,10 +16,10 @@ export interface DriftResult {
 }
 
 export function driftLabel(d: number): { label: string; color: string } {
-  if (d < 3.5) return { label: "Eccellente",    color: "#10B981" };
-  if (d < 5.0) return { label: "Buona",         color: "#3B82F6" };
+  if (d < 3.5) return { label: "Eccellente",    color: "#C0FF00" };
+  if (d < 5.0) return { label: "Buona",         color: "#27D3C3" };
   if (d < 7.5) return { label: "Da migliorare", color: "#F59E0B" };
-  return            { label: "Insufficiente",   color: "#F43F5E" };
+  return            { label: "Insufficiente",   color: "#FF4D8D" };
 }
 
 function parsePaceSec(pace: string): number {

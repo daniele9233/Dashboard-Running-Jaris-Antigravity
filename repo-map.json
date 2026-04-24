@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-04-23T06:36:17.845Z",
+  "generated_at": "2026-04-24T06:47:16.165Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 107,
+    "files": 108,
     "backend_routes": 55,
     "frontend_routes": 12,
     "api_clients": 48
@@ -1233,7 +1233,6 @@
         "./components/ErrorBoundary",
         "./components/ProfileView",
         "./components/RoutesView",
-        "./components/RunnerDnaV2View",
         "./components/RunnerDnaView",
         "./components/SettingsControls",
         "./components/Sidebar",
@@ -1246,9 +1245,9 @@
         "react-i18next",
         "react-router-dom"
       ],
-      "hash": "88d2d8448843cb74142c2c89aee84a61f9f12434501dc2321ec0f50c8d1e81de",
-      "last_modified": "2026-04-22T22:03:50.315Z",
-      "size_bytes": 9343
+      "hash": "3af279f223cc67ffbdb28e886dfafc8ba22b10dbd395b22ee840ed1d3bacec46",
+      "last_modified": "2026-04-23T15:02:57.906Z",
+      "size_bytes": 9245
     },
     {
       "path": "src/components/ActivitiesView.tsx",
@@ -1489,9 +1488,9 @@
         "react",
         "recharts"
       ],
-      "hash": "d955b35d9f686ed730646692095a8c0bb082139f8db4ded8e73f4c0d72853e61",
-      "last_modified": "2026-04-17T15:27:05.013Z",
-      "size_bytes": 17404
+      "hash": "b4f759507c428d4fce4b04e4f7ce242a1d9a821a5dc39455ec881c4257c0478d",
+      "last_modified": "2026-04-23T19:44:14.373Z",
+      "size_bytes": 18811
     },
     {
       "path": "src/components/GridCard.tsx",
@@ -1651,9 +1650,9 @@
         "react",
         "recharts"
       ],
-      "hash": "c0288c64d4a7a5e1767a13dc71da22cc960a347a9f45371ebe6fbfa9293afb0f",
-      "last_modified": "2026-04-17T15:39:28.418Z",
-      "size_bytes": 19563
+      "hash": "d6e19ca3f3c97ce153c94c4511188ef840f338323bd35b1cda01bbd1568bb750",
+      "last_modified": "2026-04-23T19:33:09.706Z",
+      "size_bytes": 19906
     },
     {
       "path": "src/components/MapFallback.tsx",
@@ -1705,9 +1704,9 @@
         "react-map-gl/maplibre",
         "react-router-dom"
       ],
-      "hash": "421dbdad491645a6b68310d96ff46db28521b087cd56373c2d6e3dd34e552ce6",
-      "last_modified": "2026-04-16T18:51:23.213Z",
-      "size_bytes": 59352
+      "hash": "4544246ea15f9f5282bc637e015b025ff62387e989083017b3e0126fcf3e9e50",
+      "last_modified": "2026-04-24T06:19:50.971Z",
+      "size_bytes": 59639
     },
     {
       "path": "src/components/RacePredictions.tsx",
@@ -1820,38 +1819,6 @@
       "size_bytes": 3494
     },
     {
-      "path": "src/components/RunnerDnaV2View.tsx",
-      "kind": "frontend-view",
-      "purpose": "Page/view component for RunnerDnaV2.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "garmin",
-        "layout",
-        "profile",
-        "runner-dna",
-        "statistics",
-        "strava",
-        "types"
-      ],
-      "exports": [
-        "RunnerDnaV2View"
-      ],
-      "routes": [],
-      "imports": [
-        "../hooks/useRunnerDnaUiModel",
-        "../utils/runnerDnaModel",
-        "./runner-dna/RunnerDnaLoading",
-        "lucide-react",
-        "motion/react",
-        "react",
-        "recharts"
-      ],
-      "hash": "aec1f562fef74c4b37a86436dc577b9238d353e5c4d9b16041d37158ad7bcfa4",
-      "last_modified": "2026-04-22T20:16:14.173Z",
-      "size_bytes": 42859
-    },
-    {
       "path": "src/components/RunnerDnaView.tsx",
       "kind": "frontend-view",
       "purpose": "Page/view component for RunnerDna.",
@@ -1863,21 +1830,23 @@
         "layout",
         "profile",
         "runner-dna",
-        "statistics"
+        "statistics",
+        "training",
+        "types"
       ],
       "exports": [
         "RunnerDnaView"
       ],
       "routes": [],
       "imports": [
-        "../api",
+        "../hooks/useRunnerDnaUiModel",
         "lucide-react",
         "react",
-        "react-i18next"
+        "recharts"
       ],
-      "hash": "b7788f31611256b5be047ab2da39f3f0336dd3666a9086acbe6930babea11183",
-      "last_modified": "2026-04-22T19:14:37.681Z",
-      "size_bytes": 45328
+      "hash": "c817c3673b2e8906d7c63e29cc2767663c9b1137d454b20f34d5053c8ef0df07",
+      "last_modified": "2026-04-23T19:32:52.008Z",
+      "size_bytes": 114962
     },
     {
       "path": "src/components/SettingsControls.tsx",
@@ -1954,9 +1923,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "0a7e3fdefc79e31fdce5f9054ef3759e7d94c558d2d6563f0953ff9a81e30da6",
-      "last_modified": "2026-04-22T13:37:05.392Z",
-      "size_bytes": 151594
+      "hash": "4675dd2ec918628a1b37bcf448500a2294630933634768b90027c533fc589267",
+      "last_modified": "2026-04-23T20:37:07.924Z",
+      "size_bytes": 152431
     },
     {
       "path": "src/components/statistics/AnalyticsV3.tsx",
@@ -2017,9 +1986,9 @@
         "react",
         "recharts"
       ],
-      "hash": "9f2938c00dcea1909e02521a191384f9cb7fd04f61c3dfa368f4181d0a214a79",
-      "last_modified": "2026-04-18T17:50:54.657Z",
-      "size_bytes": 35045
+      "hash": "f4f402f07964280d2664e961212de0ddf40db26f5a2faf4866ab75c64f9b91fc",
+      "last_modified": "2026-04-23T19:35:17.700Z",
+      "size_bytes": 35297
     },
     {
       "path": "src/components/statistics/AnalyticsV5.tsx",
@@ -2048,9 +2017,38 @@
         "react",
         "recharts"
       ],
-      "hash": "7a2a46f125111e0c537c72412168e4a97fd9e7b894b61672828c612e1a685341",
-      "last_modified": "2026-04-19T05:31:55.765Z",
-      "size_bytes": 45455
+      "hash": "fae0e5c6763eed4eee6abc9998d375b1c792f7761f651b8a28f1c53c5809e792",
+      "last_modified": "2026-04-23T20:32:12.573Z",
+      "size_bytes": 46022
+    },
+    {
+      "path": "src/components/statistics/BiologyFutureV2.tsx",
+      "kind": "frontend-statistics-component",
+      "purpose": "React component BiologyFutureV2.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "garmin",
+        "layout",
+        "profile",
+        "statistics",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "BiologyFutureV2"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "lucide-react",
+        "react",
+        "recharts"
+      ],
+      "hash": "2b113cf81eed4acec22af224fe46b4d1764f37c8a18fb20be8d889e8f57eaae5",
+      "last_modified": "2026-04-23T08:10:45.201Z",
+      "size_bytes": 29594
     },
     {
       "path": "src/components/statistics/ChartFullscreenModal.tsx",
@@ -2073,6 +2071,34 @@
       "hash": "5512ce4ae16c54e2852bb2a4f91cd36b1315a2953cf5858e071a77e067398a50",
       "last_modified": "2026-04-17T15:22:31.826Z",
       "size_bytes": 2146
+    },
+    {
+      "path": "src/components/statistics/EnvironmentalNormalizerView.tsx",
+      "kind": "frontend-statistics-component",
+      "purpose": "React component EnvironmentalNormalizerView.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "garmin",
+        "layout",
+        "map",
+        "statistics",
+        "types"
+      ],
+      "exports": [
+        "EnvironmentalNormalizerView"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "lucide-react",
+        "react",
+        "recharts"
+      ],
+      "hash": "f82a2be8f337c6bbb441d0139e5f649f562f612f1ae4509ece6447d7621ab57a",
+      "last_modified": "2026-04-24T05:43:51.049Z",
+      "size_bytes": 34785
     },
     {
       "path": "src/components/statistics/StatisticsView.tsx",
@@ -2104,21 +2130,25 @@
         "../AnaerobicThreshold",
         "../BadgesGrid",
         "../FitnessFreshness",
+        "../GridCard",
         "../MainChart",
         "./AnalyticsV2",
         "./AnalyticsV3",
         "./AnalyticsV4",
         "./AnalyticsV5",
+        "./BiologyFutureV2",
         "./ChartFullscreenModal",
+        "./EnvironmentalNormalizerView",
         "./StatsDrift",
         "lucide-react",
         "react",
+        "react-grid-layout/legacy",
         "react-i18next",
         "recharts"
       ],
-      "hash": "9c0fe6eb1a5dc82ea5283008b56651393de7322f8b26f6bfaeb5b93eee072500",
-      "last_modified": "2026-04-22T13:30:25.919Z",
-      "size_bytes": 106756
+      "hash": "5c417c454c3826f3a302f08f9e65fbf681fefe8bd2aabbec28b82c043bd15c82",
+      "last_modified": "2026-04-24T06:47:16.165Z",
+      "size_bytes": 121488
     },
     {
       "path": "src/components/statistics/StatsCalc.tsx",
@@ -2166,9 +2196,9 @@
         "react",
         "recharts"
       ],
-      "hash": "9b62f2f1e882ac3c784eae73232b9387bbe68bb9775030cb934bb8ccaf2cb7d6",
-      "last_modified": "2026-04-17T15:30:34.920Z",
-      "size_bytes": 17578
+      "hash": "72e973da8d78d9b76309e223705febd63afcef266b4003aa763ee6986fe11d88",
+      "last_modified": "2026-04-24T06:03:01.603Z",
+      "size_bytes": 18371
     },
     {
       "path": "src/components/statistics/StatsProgress.tsx",
@@ -2601,8 +2631,8 @@
       "routes": [],
       "imports": [],
       "hash": "2310b6c35474245ebed6f75331a79a93f7b9161c3f6cb414fc6d40acddc4a944",
-      "last_modified": "2026-04-20T04:32:15.246Z",
-      "size_bytes": 16143
+      "last_modified": "2026-04-23T09:20:16.878Z",
+      "size_bytes": 16141
     },
     {
       "path": "src/index.css",
@@ -2791,8 +2821,8 @@
       "imports": [
         "../types/api"
       ],
-      "hash": "2f90554dec32da9fb6ffe37a0c41de34ce78145e287c59d450a3fb6f711c35bb",
-      "last_modified": "2026-04-06T09:52:27.463Z",
+      "hash": "8c24d9dde680a0f0a42de29f9ec8015510c58609c7fe679153f71a6c17111c5e",
+      "last_modified": "2026-04-23T20:33:14.512Z",
       "size_bytes": 3275
     },
     {
@@ -3257,73 +3287,73 @@
       "path": "*",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 193
+      "line": 191
     },
     {
       "path": "/",
       "element": "DashboardView",
       "file": "src/App.tsx",
-      "line": 182
+      "line": 180
     },
     {
       "path": "/activities",
       "element": "ActivitiesView",
       "file": "src/App.tsx",
-      "line": 183
+      "line": 181
     },
     {
       "path": "/activities/:runId",
       "element": "RoutesViewWrapper",
       "file": "src/App.tsx",
-      "line": 184
+      "line": 182
     },
     {
       "path": "/biometrics",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 191
+      "line": 189
     },
     {
       "path": "/insights",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 192
+      "line": 190
     },
     {
       "path": "/profile",
       "element": "ProfileView",
       "file": "src/App.tsx",
-      "line": 189
+      "line": 187
     },
     {
       "path": "/recovery",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 190
+      "line": 188
     },
     {
       "path": "/runner-dna",
       "element": "RunnerDnaView",
       "file": "src/App.tsx",
-      "line": 186
+      "line": 184
     },
     {
       "path": "/runner-dna-v2",
-      "element": "RunnerDnaV2View",
+      "element": "Navigate",
       "file": "src/App.tsx",
-      "line": 187
+      "line": 185
     },
     {
       "path": "/statistics",
       "element": "StatisticsView",
       "file": "src/App.tsx",
-      "line": 188
+      "line": 186
     },
     {
       "path": "/training",
       "element": "TrainingView",
       "file": "src/App.tsx",
-      "line": 185
+      "line": 183
     }
   ],
   "api_clients": [

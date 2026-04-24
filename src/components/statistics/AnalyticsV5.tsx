@@ -540,6 +540,13 @@ function SeasonalMatrix() {
 export function AnalyticsV5BestEffortsProgression({ chart, onRequestDetail }: { chart?: ProAnalyticsChart; onRequestDetail?: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const fmt = (s?: number) => s ? `${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}` : '—';
+  const formatAxisMonth = (value: string) => {
+    const [year, month] = String(value).split('-');
+    const months = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+    const monthIndex = Number(month) - 1;
+    if (!Number.isFinite(monthIndex) || monthIndex < 0 || monthIndex > 11 || !year) return value;
+    return `${months[monthIndex]} '${year.slice(2)}`;
+  };
   const toPoint = (d: Record<string, any>): Record<string, any> & { mo: string; periodLabel: string } => {
     const rawDate = String(d.date ?? '');
     return { ...d, mo: rawDate, periodLabel: periodLabel(rawDate) };
@@ -592,7 +599,15 @@ export function AnalyticsV5BestEffortsProgression({ chart, onRequestDetail }: { 
     <ResponsiveContainer width="100%" height="100%">
       <LineChart data={data} margin={{ top:isExpanded ? 20 : 4, right:isExpanded ? 20 : 8, bottom:isExpanded ? 20 : 0, left:isExpanded ? 0 : -8 }}>
         <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-        <XAxis dataKey="mo" tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} tickFormatter={(value) => isExpanded ? periodLabel(String(value)) : String(value)} />
+        <XAxis
+          dataKey="mo"
+          tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...chartMono, fontWeight:900 }}
+          axisLine={false}
+          tickLine={false}
+          interval="preserveStartEnd"
+          minTickGap={18}
+          tickFormatter={(value) => isExpanded ? formatAxisMonth(String(value)) : formatAxisMonth(String(value))}
+        />
         <YAxis yAxisId="left"  tick={{ fill:DM, fontSize:isExpanded ? 11 : 8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} domain={['dataMin - 60', 'dataMax + 60']} />
         <YAxis yAxisId="right" orientation="right" tick={{ fill:DM, fontSize:isExpanded ? 11 : 8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} domain={['dataMin - 120', 'dataMax + 120']} />
         <Tooltip content={({ active, payload, label }) => {
@@ -609,9 +624,9 @@ export function AnalyticsV5BestEffortsProgression({ chart, onRequestDetail }: { 
             </div>
           );
         }} />
-        <Line yAxisId="left"  type="monotone" dataKey="k5"  name="5K"   stroke={N}  strokeWidth={2.5} dot={{ r:4, fill:N,  stroke:BG, strokeWidth:1.5 }} />
-        <Line yAxisId="right" type="monotone" dataKey="k10" name="10K"  stroke={CY} strokeWidth={2}   dot={{ r:3, fill:CY, stroke:BG, strokeWidth:1.5 }} />
-        <Line yAxisId="right" type="monotone" dataKey="hm"  name="Half" stroke={PU} strokeWidth={2}   dot={{ r:3, fill:PU, stroke:BG, strokeWidth:1.5 }} strokeDasharray="6 3" />
+        <Line yAxisId="left"  type="monotone" dataKey="k5"  name="5K"   stroke={N}  strokeWidth={2.5} dot={{ r:4, fill:N,  stroke:BG, strokeWidth:1.5 }} connectNulls />
+        <Line yAxisId="right" type="monotone" dataKey="k10" name="10K"  stroke={CY} strokeWidth={2}   dot={{ r:3, fill:CY, stroke:BG, strokeWidth:1.5 }} connectNulls />
+        <Line yAxisId="right" type="monotone" dataKey="hm"  name="Half" stroke={PU} strokeWidth={2}   dot={{ r:3, fill:PU, stroke:BG, strokeWidth:1.5 }} strokeDasharray="6 3" connectNulls />
       </LineChart>
     </ResponsiveContainer>
   );

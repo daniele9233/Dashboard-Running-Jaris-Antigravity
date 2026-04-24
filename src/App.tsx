@@ -4,7 +4,7 @@
  */
 
 import { useEffect, Suspense } from "react";
-import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { JarvisProvider, useJarvisContext } from "./context/JarvisContext";
 import { LayoutProvider } from "./context/LayoutContext";
@@ -17,7 +17,6 @@ import { StatisticsView } from "./components/statistics/StatisticsView";
 import { RoutesView } from "./components/RoutesView";
 import { ActivitiesView } from "./components/ActivitiesView";
 import { RunnerDnaView } from "./components/RunnerDnaView";
-import { RunnerDnaV2View } from "./components/RunnerDnaV2View";
 import { SettingsControls } from "./components/SettingsControls";
 import { Search, Bell, Settings } from "lucide-react";
 import { useParams } from "react-router-dom";
@@ -51,7 +50,6 @@ function AppContent() {
     { path: "/activities",  label: t("nav.activities") },
     { path: "/statistics",  label: t("nav.statistics") },
     { path: "/runner-dna",  label: t("nav.runnerDna")  },
-    { path: "/runner-dna-v2", label: "RUNNER DNA V2"  },
     { path: "/profile",     label: t("nav.profile")    },
   ];
 
@@ -184,7 +182,7 @@ function AppContent() {
                 <Route path="/activities/:runId" element={<RoutesViewWrapper />} />
                 <Route path="/training"         element={<TrainingView />} />
                 <Route path="/runner-dna"       element={<RunnerDnaView />} />
-                <Route path="/runner-dna-v2"    element={<RunnerDnaV2View />} />
+                <Route path="/runner-dna-v2"    element={<Navigate to="/runner-dna" replace />} />
                 <Route path="/statistics"       element={<StatisticsView />} />
                 <Route path="/profile"          element={<ProfileView />} />
                 <Route path="/recovery"         element={<ComingSoonView label="Recovery" />} />

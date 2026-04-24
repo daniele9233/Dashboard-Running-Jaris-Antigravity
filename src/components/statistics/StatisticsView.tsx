@@ -5,8 +5,11 @@ import { BadgesGrid } from '../BadgesGrid';
 import { MainChart } from '../MainChart';
 import { AnaerobicThreshold } from '../AnaerobicThreshold';
 import { FitnessFreshness } from '../FitnessFreshness';
+import { GridCard } from '../GridCard';
 import { AnalyticsV2 } from './AnalyticsV2';
 import { AnalyticsV3 } from './AnalyticsV3';
+import { BiologyFutureV2 } from './BiologyFutureV2';
+import { EnvironmentalNormalizerView } from './EnvironmentalNormalizerView';
 import { AnalyticsV4CadenceSpeedMatrix, AnalyticsV4PaceZoneDistribution } from './AnalyticsV4';
 import { AnalyticsV5BestEffortsProgression, AnalyticsV5EffortMatrix, AnalyticsV5PaceDistributionBell } from './AnalyticsV5';
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
@@ -47,8 +50,12 @@ import {
   Info,
   TrendingDown,
   Trophy,
-  Radar
+  Radar,
+  CloudSun,
+  Plus,
+  RotateCcw
 } from 'lucide-react';
+import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 import {
   AreaChart,
   Area,
@@ -67,6 +74,8 @@ import {
   Label,
   Legend
 } from 'recharts';
+
+const ResponsiveGrid = WidthProvider(Responsive);
 
 const PRO_ACCENT = '#D4FF00';
 const PRO_PANEL = '#0E0E0E';
@@ -252,6 +261,129 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="text-[10px] text-[#333] font-black tracking-[0.3em] uppercase pt-2">{children}</div>
   );
+}
+
+type LocalGridItem = {
+  i: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  minW?: number;
+  minH?: number;
+};
+
+type LocalGridLayouts = {
+  lg: LocalGridItem[];
+  md: LocalGridItem[];
+  sm: LocalGridItem[];
+};
+
+const LOAD_FORM_WIDGETS = [
+  { key: 'load-kpis', label: 'Metriche carico' },
+  { key: 'load-fitness', label: 'Fitness & freschezza' },
+  { key: 'load-main-chart', label: 'Trend chilometri' },
+  { key: 'load-pace-zones', label: 'Zone di passo' },
+  { key: 'load-pace-distribution', label: 'Distribuzione passo' },
+  { key: 'load-effort-matrix', label: 'Matrice sforzi' },
+];
+
+const LOAD_FORM_DEFAULT_LAYOUTS: LocalGridLayouts = {
+  lg: [
+    { i: 'load-kpis', x: 0, y: 0, w: 12, h: 3, minW: 6, minH: 3 },
+    { i: 'load-fitness', x: 0, y: 3, w: 12, h: 8, minW: 6, minH: 6 },
+    { i: 'load-main-chart', x: 0, y: 11, w: 6, h: 7, minW: 4, minH: 5 },
+    { i: 'load-pace-zones', x: 6, y: 11, w: 6, h: 7, minW: 4, minH: 5 },
+    { i: 'load-pace-distribution', x: 0, y: 18, w: 6, h: 7, minW: 4, minH: 5 },
+    { i: 'load-effort-matrix', x: 6, y: 18, w: 6, h: 7, minW: 4, minH: 5 },
+  ],
+  md: [
+    { i: 'load-kpis', x: 0, y: 0, w: 6, h: 4 },
+    { i: 'load-fitness', x: 0, y: 4, w: 6, h: 8 },
+    { i: 'load-main-chart', x: 0, y: 12, w: 3, h: 7 },
+    { i: 'load-pace-zones', x: 3, y: 12, w: 3, h: 7 },
+    { i: 'load-pace-distribution', x: 0, y: 19, w: 3, h: 7 },
+    { i: 'load-effort-matrix', x: 3, y: 19, w: 3, h: 7 },
+  ],
+  sm: [
+    { i: 'load-kpis', x: 0, y: 0, w: 1, h: 7 },
+    { i: 'load-fitness', x: 0, y: 7, w: 1, h: 8 },
+    { i: 'load-main-chart', x: 0, y: 15, w: 1, h: 7 },
+    { i: 'load-pace-zones', x: 0, y: 22, w: 1, h: 7 },
+    { i: 'load-pace-distribution', x: 0, y: 29, w: 1, h: 7 },
+    { i: 'load-effort-matrix', x: 0, y: 36, w: 1, h: 7 },
+  ],
+};
+
+function mergeLocalLayouts(stored: LocalGridLayouts | null): LocalGridLayouts {
+  if (!stored) return LOAD_FORM_DEFAULT_LAYOUTS;
+  const merged = {} as LocalGridLayouts;
+  (['lg', 'md', 'sm'] as const).forEach((bp) => {
+    const current = Array.isArray(stored[bp]) ? stored[bp] : [];
+    const known = new Set(current.map((item) => item.i));
+    merged[bp] = [
+      ...current,
+      ...LOAD_FORM_DEFAULT_LAYOUTS[bp].filter((item) => !known.has(item.i)),
+    ];
+  });
+  return merged;
+}
+
+function readStorageJson<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function useLoadFormLayout() {
+  const layoutKey = 'metic:statistics:load-form:layout';
+  const hiddenKey = 'metic:statistics:load-form:hidden';
+  const [layouts, setLayouts] = React.useState<LocalGridLayouts>(() =>
+    mergeLocalLayouts(readStorageJson<LocalGridLayouts | null>(layoutKey, null)),
+  );
+  const [hiddenKeys, setHiddenKeys] = React.useState<string[]>(() =>
+    readStorageJson<string[]>(hiddenKey, []),
+  );
+
+  const persistLayouts = React.useCallback((next: LocalGridLayouts) => {
+    setLayouts(next);
+    if (typeof window !== 'undefined') window.localStorage.setItem(layoutKey, JSON.stringify(next));
+  }, []);
+
+  const persistHidden = React.useCallback((next: string[]) => {
+    setHiddenKeys(next);
+    if (typeof window !== 'undefined') window.localStorage.setItem(hiddenKey, JSON.stringify(next));
+  }, []);
+
+  return {
+    layouts,
+    hiddenKeys,
+    onLayoutChange: (_current: any, all: LocalGridLayouts) => persistLayouts(mergeLocalLayouts(all)),
+    hideWidget: (key: string) => persistHidden(hiddenKeys.includes(key) ? hiddenKeys : [...hiddenKeys, key]),
+    restoreWidget: (key: string) => persistHidden(hiddenKeys.filter((item) => item !== key)),
+    resetLayout: () => {
+      persistLayouts(LOAD_FORM_DEFAULT_LAYOUTS);
+      persistHidden([]);
+    },
+  };
+}
+
+function useMediaQuery(query: string): boolean {
+  const [match, setMatch] = React.useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(query).matches : false,
+  );
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia(query);
+    const onChange = () => setMatch(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [query]);
+  return match;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -620,6 +752,22 @@ export function StatisticsView() {
   const { data: gctData } = useApi<GctAnalysisResponse>(getGctAnalysis);
   const { data: dashData } = useApi<DashboardResponse>(getDashboard);
   const { data: superData } = useApi<SupercompensationResponse>(getSupercompensation);
+  const loadFormLayout = useLoadFormLayout();
+  const isMobile = useMediaQuery('(max-width: 767px)');
+  const [openLoadWidgetMenu, setOpenLoadWidgetMenu] = useState(false);
+  const loadWidgetMenuRef = useRef<HTMLDivElement>(null);
+  const hiddenLoadWidgets = LOAD_FORM_WIDGETS.filter((widget) => loadFormLayout.hiddenKeys.includes(widget.key));
+
+  React.useEffect(() => {
+    if (!openLoadWidgetMenu) return;
+    const onClick = (event: MouseEvent) => {
+      if (loadWidgetMenuRef.current && !loadWidgetMenuRef.current.contains(event.target as Node)) {
+        setOpenLoadWidgetMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [openLoadWidgetMenu]);
 
   type ProTab = 'load_form' | 'potential_progress' | 'biomechanics';
   const activeProTab = React.useMemo<ProTab | null>(() => {
@@ -761,6 +909,8 @@ export function StatisticsView() {
     { id: 'analyticsv2', label: 'Potenziale & Progressi',      icon: Radar },
     { id: 'analyticsv3', label: 'Biomeccanica & Efficienza',   icon: Activity },
     { id: 'biology',     label: 'Biologia & Futuro',           icon: FlaskConical },
+    { id: 'environment', label: 'Clima & Ritmo',               icon: CloudSun },
+    { id: 'biologyv2',   label: 'Biologia & Futurov2',         icon: Dna },
     { id: 'badges',      label: 'Badge',                       icon: Star },
   ];
 
@@ -847,6 +997,8 @@ export function StatisticsView() {
           fontSize={10}
           tickLine={false}
           axisLine={false}
+          interval="preserveStartEnd"
+          minTickGap={22}
           tickFormatter={formatGctMonth}
         />
         <YAxis
@@ -868,9 +1020,9 @@ export function StatisticsView() {
           formatter={formatGctZone}
           wrapperStyle={{ fontSize: '11px', fontWeight: 700 }}
         />
-        <Line type="monotone" dataKey="pace_530" stroke={PRO_BLUE} strokeWidth={2} dot={{ r: 4, fill: PRO_BLUE }} connectNulls={false} />
-        <Line type="monotone" dataKey="pace_500" stroke={PRO_PURPLE} strokeWidth={2} dot={{ r: 4, fill: PRO_PURPLE }} connectNulls={false} />
-        <Line type="monotone" dataKey="pace_445" stroke={PRO_ACCENT} strokeWidth={2} dot={{ r: 4, fill: PRO_ACCENT }} connectNulls={false} />
+        <Line type="monotone" dataKey="pace_530" stroke={PRO_BLUE} strokeWidth={2} dot={{ r: 4, fill: PRO_BLUE }} connectNulls />
+        <Line type="monotone" dataKey="pace_500" stroke={PRO_PURPLE} strokeWidth={2} dot={{ r: 4, fill: PRO_PURPLE }} connectNulls />
+        <Line type="monotone" dataKey="pace_445" stroke={PRO_ACCENT} strokeWidth={2} dot={{ r: 4, fill: PRO_ACCENT }} connectNulls />
       </LineChart>
     </ResponsiveContainer>
   );
@@ -935,7 +1087,167 @@ export function StatisticsView() {
 
             <SectionLabel>CARICO — FITNESS · FATICA · FORMA</SectionLabel>
 
+            <div className="flex justify-end -mt-4">
+              {!isMobile && (
+                <div className="flex items-center gap-2">
+                  <div className="relative" ref={loadWidgetMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenLoadWidgetMenu((value) => !value)}
+                      disabled={hiddenLoadWidgets.length === 0}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[#666] hover:text-[#C0FF00] hover:border-[#C0FF00]/30 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-[#666] disabled:hover:border-white/[0.06] text-[10px] font-black tracking-widest transition-colors"
+                      title="Ripristina widget nascosti"
+                    >
+                      <Plus size={12} />
+                      AGGIUNGI WIDGET
+                      {hiddenLoadWidgets.length > 0 && (
+                        <span className="bg-[#C0FF00] text-black rounded-full px-1.5 text-[9px] leading-4">
+                          {hiddenLoadWidgets.length}
+                        </span>
+                      )}
+                    </button>
+                    {openLoadWidgetMenu && hiddenLoadWidgets.length > 0 && (
+                      <div className="absolute right-0 mt-2 w-64 bg-[#1a1a1a] border border-white/[0.08] rounded-2xl shadow-2xl z-40 p-2">
+                        <div className="text-[#666] text-[9px] font-black tracking-widest uppercase px-3 py-2">
+                          Archivio ({hiddenLoadWidgets.length})
+                        </div>
+                        {hiddenLoadWidgets.map((widget) => (
+                          <button
+                            key={widget.key}
+                            type="button"
+                            onClick={() => {
+                              loadFormLayout.restoreWidget(widget.key);
+                              setOpenLoadWidgetMenu(false);
+                            }}
+                            className="w-full text-left px-3 py-2 text-[12px] text-white hover:bg-white/[0.06] rounded-xl flex items-center justify-between group"
+                          >
+                            <span>{widget.label}</span>
+                            <Plus size={12} className="text-[#666] group-hover:text-[#C0FF00]" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm('Ripristinare il layout Carico & Forma?')) loadFormLayout.resetLayout();
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[#666] hover:text-[#C0FF00] hover:border-[#C0FF00]/30 text-[10px] font-black tracking-widest transition-colors"
+                    title="Ripristina posizioni widget"
+                  >
+                    <RotateCcw size={12} />
+                    RESET LAYOUT
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <ResponsiveGrid
+              className="layout"
+              layouts={loadFormLayout.layouts as any}
+              breakpoints={{ lg: 1200, md: 768, sm: 0 }}
+              cols={{ lg: 12, md: 6, sm: 1 }}
+              rowHeight={60}
+              margin={[16, 16]}
+              containerPadding={[0, 0]}
+              isDraggable={!isMobile}
+              isResizable={!isMobile}
+              draggableHandle=".drag-handle"
+              resizeHandles={['se']}
+              onLayoutChange={loadFormLayout.onLayoutChange as any}
+              useCSSTransforms
+            >
+              {!loadFormLayout.hiddenKeys.includes('load-kpis') && (
+                <div key="load-kpis">
+                  <GridCard disabled={isMobile} onRemove={() => loadFormLayout.hideWidget('load-kpis')}>
+                    <div className="h-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                      {[
+                        { label: 'Fitness (CTL)', value: '54.2', trend: '+2.1', trendUp: true, icon: TrendingUp, color: PRO_BLUE, desc: 'Carico Cronico' },
+                        { label: 'Fatigue (ATL)', value: '68.5', trend: '+5.4', trendUp: true, icon: Zap, color: PRO_RED, desc: 'Carico Acuto' },
+                        { label: 'Form (TSB)', value: '-14.3', trend: '-3.3', trendUp: false, icon: Activity, color: PRO_ACCENT, desc: 'Bilancio Carico/Recupero' },
+                        { label: 'Efficiency Factor', value: '1.42', trend: '+0.05', trendUp: true, icon: Flame, color: PRO_PURPLE, desc: 'Passo vs Frequenza Cardiaca' },
+                      ].map((kpi, i) => (
+                        <div
+                          key={i}
+                          className="bg-[#0E0E0E] border border-[#2A2A2A] rounded-2xl p-6 relative overflow-hidden hover:border-[#333] transition-colors shadow-2xl"
+                          style={{ borderLeft: `3px solid ${kpi.color}` }}
+                        >
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{kpi.label}</p>
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-3xl font-black italic">{kpi.value}</span>
+                                <span className={`text-xs font-bold ${kpi.trendUp ? 'text-[#D4FF00]' : 'text-[#F43F5E]'}`}>{kpi.trend}</span>
+                              </div>
+                            </div>
+                            <div className="p-3 rounded-xl bg-[#0D0D0D] border border-[#1E1E1E]" style={{ color: kpi.color }}>
+                              <kpi.icon className="w-5 h-5" />
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">{kpi.desc}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </GridCard>
+                </div>
+              )}
+
+              {!loadFormLayout.hiddenKeys.includes('load-fitness') && (
+                <div key="load-fitness">
+                  <GridCard disabled={isMobile} onRemove={() => loadFormLayout.hideWidget('load-fitness')}>
+                    <FitnessFreshness fitnessFreshness={ffHistory} currentFf={dashData?.current_ff ?? null} prevCtl={prevCtl} />
+                  </GridCard>
+                </div>
+              )}
+
+              {!loadFormLayout.hiddenKeys.includes('load-main-chart') && (
+                <div key="load-main-chart">
+                  <GridCard disabled={isMobile} onRemove={() => loadFormLayout.hideWidget('load-main-chart')}>
+                    <div className="h-full min-h-[360px]">
+                      <MainChart runs={statsRuns} />
+                    </div>
+                  </GridCard>
+                </div>
+              )}
+
+              {!loadFormLayout.hiddenKeys.includes('load-pace-zones') && (
+                <div key="load-pace-zones">
+                  <GridCard disabled={isMobile} onRemove={() => loadFormLayout.hideWidget('load-pace-zones')}>
+                    <AnalyticsV4PaceZoneDistribution
+                      chart={loadCharts.pace_zones}
+                      onRequestDetail={() => requestProChartDetail('load_form', 'pace_zones')}
+                    />
+                  </GridCard>
+                </div>
+              )}
+
+              {!loadFormLayout.hiddenKeys.includes('load-pace-distribution') && (
+                <div key="load-pace-distribution">
+                  <GridCard disabled={isMobile} onRemove={() => loadFormLayout.hideWidget('load-pace-distribution')}>
+                    <AnalyticsV5PaceDistributionBell
+                      chart={loadCharts.pace_distribution}
+                      onRequestDetail={() => requestProChartDetail('load_form', 'pace_distribution')}
+                    />
+                  </GridCard>
+                </div>
+              )}
+
+              {!loadFormLayout.hiddenKeys.includes('load-effort-matrix') && (
+                <div key="load-effort-matrix">
+                  <GridCard disabled={isMobile} onRemove={() => loadFormLayout.hideWidget('load-effort-matrix')}>
+                    <AnalyticsV5EffortMatrix
+                      chart={loadCharts.effort_matrix}
+                      onRequestDetail={() => requestProChartDetail('load_form', 'effort_matrix')}
+                    />
+                  </GridCard>
+                </div>
+              )}
+            </ResponsiveGrid>
+
              {/* ── KPI Grid ── */}
+             {false && (
+             <>
              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                {[
                  {
@@ -1037,6 +1349,9 @@ export function StatisticsView() {
                   />
                </div>
              </div>
+
+             </>
+             )}
 
              {false && (
              <>
@@ -1407,6 +1722,7 @@ export function StatisticsView() {
              </Card>
              )}
 
+             {false && (
              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                <AnalyticsV5PaceDistributionBell
                  chart={loadCharts.pace_distribution}
@@ -1417,6 +1733,7 @@ export function StatisticsView() {
                  onRequestDetail={() => requestProChartDetail('load_form', 'effort_matrix')}
                />
              </div>
+             )}
 
           </div>
         )}
@@ -1490,6 +1807,7 @@ export function StatisticsView() {
             </Card>
             )}
 
+            {false && (
             <Card accent={PRO_ACCENT} variant="pro">
               <CardHeader
                 icon={Zap}
@@ -1546,6 +1864,7 @@ export function StatisticsView() {
                 </p>
               )}
             </Card>
+            )}
             <AnalyticsV5BestEffortsProgression
               chart={potentialCharts.best_efforts_progression}
               onRequestDetail={() => requestProChartDetail('potential_progress', 'best_efforts_progression')}
@@ -1886,6 +2205,10 @@ export function StatisticsView() {
           </div>
         )}
 
+        {activeTab === 'environment' && (
+          <EnvironmentalNormalizerView runs={statsRuns} />
+        )}
+
         {false && activeTab === 'biology' && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
@@ -2121,6 +2444,10 @@ export function StatisticsView() {
         {/* ════════════════════════════════════════════════════
             BADGES TAB
         ════════════════════════════════════════════════════ */}
+        {activeTab === 'biologyv2' && (
+          <BiologyFutureV2 data={biologyData} />
+        )}
+
         {activeTab === 'badges' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
             <BadgesGrid

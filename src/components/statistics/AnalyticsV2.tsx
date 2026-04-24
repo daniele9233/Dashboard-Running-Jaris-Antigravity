@@ -1264,17 +1264,27 @@ export function AnalyticsV2({
     return parseFloat(vdotEst.toFixed(1));
   }
 
-  // T-Pace from VDOT (Jack Daniels formula — min/km decimal)
+  // Daniels threshold / T pace from VDOT.
+  // We solve the VO2 demand curve at ~88% of VDOT, which matches threshold pace
+  // much better than the previous approximation and keeps the card aligned with the backend pace table.
   function calcTPaceV2(v: number): string {
-    // T-pace in min/km: approximate from VDOT
-    const tPaceMs = 1000 / ((-0.182258 + Math.sqrt(0.182258 ** 2 + 4 * 0.000104 * (v * (0.8 + 0.2989558 * Math.exp(-0.1932605 * 35)) + 4.60))) / (2 * 0.000104) / 1000);
-    // Simpler direct approximation used by many coaches:
-    const tPaceSecs = (29.54 + 5.000663 * v - 0.007546 * v * v);
-    // tPaceSecs is secs per 400m, convert to min/km
-    const minPerKm = (tPaceSecs * 1000) / (400 * 60);
-    const m = Math.floor(minPerKm);
-    const s = Math.round((minPerKm - m) * 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
+    if (!Number.isFinite(v) || v <= 0) return '—';
+    const targetVo2 = v * 0.88;
+    const discriminant = (0.182258 ** 2) + 4 * 0.000104 * (targetVo2 + 4.60);
+    const velocityMetersPerMinute = (-0.182258 + Math.sqrt(discriminant)) / (2 * 0.000104);
+    if (!Number.isFinite(velocityMetersPerMinute) || velocityMetersPerMinute <= 0) return '—';
+    const minutesPerKm = 1000 / velocityMetersPerMinute;
+    const m = Math.floor(minutesPerKm);
+    const s = Math.round((minutesPerKm - m) * 60);
+    const carry = s === 60 ? 1 : 0;
+    return `${m + carry}:${String(s === 60 ? 0 : s).padStart(2, '0')}`;
+  }
+
+  function getThresholdDisplay(v: number | null | undefined): string | null {
+    if (thresholdPace) return thresholdPace;
+    if (v == null) return null;
+    const derived = calcTPaceV2(v);
+    return derived === '—' ? null : derived;
   }
 
   const vdotHistory = React.useMemo(() => {
@@ -1497,7 +1507,7 @@ export function AnalyticsV2({
     const freshness = Math.round(Math.max(30, Math.min(100, latestTsb == null ? 62 : 58 + latestTsb * 1.6 + Math.min(recent35.length, 12) * 0.6)));
     const axes: RaceReadinessAxis[] = [
       { label: 'Velocita', value: speed, hint: 'VDOT e passo' },
-      { label: 'Soglia', value: threshold, hint: 'T-pace e HR' },
+      { label: 'Soglia', value: threshold, hint: 'passo soglia e HR' },
       { label: 'Endurance', value: endurance, hint: 'lunghi recenti' },
       { label: 'Consistenza', value: consistency, hint: 'settimane attive' },
       { label: 'Freschezza', value: freshness, hint: 'TSB e carico' },
@@ -1672,13 +1682,13 @@ export function AnalyticsV2({
                        </div>
                        {d.vdot && (
                          <div className="flex items-center gap-2 text-xs">
-                           <span className="text-[#777]">5K:</span>
+                           <span className="text-[#777]">Passo soglia:</span>
                            <span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span>
                          </div>
                        )}
                        {d.vdot && (
                          <div className="flex items-center gap-2 text-xs">
-                           <span className="text-[#777]">10K:</span>
+                           <span className="text-[#777]">Soglia teorica:</span>
                            <span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span>
                          </div>
                        )}
@@ -1700,7 +1710,7 @@ export function AnalyticsV2({
              const olderVdot = vdotChartData.length >= 4 ? vdotChartData[vdotChartData.length - 4]?.vdot : null;
              const recentVdot = vdotChartData.length >= 1 ? vdotChartData[vdotChartData.length - 1]?.vdot : null;
              const trend3m = (recentVdot != null && olderVdot != null) ? (recentVdot - olderVdot) : null;
-             const tPace = currentVdot ? calcTPaceV2(currentVdot) : null;
+              const tPace = getThresholdDisplay(currentVdot);
              return (
                <>
                  <div className="flex-1 bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
@@ -1714,7 +1724,7 @@ export function AnalyticsV2({
                    </div>
                  </div>
                  <div className="flex-1 bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
-                   <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">5K Tempo</div>
+                    <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo soglia (Daniels)</div>
                    <div className="text-xl font-mono font-black text-white">{tPace ?? '—'} {tPace ? '/km' : ''}</div>
                  </div>
                </>
@@ -1733,8 +1743,14 @@ export function AnalyticsV2({
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
            {/* Anaerobic Threshold Trend — left column */}
            <div
-              className="xl:col-span-2 bg-[#111111] border border-[#1B1B1B] rounded-[3px] p-6 flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_246px] gap-6 relative group overflow-hidden"
-              style={{ minHeight: 402 }}
+              className="xl:col-span-2 rounded-[3px] p-6 flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_246px] gap-6 relative group overflow-hidden"
+              style={{
+                minHeight: 402,
+                background: 'radial-gradient(circle at top left, rgba(192,255,0,0.08), transparent 24%), radial-gradient(circle at bottom right, rgba(34,211,238,0.06), transparent 32%), #111111',
+                border: '1px solid #1F290E',
+                borderLeft: `3px solid ${NEON}`,
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02), 0 0 0 1px rgba(192,255,0,0.03)',
+              }}
            >
                 <div className="min-w-0 flex flex-col">
                 <div className="flex items-start justify-between gap-4 mb-5">
@@ -1892,7 +1908,7 @@ export function AnalyticsV2({
                            </div>
                            {d.vdot && (
                              <div className="flex items-center gap-2 text-xs">
-                               <span className="text-[#777]">T-Pace:</span>
+                               <span className="text-[#777]">Passo soglia:</span>
                                <span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span>
                              </div>
                            )}
@@ -1914,7 +1930,7 @@ export function AnalyticsV2({
                  const olderVdot = vdotChartData.length >= 4 ? vdotChartData[vdotChartData.length - 4]?.vdot : null;
                  const recentVdot = vdotChartData.length >= 1 ? vdotChartData[vdotChartData.length - 1]?.vdot : null;
                  const trend3m = (recentVdot != null && olderVdot != null) ? (recentVdot - olderVdot) : null;
-                 const tPace = currentVdot ? calcTPaceV2(currentVdot) : null;
+                 const tPace = getThresholdDisplay(currentVdot);
                  return (
                    <>
                      <div className="flex-1 bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
@@ -1928,7 +1944,7 @@ export function AnalyticsV2({
                        </div>
                      </div>
                      <div className="flex-1 bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
-                       <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">T-Pace</div>
+                       <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo soglia</div>
                        <div className="text-xl font-mono font-black text-white">{tPace ?? '—'} {tPace ? '/km' : ''}</div>
                      </div>
                    </>
@@ -2864,7 +2880,7 @@ export function AnalyticsV2({
         const olderVdot = expandedVdotData.length >= 4 ? expandedVdotData[expandedVdotData.length - 4]?.vdot : null;
         const recentVdot = expandedVdotData.length >= 1 ? expandedVdotData[expandedVdotData.length - 1]?.vdot : null;
         const trend3m = (recentVdot != null && olderVdot != null) ? (recentVdot - olderVdot) : null;
-        const tPace = currentVdot ? calcTPaceV2(currentVdot) : null;
+        const tPace = getThresholdDisplay(currentVdot);
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
             <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-[92vw] max-w-[1500px] shadow-2xl flex flex-col" style={{ height: '68vh', borderLeft: `3px solid ${NEON}` }}>
@@ -2903,7 +2919,7 @@ export function AnalyticsV2({
                         <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
                           <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>{d.name}</p>
                           <div className="flex items-center gap-2 text-xs mb-0.5"><span className="text-[#777]">VDOT:</span><span className="text-white font-bold">{d.vdot}</span></div>
-                          {d.vdot && <div className="flex items-center gap-2 text-xs"><span className="text-[#777]">T-Pace:</span><span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span></div>}
+                          {d.vdot && <div className="flex items-center gap-2 text-xs"><span className="text-[#777]">Passo soglia:</span><span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span></div>}
                         </div>
                       );
                     }} />
@@ -2925,7 +2941,7 @@ export function AnalyticsV2({
                   </div>
                 </div>
                 <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">T-Pace</div>
+                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo soglia</div>
                   <div className="text-xl font-mono font-black text-white">{tPace ?? '—'} {tPace ? '/km' : ''}</div>
                 </div>
               </div>
@@ -2935,7 +2951,7 @@ export function AnalyticsV2({
                   columns={[
                     { key: 'vdot', label: 'VDOT', color: NEON, render: (row) => Number(row.vdot).toFixed(1) },
                     { key: 'vo2max', label: 'VO2 max', render: (row) => row.vo2max ? Number(row.vo2max).toFixed(1) : Number(row.vdot).toFixed(1) },
-                    { key: 'tpace', label: 'T-Pace', render: (row) => row.vdot ? `${calcTPaceV2(Number(row.vdot))} /km` : '--' },
+                    { key: 'tpace', label: 'Passo soglia', render: (row) => row.vdot ? `${calcTPaceV2(Number(row.vdot))} /km` : '--' },
                     { key: 'samples', label: 'Campioni', render: (row) => Number(row.samples ?? 0) > 0 ? Number(row.samples ?? 0) : '--' },
                   ]}
                 />

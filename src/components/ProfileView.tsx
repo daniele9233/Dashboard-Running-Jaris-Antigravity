@@ -468,22 +468,23 @@ function PaceProgressionChart({ pacePoints }: { pacePoints: PacePoint[] }) {
       <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full h-full" preserveAspectRatio="none">
         <defs>
           <linearGradient id="paceGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0" />
+            <stop offset="0%" stopColor="#C0FF00" stopOpacity="0.18" />
+            <stop offset="65%" stopColor="#27D3C3" stopOpacity="0.08" />
+            <stop offset="100%" stopColor="#27D3C3" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#3B82F6" />
-            <stop offset="50%" stopColor="#8B5CF6" />
-            <stop offset="100%" stopColor="#EC4899" />
+            <stop offset="0%" stopColor="#27D3C3" />
+            <stop offset="58%" stopColor="#C0FF00" />
+            <stop offset="100%" stopColor="#8AE62E" />
           </linearGradient>
         </defs>
-        <line x1="0" y1={yS(minPace)} x2={chartW} y2={yS(minPace)} stroke="#2A2A2A" strokeWidth="0.5" />
-        <line x1="0" y1={yS(maxPace)} x2={chartW} y2={yS(maxPace)} stroke="#2A2A2A" strokeWidth="0.5" />
-        <line x1="0" y1={avgY} x2={chartW} y2={avgY} stroke="#8B5CF6" strokeWidth="0.8" strokeDasharray="4 3" opacity="0.4" />
+        <line x1="0" y1={yS(minPace)} x2={chartW} y2={yS(minPace)} stroke="#232323" strokeWidth="0.75" />
+        <line x1="0" y1={yS(maxPace)} x2={chartW} y2={yS(maxPace)} stroke="#232323" strokeWidth="0.75" />
+        <line x1="0" y1={avgY} x2={chartW} y2={avgY} stroke="#27D3C3" strokeWidth="0.9" strokeDasharray="4 3" opacity="0.5" />
         <path d={areaPath} fill="url(#paceGrad)" />
-        <polyline points={polyline} fill="none" stroke="url(#lineGrad)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        <polyline points={polyline} fill="none" stroke="url(#lineGrad)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
         {hovered !== null && (
-          <line x1={xS(hovered)} y1={0} x2={xS(hovered)} y2={chartH} stroke="#ffffff" strokeWidth="0.5" opacity="0.25" strokeDasharray="3 2" />
+          <line x1={xS(hovered)} y1={0} x2={xS(hovered)} y2={chartH} stroke="#C0FF00" strokeWidth="0.8" opacity="0.28" strokeDasharray="3 2" />
         )}
         {pacePoints.map((p, i) => {
           const isBest = p.pace === minPace;
@@ -493,10 +494,10 @@ function PaceProgressionChart({ pacePoints }: { pacePoints: PacePoint[] }) {
               key={i}
               cx={xS(i)}
               cy={yS(p.pace)}
-              r={isHov ? 6 : isBest ? 5 : 3}
-              fill={isHov ? "#C0FF00" : isBest ? "#EAB308" : "#8B5CF6"}
-              stroke={isHov ? "#C0FF00" : isBest ? "#FDE047" : "#121212"}
-              strokeWidth={isHov ? 2 : isBest ? 2 : 1.5}
+              r={isHov ? 6.5 : isBest ? 5.5 : 4}
+              fill={isHov ? "#C0FF00" : isBest ? "#F4B400" : "#27D3C3"}
+              stroke={isHov ? "#050505" : isBest ? "#FFF0A8" : "#050505"}
+              strokeWidth={isHov ? 2.2 : isBest ? 2 : 1.8}
               style={{ cursor: "pointer" }}
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
@@ -505,23 +506,23 @@ function PaceProgressionChart({ pacePoints }: { pacePoints: PacePoint[] }) {
         })}
       </svg>
       {/* Y axis labels */}
-      <span className="absolute top-0 left-1 text-[9px] text-[#10B981] font-bold">{fmt(minPace)}</span>
-      <span className="absolute bottom-0 left-1 text-[9px] text-[#F43F5E] font-bold">{fmt(maxPace)}</span>
-      <span className="absolute right-1 text-[9px] text-[#8B5CF6]/60 font-medium" style={{ top: `${(avgY / chartH) * 100}%` }}>media {fmt(avgPace)}</span>
+      <span className="absolute top-0 left-1 text-[9px] text-[#C0FF00] font-bold">{fmt(minPace)}</span>
+      <span className="absolute bottom-0 left-1 text-[9px] text-[#7B8591] font-bold">{fmt(maxPace)}</span>
+      <span className="absolute right-1 text-[9px] text-[#27D3C3]/70 font-medium" style={{ top: `${(avgY / chartH) * 100}%` }}>media {fmt(avgPace)}</span>
       {/* Tooltip */}
       {hp !== null && hovered !== null && (
         <div
-          className="absolute z-20 bg-[#1E1E1E] border border-[#3A3A3A] rounded-lg px-3 py-2 pointer-events-none text-xs shadow-xl whitespace-nowrap"
+          className="absolute z-20 bg-[#0E0E0E] border border-[#26350F] rounded-xl px-3 py-2 pointer-events-none text-xs shadow-xl whitespace-nowrap"
           style={{
             left: `${(xS(hovered) / chartW) * 100}%`,
             top: `${(yS(hp.pace) / chartH) * 100}%`,
             transform: hovered < pacePoints.length / 2 ? "translate(10px, -50%)" : "translate(calc(-100% - 10px), -50%)",
           }}
         >
-          <div className="text-gray-400 mb-0.5">{hp.date}</div>
-          <div className="font-bold text-white text-sm">{fmt(hp.pace)}<span className="text-gray-400 text-xs font-normal"> /km</span></div>
-          <div className="text-gray-400">{hp.km.toFixed(1)} km</div>
-          {hp.name && <div className="text-gray-500 truncate max-w-[130px]">{hp.name}</div>}
+          <div className="text-[#7B8591] mb-0.5">{hp.date}</div>
+          <div className="font-bold text-white text-sm">{fmt(hp.pace)}<span className="text-[#7B8591] text-xs font-normal"> /km</span></div>
+          <div className="text-[#C0FF00]">{hp.km.toFixed(1)} km</div>
+          {hp.name && <div className="text-[#6A727C] truncate max-w-[130px]">{hp.name}</div>}
         </div>
       )}
     </div>
@@ -764,23 +765,23 @@ export function ProfileView() {
                 </div>
 
                 {/* Stats grid */}
-                <div className="grid grid-cols-4 gap-3 mt-5 pt-4 border-t border-[#2A2A2A]/60 relative">
-                  <div className="bg-[#121212]/80 rounded-xl p-3 text-center">
+                <div className="grid grid-cols-4 gap-3 mt-5 pt-4 border-t border-[#242424] relative">
+                  <div className="bg-[#0D0D0D] border border-[#1D1D1D] rounded-xl p-3 text-center">
                     <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Streak</div>
                     <div className="text-xl font-black text-[#10B981]">{currentStreak}</div>
                     <div className="text-[10px] text-gray-600">giorni</div>
                   </div>
-                  <div className="bg-[#121212]/80 rounded-xl p-3 text-center">
+                  <div className="bg-[#0D0D0D] border border-[#1D1D1D] rounded-xl p-3 text-center">
                     <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Best Streak</div>
                     <div className="text-xl font-black text-[#EAB308]">{bestStreak}</div>
                     <div className="text-[10px] text-gray-600">giorni</div>
                   </div>
-                  <div className="bg-[#121212]/80 rounded-xl p-3 text-center">
+                  <div className="bg-[#0D0D0D] border border-[#1D1D1D] rounded-xl p-3 text-center">
                     <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Media/Run</div>
                     <div className="text-xl font-black text-white">{avgKmActive.toFixed(1)}</div>
                     <div className="text-[10px] text-gray-600">km</div>
                   </div>
-                  <div className="bg-[#121212]/80 rounded-xl p-3 text-center">
+                  <div className="bg-[#0D0D0D] border border-[#1D1D1D] rounded-xl p-3 text-center">
                     <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Giorno Top</div>
                     <div className="text-xl font-black text-[#3B82F6]">{favDay}</div>
                     <div className="text-[10px] text-gray-600">{dayTotals[favDayIdx] > 0 ? `${dayTotals[favDayIdx]} corse` : ""}</div>
@@ -788,7 +789,7 @@ export function ProfileView() {
                 </div>
 
                 {/* Weekly frequency mini-bars */}
-                <div className="mt-4 pt-3 border-t border-[#2A2A2A]/40 relative">
+                <div className="mt-4 pt-3 border-t border-[#242424] relative">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Frequenza per giorno</span>
                     <span className="text-[10px] text-gray-600">{activeWeeks} settimane attive su {heatmapGrid.length}</span>
@@ -874,29 +875,29 @@ export function ProfileView() {
 
 
             return (
-              <div className="bg-gradient-to-br from-[#181818] to-[#141414] border border-[#2A2A2A] rounded-2xl p-6 relative overflow-hidden">
+              <div className="bg-[#111111] border border-[#242424] rounded-2xl p-6 relative overflow-hidden">
                 {/* Ambient glow */}
-                <div className="absolute top-0 right-0 w-48 h-48 bg-[#8B5CF6]/5 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#3B82F6]/4 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute top-0 right-0 w-48 h-48 bg-[#C0FF00]/[0.05] rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-40 h-40 bg-[#27D3C3]/[0.04] rounded-full blur-3xl pointer-events-none" />
 
                 {/* Header */}
                 <div className="flex items-center justify-between mb-5 relative">
                   <div>
                     <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-[#8B5CF6]" />
+                      <div className="w-2 h-2 rounded-full bg-[#C0FF00]" />
                       Progressione del Passo
                     </h2>
-                    <p className="text-xs text-gray-500 mt-0.5">Evoluzione del passo medio sulle ultime {pacePoints.length} corse</p>
+                    <p className="text-xs text-[#6F7782] mt-0.5">Evoluzione del passo medio sulle ultime {pacePoints.length} corse</p>
                   </div>
                   <div className="flex items-center gap-2">
                     {improvement > 0 && (
-                      <div className="bg-[#10B981]/10 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-                        <Zap className="w-3.5 h-3.5 text-[#10B981]" />
-                        <span className="text-xs font-bold text-[#10B981]">-{fmtPace(improvement)}/km</span>
+                      <div className="bg-[#C0FF00]/10 border border-[#C0FF00]/15 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                        <Zap className="w-3.5 h-3.5 text-[#C0FF00]" />
+                        <span className="text-xs font-bold text-[#C0FF00]">-{fmtPace(improvement)}/km</span>
                       </div>
                     )}
                     {improvement < 0 && (
-                      <div className="bg-[#F43F5E]/10 px-3 py-1.5 rounded-lg">
+                      <div className="bg-[#F43F5E]/10 border border-[#F43F5E]/15 px-3 py-1.5 rounded-lg">
                         <span className="text-xs font-bold text-[#F43F5E]">+{fmtPace(-improvement)}/km</span>
                       </div>
                     )}
@@ -907,31 +908,31 @@ export function ProfileView() {
                 <PaceProgressionChart pacePoints={pacePoints} />
 
                 {/* Date range */}
-                <div className="flex justify-between mt-1 text-[9px] text-gray-600">
+                <div className="flex justify-between mt-1 text-[9px] text-[#5E6670]">
                   <span>{pacePoints[0]?.date}</span>
                   <span>{pacePoints[pacePoints.length - 1]?.date}</span>
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-4 gap-3 mt-5 pt-4 border-t border-[#2A2A2A]/60 relative">
-                  <div className="bg-[#121212]/80 rounded-xl p-3 text-center">
-                    <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Best Pace</div>
+                <div className="grid grid-cols-4 gap-3 mt-5 pt-4 border-t border-[#242424] relative">
+                  <div className="bg-[#0D0D0D] border border-[#1D1D1D] rounded-xl p-3 text-center">
+                    <div className="text-[10px] text-[#68707B] uppercase tracking-wider font-bold mb-1">Best Pace</div>
                     <div className="text-lg font-black text-[#EAB308]">{fmtPace(bestPaceVal)}</div>
-                    <div className="text-[10px] text-gray-600">/km</div>
+                    <div className="text-[10px] text-[#5E6670]">/km</div>
                   </div>
-                  <div className="bg-[#121212]/80 rounded-xl p-3 text-center">
-                    <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Media</div>
+                  <div className="bg-[#0D0D0D] border border-[#1D1D1D] rounded-xl p-3 text-center">
+                    <div className="text-[10px] text-[#68707B] uppercase tracking-wider font-bold mb-1">Media</div>
                     <div className="text-lg font-black text-white">{fmtPace(avgPace)}</div>
-                    <div className="text-[10px] text-gray-600">/km</div>
+                    <div className="text-[10px] text-[#5E6670]">/km</div>
                   </div>
-                  <div className="bg-[#121212]/80 rounded-xl p-3 text-center">
-                    <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Ultime 5</div>
-                    <div className="text-lg font-black text-[#8B5CF6]">{fmtPace(recentAvg)}</div>
-                    <div className="text-[10px] text-gray-600">/km</div>
+                  <div className="bg-[#0D0D0D] border border-[#1D1D1D] rounded-xl p-3 text-center">
+                    <div className="text-[10px] text-[#68707B] uppercase tracking-wider font-bold mb-1">Ultime 5</div>
+                    <div className="text-lg font-black text-[#27D3C3]">{fmtPace(recentAvg)}</div>
+                    <div className="text-[10px] text-[#5E6670]">/km</div>
                   </div>
-                  <div className="bg-[#121212]/80 rounded-xl p-3 text-center">
-                    <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Trend</div>
-                    <div className={`text-lg font-black ${improvement > 0 ? "text-[#10B981]" : improvement < 0 ? "text-[#F43F5E]" : "text-gray-400"}`}>
+                  <div className="bg-[#0D0D0D] border border-[#1D1D1D] rounded-xl p-3 text-center">
+                    <div className="text-[10px] text-[#68707B] uppercase tracking-wider font-bold mb-1">Trend</div>
+                    <div className={`text-lg font-black ${improvement > 0 ? "text-[#C0FF00]" : improvement < 0 ? "text-[#F43F5E]" : "text-[#7B8591]"}`}>
                       {improvement > 0 ? `−${improvement}s` : improvement < 0 ? `+${-improvement}s` : "="}
                     </div>
                     <div className="text-[10px] text-gray-600">{improvement > 0 ? "più veloce" : improvement < 0 ? "più lento" : "stabile"}</div>
@@ -939,27 +940,27 @@ export function ProfileView() {
                 </div>
 
                 {/* Distribuzione distanze */}
-                <div className="mt-4 pt-3 border-t border-[#2A2A2A]/40 relative">
+                <div className="mt-4 pt-3 border-t border-[#242424] relative">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Distribuzione Distanze</span>
-                    <span className="text-[10px] text-gray-600">{allRuns.filter(r => r.distance_km > 0).length} corse totali</span>
+                    <span className="text-[10px] text-[#68707B] font-bold uppercase tracking-wider">Distribuzione Distanze</span>
+                    <span className="text-[10px] text-[#5E6670]">{allRuns.filter(r => r.distance_km > 0).length} corse totali</span>
                   </div>
-                  <div className="flex gap-1 h-3 rounded-full overflow-hidden mb-3">
-                    {shortRuns > 0 && <div className="bg-[#3B82F6] transition-all" style={{ width: `${(shortRuns / totalCat) * 100}%` }} />}
-                    {medRuns > 0 && <div className="bg-[#8B5CF6] transition-all" style={{ width: `${(medRuns / totalCat) * 100}%` }} />}
-                    {longRuns > 0 && <div className="bg-[#EC4899] transition-all" style={{ width: `${(longRuns / totalCat) * 100}%` }} />}
-                    {ultraRuns > 0 && <div className="bg-[#EAB308] transition-all" style={{ width: `${(ultraRuns / totalCat) * 100}%` }} />}
+                  <div className="flex gap-1 h-3 rounded-full overflow-hidden mb-3 bg-[#0D0D0D] border border-[#1D1D1D] p-[2px]">
+                    {shortRuns > 0 && <div className="bg-[#27D3C3] transition-all rounded-full" style={{ width: `${(shortRuns / totalCat) * 100}%` }} />}
+                    {medRuns > 0 && <div className="bg-[#7A6CFF] transition-all rounded-full" style={{ width: `${(medRuns / totalCat) * 100}%` }} />}
+                    {longRuns > 0 && <div className="bg-[#C94BAE] transition-all rounded-full" style={{ width: `${(longRuns / totalCat) * 100}%` }} />}
+                    {ultraRuns > 0 && <div className="bg-[#F4B400] transition-all rounded-full" style={{ width: `${(ultraRuns / totalCat) * 100}%` }} />}
                   </div>
                   <div className="grid grid-cols-4 gap-2">
                     {[
-                      { label: "< 5 km", count: shortRuns, color: "bg-[#3B82F6]" },
-                      { label: "5-10 km", count: medRuns, color: "bg-[#8B5CF6]" },
-                      { label: "10-20 km", count: longRuns, color: "bg-[#EC4899]" },
-                      { label: "20+ km", count: ultraRuns, color: "bg-[#EAB308]" },
+                      { label: "< 5 km", count: shortRuns, color: "bg-[#27D3C3]" },
+                      { label: "5-10 km", count: medRuns, color: "bg-[#7A6CFF]" },
+                      { label: "10-20 km", count: longRuns, color: "bg-[#C94BAE]" },
+                      { label: "20+ km", count: ultraRuns, color: "bg-[#F4B400]" },
                     ].map((cat, i) => (
                       <div key={i} className="flex items-center gap-1.5">
                         <div className={`w-2 h-2 rounded-full ${cat.color} flex-shrink-0`} />
-                        <span className="text-[10px] text-gray-400">{cat.label}</span>
+                        <span className="text-[10px] text-[#7B8591]">{cat.label}</span>
                         <span className="text-[10px] font-bold text-white">{cat.count}</span>
                       </div>
                     ))}

@@ -331,7 +331,14 @@ export function AnalyticsV4CadenceSpeedMatrix({ chart, onRequestDetail }: { char
 
   return (
     <>
-      <Panel className="p-6 group" accent={CY}>
+      <Panel
+        className="p-6 group"
+        accent={N}
+        style={{
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02), 0 0 0 1px rgba(192,255,0,0.04)',
+          background: 'radial-gradient(circle at top left, rgba(192,255,0,0.07), transparent 24%), #0E0E0E',
+        }}
+      >
         <div className="flex items-center justify-between mb-5">
           <Lbl color={DM}>CADENCE vs SPEED MATRIX</Lbl>
           <div className="flex items-center gap-3">

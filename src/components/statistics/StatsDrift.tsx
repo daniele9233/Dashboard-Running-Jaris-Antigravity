@@ -9,6 +9,12 @@ import { computeDrift, driftLabel } from "../../utils/cardiacDrift";
 import type { DriftResult } from "../../utils/cardiacDrift";
 import { ChartExpandButton, ChartFullscreenModal } from "./ChartFullscreenModal";
 
+const DRIFT_NEON = "#C0FF00";
+const DRIFT_CYAN = "#27D3C3";
+const DRIFT_AMBER = "#F59E0B";
+const DRIFT_PINK = "#FF4D8D";
+const DRIFT_PANEL_BORDER = "#20290F";
+
 // ─── Single Run Drift ─────────────────────────────────────────────────────────
 
 function SingleRunDrift({
@@ -41,7 +47,7 @@ function SingleRunDrift({
         <select
           value={selectedIdx}
           onChange={e => setSelectedIdx(Number(e.target.value))}
-          className="bg-[#1E293B] border border-[#2A2A2A] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#3B82F6] cursor-pointer"
+          className="bg-[#10130D] border border-[#243018] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#C0FF00] cursor-pointer"
         >
           {results.map((r, i) => (
             <option key={r.runId} value={i}>
@@ -56,7 +62,7 @@ function SingleRunDrift({
         {/* Left: metrics */}
         <div className="flex flex-col gap-3">
           {/* Big drift */}
-          <div className="bg-[#0F172A] rounded-xl p-4 text-center border border-white/5">
+          <div className="bg-[#10130D] rounded-xl p-4 text-center border border-[#243018]">
             <div className="text-4xl font-black" style={{ color: cfg.color }}>
               {driftSign}{run.drift.toFixed(1)}%
             </div>
@@ -68,12 +74,12 @@ function SingleRunDrift({
 
           {/* Halves */}
           <div className="grid grid-cols-2 gap-2">
-            <div className="bg-[#0F172A] border border-white/5 rounded-xl p-3 text-center">
+            <div className="bg-[#10130D] border border-[#243018] rounded-xl p-3 text-center">
               <div className="text-[9px] text-gray-500 uppercase mb-1">Prima metà</div>
               <div className="text-lg font-black text-white">{run.hr1} <span className="text-xs text-gray-500">bpm</span></div>
               <div className="text-[10px] text-gray-400">{run.kmFirst}</div>
             </div>
-            <div className="bg-[#0F172A] border border-white/5 rounded-xl p-3 text-center">
+            <div className="bg-[#10130D] border border-[#243018] rounded-xl p-3 text-center">
               <div className="text-[9px] text-gray-500 uppercase mb-1">Seconda metà</div>
               <div className="text-lg font-black" style={{ color: cfg.color }}>{run.hr2} <span className="text-xs text-gray-500">bpm</span></div>
               <div className="text-[10px] text-gray-400">{run.kmSecond}</div>
@@ -83,10 +89,10 @@ function SingleRunDrift({
           {/* Scale */}
           <div className="space-y-1">
             {[
-              { range: "< 3.5%", label: "Base aerobica eccellente", color: "#10B981" },
-              { range: "3.5–5%", label: "Buona efficienza",         color: "#3B82F6" },
-              { range: "5–7.5%", label: "Da migliorare",            color: "#F59E0B" },
-              { range: "> 7.5%", label: "Insufficiente",            color: "#F43F5E" },
+              { range: "< 3.5%", label: "Base aerobica eccellente", color: DRIFT_NEON },
+              { range: "3.5–5%", label: "Buona efficienza",         color: DRIFT_CYAN },
+              { range: "5–7.5%", label: "Da migliorare",            color: DRIFT_AMBER },
+              { range: "> 7.5%", label: "Insufficiente",            color: DRIFT_PINK },
             ].map(item => {
               const active = (
                 (item.range === "< 3.5%"  && run.drift < 3.5) ||
@@ -113,29 +119,29 @@ function SingleRunDrift({
           </div>
           <ResponsiveContainer width="100%" height={fullscreen ? 340 : 200}>
             <BarChart data={run.splits} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#1E293B" />
+              <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="rgba(192,255,0,0.08)" />
               <XAxis dataKey="km" tick={{ fontSize: 9, fill: "#475569" }} axisLine={false} tickLine={false} label={{ value: "km", position: "insideBottomRight", offset: -4, fill: "#475569", fontSize: 9 }} />
               <YAxis tick={{ fontSize: 9, fill: "#475569" }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
               <Tooltip
-                contentStyle={{ background: "#0F172A", border: "1px solid #1E293B", borderRadius: 8, fontSize: 11 }}
+                contentStyle={{ background: "#0B0B0B", border: "1px solid #243018", borderRadius: 8, fontSize: 11 }}
                 formatter={(v: number, _: string, props: any) => [
                   `${v} bpm · ${props.payload.paceLabel}/km`,
                   "HR"
                 ]}
                 labelFormatter={(l) => `km ${l}`}
               />
-              <ReferenceLine y={run.hr1} stroke="#10B981" strokeDasharray="4 4" strokeOpacity={0.5} label={{ value: `Prima ${run.hr1}`, fill: "#10B981", fontSize: 8, position: "insideTopLeft" }} />
+              <ReferenceLine y={run.hr1} stroke={DRIFT_CYAN} strokeDasharray="4 4" strokeOpacity={0.5} label={{ value: `Prima ${run.hr1}`, fill: DRIFT_CYAN, fontSize: 8, position: "insideTopLeft" }} />
               <ReferenceLine y={run.hr2} stroke={cfg.color} strokeDasharray="4 4" strokeOpacity={0.5} label={{ value: `Seconda ${run.hr2}`, fill: cfg.color, fontSize: 8, position: "insideTopRight" }} />
               <Bar dataKey="hr" radius={[4, 4, 0, 0]}>
                 {run.splits.map((_, i) => {
                   const mid = Math.floor(run.splits.length / 2);
-                  return <Cell key={i} fill={i < mid ? "#10B981" : cfg.color} fillOpacity={0.85} />;
+                  return <Cell key={i} fill={i < mid ? DRIFT_CYAN : cfg.color} fillOpacity={0.85} />;
                 })}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
           <div className="flex gap-4 mt-1">
-            <span className="flex items-center gap-1 text-[9px] text-[#10B981]"><span className="w-2 h-2 rounded-sm bg-[#10B981]" /> Prima metà</span>
+            <span className="flex items-center gap-1 text-[9px]" style={{ color: DRIFT_CYAN }}><span className="w-2 h-2 rounded-sm" style={{ background: DRIFT_CYAN }} /> Prima metà</span>
             <span className="flex items-center gap-1 text-[9px]" style={{ color: cfg.color }}><span className="w-2 h-2 rounded-sm" style={{ background: cfg.color }} /> Seconda metà</span>
           </div>
         </div>
@@ -178,7 +184,7 @@ function HistoricalDrift({ results, fullscreen = false }: { results: DriftResult
           { label: "Migliore",      value: `${minDrift >= 0 ? "+" : ""}${minDrift.toFixed(1)}%`, color: "#10B981", sub: "min drift" },
           { label: "Peggiore",      value: `${maxDrift >= 0 ? "+" : ""}${maxDrift.toFixed(1)}%`, color: "#F43F5E", sub: "max drift" },
         ].map(k => (
-          <div key={k.label} className="bg-[#0F172A] border border-white/5 rounded-xl p-3 text-center">
+          <div key={k.label} className="bg-[#10130D] border border-[#243018] rounded-xl p-3 text-center">
             <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">{k.label}</div>
             <div className="text-xl font-black" style={{ color: k.color }}>{k.value}</div>
             <div className="text-[9px] text-gray-600 mt-0.5">{k.sub}</div>
@@ -198,32 +204,42 @@ function HistoricalDrift({ results, fullscreen = false }: { results: DriftResult
         </div>
         <ResponsiveContainer width="100%" height={fullscreen ? 340 : 200}>
           <LineChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
-            <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#1E293B" />
+            <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="rgba(192,255,0,0.08)" />
             <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#475569" }} axisLine={false} tickLine={false}
               interval={Math.max(0, Math.floor(data.length / 8) - 1)} />
             <YAxis tick={{ fontSize: 9, fill: "#475569" }} axisLine={false} tickLine={false}
               tickFormatter={v => `${v}%`} domain={["auto", "auto"]} />
             <Tooltip
-              contentStyle={{ background: "#0F172A", border: "1px solid #1E293B", borderRadius: 8, fontSize: 11 }}
+              contentStyle={{ background: "#0B0B0B", border: "1px solid #243018", borderRadius: 8, fontSize: 11 }}
               formatter={(v: number, _: string, props: any) => [
                 `${v >= 0 ? "+" : ""}${v.toFixed(1)}% · ${props.payload.distKm.toFixed(1)} km`,
                 "Deriva FC"
               ]}
               labelFormatter={(l) => `${l}`}
             />
-            <ReferenceLine y={3.5} stroke="#10B981" strokeDasharray="4 4" strokeOpacity={0.3} />
-            <ReferenceLine y={5.0} stroke="#3B82F6" strokeDasharray="4 4" strokeOpacity={0.3} />
-            <ReferenceLine y={7.5} stroke="#F43F5E" strokeDasharray="4 4" strokeOpacity={0.3} />
+            <ReferenceLine y={3.5} stroke={DRIFT_NEON} strokeDasharray="4 4" strokeOpacity={0.36} />
+            <ReferenceLine y={5.0} stroke={DRIFT_CYAN} strokeDasharray="4 4" strokeOpacity={0.36} />
+            <ReferenceLine y={7.5} stroke={DRIFT_PINK} strokeDasharray="4 4" strokeOpacity={0.36} />
             <Line
               type="monotone"
               dataKey="drift"
-              stroke={improving ? "#10B981" : "#F43F5E"}
+              stroke={DRIFT_NEON}
               strokeWidth={2.5}
               dot={(props: any) => {
                 const c = driftLabel(props.payload.drift).color;
-                return <circle key={props.index} cx={props.cx} cy={props.cy} r={4} fill={c} stroke="none" />;
+                return (
+                  <circle
+                    key={props.index}
+                    cx={props.cx}
+                    cy={props.cy}
+                    r={5}
+                    fill={c}
+                    stroke="#050505"
+                    strokeWidth={1.75}
+                  />
+                );
               }}
-              activeDot={{ r: 6, strokeWidth: 0 }}
+              activeDot={{ r: 7, fill: DRIFT_NEON, stroke: '#050505', strokeWidth: 2 }}
             />
           </LineChart>
         </ResponsiveContainer>
@@ -231,10 +247,10 @@ function HistoricalDrift({ results, fullscreen = false }: { results: DriftResult
         {/* Zone legend */}
         <div className="flex flex-wrap gap-4 mt-2">
           {[
-            { color: "#10B981", label: "< 3.5% Eccellente" },
-            { color: "#3B82F6", label: "3.5–5% Buona" },
-            { color: "#F59E0B", label: "5–7.5% Da migliorare" },
-            { color: "#F43F5E", label: "> 7.5% Insufficiente" },
+            { color: DRIFT_NEON, label: "< 3.5% Eccellente" },
+            { color: DRIFT_CYAN, label: "3.5–5% Buona" },
+            { color: DRIFT_AMBER, label: "5–7.5% Da migliorare" },
+            { color: DRIFT_PINK, label: "> 7.5% Insufficiente" },
           ].map(z => (
             <span key={z.label} className="flex items-center gap-1.5 text-[9px]" style={{ color: z.color }}>
               <span className="w-6 border-t-2 border-dashed inline-block" style={{ borderColor: z.color }} />
@@ -264,14 +280,19 @@ export function StatsDrift({ runs }: { runs: Run[] }) {
 
   return (
     <div
-      className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 group"
-      style={{ borderLeft: "3px solid #F43F5E" }}
+      className="rounded-2xl p-6 group"
+      style={{
+        background: "radial-gradient(circle at top left, rgba(192,255,0,0.08), transparent 24%), radial-gradient(circle at top right, rgba(255,77,141,0.06), transparent 28%), #0B0B0B",
+        border: `1px solid ${DRIFT_PANEL_BORDER}`,
+        borderLeft: `3px solid ${DRIFT_NEON}`,
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.02), 0 0 0 1px rgba(192,255,0,0.04)",
+      }}
     >
       {/* Section header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-rose-500/15 flex items-center justify-center">
-            <svg className="w-4 h-4 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <div className="w-8 h-8 rounded-xl bg-[#1B2A0B] flex items-center justify-center">
+            <svg className="w-4 h-4 text-[#C0FF00]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
             </svg>
           </div>
@@ -289,7 +310,7 @@ export function StatsDrift({ runs }: { runs: Run[] }) {
       </div>
 
       {/* Sub-tabs */}
-      <div className="flex gap-1 mb-5 bg-[#0A0A0A] p-1 rounded-xl w-fit">
+      <div className="flex gap-1 mb-5 bg-[#090909] border border-white/[0.04] p-1 rounded-xl w-fit">
         {([
           { id: "historical", label: "Historical Drift" },
           { id: "single",     label: "Single Run Drift" },
@@ -300,7 +321,7 @@ export function StatsDrift({ runs }: { runs: Run[] }) {
             onClick={() => setDriftTab(t.id)}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${
               driftTab === t.id
-                ? "bg-[#1E293B] text-white"
+                ? "bg-[#1B2A0B] text-[#D7FF76]"
                 : "text-gray-500 hover:text-gray-300"
             }`}
           >
@@ -325,10 +346,10 @@ export function StatsDrift({ runs }: { runs: Run[] }) {
         onClose={() => setExpanded(false)}
         title="Deriva Cardiaca"
         subtitle="Pa:Hr ratio — Metodo Friel"
-        accent="#F43F5E"
+        accent={DRIFT_NEON}
       >
         <div className="h-full overflow-y-auto pr-1">
-          <div className="flex gap-1 mb-5 bg-[#0A0A0A] p-1 rounded-xl w-fit">
+          <div className="flex gap-1 mb-5 bg-[#090909] border border-white/[0.04] p-1 rounded-xl w-fit">
             {([
               { id: "historical", label: "Historical Drift" },
               { id: "single", label: "Single Run Drift" },
@@ -338,7 +359,7 @@ export function StatsDrift({ runs }: { runs: Run[] }) {
                 type="button"
                 onClick={() => setDriftTab(t.id)}
                 className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${
-                  driftTab === t.id ? "bg-[#1E293B] text-white" : "text-gray-500 hover:text-gray-300"
+                  driftTab === t.id ? "bg-[#1B2A0B] text-[#D7FF76]" : "text-gray-500 hover:text-gray-300"
                 }`}
               >
                 {t.label}
