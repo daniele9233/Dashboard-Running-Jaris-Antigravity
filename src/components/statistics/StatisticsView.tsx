@@ -9,12 +9,13 @@ import { GridCard } from '../GridCard';
 import { AnalyticsV2 } from './AnalyticsV2';
 import { AnalyticsV3 } from './AnalyticsV3';
 import { BiologyFutureV2 } from './BiologyFutureV2';
+import { BiologyFutureLab } from './BiologyFutureLab';
 import { EnvironmentalNormalizerView } from './EnvironmentalNormalizerView';
 import { AnalyticsV4CadenceSpeedMatrix, AnalyticsV4PaceZoneDistribution } from './AnalyticsV4';
 import { AnalyticsV5BestEffortsProgression, AnalyticsV5EffortMatrix, AnalyticsV5PaceDistributionBell } from './AnalyticsV5';
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 import { useApi } from '../../hooks/useApi';
-import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, getDashboard, getProAnalytics, linkGarminCsv, getSupercompensation, type GctAnalysisResponse } from '../../api';
+import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, getDashboard, getProAnalytics, linkGarminCsv, getSupercompensation, getProfile, type GctAnalysisResponse } from '../../api';
 import { cadenceSpmFromRun } from '../../utils/cadence';
 import type {
   AnalyticsResponse,
@@ -24,6 +25,7 @@ import type {
   ProAnalyticsResponse,
   ProAnalyticsChart,
   GarminCsvLinkResult,
+  Profile,
   Run,
   SupercompensationResponse,
   SupercompensationRun,
@@ -752,6 +754,7 @@ export function StatisticsView() {
   const { data: gctData } = useApi<GctAnalysisResponse>(getGctAnalysis);
   const { data: dashData } = useApi<DashboardResponse>(getDashboard);
   const { data: superData } = useApi<SupercompensationResponse>(getSupercompensation);
+  const { data: profileData } = useApi<Profile>(getProfile);
   const loadFormLayout = useLoadFormLayout();
   const isMobile = useMediaQuery('(max-width: 767px)');
   const [openLoadWidgetMenu, setOpenLoadWidgetMenu] = useState(false);
@@ -1989,6 +1992,7 @@ export function StatisticsView() {
 
         {/* ════════════════════════════════════════════════════
             BIOLOGIA & FUTURO TAB
+            (Supercompensazione legacy + Detraining Lab Coyle/Mujika)
         ════════════════════════════════════════════════════ */}
         {activeTab === 'biology' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -2202,6 +2206,9 @@ export function StatisticsView() {
                 </div>
               )}
             </Card>
+
+            {/* DETRAINING LAB — Coyle 1984 / Mujika 2000 / Bosquet 2007-2013 */}
+            <BiologyFutureLab profile={profileData ?? null} runs={runs} vdot={vdot} />
           </div>
         )}
 
@@ -2209,7 +2216,7 @@ export function StatisticsView() {
           <EnvironmentalNormalizerView runs={statsRuns} />
         )}
 
-        {false && activeTab === 'biology' && (
+        {false && activeTab === 'biology-old-future' && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -2445,7 +2452,7 @@ export function StatisticsView() {
             BADGES TAB
         ════════════════════════════════════════════════════ */}
         {activeTab === 'biologyv2' && (
-          <BiologyFutureV2 data={biologyData} />
+          <BiologyFutureV2 data={biologyData} profile={profileData ?? null} runs={runs} vdot={vdot} />
         )}
 
         {activeTab === 'badges' && (

@@ -16,24 +16,41 @@ import {
 import {
   Activity,
   ArrowRight,
+  Brain,
+  Calendar,
   Clock,
   Dna,
+  Flame,
   FlaskConical,
   Gauge,
+  Heart,
   Layers,
+  Rewind,
   Route,
   ShieldCheck,
+  Sparkles,
   Target,
   Timer,
+  TrendingDown,
   TrendingUp,
   Zap,
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import type {
   AdaptationKey,
+  Profile,
+  Run,
   SupercompensationProjectionPoint,
   SupercompensationResponse,
   SupercompensationRun,
 } from '../../types/api';
+import {
+  buildDetrainingInputs,
+  computeDetrainingCurve,
+  paceLabel as paceLabelFn,
+  projectRaceTime,
+  type DetrainingPoint,
+} from '../../utils/detrainingModel';
 
 const ACCENT = '#C0FF00';
 const PANEL = '#0E0E0E';
@@ -347,7 +364,17 @@ function projectionToChart(projection: SupercompensationProjectionPoint[]) {
   }));
 }
 
-export function BiologyFutureV2({ data }: { data: SupercompensationResponse }) {
+export function BiologyFutureV2({
+  data,
+  profile,
+  runs: allRuns,
+  vdot,
+}: {
+  data: SupercompensationResponse;
+  profile: Profile | null | undefined;
+  runs: Run[];
+  vdot: number | null;
+}) {
   const projectionData = React.useMemo(() => projectionToChart(data.projection ?? []), [data.projection]);
   const runs = data.recent_runs ?? [];
   const flow = React.useMemo(() => buildStimulusFlow(data), [data]);
@@ -672,6 +699,519 @@ export function BiologyFutureV2({ data }: { data: SupercompensationResponse }) {
               Il beneficio viene tradotto sulle distanze piu sensibili: 5K, 10K, mezza, maratona e ultra.
             </p>
           </div>
+        </div>
+      </Panel>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          PREDITTORE DETRAINING — Coyle / Mujika / Bosquet / Bruusgaard
+      ═══════════════════════════════════════════════════════════════════ */}
+      <DetrainingPredictor profile={profile} runs={allRuns} vdot={vdot} />
+    </div>
+  );
+}
+
+// ─── DETRAINING PREDICTOR ────────────────────────────────────────────────────
+
+const PRED_RED = '#F43F5E';
+const PRED_GREEN = '#22C55E';
+const PRED_PINK = '#EC4899';
+const PRED_BLUE = '#6366F1';
+
+const TIMELINE_EVENTS: { day: number; title: string; body: string; color: string; icon: React.ElementType }[] = [
+  { day: 1, title: '"Mi sento ancora forte"', body: 'Il glicogeno e ancora pieno. Sensazioni intatte. Plasma cala leggermente ma hematocrit compensa: nessuna perdita reale (Mujika 2010).', color: CYAN, icon: Heart },
+  { day: 3, title: 'Taper attivo', body: 'PV -8%, fatica residua dissipata, glicogeno super-compensa. La performance puo essere uguale o leggermente superiore al baseline. Questo e il principio del taper pre-gara.', color: PRED_GREEN, icon: Brain },
+  { day: 7, title: 'Picco taper', body: 'Bosquet 2007 (meta-analisi 27 studi): 8-14gg di taper migliorano la performance del +1.96% in media. Il sistema nervoso e riposato, soglia ancora intatta.', color: PRED_GREEN, icon: TrendingUp },
+  { day: 14, title: 'Inizia il vero detraining', body: 'Coyle 1984: -2.6% VO2max gia documentato a 12 giorni di stop completo. Soglia LT inizia a calare (-3/-5%). FC riposo +3-5 bpm.', color: ORANGE, icon: TrendingDown },
+  { day: 30, title: 'Identita atletica fragile', body: 'Mitocondri -25%. Capillari iniziano a regredire. Psicologicamente: irritabilita, perdita identita "runner". La memoria muscolare resta intatta nei nuclei mionucleari (Bruusgaard 2010, Murach 2020).', color: PRED_RED, icon: Flame },
+  { day: 60, title: 'Ricostruzione lunga', body: 'VO2 -14/-16%, capacita ossidativa -40%. Servono 4-5 mesi di richiamo strutturato. La memoria epigenetica (Seaborne 2018) accelera il ritorno: chi ha corso anni torna piu in fretta.', color: ACCENT, icon: Sparkles },
+];
+
+function GaugeChart({
+  value,
+  max = 100,
+  label,
+  sublabel,
+  color,
+  size = 240,
+}: {
+  value: number;
+  max?: number;
+  label: string;
+  sublabel: string;
+  color: string;
+  size?: number;
+}) {
+  const pct = Math.max(0, Math.min(1, value / max));
+  const cx = size / 2;
+  const cy = size / 2 + 20;
+  const radius = size * 0.38;
+
+  const startAngle = -210;
+  const endAngle = 30;
+  const polar = (a: number) => {
+    const r = (a * Math.PI) / 180;
+    return { x: cx + radius * Math.cos(r), y: cy + radius * Math.sin(r) };
+  };
+  const start = polar(startAngle);
+  const end = polar(endAngle);
+  const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+  const arcPath = `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y}`;
+
+  const activeEnd = polar(startAngle + 240 * pct);
+  const activeLargeArc = 240 * pct > 180 ? 1 : 0;
+  const activePath = `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${activeLargeArc} 1 ${activeEnd.x} ${activeEnd.y}`;
+
+  const needleAngleDeg = startAngle + 240 * pct;
+  const needleRad = (needleAngleDeg * Math.PI) / 180;
+  const needleLen = radius * 0.85;
+  const nx = cx + needleLen * Math.cos(needleRad);
+  const ny = cy + needleLen * Math.sin(needleRad);
+
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <path d={arcPath} stroke="#1A1A1A" strokeWidth={14} fill="none" strokeLinecap="round" />
+        <motion.path
+          d={activePath}
+          stroke={color}
+          strokeWidth={14}
+          fill="none"
+          strokeLinecap="round"
+          style={{ filter: `drop-shadow(0 0 18px ${color}88)` }}
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 1.0, ease: 'easeOut' }}
+        />
+        <motion.line
+          x1={cx}
+          y1={cy}
+          x2={nx}
+          y2={ny}
+          stroke={color}
+          strokeWidth={3}
+          strokeLinecap="round"
+          initial={{ x2: cx + needleLen * Math.cos((startAngle * Math.PI) / 180), y2: cy + needleLen * Math.sin((startAngle * Math.PI) / 180) }}
+          animate={{ x2: nx, y2: ny }}
+          transition={{ duration: 0.9, ease: 'easeOut' }}
+          style={{ filter: `drop-shadow(0 0 6px ${color})` }}
+        />
+        <circle cx={cx} cy={cy} r={9} fill={color} style={{ filter: `drop-shadow(0 0 8px ${color})` }} />
+        <text x={polar(startAngle).x - 6} y={polar(startAngle).y + 18} fill="#666" fontSize={10} fontWeight={700} textAnchor="end">AMATEUR</text>
+        <text x={polar(endAngle).x + 6} y={polar(endAngle).y + 18} fill="#666" fontSize={10} fontWeight={700} textAnchor="start">ELITE</text>
+      </svg>
+      <div className="absolute left-0 right-0 text-center" style={{ top: cy + 24 }}>
+        <div className="text-3xl font-black text-white leading-none">{Math.round(value)}<span className="text-base text-gray-500">/{max}</span></div>
+        <div className="mt-1 text-[10px] font-black uppercase tracking-[0.2em]" style={{ color }}>{label}</div>
+        <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-600">{sublabel}</div>
+      </div>
+    </div>
+  );
+}
+
+function TimelineEvent({
+  day,
+  active,
+  onClick,
+  color,
+  label,
+}: {
+  day: number;
+  active: boolean;
+  onClick: () => void;
+  color: string;
+  label: string;
+}) {
+  return (
+    <button onClick={onClick} className="flex flex-col items-center group" style={{ minWidth: 72 }}>
+      <div
+        className="w-3 h-3 rounded-full mb-2 transition-all"
+        style={{
+          background: active ? color : '#2A2A2A',
+          boxShadow: active ? `0 0 14px ${color}` : 'none',
+          transform: active ? 'scale(1.4)' : 'scale(1)',
+        }}
+      />
+      <div className={`text-[10px] font-black tracking-widest ${active ? 'text-white' : 'text-gray-600'}`}>D{day}</div>
+      <div className={`text-[9px] mt-0.5 ${active ? 'text-gray-400' : 'text-gray-700'}`}>{label}</div>
+    </button>
+  );
+}
+
+function SnapshotStat({ label, value, color, hint }: { label: string; value: string; color: string; hint?: string }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
+      <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">{label}</div>
+      <div className="mt-2 text-2xl font-black leading-none" style={{ color }}>{value}</div>
+      {hint && <div className="mt-2 text-[10px] font-semibold leading-relaxed text-gray-600">{hint}</div>}
+    </div>
+  );
+}
+
+function predict10k(vdot: number): number {
+  if (vdot >= 60) return 1958 + (60 - vdot) * 38;
+  if (vdot >= 50) return 2335 + (50 - vdot) * 54;
+  if (vdot >= 40) return 2873 + (40 - vdot) * 70;
+  if (vdot >= 30) return 3573 + (30 - vdot) * 90;
+  return 4473;
+}
+
+function estimateEasyPaceFromVdot(vdot: number): number {
+  const sec = 590 - 5.7 * vdot;
+  return Math.round(Math.max(180, sec));
+}
+
+function formatSec(s: number): string {
+  const total = Math.round(s);
+  const m = Math.floor(total / 60);
+  const sec = total - m * 60;
+  return `${m}:${String(sec).padStart(2, '0')}`;
+}
+
+function DetrainingPredictor({
+  profile,
+  runs,
+  vdot,
+}: {
+  profile: Profile | null | undefined;
+  runs: Run[];
+  vdot: number | null;
+}) {
+  const inputs = React.useMemo(() => buildDetrainingInputs(profile, runs, vdot), [profile, runs, vdot]);
+  const summary = React.useMemo(() => computeDetrainingCurve(inputs, 90, 'taper'), [inputs]);
+  const summaryFull = React.useMemo(() => computeDetrainingCurve(inputs, 90, 'fullStop'), [inputs]);
+  const [day, setDay] = React.useState(14);
+
+  const point: DetrainingPoint = summary.curve[day] ?? summary.curve[0];
+  const pointFull: DetrainingPoint = summaryFull.curve[day] ?? summaryFull.curve[0];
+  const vo2Loss = (1 - point.vo2Pct) * 100;
+  const ltLoss = (1 - point.ltPct) * 100;
+  const plasmaLoss = (1 - point.plasmaPct) * 100;
+  const mitoLoss = (1 - point.mitochondriaPct) * 100;
+  const perfDelta = (point.performancePct - 1) * 100; // positive in taper window
+
+  // Atrofia gauge: 0 in taper, scales with VO2/Mito loss in detraining.
+  const atrophyScore = day <= summary.taperDays
+    ? 0
+    : Math.max(0, Math.min(100, Math.round(vo2Loss * 4 + mitoLoss * 2)));
+
+  const base10kSec = vdot ? Math.round(predict10k(vdot)) : 50 * 60;
+  const whatIfRows = [3, 7, 14, 21, 30, 45, 60].map((d) => {
+    const proj = projectRaceTime(base10kSec, summary.curve, d);
+    return { day: d, label: proj.label, deltaSec: proj.deltaSec };
+  });
+
+  const userBasePaceSec = vdot ? estimateEasyPaceFromVdot(vdot) : 300;
+  const userPaceRow = [3, 7, 14, 21, 30, 45, 60].map((d) => {
+    const perf = summary.curve[d].performancePct;
+    const sec = userBasePaceSec / perf;
+    return { day: d, paceSec: sec, paceLabel: paceLabelFn(sec), deltaPct: (1 - perf) * 100 };
+  });
+
+  const ageActiveYears = inputs.yearsRunning;
+  const memoryBonus = Math.round(inputs.yearsRunning * 4);
+  const memoryBonusCapped = Math.min(40, memoryBonus);
+
+  const ratio = summary.backToFit[0].ratio;
+  const recoveryDays = day <= summary.taperDays
+    ? Math.max(2, Math.round(day * 0.5))
+    : Math.round((day - summary.taperDays) * ratio + summary.taperDays * 0.5);
+
+  const isTaper = day <= summary.taperDays;
+
+  return (
+    <div className="space-y-6 mt-2">
+      {/* Hero */}
+      <Panel accent={ACCENT}>
+        <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#C0FF00]/25 bg-[#C0FF00]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: ACCENT }}>
+              <Dna className="w-3.5 h-3.5" />
+              PREDITTORE DETRAINING — Coyle / Mujika / Bosquet
+            </div>
+            <h2 className="mt-4 text-3xl sm:text-4xl font-black leading-[1.0] text-white">
+              Cosa accade tra <span style={{ color: isTaper ? PRED_GREEN : ACCENT }}>{day} giorni</span> di stop.
+            </h2>
+            <p className="mt-4 text-sm font-semibold text-gray-500 leading-relaxed max-w-2xl">
+              Sposta la timeline. Personalizzato su <span className="text-white font-black">{inputs.age} anni</span>,
+              {' '}<span className="text-white font-black">{inputs.weightKg} kg</span>,
+              {' '}<span className="text-white font-black">{ageActiveYears.toFixed(1)} anni di corsa</span>.
+            </p>
+            {isTaper && (
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#22C55E]/30 bg-[#22C55E]/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-widest" style={{ color: PRED_GREEN }}>
+                <Sparkles className="w-3.5 h-3.5" />
+                FINESTRA TAPER — performance {perfDelta >= 0 ? `+${perfDelta.toFixed(1)}` : perfDelta.toFixed(1)}%
+              </div>
+            )}
+          </div>
+          <div className="flex items-center justify-center gap-4">
+            <GaugeChart
+              value={atrophyScore}
+              label={isTaper ? 'TAPER' : 'ATROFIA'}
+              sublabel={`a ${day} gg di stop`}
+              color={isTaper ? PRED_GREEN : atrophyScore > 60 ? PRED_RED : atrophyScore > 30 ? ORANGE : ACCENT}
+              size={260}
+            />
+          </div>
+        </div>
+      </Panel>
+
+      {/* Timeline */}
+      <Panel accent={CYAN}>
+        <div className="flex items-center gap-3 mb-5">
+          <Calendar className="w-4 h-4" style={{ color: CYAN }} />
+          <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Timeline Personale del Detraining</h2>
+        </div>
+
+        <div className="mb-6">
+          <input
+            type="range"
+            min={0}
+            max={60}
+            value={day}
+            onChange={(e) => setDay(Number(e.target.value))}
+            className="w-full accent-[#C0FF00]"
+          />
+          <div className="flex justify-between gap-2 mt-3">
+            {TIMELINE_EVENTS.map((ev) => (
+              <TimelineEvent
+                key={ev.day}
+                day={ev.day}
+                label={ev.title.length > 14 ? `${ev.title.slice(0, 12)}…` : ev.title}
+                active={Math.abs(day - ev.day) <= 1}
+                onClick={() => setDay(ev.day)}
+                color={ev.color}
+              />
+            ))}
+          </div>
+        </div>
+
+        {(() => {
+          const ev = [...TIMELINE_EVENTS].reverse().find((e) => e.day <= day) ?? TIMELINE_EVENTS[0];
+          return (
+            <motion.div
+              key={ev.day}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="rounded-xl border p-5"
+              style={{ borderColor: `${ev.color}33`, background: `${ev.color}10` }}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <ev.icon className="w-4 h-4" style={{ color: ev.color }} />
+                <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: ev.color }}>D{ev.day}</div>
+              </div>
+              <h3 className="text-2xl sm:text-3xl font-black text-white leading-tight">{ev.title}</h3>
+              <p className="mt-3 text-sm font-semibold leading-relaxed text-gray-400">{ev.body}</p>
+            </motion.div>
+          );
+        })()}
+
+        <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <SnapshotStat
+            label="VO2max"
+            value={vo2Loss < 0.05 ? '~0%' : `-${vo2Loss.toFixed(1)}%`}
+            color={vo2Loss < 0.05 ? PRED_GREEN : ORANGE}
+            hint={`${(point.vo2Pct * 100).toFixed(1)}% mantenuto`}
+          />
+          <SnapshotStat
+            label="Soglia"
+            value={ltLoss < 0.05 ? '~0%' : `-${ltLoss.toFixed(1)}%`}
+            color={ltLoss < 0.05 ? PRED_GREEN : CYAN}
+            hint="enzimi ossidativi"
+          />
+          <SnapshotStat label="Plasma" value={`-${plasmaLoss.toFixed(1)}%`} color={PURPLE} hint="compensato hematocrit" />
+          <SnapshotStat
+            label="Performance"
+            value={`${perfDelta >= 0 ? '+' : ''}${perfDelta.toFixed(1)}%`}
+            color={perfDelta >= 0 ? PRED_GREEN : ORANGE}
+            hint="indice clinico"
+          />
+        </div>
+      </Panel>
+
+      {/* COMPARISON: Taper vs Fermo Totale al giorno selezionato */}
+      <Panel accent={PRED_RED}>
+        <div className="flex items-center gap-3 mb-5">
+          <TrendingDown className="w-4 h-4" style={{ color: PRED_RED }} />
+          <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Confronto Taper vs Fermo Totale — D{day}</h2>
+        </div>
+        <p className="text-sm font-semibold text-gray-500 mb-5 leading-relaxed max-w-3xl">
+          Stesso giorno di stop, due scenari diversi. <span className="text-[#22C55E] font-black">Taper</span> = mantenere corsa lenta (50% volume).
+          <span className="text-[#F43F5E] font-black"> Fermo Totale</span> = zero training, sedentario (Coyle 1984).
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-xl border p-5" style={{ background: '#22C55E10', borderColor: '#22C55E33' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="w-4 h-4" style={{ color: '#22C55E' }} />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#22C55E' }}>SCENARIO TAPER</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <SnapshotStat label="VO2max" value={(1 - point.vo2Pct) * 100 < 0.05 ? '~0%' : `-${((1 - point.vo2Pct) * 100).toFixed(1)}%`} color={ORANGE} hint={`${(point.vo2Pct * 100).toFixed(1)}% mantenuto`} />
+              <SnapshotStat label="Soglia" value={(1 - point.ltPct) * 100 < 0.05 ? '~0%' : `-${((1 - point.ltPct) * 100).toFixed(1)}%`} color={CYAN} />
+              <SnapshotStat label="Mitocondri" value={`-${((1 - point.mitochondriaPct) * 100).toFixed(1)}%`} color={ACCENT} />
+              <SnapshotStat label="Performance" value={`${(point.performancePct - 1) * 100 >= 0 ? '+' : ''}${((point.performancePct - 1) * 100).toFixed(1)}%`} color="#22C55E" />
+            </div>
+          </div>
+          <div className="rounded-xl border p-5" style={{ background: `${PRED_RED}10`, borderColor: `${PRED_RED}33` }}>
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingDown className="w-4 h-4" style={{ color: PRED_RED }} />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: PRED_RED }}>SCENARIO FERMO TOTALE</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <SnapshotStat label="VO2max" value={(1 - pointFull.vo2Pct) * 100 < 0.05 ? '~0%' : `-${((1 - pointFull.vo2Pct) * 100).toFixed(1)}%`} color={ORANGE} hint={`${(pointFull.vo2Pct * 100).toFixed(1)}% mantenuto`} />
+              <SnapshotStat label="Soglia" value={(1 - pointFull.ltPct) * 100 < 0.05 ? '~0%' : `-${((1 - pointFull.ltPct) * 100).toFixed(1)}%`} color={CYAN} />
+              <SnapshotStat label="Mitocondri" value={`-${((1 - pointFull.mitochondriaPct) * 100).toFixed(1)}%`} color={ACCENT} />
+              <SnapshotStat label="Performance" value={`${(pointFull.performancePct - 1) * 100 >= 0 ? '+' : ''}${((pointFull.performancePct - 1) * 100).toFixed(1)}%`} color={PRED_RED} />
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.025] p-4">
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Differenziale (fermo − taper)</div>
+          <div className="mt-2 text-sm font-semibold text-gray-300 leading-relaxed">
+            VO2 <span className="font-black text-white">{((point.vo2Pct - pointFull.vo2Pct) * 100).toFixed(1)} pp</span> in piu con il fermo.
+            Soglia <span className="font-black text-white">{((point.ltPct - pointFull.ltPct) * 100).toFixed(1)} pp</span>.
+            Mitocondri <span className="font-black text-white">{((point.mitochondriaPct - pointFull.mitochondriaPct) * 100).toFixed(1)} pp</span>.
+            Performance <span className="font-black text-white">{((point.performancePct - pointFull.performancePct) * 100).toFixed(1)} pp</span>.
+          </div>
+        </div>
+      </Panel>
+
+      {/* What-if 10K */}
+      <Panel accent={ORANGE}>
+        <div className="flex items-center gap-3 mb-5">
+          <Timer className="w-4 h-4" style={{ color: ORANGE }} />
+          <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Se ti fermi oggi: 10K previsti</h2>
+        </div>
+        <p className="text-sm font-semibold text-gray-500 mb-5 max-w-3xl leading-relaxed">
+          Tempo base 10K oggi: <span className="text-white font-black">{formatSec(base10kSec)}</span>
+          {vdot ? <> (da VDOT {vdot.toFixed(1)})</> : <> (stima default)</>}.
+          Verde = scenario taper. Rosso tratteggiato = fermo totale.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          {whatIfRows.map((r, i) => {
+            const fullProj = projectRaceTime(base10kSec, summaryFull.curve, r.day);
+            return (
+              <div key={r.day} className="rounded-xl border border-white/10 bg-white/[0.025] p-4 text-center">
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Stop {r.day} gg</div>
+                <div className="mt-2 text-xl font-black text-white">{r.label}</div>
+                <div
+                  className="mt-0.5 text-[10px] font-bold"
+                  style={{ color: r.deltaSec < -2 ? PRED_GREEN : r.deltaSec > 60 ? PRED_RED : r.deltaSec > 30 ? ORANGE : '#666' }}
+                >
+                  taper {r.deltaSec < -2 ? '↓' : '+'}{Math.abs(Math.round(r.deltaSec))}s
+                </div>
+                <div className="mt-2 pt-2 border-t border-white/10">
+                  <div className="text-base font-black" style={{ color: '#FCA5A5' }}>{fullProj.label}</div>
+                  <div className="text-[10px] font-bold" style={{ color: PRED_RED }}>fermo +{Math.round(fullProj.deltaSec)}s</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Panel>
+
+      {/* Pace personale */}
+      <Panel accent={ACCENT}>
+        <div className="flex items-center gap-3 mb-5">
+          <Activity className="w-4 h-4" style={{ color: ACCENT }} />
+          <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Il tuo passo nel tempo</h2>
+        </div>
+        <p className="text-sm font-semibold text-gray-500 mb-5 leading-relaxed max-w-3xl">
+          Pace base easy: <span className="text-white font-black">{paceLabelFn(userBasePaceSec)}</span>.
+          A pari sforzo aerobico, ecco come evolve. Verde = piu veloce (effetto taper).
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-[12px]">
+            <thead>
+              <tr className="text-gray-500 uppercase tracking-widest font-black text-[10px]">
+                {userPaceRow.map((r) => (
+                  <th key={r.day} className="py-2 px-3">D{r.day}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                {userPaceRow.map((r) => (
+                  <td key={r.day} className="py-2 px-3">
+                    <div className="text-lg font-black text-white">{r.paceLabel}</div>
+                    <div
+                      className="text-[10px] font-bold"
+                      style={{ color: r.deltaPct < -0.05 ? PRED_GREEN : r.deltaPct > 5 ? PRED_RED : '#666' }}
+                    >
+                      {r.deltaPct < -0.05 ? '↓' : r.deltaPct > 0 ? '+' : ''}{Math.abs(r.deltaPct).toFixed(1)}%
+                    </div>
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+
+      {/* Memory cell + Ritorno al futuro */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Panel accent={PURPLE}>
+          <div className="flex items-center gap-3 mb-5">
+            <Dna className="w-4 h-4" style={{ color: PURPLE }} />
+            <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Memory Cell — Memoria Muscolare</h2>
+          </div>
+          <p className="text-sm font-semibold text-gray-400 leading-relaxed">
+            I nuclei mionucleari acquisiti negli anni di allenamento <span className="text-white font-black">non muoiono</span>:
+            restano dormienti nelle fibre. Quando riprendi, accelerano la sintesi proteica.
+            Murach 2020 e Seaborne 2018 (memoria epigenetica) confermano: chi ha corso anni recupera in modo non-lineare e piu rapido.
+          </p>
+          <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.025] p-4">
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Bonus muscle memory</div>
+            <div className="mt-2 text-3xl font-black" style={{ color: PURPLE }}>+{memoryBonusCapped}%</div>
+            <p className="mt-1 text-[11px] font-semibold text-gray-600 leading-relaxed">
+              Con <span className="text-white font-black">{ageActiveYears.toFixed(1)} anni</span> di corsa, recuperi piu in fretta rispetto a un principiante.
+            </p>
+          </div>
+        </Panel>
+
+        <Panel accent={ACCENT}>
+          <div className="flex items-center gap-3 mb-5">
+            <Rewind className="w-4 h-4" style={{ color: ACCENT }} />
+            <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Ritorno al Futuro</h2>
+          </div>
+          <p className="text-sm font-semibold text-gray-500 leading-relaxed">
+            Ti sei fermato <span className="text-white font-black">{day} giorni</span>?
+            {isTaper && <span className="text-[#22C55E] font-black"> (taper window — quasi nessun debito)</span>}
+          </p>
+          <div className="mt-4 flex items-baseline gap-2">
+            <span className="text-5xl font-black text-white">{recoveryDays}</span>
+            <span className="text-sm font-bold text-gray-500">giorni di richiamo progressivo</span>
+          </div>
+          <div className="mt-3 text-[11px] font-bold uppercase tracking-widest" style={{ color: ACCENT }}>
+            Ratio personale ×{ratio.toFixed(1)} {isTaper && '· taper esente'}
+          </div>
+          <ol className="mt-5 space-y-3 text-sm font-semibold text-gray-400">
+            <li className="flex gap-3">
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 mt-0.5 shrink-0 w-12">Fase 1</span>
+              <span>Corsa lenta, FC sotto 70% max. Ricarico plasmatico in 4-7 giorni.</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 mt-0.5 shrink-0 w-12">Fase 2</span>
+              <span>Soglia leggera + lunghi controllati. Risveglio enzimi ossidativi.</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 mt-0.5 shrink-0 w-12">Fase 3</span>
+              <span>Ripetute brevi sopra soglia. VO2max torna al valore pre-stop.</span>
+            </li>
+          </ol>
+        </Panel>
+      </div>
+
+      {/* Tachimetri sistemici */}
+      <Panel accent={CYAN}>
+        <div className="flex items-center gap-3 mb-5">
+          <Gauge className="w-4 h-4" style={{ color: CYAN }} />
+          <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Tachimetri Sistemici</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 place-items-center">
+          <GaugeChart value={point.vo2Pct * 100} label="VO2MAX" sublabel="% mantenuta" color={ORANGE} size={200} />
+          <GaugeChart value={point.ltPct * 100} label="SOGLIA" sublabel="% mantenuta" color={CYAN} size={200} />
+          <GaugeChart value={point.performancePct * 100} label="PERFORMANCE" sublabel="indice clinico" color={point.performancePct >= 1 ? PRED_GREEN : ACCENT} size={200} />
         </div>
       </Panel>
     </div>

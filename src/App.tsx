@@ -17,6 +17,7 @@ import { StatisticsView } from "./components/statistics/StatisticsView";
 import { RoutesView } from "./components/RoutesView";
 import { ActivitiesView } from "./components/ActivitiesView";
 import { RunnerDnaView } from "./components/RunnerDnaView";
+import { RankingView } from "./components/RankingView";
 import { SettingsControls } from "./components/SettingsControls";
 import { Search, Bell, Settings } from "lucide-react";
 import { useParams } from "react-router-dom";
@@ -50,6 +51,7 @@ function AppContent() {
     { path: "/activities",  label: t("nav.activities") },
     { path: "/statistics",  label: t("nav.statistics") },
     { path: "/runner-dna",  label: t("nav.runnerDna")  },
+    { path: "/ranking",     label: t("nav.ranking")    },
     { path: "/profile",     label: t("nav.profile")    },
   ];
 
@@ -182,6 +184,7 @@ function AppContent() {
                 <Route path="/activities/:runId" element={<RoutesViewWrapper />} />
                 <Route path="/training"         element={<TrainingView />} />
                 <Route path="/runner-dna"       element={<RunnerDnaView />} />
+                <Route path="/ranking"          element={<RankingView />} />
                 <Route path="/runner-dna-v2"    element={<Navigate to="/runner-dna" replace />} />
                 <Route path="/statistics"       element={<StatisticsView />} />
                 <Route path="/profile"          element={<ProfileView />} />

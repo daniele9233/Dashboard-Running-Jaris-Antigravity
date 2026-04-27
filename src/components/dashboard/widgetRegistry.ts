@@ -7,6 +7,7 @@ export const WIDGET_REGISTRY: WidgetMeta[] = [
   { key: "status-form",     label: "Status di Forma" },
   { key: "vo2max",          label: "VO2 Max / VDOT" },
   { key: "previsione-gara", label: "Previsione Gara" },
+  { key: "detraining",      label: "Detraining (Taper vs Fermo)" },
   { key: "fatigue-atl",     label: "Fatigue (ATL)" },
   { key: "soglia",          label: "Soglia Anaerobica" },
   { key: "deriva",          label: "Deriva Cardiaca" },

@@ -36,7 +36,10 @@
       "Bash(python3 -c ':*)",
       "Bash(curl -s \"http://localhost:8000/api/runs\")",
       "Bash(node -e ':*)",
-      "Bash(curl -v \"http://localhost:8000/api/runs\")"
+      "Bash(curl -v \"http://localhost:8000/api/runs\")",
+      "Bash(cd /d D:\\\\webapp-antiG)",
+      "Bash(node -e \"const fs=require\\('fs'\\);const s=fs.readFileSync\\('src/components/DashboardView.tsx','utf8'\\);const opens=\\(s.match\\(/hiddenKeys\\\\.includes\\\\\\(/g\\)||[]\\).length;const closes=\\(s.match\\(/\\\\n          \\\\\\)\\\\}/g\\)||[]\\).length;console.log\\('opens',opens,'closes',closes\\);\")",
+      "Bash(xargs grep *)"
     ]
   }
 }

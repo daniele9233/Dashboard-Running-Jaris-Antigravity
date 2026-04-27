@@ -465,8 +465,9 @@ function HRZones({ lastRun }: { lastRun: Run | null }) {
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Line, CartesianGrid, Area, ComposedChart } from "recharts";
 import { useApi } from "../hooks/useApi";
-import { getDashboard, getRuns, getAnalytics, getBestEfforts, getVdotPaces, getDashboardInsight } from "../api";
-import type { DashboardResponse, RunsResponse, AnalyticsResponse, Run, BestEffort, FitnessFreshnessPoint, VdotPacesResponse } from "../types/api";
+import { getDashboard, getRuns, getAnalytics, getBestEfforts, getVdotPaces, getDashboardInsight, getProfile } from "../api";
+import type { DashboardResponse, RunsResponse, AnalyticsResponse, Run, BestEffort, FitnessFreshnessPoint, VdotPacesResponse, Profile } from "../types/api";
+import { DetrainingWidget } from "./DetrainingWidget";
 
 function fmtPbTime(minutes: number): string {
   const h = Math.floor(minutes / 60);
@@ -720,6 +721,7 @@ export function DashboardView() {
   const { data: analyticsData } = useApi<AnalyticsResponse>(getAnalytics);
   const { data: effortsData } = useApi<{ efforts: BestEffort[] }>(getBestEfforts);
   const { data: vdotPacesData } = useApi<VdotPacesResponse>(getVdotPaces);
+  const { data: profileData } = useApi<Profile>(getProfile);
   const { data: insightData } = useApi<{ insight: string | null }>(getDashboardInsight);
 
   const navigate = useNavigate();
@@ -1406,6 +1408,20 @@ export function DashboardView() {
               stimolo fisiologico ultima corsa → beneficio per distanza
             </div>
             </div>
+           </GridCard>
+          </div>
+          )}
+
+          {/* ── Detraining (taper vs fermo totale) ── */}
+          {!hiddenKeys.includes("detraining") && (
+          <div key="detraining">
+           <GridCard disabled={isMobile} onRemove={() => hideWidget("detraining")}>
+            <DetrainingWidget
+              profile={profileData ?? null}
+              runs={runs}
+              vdot={vdot}
+              base5kSec={racePredictions.find(p => p.short === '5K')?.secs ?? null}
+            />
            </GridCard>
           </div>
           )}
