@@ -22,6 +22,8 @@ services:
     envVars:
       - key: VITE_BACKEND_URL
         value: https://dani-backend-ea0s.onrender.com
+      - key: VITE_MAPBOX_TOKEN
+        value: pk.eyJ1Ijoia2lra29kZXJpc28iLCJhIjoiY21uYWszMTIxMGp3NzJzc2JraDhwbTU5ayJ9.-60pgYn_BXERAHA7AqVgqA
     routes:
       - type: rewrite
         source: /*
