@@ -3,25 +3,39 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, Suspense } from "react";
+import { useEffect, Suspense, lazy } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { JarvisProvider, useJarvisContext } from "./context/JarvisContext";
 import { LayoutProvider } from "./context/LayoutContext";
 import { Sidebar } from "./components/Sidebar";
-import { DashboardView } from "./components/DashboardView";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { TrainingView } from "./components/TrainingView";
-import { ProfileView } from "./components/ProfileView";
-import { StatisticsView } from "./components/statistics/StatisticsView";
-import { RoutesView } from "./components/RoutesView";
-import { ActivitiesView } from "./components/ActivitiesView";
-import { RunnerDnaView } from "./components/RunnerDnaView";
-import { RankingView } from "./components/RankingView";
 import { SettingsControls } from "./components/SettingsControls";
-import { Search, Bell, Settings } from "lucide-react";
+
+// Route-level code splitting: ogni view è un chunk separato (Suspense gestisce loading).
+// I componenti usano named export → wrap con .then per estrarre il named come default.
+const DashboardView  = lazy(() => import("./components/DashboardView").then((m) => ({ default: m.DashboardView })));
+const TrainingView   = lazy(() => import("./components/TrainingView").then((m) => ({ default: m.TrainingView })));
+const ProfileView    = lazy(() => import("./components/ProfileView").then((m) => ({ default: m.ProfileView })));
+const StatisticsView = lazy(() => import("./components/statistics/StatisticsView").then((m) => ({ default: m.StatisticsView })));
+const RoutesView     = lazy(() => import("./components/RoutesView").then((m) => ({ default: m.RoutesView })));
+const ActivitiesView = lazy(() => import("./components/ActivitiesView").then((m) => ({ default: m.ActivitiesView })));
+const RunnerDnaView  = lazy(() => import("./components/RunnerDnaView").then((m) => ({ default: m.RunnerDnaView })));
+const RankingView    = lazy(() => import("./components/RankingView").then((m) => ({ default: m.RankingView })));
 import { useParams } from "react-router-dom";
-import { exchangeStravaCode, syncStrava } from "./api";
+import { exchangeStravaCode, syncStrava, getProfile } from "./api";
+import { invalidateCache, useApi } from "./hooks/useApi";
+import { API_CACHE } from "./hooks/apiCacheKeys";
+import { useServerEvents } from "./hooks/useServerEvents";
+
+/** Iniziali da nome utente: "Daniele Pasco" → "DP". Fallback "ML". */
+function deriveInitials(name?: string | null): string {
+  if (!name) return "ML";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "ML";
+  const initials = parts.slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
+  return initials || "ML";
+}
 
 // Wrapper per passare runId da URL params a RoutesView
 function RoutesViewWrapper() {
@@ -45,6 +59,15 @@ function AppContent() {
   const location = useLocation();
   const { t } = useTranslation();
 
+  // Profile per avatar dinamico (cache-shared con tutti gli altri view).
+  const { data: profile } = useApi(getProfile, { cacheKey: API_CACHE.PROFILE });
+  const profileName = (profile as { name?: string } | null)?.name ?? null;
+  const initials = deriveInitials(profileName);
+
+  // SSE: ricevi push dal backend (sync_complete / training_adapted) e
+  // auto-invalida le cache. Niente F5 dopo sync.
+  useServerEvents();
+
   const NAV_ITEMS = [
     { path: "/",            label: t("nav.dashboard")  },
     { path: "/training",    label: t("nav.training")   },
@@ -64,7 +87,16 @@ function AppContent() {
       window.history.replaceState({}, "", window.location.pathname);
       exchangeStravaCode(stravaCode)
         .then(() => syncStrava())
-        .then(() => navigate("/activities"))
+        .then(() => {
+          // Strava OAuth + sync done → drop everything that depends on runs
+          invalidateCache(API_CACHE.RUNS);
+          invalidateCache(API_CACHE.DASHBOARD);
+          invalidateCache(API_CACHE.ANALYTICS);
+          invalidateCache(API_CACHE.BEST_EFFORTS);
+          invalidateCache(API_CACHE.HEATMAP);
+          invalidateCache(API_CACHE.SUPERCOMPENSATION);
+          navigate("/activities");
+        })
         .catch((err) => console.error("Strava sync failed:", err));
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -84,7 +116,7 @@ function AppContent() {
       className="w-full h-screen flex overflow-hidden font-sans"
       style={{ backgroundColor: "var(--app-bg)", color: "var(--app-text)" }}
     >
-      <Sidebar activeView={activeSegment} onViewChange={(id) => navigate(id === "dashboard" ? "/" : `/${id}`)} />
+      <Sidebar />
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Navigation Bar */}
@@ -119,52 +151,17 @@ function AppContent() {
           </div>
 
           <div className="flex items-center gap-5">
-            <div className="relative group">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors"
-                style={{ color: "var(--app-text-dim)" }}
-              />
-              <input
-                type="text"
-                placeholder={t("header.search")}
-                className="border rounded-xl pl-10 pr-4 py-2 text-xs font-medium focus:outline-none w-56 transition-all"
-                style={{
-                  backgroundColor: "var(--app-input-bg)",
-                  borderColor: "var(--app-border)",
-                  color: "var(--app-text)",
-                }}
-              />
-            </div>
-
             {/* Language + Theme controls */}
             <SettingsControls />
 
             <div className="flex items-center gap-4">
-              <button
-                className="transition-colors relative"
-                style={{ color: "var(--app-text-dim)" }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--app-text)")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--app-text-dim)")}
-              >
-                <Bell className="w-5 h-5" />
-                <div
-                  className="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full border-2"
-                  style={{ borderColor: "var(--app-bg-alt)" }}
-                />
-              </button>
-              <button
-                className="transition-colors"
-                style={{ color: "var(--app-text-dim)" }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--app-text)")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--app-text-dim)")}
-              >
-                <Settings className="w-5 h-5" />
-              </button>
               <div
-                className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 border flex items-center justify-center overflow-hidden"
+                className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 border flex items-center justify-center shrink-0"
                 style={{ borderColor: "var(--app-border-strong)" }}
+                title={profileName ?? "Metic Lab"}
+                aria-label={profileName ? `Profilo ${profileName}` : "Profilo utente"}
               >
-                <img src="https://picsum.photos/seed/user/100/100" alt="Profile" className="w-full h-full object-cover" />
+                <span className="text-[10px] font-black text-white select-none">{initials}</span>
               </div>
             </div>
           </div>

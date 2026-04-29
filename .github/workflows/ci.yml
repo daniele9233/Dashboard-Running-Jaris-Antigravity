@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancella run obsoleti su nuovo push allo stesso branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Frontend: type-check + lint + test + build ──────────────────────────────
+  frontend:
+    name: Frontend (TS + ESLint + Vitest + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npm run lint
+
+      - name: ESLint
+        run: npm run lint:eslint
+        # ESLint warnings non bloccanti finché non si stabilizza la baseline.
+        continue-on-error: true
+
+      - name: Prettier check
+        run: npm run format:check
+        continue-on-error: true
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          # Mock env per build CI (sostituire con secrets in prod).
+          VITE_BACKEND_URL: http://localhost:8000
+          VITE_MAPBOX_TOKEN: pk.dummy
+          GEMINI_API_KEY: dummy
+
+  # ── Backend: syntax check + (opzionale) pytest ──────────────────────────────
+  backend:
+    name: Backend (Python syntax + pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt pytest
+
+      - name: AST syntax check
+        run: python -c "import ast; ast.parse(open('backend/server.py', encoding='utf-8').read())"
+
+      - name: Pytest (skip se nessun test)
+        run: |
+          if compgen -G "backend/test_*.py" > /dev/null || compgen -G "backend/tests/*.py" > /dev/null; then
+            python -m pytest backend/ -v
+          else
+            echo "Nessun test pytest in backend/ — skip."
+          fi
+        continue-on-error: true

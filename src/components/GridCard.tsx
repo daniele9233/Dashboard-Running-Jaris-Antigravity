@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { GripVertical, X } from "lucide-react";
+import { WidgetBoundary } from "./ErrorBoundary";
 
 /**
  * GridCard — wrapper for widgets inside ResponsiveReactGridLayout.
@@ -9,6 +10,9 @@ import { GripVertical, X } from "lucide-react";
  * via the `.drag-handle` selector — so the rest of the widget body remains
  * fully interactive (charts, tabs, tooltips work unchanged).
  *
+ * Children wrappati in WidgetBoundary: crash di un widget non abbatte la
+ * dashboard intera. Vedi ErrorBoundary.tsx → WidgetBoundary.
+ *
  * The resize handle (bottom-right) is injected automatically by
  * react-grid-layout when `resizeHandles: ['se']` is passed to the grid.
  */
@@ -16,12 +20,15 @@ export function GridCard({
   children,
   disabled = false,
   onRemove,
+  scope,
 }: {
   children: ReactNode;
   /** If true, hide drag grip (used when drag disabled on mobile). */
   disabled?: boolean;
   /** If provided, shows an X button top-right to hide the widget. */
   onRemove?: () => void;
+  /** Scope identificativo per logging telemetria (es. "VO2MaxChart"). */
+  scope?: string;
 }) {
   return (
     <div className="relative h-full group">
@@ -48,7 +55,9 @@ export function GridCard({
           <X size={12} className="text-white" />
         </button>
       )}
-      <div className="h-full">{children}</div>
+      <div className="h-full">
+        <WidgetBoundary scope={scope}>{children}</WidgetBoundary>
+      </div>
     </div>
   );
 }

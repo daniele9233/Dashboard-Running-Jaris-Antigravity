@@ -8,3 +8,4 @@ google-genai>=1.0.0
 fitdecode>=0.10.0
 garminconnect>=0.2.0
 garth>=0.4.38
+slowapi>=0.1.9

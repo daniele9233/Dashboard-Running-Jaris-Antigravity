@@ -1,0 +1,14 @@
+node_modules
+dist
+build
+.venv
+backend
+public
+restyling
+docs
+browser-tools-mcp
+local-whisper
+*.log
+package-lock.json
+repo-map.json
+repo-map.md

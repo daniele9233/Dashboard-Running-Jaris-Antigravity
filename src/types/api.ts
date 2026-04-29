@@ -471,6 +471,8 @@ export interface VdotPacesResponse {
     easy: string | null;
     marathon: string | null;
     threshold: string | null;
+    /** Empirical override da tempo runs reali (86-91% HR). Round 5. */
+    threshold_empirical?: string | null;
     interval: string | null;
     repetition: string | null;
   };

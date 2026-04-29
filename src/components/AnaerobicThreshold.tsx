@@ -85,9 +85,9 @@ function PaceTick({ x, y, payload }: any) {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-interface Props { runs: Run[]; maxHr: number; vdot?: number | null; }
+interface Props { runs: Run[]; vdot?: number | null; }
 
-export function AnaerobicThreshold({ runs, maxHr, vdot }: Props) {
+export function AnaerobicThreshold({ runs, vdot }: Props) {
   const [timeRange, setTimeRange] = useState<"6m" | "12m" | "all">("12m");
 
   const { points, hrMin, hrMax, paceDomain, paceTickValues, tPaceSec, currentHr, currentPace } = useMemo(() => {

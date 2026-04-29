@@ -118,7 +118,7 @@ async function fetchWeatherForRun(run: Run): Promise<WeatherSnapshot | null> {
         wind: winds[index] ?? null,
         estimatedHour: hour,
         estimatedLabel: label,
-        source: 'archive',
+        source: 'archive' as const,
       };
     } catch {
       if (run.temperature == null) return null;
@@ -129,7 +129,7 @@ async function fetchWeatherForRun(run: Run): Promise<WeatherSnapshot | null> {
         wind: null,
         estimatedHour: hour,
         estimatedLabel: `${label} · fallback temperatura run`,
-        source: 'run-fallback',
+        source: 'run-fallback' as const,
       };
     }
   })();

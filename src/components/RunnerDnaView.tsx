@@ -658,7 +658,7 @@ function PotentialBiologySection({
         delta: currentTime ? formatDelta(currentTime, potentialTime) : "",
       };
     })
-    .filter((item): item is { dist: string; currentTime?: string; potentialTime: string; delta: string } => item !== null)
+    .filter((item): item is { dist: string; currentTime: string | undefined; potentialTime: string; delta: string } => item !== null)
     .slice(0, 3);
   const primaryFocusArea = focusAreas[0] ?? null;
 

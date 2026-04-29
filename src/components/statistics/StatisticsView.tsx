@@ -15,6 +15,7 @@ import { AnalyticsV4CadenceSpeedMatrix, AnalyticsV4PaceZoneDistribution } from '
 import { AnalyticsV5BestEffortsProgression, AnalyticsV5EffortMatrix, AnalyticsV5PaceDistributionBell } from './AnalyticsV5';
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 import { useApi } from '../../hooks/useApi';
+import { API_CACHE } from '../../hooks/apiCacheKeys';
 import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, getDashboard, getProAnalytics, linkGarminCsv, getSupercompensation, getProfile, type GctAnalysisResponse } from '../../api';
 import { cadenceSpmFromRun } from '../../utils/cadence';
 import type {
@@ -748,13 +749,13 @@ export function StatisticsView() {
   const [proSections, setProSections] = useState<ProAnalyticsResponse['sections']>({});
   const [proError, setProError] = useState<string | null>(null);
   const detailRequestsRef = useRef<Set<string>>(new Set());
-  const { data: analyticsData } = useApi<AnalyticsResponse>(getAnalytics);
-  const { data: vdotData } = useApi<VdotPacesResponse>(getVdotPaces);
-  const { data: runsData } = useApi<RunsResponse>(getRuns);
-  const { data: gctData } = useApi<GctAnalysisResponse>(getGctAnalysis);
-  const { data: dashData } = useApi<DashboardResponse>(getDashboard);
-  const { data: superData } = useApi<SupercompensationResponse>(getSupercompensation);
-  const { data: profileData } = useApi<Profile>(getProfile);
+  const { data: analyticsData } = useApi<AnalyticsResponse>(getAnalytics, { cacheKey: API_CACHE.ANALYTICS });
+  const { data: vdotData } = useApi<VdotPacesResponse>(getVdotPaces, { cacheKey: API_CACHE.VDOT_PACES });
+  const { data: runsData } = useApi<RunsResponse>(getRuns, { cacheKey: API_CACHE.RUNS });
+  const { data: gctData } = useApi<GctAnalysisResponse>(getGctAnalysis, { cacheKey: API_CACHE.GCT_ANALYSIS });
+  const { data: dashData } = useApi<DashboardResponse>(getDashboard, { cacheKey: API_CACHE.DASHBOARD });
+  const { data: superData } = useApi<SupercompensationResponse>(getSupercompensation, { cacheKey: API_CACHE.SUPERCOMPENSATION });
+  const { data: profileData } = useApi<Profile>(getProfile, { cacheKey: API_CACHE.PROFILE });
   const loadFormLayout = useLoadFormLayout();
   const isMobile = useMediaQuery('(max-width: 767px)');
   const [openLoadWidgetMenu, setOpenLoadWidgetMenu] = useState(false);
@@ -1486,7 +1487,6 @@ export function StatisticsView() {
              <div>
                <AnaerobicThreshold
                  runs={statsRuns}
-                 maxHr={dashData?.profile?.max_hr ?? 180}
                  vdot={vdot}
                />
              </div>
@@ -2462,6 +2462,7 @@ export function StatisticsView() {
               vdot={vdot ?? 0}
               vdotPeak={vdot ? vdot + 2 : 0}
               vdotDelta={0}
+              maxHr={dashData?.profile?.max_hr ?? 0}
             />
           </div>
         )}

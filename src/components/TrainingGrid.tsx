@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer } from "lucide-react";
-import { useApi } from "../hooks/useApi";
+import { useApi, invalidateCache } from "../hooks/useApi";
+import { API_CACHE } from "../hooks/apiCacheKeys";
 import { getTrainingPlan, generateTrainingPlan, adaptTrainingPlan, evaluateTest } from "../api";
 import type { Session, TrainingPlanResponse, AdaptAdaptation } from "../types/api";
 
@@ -67,6 +68,9 @@ function AdaptPlanModal({ onClose, onDone }: { onClose: () => void; onDone: () =
       if (res.message) {
         setError(res.message);
       } else {
+        // Plan changed → invalidate plan + current week
+        invalidateCache(API_CACHE.TRAINING_PLAN);
+        invalidateCache(API_CACHE.TRAINING_CURRENT_WEEK);
         setResult(res.adaptations);
         setSummary({ weeks: res.weeks_modified, sessions: res.sessions_modified, triggered: res.triggered_count });
       }
@@ -589,6 +593,9 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
     setError(null);
     try {
       const res = await generateTrainingPlan({ ...baseParams(), plan_mode: mode });
+      // New plan → invalidate plan + current week
+      invalidateCache(API_CACHE.TRAINING_PLAN);
+      invalidateCache(API_CACHE.TRAINING_CURRENT_WEEK);
       setResult(res as unknown as GenerateResult);
       setPhase('done');
     } catch (e: unknown) {
@@ -1079,7 +1086,7 @@ export function TrainingGrid() {
     setPreviousView(null);
   };
 
-  const { data: planData, refetch: refetchPlan } = useApi<TrainingPlanResponse>(getTrainingPlan);
+  const { data: planData, refetch: refetchPlan } = useApi<TrainingPlanResponse>(getTrainingPlan, { cacheKey: API_CACHE.TRAINING_PLAN });
 
   // Build date → Session lookup map from all plan weeks
   const sessionMap = useMemo(() => {

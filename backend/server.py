@@ -10,7 +10,21 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.responses import RedirectResponse, JSONResponse, StreamingResponse
+
+# Rate limiting — opzionale: se slowapi non installato il server parte comunque
+# senza limiti (degradazione graceful). Per attivare: pip install slowapi
+try:
+    from slowapi import Limiter, _rate_limit_exceeded_handler
+    from slowapi.util import get_remote_address
+    from slowapi.errors import RateLimitExceeded
+    _SLOWAPI_AVAILABLE = True
+except ImportError:
+    _SLOWAPI_AVAILABLE = False
+    Limiter = None  # type: ignore
+    get_remote_address = None  # type: ignore
+    RateLimitExceeded = None  # type: ignore
+    _rate_limit_exceeded_handler = None  # type: ignore
 
 import httpx
 import json
@@ -60,13 +74,44 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Altrove", lifespan=lifespan)
 
+# ── CORS ──────────────────────────────────────────────────────────────────────
+# Env var ALLOWED_ORIGINS = "https://foo.com,https://bar.com" (comma-separated).
+# Default: dev (localhost) + prod (Render frontend) — no wildcard.
+# allow_origins=["*"] + allow_credentials=True è invalid per spec CORS:
+# i browser rifiutano comunque le credenziali. La whitelist è obbligatoria.
+_DEFAULT_ORIGINS = (
+    "http://localhost:3000,http://localhost:3001,http://localhost:5173,"
+    "https://dani-frontend-ea0s.onrender.com"
+)
+ALLOWED_ORIGINS = [
+    o.strip() for o in os.environ.get("ALLOWED_ORIGINS", _DEFAULT_ORIGINS).split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Rate limiting ─────────────────────────────────────────────────────────────
+# Limiter globale a 120 req/min per IP. I decorator @limiter.limit("...") sui
+# singoli endpoint sotto stringono dove serve (AI / sync). Se slowapi non è
+# installato (dev senza dipendenze), tutti i decorator diventano no-op.
+if _SLOWAPI_AVAILABLE:
+    limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+else:
+    # Stub no-op così @limiter.limit(...) funziona anche senza slowapi.
+    class _NoopLimiter:
+        def limit(self, *_args, **_kwargs):
+            def deco(f):
+                return f
+            return deco
+    limiter = _NoopLimiter()  # type: ignore
 
 # ── HELPERS ──────────────────────────────────────────────────────────────────
 
@@ -334,22 +379,88 @@ def _normalise_run_quality_fields(run_doc: dict) -> dict:
     run_doc["biomechanics"] = biomech
     return run_doc
 
-# ── HEALTH ───────────────────────────────────────────────────────────────────
+# ── SSE EVENT BUS ─────────────────────────────────────────────────────────────
+# Pub/sub in-process per server-push notifications (single-tenant).
+# Quando arriverà l'auth (#1 deferred) → estendere con scope per user_id.
+#
+# Eventi standard:
+#   - { "type": "sync_started",  "source": "strava"|"garmin", "ts": ... }
+#   - { "type": "sync_complete", "source": "...", "count": N, "ts": ... }
+#   - { "type": "sync_error",    "source": "...", "error": "...", "ts": ... }
+#   - { "type": "training_adapted", "ts": ... }
+#   - { "type": "ping", "ts": ... }   (keepalive ogni 30s)
 
-@app.get("/")
-async def health():
-    return {"status": "ok", "app": "Altrove"}
+_event_subscribers: list[asyncio.Queue] = []
 
 
-@app.get("/api/version")
-async def api_version():
-    return {
-        "status": "ok",
-        "app": "Altrove",
-        "version": APP_VERSION,
-        "analytics_schema_version": ANALYTICS_SCHEMA_VERSION,
-        "service": os.environ.get("RENDER_SERVICE_NAME") or "local",
-    }
+async def publish_event(payload: dict):
+    """Push un evento a tutti i subscriber connessi. Drop silenzioso se queue piena."""
+    payload.setdefault("ts", dt.datetime.utcnow().isoformat() + "Z")
+    dead = []
+    for q in _event_subscribers:
+        try:
+            q.put_nowait(payload)
+        except asyncio.QueueFull:
+            # Subscriber lento → marca per rimozione (evita memory leak)
+            dead.append(q)
+    for q in dead:
+        try:
+            _event_subscribers.remove(q)
+        except ValueError:
+            pass
+
+
+@app.get("/api/events/stream")
+async def event_stream(request: Request):
+    """
+    Server-Sent Events endpoint.
+
+    Frontend usa `new EventSource('/api/events/stream')` e ascolta:
+      es.onmessage = (e) => { const data = JSON.parse(e.data); ... }
+
+    Connessione tenuta aperta. Server invia ping ogni 30s per evitare
+    timeout proxy (Render/CloudFlare hanno idle timeout 60-100s).
+    """
+    queue: asyncio.Queue = asyncio.Queue(maxsize=100)
+    _event_subscribers.append(queue)
+
+    async def gen():
+        try:
+            # Hello iniziale così client sa che la connessione è viva
+            yield f"data: {json.dumps({'type': 'connected', 'ts': dt.datetime.utcnow().isoformat() + 'Z'})}\n\n"
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    # Wait con timeout = keepalive ping
+                    payload = await asyncio.wait_for(queue.get(), timeout=30.0)
+                    yield f"data: {json.dumps(payload)}\n\n"
+                except asyncio.TimeoutError:
+                    # Keepalive: SSE comment è ignorato dal client ma tiene la connessione viva
+                    yield ": ping\n\n"
+        finally:
+            try:
+                _event_subscribers.remove(queue)
+            except ValueError:
+                pass
+
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # disabilita buffering nginx/Render
+        },
+    )
+
+
+# ── ROUTERS ──────────────────────────────────────────────────────────────────
+# Pattern: estrazione progressiva endpoint da questo file in `backend/routers/`.
+# Round 5 ha estratto health/version come pattern. Vedi REPORT-TECNICO sezione 15.
+from backend.routers import health as _health_router  # noqa: E402
+
+app.include_router(_health_router.router)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  STRAVA OAUTH
@@ -586,7 +697,9 @@ async def strava_sync():
     """Fetch ALL activities from Strava (paginated) and upsert into DB."""
     tokens = await db.strava_tokens.find_one(sort=[("_id", -1)])
     if not tokens:
+        await publish_event({"type": "sync_error", "source": "strava", "error": "not_connected"})
         return JSONResponse({"error": "not_connected"}, status_code=400)
+    await publish_event({"type": "sync_started", "source": "strava"})
 
     tokens = await _refresh_token_if_needed(tokens)
     athlete_id = tokens.get("athlete_id")
@@ -796,6 +909,7 @@ async def strava_sync():
             print(f"[training-auto-adapt] non-fatal auto adapt after Strava sync failed: {e}")
             pass  # never fail the sync because of adapt
 
+    await publish_event({"type": "sync_complete", "source": "strava", "count": synced})
     return {"ok": True, "synced": synced, "auto_adapt": adapt_result}
 
 
@@ -1870,6 +1984,7 @@ def _generate_plan_weeks(goal_race: str, weeks_total: int, max_weekly_km: float,
 
 
 @app.post("/api/training-plan/generate")
+@limiter.limit("10/minute")
 async def generate_training_plan(request: Request):
     """Generate a goal-driven training plan with history-aware calibration.
 
@@ -2460,6 +2575,8 @@ async def adapt_training_plan():
             sessions_mod += sum(1 for s in w["sessions"] if s.get("type") != "rest")
 
     triggered_count = sum(1 for a in adaptations if a.get("triggered"))
+    if triggered_count > 0:
+        await publish_event({"type": "training_adapted", "triggered": triggered_count, "weeks": weeks_mod})
     return {
         "ok": True,
         "adaptations": adaptations,
@@ -4211,12 +4328,58 @@ async def get_vdot_paces():
         v = (-0.182258 + math.sqrt(disc)) / (2 * 0.000104)  # m/min
         return _format_pace(v / 60) if v > 0 else None  # convert m/min → m/s for _format_pace
 
+    # ── EMPIRICAL THRESHOLD PACE (round 5 — #3 math heavy → backend) ──────────
+    # Override Daniels formula con mediana paces di tempo runs reali a 86-91% HR.
+    # Replica logica client DashboardView.thresholdPace useMemo (ora deprecato).
+    # Fallback a formula VDOT se < 3 tempo runs qualificate.
+    def _parse_pace_to_secs(pace_str: str) -> int:
+        """'5:42' → 342. Returns 0 on bad input."""
+        try:
+            parts = pace_str.split(":")
+            if len(parts) != 2:
+                return 0
+            return int(parts[0]) * 60 + int(parts[1])
+        except Exception:
+            return 0
+
+    def _secs_to_pace_str(secs: int) -> str:
+        if secs <= 0:
+            return ""
+        m = secs // 60
+        s = secs % 60
+        return f"{m}:{s:02d}"
+
+    threshold_empirical = None
+    tempo_runs = []
+    for r in runs:
+        if r.get("is_treadmill"):
+            continue
+        hr_pct = r.get("avg_hr_pct")
+        if hr_pct is None:
+            continue
+        # avg_hr_pct may come as fraction (0.87) or percent (87)
+        pct = hr_pct / 100.0 if hr_pct > 1 else hr_pct
+        if r.get("distance_km", 0) < 3:
+            continue
+        if 0.86 <= pct <= 0.91:
+            tempo_runs.append(r)
+        if len(tempo_runs) >= 8:
+            break
+
+    if len(tempo_runs) >= 3:
+        paces = sorted(filter(None, [_parse_pace_to_secs(r.get("avg_pace", "")) for r in tempo_runs]))
+        paces = [p for p in paces if p > 0]
+        if paces:
+            median = paces[len(paces) // 2]
+            threshold_empirical = _secs_to_pace_str(max(150, min(500, median)))
+
     return {
         "vdot": vdot,
         "paces": {
             "easy":       pace_at_vo2_pct(0.65),  # E: 59–74% VO2max
             "marathon":   pace_at_vo2_pct(0.80),  # M: 75–84% VO2max
-            "threshold":  pace_at_vo2_pct(0.88),  # T: 83–88% VO2max
+            "threshold":  pace_at_vo2_pct(0.88),  # T: 83–88% VO2max (Daniels VDOT formula)
+            "threshold_empirical": threshold_empirical,  # mediana paces tempo runs reali (86-91% HR)
             "interval":   pace_at_vo2_pct(0.98),  # I: 95–100% VO2max
             "repetition": pace_at_vo2_pct(1.10),  # R: 105–120% VO2max
         },
@@ -4780,6 +4943,7 @@ async def get_heatmap():
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @app.post("/api/ai/analyze-run")
+@limiter.limit("10/minute")
 async def analyze_run(request: Request):
     body = await request.json()
     run_id = body.get("run_id", "")
@@ -6519,6 +6683,7 @@ Risposte brevi e concise — è output vocale."""
 
 
 @app.post("/api/jarvis/chat")
+@limiter.limit("30/minute")
 async def jarvis_chat(request: Request):
     """JARVIS AI voice assistant — processes transcript and returns spoken response + action."""
     body = await request.json()
@@ -7211,6 +7376,7 @@ async def _link_garmin_csv_docs(athlete_id: int) -> dict:
 
 
 @app.post("/api/garmin/csv-import")
+@limiter.limit("20/minute")
 async def garmin_csv_import(request: Request):
     """Import Garmin CSV rows, dedupe raw data, then link telemetry to Strava runs."""
     athlete_id = await _get_athlete_id()

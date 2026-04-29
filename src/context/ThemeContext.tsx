@@ -23,6 +23,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("app-theme", theme);
   }, [theme]);
 
+  // Cross-tab sync: ascolta cambi storage da ALTRE tab.
+  // `storage` event fires solo nelle tab che NON hanno scritto, evitando loop.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "app-theme" && (e.newValue === "dark" || e.newValue === "light")) {
+        setThemeState(e.newValue);
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
   const setTheme = (t: Theme) => setThemeState(t);
   const toggleTheme = () => setThemeState((prev) => (prev === "dark" ? "light" : "dark"));
 

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { ChevronLeft, ChevronRight, ChevronDown, CheckCircle2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useApi } from '../hooks/useApi';
+import { API_CACHE } from '../hooks/apiCacheKeys';
 import { getCurrentWeek, getRuns } from '../api';
 import type { TrainingWeek, RunsResponse } from '../types/api';
 
@@ -15,8 +16,8 @@ const SESSION_COLORS: Record<string, string> = {
 };
 
 export function TrainingSidebar() {
-  const { data: currentWeek } = useApi<TrainingWeek>(getCurrentWeek);
-  const { data: runsData } = useApi<RunsResponse>(getRuns);
+  const { data: currentWeek } = useApi<TrainingWeek>(getCurrentWeek, { cacheKey: API_CACHE.TRAINING_CURRENT_WEEK });
+  const { data: runsData } = useApi<RunsResponse>(getRuns, { cacheKey: API_CACHE.RUNS });
 
   // ── Weekly mileage from last 9 weeks ────────────────────────────────────────
   const mileageData = useMemo(() => {

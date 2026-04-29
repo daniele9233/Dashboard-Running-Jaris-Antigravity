@@ -211,6 +211,39 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Cross-tab sync: ascolta cambi storage da ALTRE tab (drag widget in tab A
+  // → vedi nuova posizione in tab B senza refresh).
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed && typeof parsed === "object") {
+            const merged = mergeWithDefaults(parsed as Layouts);
+            setLayouts(merged);
+            latestLayouts.current = merged;
+          }
+        } catch { /* ignore */ }
+      } else if (e.key === HIDDEN_STORAGE_KEY) {
+        if (!e.newValue) {
+          setHiddenKeys([]);
+          latestHidden.current = [];
+        } else {
+          try {
+            const parsed = JSON.parse(e.newValue);
+            if (Array.isArray(parsed)) {
+              const hk = parsed.filter((x) => typeof x === "string");
+              setHiddenKeys(hk);
+              latestHidden.current = hk;
+            }
+          } catch { /* ignore */ }
+        }
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
   const scheduleBackendSync = useCallback((nextLayouts: Layouts, nextHidden: string[]) => {
     latestLayouts.current = nextLayouts;
     latestHidden.current = nextHidden;

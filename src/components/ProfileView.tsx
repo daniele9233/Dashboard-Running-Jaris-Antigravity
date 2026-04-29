@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import Map, { Source, Layer } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Award, Clock, Activity, Zap, Calendar, Edit3, Share2, RefreshCw, Link2, X, Check, Heart, ChevronRight, Upload, Camera, Bot } from "lucide-react";
-import { useApi } from "../hooks/useApi";
+import { useApi, invalidateCache } from "../hooks/useApi";
+import { API_CACHE } from "../hooks/apiCacheKeys";
 import { getProfile, updateProfile, getStravaAuthUrl, syncStrava, getBestEfforts, getHeatmap, getRuns } from "../api";
 import { useJarvisContext } from "../context/JarvisContext";
 import type { Profile, BestEffort, Run } from "../types/api";
@@ -180,6 +181,9 @@ function EditModal({ profile, onClose, onSaved }: EditModalProps) {
       if (form.height_cm) patch.height_cm = parseFloat(form.height_cm);
       if (form.max_hr) patch.max_hr = parseInt(form.max_hr);
       const updated = await updateProfile(patch as Partial<Profile>);
+      // Profile changed → drop cached profile + dashboard (HRmax cascades)
+      invalidateCache(API_CACHE.PROFILE);
+      invalidateCache(API_CACHE.DASHBOARD);
       onSaved(updated);
     } catch {
       setError("Errore nel salvataggio. Riprova.");
@@ -534,10 +538,10 @@ function PaceProgressionChart({ pacePoints }: { pacePoints: PacePoint[] }) {
 export function ProfileView() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { data: profileData, loading } = useApi<Profile>(getProfile);
-  const { data: effortsData } = useApi<{ efforts: BestEffort[] }>(getBestEfforts);
-  const { data: heatmapData } = useApi<{ heatmap: { date: string; km: number }[] }>(getHeatmap);
-  const { data: runsData } = useApi<{ runs: Run[] }>(getRuns);
+  const { data: profileData, loading } = useApi<Profile>(getProfile, { cacheKey: API_CACHE.PROFILE });
+  const { data: effortsData } = useApi<{ efforts: BestEffort[] }>(getBestEfforts, { cacheKey: API_CACHE.BEST_EFFORTS });
+  const { data: heatmapData } = useApi<{ heatmap: { date: string; km: number }[] }>(getHeatmap, { cacheKey: API_CACHE.HEATMAP });
+  const { data: runsData } = useApi<{ runs: Run[] }>(getRuns, { cacheKey: API_CACHE.RUNS });
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -598,6 +602,13 @@ export function ProfileView() {
     setSyncResult(null);
     try {
       const res = (await syncStrava()) as { synced?: number };
+      // New runs synced → drop everything that depends on runs
+      invalidateCache(API_CACHE.RUNS);
+      invalidateCache(API_CACHE.DASHBOARD);
+      invalidateCache(API_CACHE.ANALYTICS);
+      invalidateCache(API_CACHE.BEST_EFFORTS);
+      invalidateCache(API_CACHE.HEATMAP);
+      invalidateCache(API_CACHE.SUPERCOMPENSATION);
       setSyncResult(`${res.synced ?? 0} corse sincronizzate!`);
     } catch {
       setSyncResult("Errore nella sincronizzazione. Connetti prima Strava.");

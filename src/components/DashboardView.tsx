@@ -11,6 +11,7 @@ import { Responsive, WidthProvider } from "react-grid-layout/legacy";
 
 const ResponsiveGrid = WidthProvider(Responsive);
 import { GridCard } from "./GridCard";
+import { FirstRunOnboarding } from "./FirstRunOnboarding";
 import { useLayout } from "../context/LayoutContext";
 import { WIDGET_REGISTRY } from "./dashboard/widgetRegistry";
 
@@ -75,407 +76,20 @@ function InfoTooltip({ title, lines }: { title: string; lines: string[] }) {
   );
 }
 import { LastRunMap } from "./LastRunMap";
-
-// ─────────────────── Fitness Chart — CTL over time (Strava-style) ───────────────
-type FFRange = "1m" | "3m" | "6m" | "1y" | "2y";
-const FF_RANGE_DAYS: Record<FFRange, number> = { "1m": 30, "3m": 90, "6m": 182, "1y": 365, "2y": 730 };
-const FF_TAB_LABELS: Record<FFRange, string> = { "1m": "1 mese", "3m": "3 mesi", "6m": "6 mesi", "1y": "1 anno", "2y": "2 anni" };
-
-function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }) {
-  const [range, setRange] = useState<FFRange>("1y");
-  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
-
-  const data = useMemo(() => {
-    if (!ff?.length) return [] as FitnessFreshnessPoint[];
-    const cutoff = Date.now() - FF_RANGE_DAYS[range] * 86400000;
-    return ff
-      .filter((p) => new Date(p.date).getTime() >= cutoff)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [ff, range]);
-
-  // SVG viewport (preserveAspectRatio="none" stretches horizontally)
-  const W = 1000, H = 260;
-  const padL = 42, padR = 18, padT = 16, padB = 28;
-  const plotW = W - padL - padR;
-  const plotH = H - padT - padB;
-
-  const { maxY, minY } = useMemo(() => {
-    if (!data.length) return { maxY: 60, minY: 0 };
-    const vals = data.map((d) => d.ctl);
-    const mx = Math.max(...vals);
-    const mn = Math.min(...vals, 0);
-    const top = Math.ceil((mx + 5) / 10) * 10;
-    return { maxY: Math.max(top, 10), minY: Math.floor(mn / 10) * 10 };
-  }, [data]);
-
-  const x = (i: number) => padL + (data.length <= 1 ? plotW / 2 : (i / (data.length - 1)) * plotW);
-  const y = (v: number) => padT + (1 - (v - minY) / (maxY - minY || 1)) * plotH;
-
-  const linePath = useMemo(() => {
-    if (!data.length) return "";
-    return data.map((d, i) => `${i === 0 ? "M" : "L"} ${x(i).toFixed(2)} ${y(d.ctl).toFixed(2)}`).join(" ");
-  }, [data, maxY, minY]);
-
-  const areaPath = useMemo(() => {
-    if (!data.length) return "";
-    const top = data.map((d, i) => `${i === 0 ? "M" : "L"} ${x(i).toFixed(2)} ${y(d.ctl).toFixed(2)}`).join(" ");
-    return `${top} L ${x(data.length - 1).toFixed(2)} ${padT + plotH} L ${padL} ${padT + plotH} Z`;
-  }, [data, maxY, minY]);
-
-  const yTicks = useMemo(() => {
-    const step = Math.max(10, Math.ceil((maxY - minY) / 4 / 10) * 10);
-    const arr: number[] = [];
-    for (let v = minY; v <= maxY; v += step) arr.push(v);
-    return arr;
-  }, [maxY, minY]);
-
-  const xLabels = useMemo(() => {
-    if (data.length < 2) return [] as { i: number; label: string }[];
-    const want = 5;
-    const step = Math.max(1, Math.floor(data.length / want));
-    const out: { i: number; label: string }[] = [];
-    const fmt = (s: string) => {
-      const d = new Date(s);
-      return d.toLocaleDateString("it", { month: "short" }).replace(".", "");
-    };
-    for (let i = 0; i < data.length; i += step) out.push({ i, label: fmt(data[i].date) });
-    out.push({ i: data.length - 1, label: "Oggi" });
-    return out;
-  }, [data]);
-
-  const current = data.length ? data[data.length - 1].ctl : null;
-  const first = data.length ? data[0].ctl : null;
-  const delta = current !== null && first !== null ? current - first : null;
-  const rangeLabel = data.length
-    ? `dal ${new Date(data[0].date).toLocaleDateString("it", { day: "numeric", month: "short", year: "numeric" })} al ${new Date(data[data.length - 1].date).toLocaleDateString("it", { day: "numeric", month: "short", year: "numeric" })}`
-    : "—";
-
-  const onMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!data.length || !svgRef.current) return;
-    const rect = svgRef.current.getBoundingClientRect();
-    const px = ((e.clientX - rect.left) / rect.width) * W;
-    const rel = (px - padL) / plotW;
-    const idx = Math.round(rel * (data.length - 1));
-    setHoverIdx(Math.max(0, Math.min(data.length - 1, idx)));
-  };
-
-  const hov = hoverIdx !== null ? data[hoverIdx] : null;
-
-  return (
-    <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4 flex-wrap gap-4">
-        <div>
-          <h3 className="text-white text-lg font-black tracking-tight">Condizione fisica</h3>
-          <p className="text-[#A0A0A0] text-[11px] tracking-wide">Allenamento e recupero sommati nel tempo (CTL)</p>
-        </div>
-        <div className="flex gap-1 bg-[#111] border border-white/[0.06] rounded-full p-1">
-          {(Object.keys(FF_TAB_LABELS) as FFRange[]).map((k) => (
-            <button
-              key={k}
-              onClick={() => { setRange(k); setHoverIdx(null); }}
-              className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase transition-colors ${
-                range === k ? "bg-[#F97316] text-white" : "text-[#A0A0A0] hover:text-white"
-              }`}
-            >
-              {FF_TAB_LABELS[k]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Current value + delta */}
-      <div className="mb-2">
-        <div className="flex items-baseline gap-3">
-          <span className="text-white text-4xl font-black">{current !== null ? current.toFixed(0) : "—"}</span>
-          <span className="text-[#A0A0A0] text-xs tracking-widest">CTL</span>
-          {delta !== null && (
-            <span className={`text-xs font-black ${delta >= 0 ? "text-[#F97316]" : "text-[#60A5FA]"}`}>
-              {delta >= 0 ? "+" : ""}{delta.toFixed(0)} punti
-            </span>
-          )}
-        </div>
-        <p className="text-[#666] text-[10px] tracking-wider">{rangeLabel}</p>
-      </div>
-
-      {/* Chart */}
-      <div className="relative flex-1 min-h-[260px]">
-        {data.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center text-[#666] text-xs font-black tracking-widest uppercase">
-            nessun dato in questo periodo
-          </div>
-        ) : (
-          <svg
-            ref={svgRef}
-            viewBox={`0 0 ${W} ${H}`}
-            preserveAspectRatio="none"
-            className="w-full h-full"
-            style={{ cursor: "crosshair" }}
-            onMouseMove={onMove}
-            onMouseLeave={() => setHoverIdx(null)}
-          >
-            <defs>
-              <linearGradient id="ffGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#F97316" stopOpacity="0.55" />
-                <stop offset="100%" stopColor="#F97316" stopOpacity="0.02" />
-              </linearGradient>
-            </defs>
-
-            {/* Y grid + labels */}
-            {yTicks.map((v) => (
-              <g key={v}>
-                <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke="#26262b" strokeWidth={1} vectorEffect="non-scaling-stroke" />
-                <text x={padL - 8} y={y(v) + 3} textAnchor="end" fontSize="10" fill="#666" style={{ fontFamily: "JetBrains Mono" }}>
-                  {v}
-                </text>
-              </g>
-            ))}
-
-            {/* Area + line */}
-            <path d={areaPath} fill="url(#ffGrad)" />
-            <path d={linePath} fill="none" stroke="#F97316" strokeWidth={2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-
-            {/* X labels */}
-            {xLabels.map((l, k) => (
-              <text
-                key={k}
-                x={x(l.i)}
-                y={H - 8}
-                textAnchor="middle"
-                fontSize="10"
-                fill="#888"
-                style={{ fontFamily: "JetBrains Mono" }}
-              >
-                {l.label}
-              </text>
-            ))}
-
-            {/* Hover marker */}
-            {hov && hoverIdx !== null && (
-              <g>
-                <line
-                  x1={x(hoverIdx)}
-                  x2={x(hoverIdx)}
-                  y1={padT}
-                  y2={padT + plotH}
-                  stroke="#F97316"
-                  strokeWidth={1.5}
-                  vectorEffect="non-scaling-stroke"
-                />
-                <circle cx={x(hoverIdx)} cy={y(hov.ctl)} r={12} fill="#F97316" fillOpacity={0.25} />
-                <circle cx={x(hoverIdx)} cy={y(hov.ctl)} r={5} fill="#F97316" stroke="#fff" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-              </g>
-            )}
-          </svg>
-        )}
-
-        {/* CTL badge — HTML so it never stretches */}
-        {hov && hoverIdx !== null && (() => {
-          const badgeLeft = (x(hoverIdx) / W) * 100;
-          const badgeTop  = (Math.max(padT + 4, y(hov.ctl) - 38) / H) * 100;
-          return (
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: `calc(${badgeLeft}% - 22px)`,
-                top: `${badgeTop}%`,
-              }}
-            >
-              <div
-                style={{
-                  background: '#F97316',
-                  borderRadius: 8,
-                  width: 44,
-                  height: 28,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: 14, fontWeight: 900, color: '#fff', lineHeight: 1 }}>
-                  {hov.ctl.toFixed(0)}
-                </span>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Hover date overlay (HTML, not scaled) */}
-        {hov && (
-          <div className="absolute top-0 right-0 bg-[#111] border border-white/[0.08] rounded-lg px-3 py-1.5 pointer-events-none">
-            <div className="text-[10px] tracking-widest uppercase text-[#A0A0A0] font-black">
-              {new Date(hov.date).toLocaleDateString("it", { day: "numeric", month: "short", year: "numeric" })}
-            </div>
-            <div className="text-sm font-black text-white" style={{ fontFamily: "JetBrains Mono" }}>
-              CTL {hov.ctl.toFixed(1)} · ATL {hov.atl.toFixed(1)} · TSB {hov.tsb >= 0 ? "+" : ""}{hov.tsb.toFixed(1)}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────── HR Zones donut (adapted to dark theme) ───────────────────
-function HRZones({ lastRun }: { lastRun: Run | null }) {
-  const [active, setActive] = useState(2);
-
-  const zones = useMemo(() => {
-    const maxHr = lastRun?.max_hr ?? 190;
-    const ranges = [
-      { n: "Z1", label: "Recovery", low: 0.5, high: 0.69, color: "#60A5FA" },
-      { n: "Z2", label: "Endurance", low: 0.69, high: 0.78, color: "#34D399" },
-      { n: "Z3", label: "Tempo", low: 0.78, high: 0.86, color: "#FBBF24" },
-      { n: "Z4", label: "Threshold", low: 0.86, high: 0.92, color: "#FB923C" },
-      { n: "Z5", label: "VO₂", low: 0.92, high: 1.0, color: "#F43F5E" },
-    ];
-    const secs = ranges.map(() => 0);
-    for (const sp of lastRun?.splits ?? []) {
-      if (sp.hr == null) continue;
-      const pct = sp.hr / maxHr;
-      const zi = ranges.findIndex((r) => pct >= r.low && pct < r.high);
-      if (zi >= 0) secs[zi] += sp.elapsed_time || 60;
-    }
-    const total = secs.reduce((s, v) => s + v, 0);
-    return ranges.map((r, i) => {
-      const pct = total > 0 ? (secs[i] / total) * 100 : 0;
-      return {
-        ...r,
-        pct: Math.round(pct),
-        range: `${Math.round(r.low * maxHr)}-${Math.round(r.high * maxHr)}`,
-      };
-    });
-  }, [lastRun]);
-
-  const total = zones.reduce((s, z) => s + z.pct, 0) || 1;
-  const R = 70, r = 48;
-  const cx = 96, cy = 96;
-  let startAngle = -90;
-  const gap = 2;
-  const maxPct = Math.max(...zones.map((z) => z.pct), 1);
-
-  return (
-    <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-5 h-full flex flex-col overflow-hidden">
-      {/* ── top label ── */}
-      <div className="text-[#A0A0A0] text-[9px] font-black tracking-[0.2em] uppercase mb-3 shrink-0">
-        Heart Rate Zones
-      </div>
-
-      {/* ── body: donut left / list right ── */}
-      <div className="flex gap-4 flex-1 min-h-0">
-
-        {/* Donut */}
-        <div className="flex items-center justify-center shrink-0" style={{ width: '44%' }}>
-          <svg viewBox="0 0 200 200" className="w-full h-full" style={{ maxWidth: 200, maxHeight: 200 }}>
-            {zones.map((z, i) => {
-              const a1 = startAngle + gap / 2;
-              const a2 = startAngle + (z.pct / total) * 360 - gap / 2;
-              startAngle += (z.pct / total) * 360;
-              const large = a2 - a1 > 180 ? 1 : 0;
-              const rad = (p: number) => (p * Math.PI) / 180;
-              const isActive = i === active;
-              const rr = isActive ? R + 6 : R;
-              const ri = isActive ? r - 2 : r;
-              const x1 = cx + rr * Math.cos(rad(a1));
-              const y1 = cy + rr * Math.sin(rad(a1));
-              const x2 = cx + rr * Math.cos(rad(a2));
-              const y2 = cy + rr * Math.sin(rad(a2));
-              const x3 = cx + ri * Math.cos(rad(a2));
-              const y3 = cy + ri * Math.sin(rad(a2));
-              const x4 = cx + ri * Math.cos(rad(a1));
-              const y4 = cy + ri * Math.sin(rad(a1));
-              if (z.pct === 0) return null;
-              const d = `M ${x1} ${y1} A ${rr} ${rr} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${ri} ${ri} 0 ${large} 0 ${x4} ${y4} Z`;
-              return (
-                <path
-                  key={i}
-                  d={d}
-                  fill={z.color}
-                  opacity={isActive ? 1 : 0.55}
-                  style={{ cursor: "pointer", transition: "all .25s ease", filter: isActive ? `drop-shadow(0 0 6px ${z.color}88)` : "none" }}
-                  onMouseEnter={() => setActive(i)}
-                />
-              );
-            })}
-            {/* dark inner circle */}
-            <circle cx={cx} cy={cy} r={r - 5} fill="#111" />
-            {/* center text */}
-            <text x={cx} y={cy - 8} textAnchor="middle" fontSize="7.5" fontWeight="800" fill="#888" letterSpacing="1.2">
-              {zones[active].n} · {zones[active].label.toUpperCase()}
-            </text>
-            <text x={cx} y={cy + 12} textAnchor="middle" fontSize="22" fontWeight="900" fill="#fff">
-              {zones[active].pct}%
-            </text>
-            <text x={cx} y={cy + 26} textAnchor="middle" fontSize="7.5" fill="#555">
-              {zones[active].range} bpm
-            </text>
-          </svg>
-        </div>
-
-        {/* Distribution list */}
-        <div className="flex flex-col flex-1 min-w-0 min-h-0">
-          <div className="text-white text-xl font-black italic tracking-tight mb-3 shrink-0">
-            Distribution
-          </div>
-          <div className="flex flex-col gap-1.5 flex-1 justify-evenly">
-            {zones.map((z, i) => (
-              <div
-                key={z.n}
-                onMouseEnter={() => setActive(i)}
-                className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl cursor-pointer transition-all"
-                style={{
-                  background: i === active ? "rgba(255,255,255,0.06)" : "transparent",
-                  border: i === active ? `1px solid ${z.color}30` : "1px solid transparent",
-                }}
-              >
-                {/* color pill */}
-                <div style={{
-                  width: 5, height: 22, borderRadius: 3,
-                  background: z.color,
-                  opacity: i === active ? 1 : 0.65,
-                  flexShrink: 0,
-                  boxShadow: i === active ? `0 0 8px ${z.color}66` : "none",
-                }} />
-                {/* label + bar */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-white text-[10px] font-black tracking-widest uppercase truncate">
-                      {z.n} · {z.label}
-                    </span>
-                    <span className="text-[#A0A0A0] text-[10px] font-bold ml-2 shrink-0" style={{ fontFamily: "JetBrains Mono" }}>
-                      {z.pct}%
-                    </span>
-                  </div>
-                  <div className="h-[3px] rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${(z.pct / maxPct) * 100}%`, background: z.color, transition: "width .6s ease", opacity: i === active ? 1 : 0.6 }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { FitnessChart } from "./dashboard/widgets/FitnessChart";
+import { HRZones } from "./dashboard/widgets/HRZones";
+import { NextOptimalSessionWidget } from "./dashboard/widgets/NextOptimalSessionWidget";
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Line, CartesianGrid, Area, ComposedChart } from "recharts";
 import { useApi } from "../hooks/useApi";
+import { API_CACHE } from "../hooks/apiCacheKeys";
 import { getDashboard, getRuns, getAnalytics, getBestEfforts, getVdotPaces, getDashboardInsight, getProfile } from "../api";
 import type { DashboardResponse, RunsResponse, AnalyticsResponse, Run, BestEffort, FitnessFreshnessPoint, VdotPacesResponse, Profile } from "../types/api";
 import { DetrainingWidget } from "./DetrainingWidget";
+import { computeDrift as computeDriftCanonical } from "../utils/cardiacDrift";
+import { parsePaceToSecs, secsToPaceStr, hmsToSecs, formatDuration, fmtPbTime } from "../utils/paceFormat";
+import { buildRacePredictions } from "../utils/racePredictions";
 
-function fmtPbTime(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = Math.floor(minutes % 60);
-  const s = Math.round((minutes * 60) % 60);
-  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-  return `${m}:${String(s).padStart(2,'0')}`;
-}
 function bestPbTime(runs: Run[], minKm: number, maxKm: number, targetKm: number): string {
   const c = runs.filter(r =>
     !r.is_treadmill &&
@@ -504,225 +118,16 @@ function timeUntil(dateStr: string): { days: number; hours: number; minutes: num
   return { days, hours, minutes };
 }
 
-function parsePaceToSecs(pace: string): number {
-  if (!pace) return 0;
-  const parts = pace.split(":");
-  if (parts.length !== 2) return 0;
-  const m = parseInt(parts[0]);
-  const s = parseInt(parts[1]);
-  if (isNaN(m) || isNaN(s)) return 0;
-  return m * 60 + s;
-}
-
-function secsToPaceStr(secs: number): string {
-  if (secs <= 0) return "--";
-  const m = Math.floor(secs / 60);
-  const s = Math.round(secs % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
-// Parse "h:mm:ss" or "mm:ss" to seconds
-function hmsToSecs(s: string): number | null {
-  if (!s) return null;
-  const parts = s.split(":").map(x => parseInt(x, 10));
-  if (parts.some(isNaN)) return null;
-  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  if (parts.length === 2) return parts[0] * 60 + parts[1];
-  return null;
-}
-
-function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = Math.floor(minutes % 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
-
-// ─── Next Optimal Session Widget ─────────────────────────────────────────────
-function NextOptimalSessionWidget({
-  tsb, atl, ctl, runs, faticaColor,
-}: {
-  tsb: number | null;
-  atl: number;
-  ctl: number;
-  runs: Run[];
-  faticaColor: string;
-}) {
-  const { t } = useTranslation();
-  const { hoursUntil, pct, recommendation, readyAt } = useMemo(() => {
-    const gpsRuns = runs.filter(r => !r.is_treadmill);
-    const lastRun = gpsRuns[0] ?? null;
-
-    // Hours elapsed since last run
-    const hoursElapsed = lastRun
-      ? (Date.now() - new Date(lastRun.date + 'T12:00:00').getTime()) / 3600000
-      : 9999;
-
-    // Minimum recovery based on last run intensity
-    let minRecoveryHours = 24;
-    if (lastRun) {
-      const hrPct = lastRun.avg_hr_pct != null
-        ? (lastRun.avg_hr_pct > 1 ? lastRun.avg_hr_pct / 100 : lastRun.avg_hr_pct)
-        : 0.72;
-      const isHard = ['intervals', 'ripetute', 'tempo', 'soglia'].includes(
-        (lastRun.run_type ?? '').toLowerCase()
-      );
-      const isLong = lastRun.distance_km > 18;
-
-      if (isHard || hrPct > 0.88) {
-        minRecoveryHours = isLong ? 72 : 48;
-      } else if (hrPct > 0.78 || lastRun.distance_km > 12) {
-        minRecoveryHours = 36;
-      } else {
-        minRecoveryHours = 24;
-      }
-    }
-
-    // Also compute ATL-based model as secondary signal
-    let atlHours = 0;
-    if (tsb !== null && atl > 0 && ctl > 0) {
-      const targetAtl = ctl + 5;
-      if (atl > targetAtl) {
-        atlHours = Math.round(7 * Math.log(atl / targetAtl) * 24);
-      }
-    }
-
-    // Take the larger of the two models (conservative)
-    const remainingFromLastRun = Math.max(0, minRecoveryHours - hoursElapsed);
-    const totalRemaining = Math.max(remainingFromLastRun, atlHours > 0 ? Math.min(atlHours, remainingFromLastRun + 12) : 0);
-    const hoursUntil = Math.round(totalRemaining);
-
-    // Recovery pct
-    const pct = minRecoveryHours > 0
-      ? Math.max(0, Math.min(1, hoursElapsed / minRecoveryHours))
-      : 1;
-
-    // Ready-at timestamp
-    const readyAt = hoursUntil > 0
-      ? new Date(Date.now() + hoursUntil * 3600000)
-      : null;
-
-    const recommendation = (atl > 70 || (tsb !== null && tsb < -20))
-      ? 'easy'
-      : (atl > 40 || (tsb !== null && tsb < -5))
-      ? 'moderate'
-      : 'hard';
-
-    return {
-      hoursUntil,
-      pct,
-      recommendation: recommendation as 'easy' | 'moderate' | 'hard',
-      readyAt,
-    };
-  }, [tsb, atl, ctl, runs]);
-
-  const isReady = hoursUntil === 0;
-  const h = Math.floor(hoursUntil);
-  const arcColor = faticaColor;
-  const circ = 2 * Math.PI * 38;
-  const offset = circ * (1 - pct);
-
-  const readyAtLabel = readyAt
-    ? readyAt.toLocaleDateString('en', { weekday: 'short', day: 'numeric', month: 'short' })
-      + ' ' + readyAt.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', hour12: false })
-    : null;
-
-  const recLabel = recommendation === 'hard'
-    ? 'HARD SESSION' : recommendation === 'moderate'
-    ? 'MODERATE SESSION' : 'EASY / RECOVERY';
-  const recColor = recommendation === 'hard'
-    ? '#C0FF00' : recommendation === 'moderate'
-    ? '#F59E0B' : '#60A5FA';
-
-  const ringColor = isReady ? "#C0FF00" : arcColor;
-
-  // Semicircular arc path length
-  const arcLen = Math.PI * 85;
-
-  return (
-    <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-3">
-        <Timer className="text-[#C0FF00]" size={14} />
-        <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest">NEXT OPTIMAL SESSION</span>
-      </div>
-
-      <div className="flex-1 flex flex-col items-center justify-center">
-        {/* Semicircle gauge — Garmin-style */}
-        <div className="relative w-full mx-auto" style={{ maxWidth: '220px', aspectRatio: '200 / 120' }}>
-          <svg viewBox="0 0 200 120" className="w-full h-full overflow-visible">
-            <defs>
-              <linearGradient id="nos-grad" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%"   stopColor={ringColor} stopOpacity="0.35" />
-                <stop offset="100%" stopColor={ringColor} stopOpacity="1" />
-              </linearGradient>
-            </defs>
-            {/* Track */}
-            <path d="M 15 105 A 85 85 0 0 1 185 105" stroke="#242424" strokeWidth="9" fill="none" strokeLinecap="round" />
-            {/* Fill */}
-            <path
-              d="M 15 105 A 85 85 0 0 1 185 105"
-              stroke="url(#nos-grad)"
-              strokeWidth="9"
-              fill="none"
-              strokeLinecap="round"
-              strokeDasharray={`${arcLen}`}
-              strokeDashoffset={arcLen * (1 - pct)}
-              style={{ transition: "stroke-dashoffset .6s ease" }}
-            />
-            {/* Tick marks at 0/50/100% */}
-            <line x1="15"  y1="105" x2="15"  y2="115" stroke="#444" strokeWidth="1" />
-            <line x1="100" y1="20"  x2="100" y2="10"  stroke="#444" strokeWidth="1" />
-            <line x1="185" y1="105" x2="185" y2="115" stroke="#444" strokeWidth="1" />
-          </svg>
-
-          {/* Center content — anchored inside arc */}
-          <div className="absolute inset-x-0 bottom-0 flex flex-col items-center">
-            {isReady ? (
-              <>
-                <Zap size={30} className="text-[#C0FF00] mb-1" />
-                <span className="text-[#C0FF00] text-[10px] font-black tracking-widest">READY NOW</span>
-              </>
-            ) : (
-              <>
-                <span className="text-white font-black font-mono text-[40px] leading-none">{h}</span>
-                <span className="text-[#666] text-[9px] font-black tracking-widest mt-1">ORE AL RECUPERO</span>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Recommendation + date */}
-        <div
-          className="flex flex-col items-center gap-1 px-4 py-2.5 rounded-2xl mt-5 w-full"
-          style={{ background: `${recColor}14`, border: `1px solid ${recColor}44` }}
-        >
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: recColor, boxShadow: `0 0 6px ${recColor}` }} />
-            <span className="text-[10px] font-black tracking-widest uppercase" style={{ color: recColor }}>
-              {recLabel}
-            </span>
-          </div>
-          {readyAtLabel && (
-            <div className="text-[10px] tracking-wider font-black" style={{ color: `${recColor}BB` }}>
-              {readyAtLabel}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function DashboardView() {
   const { data: dashData, loading: dashLoading, error: dashError, refetch: refetchDashboard } =
-    useApi<DashboardResponse>(getDashboard);
-  const { data: runsData } = useApi<RunsResponse>(getRuns);
-  const { data: analyticsData } = useApi<AnalyticsResponse>(getAnalytics);
-  const { data: effortsData } = useApi<{ efforts: BestEffort[] }>(getBestEfforts);
-  const { data: vdotPacesData } = useApi<VdotPacesResponse>(getVdotPaces);
-  const { data: profileData } = useApi<Profile>(getProfile);
-  const { data: insightData } = useApi<{ insight: string | null }>(getDashboardInsight);
+    useApi<DashboardResponse>(getDashboard, { cacheKey: API_CACHE.DASHBOARD });
+  const { data: runsData, loading: runsLoading } = useApi<RunsResponse>(getRuns, { cacheKey: API_CACHE.RUNS });
+  const { data: analyticsData } = useApi<AnalyticsResponse>(getAnalytics, { cacheKey: API_CACHE.ANALYTICS });
+  const { data: effortsData } = useApi<{ efforts: BestEffort[] }>(getBestEfforts, { cacheKey: API_CACHE.BEST_EFFORTS });
+  const { data: vdotPacesData } = useApi<VdotPacesResponse>(getVdotPaces, { cacheKey: API_CACHE.VDOT_PACES });
+  const { data: profileData } = useApi<Profile>(getProfile, { cacheKey: API_CACHE.PROFILE });
+  const { data: insightData } = useApi<{ insight: string | null }>(getDashboardInsight, { cacheKey: API_CACHE.DASHBOARD_INSIGHT });
 
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -748,6 +153,11 @@ export function DashboardView() {
   const [chartPeriod, setChartPeriod] = useState<'7d' | 'month' | 'year'>('year');
   const runs = runsData?.runs ?? [];
   const vdot = analyticsData?.vdot ?? null;
+
+  // First-run onboarding: nessuna corsa caricata e fetch completato →
+  // mostra CTA Strava/Garmin invece della dashboard piena di skeleton vuoti.
+  // Skip mentre runsLoading per evitare flash dell'onboarding al primo paint.
+  const showOnboarding = !runsLoading && runsData !== null && runs.length === 0;
 
   const ff = dashData?.current_ff ?? null;
   const tsb = ff?.tsb ?? null;
@@ -906,22 +316,14 @@ export function DashboardView() {
   const metaboBar = Math.min(100, atl);
   const struttBar = tsb !== null ? Math.min(100, Math.max(0, 50 + tsb * 2)) : 0;
 
-  // Compute drift % for a single run (first-half vs second-half HR)
-  const computeDrift = (r: Run): number | null => {
-    if (r.distance_km < 4 || !r.splits || r.splits.length < 4) return null;
-    const splits = r.splits.filter(s => s.hr && s.hr > 80 && s.pace && s.pace.includes(":"));
-    if (splits.length < 4) return null;
-    const mid = Math.floor(splits.length / 2);
-    const avgHr = (arr: typeof splits) => arr.reduce((s, x) => s + (x.hr ?? 0), 0) / arr.length;
-    const hr1 = avgHr(splits.slice(0, mid));
-    const hr2 = avgHr(splits.slice(mid));
-    if (!hr1) return null;
-    return Math.round(((hr2 - hr1) / hr1) * 1000) / 10;
-  };
+  // Cardiac drift uses the canonical util (src/utils/cardiacDrift.ts) — single
+  // source of truth across the app (was previously a 3rd local copy here that
+  // diverged from CardiacDrift.tsx and the official util — now removed).
+  const driftFor = (r: Run): number | null => computeDriftCanonical(r)?.drift ?? null;
 
   const lastDrift = useMemo(() => {
     const qualifying = runs.find(r => r.distance_km >= 4 && r.splits?.length >= 4);
-    return qualifying ? computeDrift(qualifying) : null;
+    return qualifying ? driftFor(qualifying) : null;
   }, [runs]);
 
   // Drift over last N qualifying runs (for Cardiac Drift card sparkline)
@@ -929,7 +331,7 @@ export function DashboardView() {
     const out: { date: string; drift: number }[] = [];
     for (const r of runs) {
       if (out.length >= 12) break;
-      const d = computeDrift(r);
+      const d = driftFor(r);
       if (d !== null) out.push({ date: r.date, drift: d });
     }
     return out.reverse(); // oldest → newest
@@ -939,38 +341,13 @@ export function DashboardView() {
   // Fonte primaria = VDOT corrente (sempre affidabile).
   // Override solo se ≥3 corse recenti nel range HR 86–91% HRmax (vera soglia),
   // altrimenti il filtro largo mescola M-pace/I-pace e distorce la mediana.
-  const thresholdPace = useMemo(() => {
-    const v = analyticsData?.vdot;
-    let vdotPaceSecs: number | null = null;
-    if (v) {
-      // Daniels: T-pace = pace @ 88% VO2max. Risolvi VO2 = -4.60 + 0.182258·v + 0.000104·v²
-      const vo2 = v * 0.88;
-      const disc = 0.182258 ** 2 + 4 * 0.000104 * (vo2 + 4.60);
-      if (disc >= 0) {
-        const speedMpm = (-0.182258 + Math.sqrt(disc)) / (2 * 0.000104);
-        if (speedMpm > 0) vdotPaceSecs = Math.round(60000 / speedMpm); // sec/km
-      }
-    }
-
-    const tempoRuns = runs.filter(r => {
-      if (r.is_treadmill || !r.avg_hr_pct || r.distance_km < 3) return false;
-      const pct = r.avg_hr_pct > 1 ? r.avg_hr_pct / 100 : r.avg_hr_pct;
-      return pct >= 0.86 && pct <= 0.91;
-    }).slice(0, 8);
-
-    if (tempoRuns.length >= 3) {
-      const paces = tempoRuns
-        .map(r => parsePaceToSecs(r.avg_pace))
-        .filter(s => s > 0)
-        .sort((a, b) => a - b);
-      if (paces.length) {
-        return secsToPaceStr(paces[Math.floor(paces.length / 2)]);
-      }
-    }
-
-    if (vdotPaceSecs) return secsToPaceStr(Math.max(150, Math.min(500, vdotPaceSecs)));
-    return null;
-  }, [runs, analyticsData?.vdot]);
+  // Threshold pace migrato lato backend (round 5 — #3 math heavy → backend).
+  // Backend ora calcola SIA Daniels formula SIA empirical override (mediana
+  // tempo runs 86-91% HR) e li espone in `paces.threshold_empirical` /
+  // `paces.threshold`. Client = sola visualizzazione: prefer empirical, fallback formula.
+  const thresholdPace = vdotPacesData?.paces?.threshold_empirical
+    ?? vdotPacesData?.paces?.threshold
+    ?? null;
 
   const gpsRuns = runs.filter(r => !r.is_treadmill);
   const recentRuns = runs.slice(0, 7);
@@ -1006,88 +383,17 @@ export function DashboardView() {
   const predictions = analyticsData?.race_predictions ?? {};
 
   // ── Previsione Gara — stimolo fisiologico dell'ultima corsa proiettato su 5K/10K/21K/42K
-  //   Classifica ultima corsa (intervals / tempo / medium_long / long_endurance / easy)
-  //   Moltiplica benefit table[stim][target] × magnitudine volume × boost intensità
-  //   Esempio target: 10K @ 5:50 @ 147bpm (tempo, magnitude≈1) → 5K≈-5s, 10K≈-13s, 21K≈-40s, 42K≈-62s
-  const racePredictions = useMemo(() => {
-    const keys = Object.keys(predictions);
-    const norm = (s: string) => s.toLowerCase().replace(/\s+/g, "").replace("kilometre", "k").replace("km", "k");
-    const findKey = (patterns: string[]) =>
-      keys.find(k => patterns.some(p => norm(k).includes(p))) ?? null;
+  // Logica estratta in `src/utils/racePredictions.ts` (pure function). Vedi nota
+  // di migrazione in REPORT-TECNICO.md → ideale che viva in FastAPI.
+  const racePredictions = useMemo(
+    () => buildRacePredictions({ predictions, runs, thresholdPace }),
+    [predictions, runs, thresholdPace],
+  );
 
-    const targets: { label: string; short: '5K'|'10K'|'21K'|'42K'; km: number; patterns: string[] }[] = [
-      { label: "5K",       short: "5K",  km: 5,       patterns: ["5k"] },
-      { label: "10K",      short: "10K", km: 10,      patterns: ["10k"] },
-      { label: "Mezza",    short: "21K", km: 21.0975, patterns: ["half", "mezza", "21"] },
-      { label: "Maratona", short: "42K", km: 42.195,  patterns: ["marathon", "maratona", "42"] },
-    ];
-
-    // Identifica ultima corsa outdoor valida
-    const valid = runs.filter(r =>
-      !r.is_treadmill && r.avg_pace && parsePaceToSecs(r.avg_pace) > 180 && r.distance_km >= 3
-    );
-    const last = valid[0] ?? null;
-
-    type Stim = 'intervals' | 'tempo' | 'medium_long' | 'long_endurance' | 'easy';
-
-    // Benefit table: secondi stimati per stimolo "tipico" (magnitudine 1.0) su ogni distanza
-    // Calibrato su esempio utente: tempo 10km @ threshold → -5/-13/-40/-62
-    const BENEFIT: Record<Stim, Record<'5K'|'10K'|'21K'|'42K', number>> = {
-      intervals:      { '5K': 8,  '10K': 6,  '21K': 3,  '42K': 2   },
-      tempo:          { '5K': 5,  '10K': 13, '21K': 40, '42K': 62  },
-      medium_long:    { '5K': 2,  '10K': 8,  '21K': 45, '42K': 95  },
-      long_endurance: { '5K': 1,  '10K': 4,  '21K': 30, '42K': 130 },
-      easy:           { '5K': 1,  '10K': 2,  '21K': 6,  '42K': 12  },
-    };
-    const TYPICAL_KM: Record<Stim, number> = {
-      intervals: 6, tempo: 10, medium_long: 18, long_endurance: 30, easy: 8,
-    };
-
-    let stim: Stim | null = null;
-    let magnitude = 0;
-    if (last) {
-      const distKm = last.distance_km;
-      const paceSec = parsePaceToSecs(last.avg_pace);
-      const hrPct = last.avg_hr_pct != null
-        ? (last.avg_hr_pct > 1 ? last.avg_hr_pct / 100 : last.avg_hr_pct)
-        : null;
-      // paceRatio: 1.0 = a soglia, >1 più veloce (più duro), <1 più lento (facile)
-      const tPaceSec = thresholdPace ? parsePaceToSecs(thresholdPace) : null;
-      const paceRatio = tPaceSec && paceSec > 0
-        ? tPaceSec / paceSec
-        : hrPct !== null
-          ? hrPct / 0.87  // 87% HR ~ soglia
-          : 1.0;
-
-      // Classifica stimolo
-      if (distKm >= 25) stim = 'long_endurance';
-      else if (distKm >= 15 && paceRatio < 1.03) stim = 'medium_long';
-      else if (paceRatio >= 1.05 && distKm < 8) stim = 'intervals';
-      else if (paceRatio >= 0.92) stim = 'tempo';
-      else if (hrPct !== null && hrPct < 0.72) stim = 'easy';
-      else stim = 'tempo';
-
-      // Magnitudine = volume relativo vs sessione "tipica" del suo stimolo, clamp [0.2, 2.0]
-      magnitude = Math.max(0.2, Math.min(2.0, distKm / TYPICAL_KM[stim]));
-      // Boost intensità se pace > soglia
-      if (paceRatio > 1.0) magnitude *= 1 + (paceRatio - 1) * 0.8;
-      magnitude = Math.min(2.5, magnitude);
-    }
-
-    return targets.map(t => {
-      const key = findKey(t.patterns);
-      const timeStr = key ? predictions[key] : null;
-      const secs = timeStr ? hmsToSecs(timeStr) : null;
-      let deltaSec: number | null = null;
-      if (stim) {
-        const base = BENEFIT[stim][t.short];
-        const d = Math.round(base * magnitude);
-        // Miglioramento = negativo; filtro valori troppo piccoli come null
-        deltaSec = d >= 1 ? -d : null;
-      }
-      return { label: t.label, short: t.short, km: t.km, key, timeStr, secs, deltaSec };
-    });
-  }, [predictions, runs, thresholdPace]);
+  // First-run onboarding gate (#6): zero corse → CTA Strava/Garmin.
+  if (showOnboarding) {
+    return <FirstRunOnboarding onImportClick={() => navigate("/activities")} />;
+  }
 
   return (
     <main className="flex-1 overflow-y-auto custom-scrollbar">

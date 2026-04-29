@@ -30,50 +30,7 @@ const LABEL_COLOR = '#8E8E93';
 const BG_DARK = '#111111';
 const RACE_ORANGE = '#FF5B00';
 
-// ─────────────────────────────────────────────────────────────
-// MOCK DATA
-// ─────────────────────────────────────────────────────────────
-
-// PMC — 90 giorni
-const pmcV2 = Array.from({ length: 90 }, (_, i) => {
-  const noise = Math.sin(i / 7) * 8 + Math.sin(i / 13) * 5;
-  const ctl = 32 + i * 0.28 + Math.sin(i / 20) * 3;
-  const atl = ctl + noise + (Math.random() * 6 - 3);
-  const tsb = ctl - atl;
-  const d = new Date();
-  d.setDate(d.getDate() - (89 - i));
-  return {
-    day: d.toLocaleDateString('it', { day: '2-digit', month: 'short' }),
-    ctl: Math.round(ctl * 10) / 10,
-    atl: Math.round(atl * 10) / 10,
-    tsb: Math.round(tsb * 10) / 10,
-  };
-});
-
-// Pace Trend — 10 mesi (min/km decimale, più basso = più veloce)
-const paceTrendV2 = (() => {
-  const now = new Date();
-  return Array.from({ length: 10 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - (9 - i), 1);
-    const base = 5.8 - i * 0.12 + Math.sin(i / 2) * 0.15;
-    return {
-      month: d.toLocaleString('it', { month: 'short' }).toUpperCase(),
-      pace: Math.round(base * 100) / 100,
-    };
-  });
-})();
-
-// Cardiac Drift — singola sessione, 14 km splits
-const driftV2 = Array.from({ length: 14 }, (_, i) => {
-  const basePace = 5.15 + (Math.random() * 0.12 - 0.06);
-  const baseHr = 142 + i * 1.8 + (Math.random() * 3 - 1.5);
-  return {
-    km: `${i + 1}`,
-    pace: Math.round(basePace * 100) / 100,
-    hr: Math.round(baseHr),
-  };
-});
-// Mark divergence zone: from km 8 onward
+// Fallback km marker for drift chart when no run data is available
 const DRIFT_START_KM = '8';
 
 // Zone Data

@@ -3,79 +3,16 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, ReferenceLine, CartesianGrid,
 } from "recharts";
-import type { Run, Split } from "../types/api";
+import type { Run } from "../types/api";
+import { computeDrift, type DriftResult } from "../utils/cardiacDrift";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function parsePaceSec(pace: string): number {
-  const parts = pace.split(":");
-  if (parts.length < 2) return 0;
-  return parseInt(parts[0]) * 60 + parseInt(parts[1]);
-}
 
 function fmtPace(sec: number): string {
   if (!sec || sec <= 0) return "—";
   const m = Math.floor(sec / 60);
   const s = Math.round(sec % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
-interface DriftResult {
-  drift: number;        // %
-  hr1: number;          // avg HR first half
-  hr2: number;          // avg HR second half
-  pace1: number;        // avg pace first half (sec)
-  pace2: number;        // avg pace second half (sec)
-  kmFirst: string;      // label "km 1-N"
-  kmSecond: string;     // label "km N+1-M"
-  date: string;
-  distKm: number;
-}
-
-function computeDrift(run: Run): DriftResult | null {
-  const splits: Split[] = (run.splits ?? []).filter(
-    s => s.hr && s.hr > 80 && s.pace && parsePaceSec(s.pace) > 0
-  );
-  // Need at least 4 km with HR data
-  if (splits.length < 4) return null;
-  // Filter out interval-pace splits (very fast or very slow)
-  const paces = splits.map(s => parsePaceSec(s.pace));
-  const medianPace = [...paces].sort((a, b) => a - b)[Math.floor(paces.length / 2)];
-  const steady = splits.filter(s => {
-    const p = parsePaceSec(s.pace);
-    return p >= medianPace * 0.85 && p <= medianPace * 1.20;
-  });
-  if (steady.length < 4) return null;
-
-  const mid = Math.floor(steady.length / 2);
-  const first = steady.slice(0, mid);
-  const second = steady.slice(mid);
-
-  const avgHr = (arr: Split[]) =>
-    arr.reduce((s, x) => s + (x.hr ?? 0), 0) / arr.length;
-  const avgPace = (arr: Split[]) =>
-    arr.reduce((s, x) => s + parsePaceSec(x.pace), 0) / arr.length;
-
-  const hr1 = avgHr(first);
-  const hr2 = avgHr(second);
-  if (hr1 <= 0) return null;
-
-  const drift = ((hr2 - hr1) / hr1) * 100;
-  const km1 = steady[0].km;
-  const kmMid = steady[mid - 1].km;
-  const kmEnd = steady[steady.length - 1].km;
-
-  return {
-    drift: Math.round(drift * 10) / 10,
-    hr1: Math.round(hr1),
-    hr2: Math.round(hr2),
-    pace1: avgPace(first),
-    pace2: avgPace(second),
-    kmFirst: `km ${km1}–${kmMid}`,
-    kmSecond: `km ${kmMid + 1}–${kmEnd}`,
-    date: run.date,
-    distKm: run.distance_km,
-  };
 }
 
 // ─── Scale config ─────────────────────────────────────────────────────────────

@@ -15,12 +15,11 @@ import {
   Upload,
   X,
   Database,
-  Mountain,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { motion, AnimatePresence } from 'motion/react';
-import { TrailRunView } from './TrailRunView';
-import { useApi } from '../hooks/useApi';
+import { motion } from 'motion/react';
+import { useApi, invalidateCache } from '../hooks/useApi';
+import { API_CACHE } from '../hooks/apiCacheKeys';
 import { getRuns, importGarminCsv } from '../api';
 import type { Run, RunsResponse } from '../types/api';
 import { useState, useRef, useCallback, useEffect, useMemo, type ReactNode } from 'react';
@@ -130,13 +129,12 @@ interface ActivitiesViewProps {
 
 export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
   const { t } = useTranslation();
-  const { data, loading, error } = useApi<RunsResponse>(getRuns);
+  const { data, loading, error } = useApi<RunsResponse>(getRuns, { cacheKey: API_CACHE.RUNS });
   const [hoveredRunId, setHoveredRunId] = useState<string | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [mapViewMode, setMapViewMode] = useState<MapViewMode>('all-zoomed');
   const [mapReady, setMapReady] = useState(false);
   const [showGarminImport, setShowGarminImport] = useState(false);
-  const [showTrailView, setShowTrailView] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvParsing, setCsvParsing] = useState(false);
   const [csvImporting, setCsvImporting] = useState(false);
@@ -408,6 +406,13 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
     setCsvResult(null);
     try {
       const result = await importGarminCsv(parsedRuns);
+      // New runs imported → invalidate everything that depends on runs
+      invalidateCache(API_CACHE.RUNS);
+      invalidateCache(API_CACHE.DASHBOARD);
+      invalidateCache(API_CACHE.ANALYTICS);
+      invalidateCache(API_CACHE.BEST_EFFORTS);
+      invalidateCache(API_CACHE.HEATMAP);
+      invalidateCache(API_CACHE.SUPERCOMPENSATION);
       setCsvResult({
         success: true,
         message: `Importazione completata: ${result.imported} righe salvate, ${result.duplicates ?? 0} duplicate, ${result.matched ?? 0} match Strava, ${result.enriched ?? 0} corse arricchite.`,
@@ -512,91 +517,6 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
           )}
 
           {!loading && allRuns.map((run, index) => {
-            // ── Special: Demo Trail Run card ────────────────────────────────
-            if (run.id === '__demo_trail__') {
-              const isHovered = hoveredRunId === '__demo_trail__';
-              return (
-                <motion.div
-                  key="__demo_trail__"
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0 }}
-                  onMouseEnter={() => setHoveredRunId('__demo_trail__')}
-                  onMouseLeave={() => setHoveredRunId(null)}
-                  onClick={() => handleRunClick(run)}
-                  className={cn(
-                    'w-full backdrop-blur-xl border p-4 rounded-2xl flex items-center gap-4 transition-all group relative cursor-pointer overflow-hidden',
-                    isHovered
-                      ? 'border-[#F97316]/60 bg-[#F97316]/[0.06] shadow-[0_0_32px_rgba(249,115,22,0.12)]'
-                      : 'border-[#F97316]/30 bg-[#0F172A]/60 shadow-[0_0_16px_rgba(249,115,22,0.06)]'
-                  )}
-                >
-                  {/* shimmer glow bg */}
-                  <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-[#F97316]/5 to-transparent" />
-
-                  {/* TRAIL PREMIUM badge — top right */}
-                  <div className="absolute top-2 right-2 flex items-center gap-1 bg-[#F97316]/20 border border-[#F97316]/40 px-1.5 py-0.5 rounded-md">
-                    <Mountain className="w-2.5 h-2.5 text-[#F97316]" />
-                    <span className="text-[7px] font-black uppercase tracking-widest text-[#F97316]">Trail Premium</span>
-                  </div>
-
-                  {/* Icon */}
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-xl flex-shrink-0 bg-[#F97316]/20 text-[#F97316] transition-transform" style={{ transform: isHovered ? 'scale(1.1)' : 'scale(1)' }}>
-                    <Mountain className="w-7 h-7" />
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className="text-sm font-black italic tracking-tight truncate text-[#F97316]">
-                        Monte Cavo Loop
-                      </h3>
-                      <span className="px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest flex-shrink-0 bg-[#F97316]/20 text-[#F97316]">
-                        Trail
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 text-gray-500 text-[10px] font-bold uppercase tracking-wider">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-2.5 h-2.5" />06 apr 2026
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-2.5 h-2.5 flex-shrink-0" />Rocca di Papa, RM
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="flex gap-4 border-x border-[#F97316]/10 px-4 flex-shrink-0">
-                    <div className="flex flex-col items-center">
-                      <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">km</span>
-                      <span className="text-sm font-black italic text-white">12.4</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">D+</span>
-                      <span className="text-sm font-black italic text-[#F97316]">624m</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">hr</span>
-                      <span className="text-sm font-black italic text-rose-400">158</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">tempo</span>
-                      <span className="text-sm font-black italic text-white">2:28</span>
-                    </div>
-                  </div>
-
-                  {/* Arrow → opens TrailRunView */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowTrailView(true); }}
-                    className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all bg-[#F97316]/20 text-[#F97316] hover:bg-[#F97316] hover:text-black"
-                    title="Apri dettaglio trail premium"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </motion.div>
-              );
-            }
-
             // ── Regular run card ────────────────────────────────────────────
             const typeLabel = getRunTypeLabel(run.run_type);
             const { bg, text, icon } = getTypeStyle(typeLabel);
@@ -877,13 +797,6 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
           </div>
         )}
       </div>
-
-      {/* ── Trail Run Premium Overlay ───────────────────────────────────── */}
-      <AnimatePresence>
-        {showTrailView && (
-          <TrailRunView onClose={() => setShowTrailView(false)} />
-        )}
-      </AnimatePresence>
 
       {/* ── Garmin CSV Import Modal ──────────────────────────────────────── */}
       {showGarminImport && (

@@ -1,36 +1,203 @@
-# METIC LAB — Roadmap
+# METIC LAB
 
-## Completati
+Dashboard di training & analytics per podisti — frontend React 19 + backend FastAPI/MongoDB.
 
-- [x] **Dashboard — CSS Grid Layout (v2)**: eliminata sidebar fissa `w-[300px]`. Layout ora CSS Grid `grid-cols-12` con `max-w-[1600px] mx-auto`. Status of Form `row-span-2`, HOF e Target integrati nella griglia principale. Nessun dead space laterale su schermi wide. Gap uniforme 24px.
+> Single-tenant: l'app è pensata per un singolo runner (config Strava/Garmin nelle env-var server).
 
-- [x] **Dashboard — Chart KM fix**: `ResponsiveContainer` ora usa `height={240}` esplicito invece di `flex-1 + height="100%"` che causava altezza 0px su tutti i periodi (7G/MESE/ANNO).
+---
 
-- [x] **Dashboard — Map Dusk 3D**: mappa interattiva Mapbox standard + `lightPreset: dusk`, pitch 60°, zoom 17 sul punto di partenza. Placeholder no-GPS per corse tapis roulant.
+## ⚡ Quick start (5 min)
 
-- [x] **Dashboard — Metriche live**: EFFICIENCY (TSB-based), DERIVA CARDIACA (split HR), TE SCORE normalizzato (avg_hr_pct 0-100 → 0-1), countdown D/H/M alla gara, Next Optimal Session arc timer.
+### 1. Prerequisiti
 
-- [x] **Training Calendar — Giorni Forza**: colore sky-blue `#0EA5E9` per giorni riposo+forza. Picker data inizio piano. Esercizi periodizzati (Bulgarian Split Squat, Depth Jump, Pogo Jumps, etc.).
+- **Node.js** ≥ 20
+- **Python** ≥ 3.11
+- Cluster MongoDB (Atlas free tier OK)
+- App Strava registrata → `STRAVA_CLIENT_ID` + `STRAVA_CLIENT_SECRET`
+- (Opzionale) Mapbox public token, Anthropic/Gemini API key
 
-- [x] **Backend — Success Probability**: non più hardcoded 20%. Formula proporzionale `max(5, min(49, round(55 * max_optimistic / gap)))`.
+### 2. Setup
 
-- [x] **Statistics — Deriva Cardiaca**: 2 grafici nel tab Performance — *Historical Drift* (trend storico con KPI + grafico colorato per zona) e *Single Run Drift* (split HR per km con filtro passo costante ±12%). Solo corse qualificate vengono analizzate.
+```bash
+git clone <repo>
+cd webapp-antiG
 
-- [x] **Activities — Drift per corsa**: colonne **DRIFT** e **1ª→2ª** aggiunte su ogni card corsa nell'elenco attività. Colorazione per zona (verde/blu/arancione/rosso). Solo per corse a passo costante con dati split HR.
+# Frontend env
+cp .env.example .env
+# → compila VITE_BACKEND_URL, VITE_MAPBOX_TOKEN, GEMINI_API_KEY
 
-- [x] **Training Plan — Riscrittura completa**: logica scientifica riscritta da zero.
-  - **VDOT con storia completa**: analisi picco storico + VDOT attuale + training age + volume settimanale.
-  - **Recovery Mode**: se il target è dentro il picco storico, tassi accelerati (Mujika & Padilla 2000, muscle memory).
-  - **Due opzioni**: se il goal non è fattibile, l'utente sceglie tra Piano Conservativo (0.5 VDOT/meso) e Piano Aggressivo (0.8 VDOT/meso) — nessun ricalcolo automatico.
-  - **Test pre-piano**: input opzionale di distanza + tempo test per calibrare il VDOT con precisione.
-  - **Esercizi forza/prehab/pliometrici**: ogni sessione include esercizi specifici per fase — clamshell, Nordic curl, A-skip, drop jump, eccentric heel drops, etc. (Beattie 2017, Lauersen 2014, Saunders 2006).
-  - **Auto-adattamento**: il piano si aggiorna automaticamente ad ogni sync Strava (ACWR, TSB, VDOT drift, compliance, taper).
-  - **Richiede deploy backend su Render** per essere attivo.
+# Backend env
+cp backend/.env.example backend/.env
+# → compila MONGO_URL, STRAVA_*, ANTHROPIC_API_KEY, GEMINI_API_KEY
 
-- [x] **Statistics — Analytics Pro**: eliminato tab "Carico & Rischio". Uniti "Dashboard" + "Performance" in unico tab "Analytics Pro". 3 tab totali: Analytics Pro, Biologia & Futuro, Badge. Layout identico alla dashboard (card #111111, bordi #1E1E1E, accent #C0FF00). SectionLabel per separare macro-sezioni. `InfoTooltip` (ⓘ) su ogni grafico. Tutti i chart dinamici da Strava: KPI grid, FitnessFreshness, Volume+Zone, VDOT, Race Predictions, Zone Daniels, MainChart, VO2MaxChart, Paces Trend, Cadenza, Soglia Anaerobica, Deriva Cardiaca, GCT, Dislivello.
+# Install
+npm install
+pip install -r backend/requirements.txt
+```
 
-## Todo
+### 3. Run
 
-- [ ] **Gamification — Badge & Trofei**: implementare sistema badge con 100+ trofei in 8 categorie: Milestone distanza, Costanza, Miglioramenti, Allenamento, Mezza maratona, Scienza, Velocità lampo, Fun & Speciali. Vedi specifica completa in chat.
+```bash
+npm run dev
+# → backend uvicorn :8000 + vite :3000 in parallelo
+```
 
-- [ ] **Garmin Sync — Verifica dinamiche di corsa**: verificare su Activities che la sincronizzazione Garmin estragga correttamente i valori di Rapporto verticale medio, Oscillazione verticale media e Tempo medio di contatto con il suolo.
+Apri `http://localhost:3000`.
+
+### 4. Build prod
+
+```bash
+npm run build       # → dist/
+npm run preview     # serve dist/ in locale
+```
+
+---
+
+## 📚 Documentazione (chi cosa)
+
+Tre fonti di verità documentale, separate per scopo:
+
+| File | Scopo | Ownership |
+|---|---|---|
+| **[README.md](./README.md)** | Onboarding 5 min, comandi, env-var | Indice |
+| **[PRD.md](./PRD.md)** | Product Requirements: visione prodotto, feature, UX | Product |
+| **[REPORT-TECNICO.md](./REPORT-TECNICO.md)** | Architettura tecnica: ogni componente, hook, util, formula scientifica, CHANGELOG fix | Architettura |
+| **[ROADMAP.md](./ROADMAP.md)** | Cosa è fatto, cosa manca | Roadmap |
+| **[CHECKLIST-PENDING.md](./CHECKLIST-PENDING.md)** | 12 punti audit non eseguiti, con priorità + costi | Backlog |
+| **[CHANGELOG-AI.md](./CHANGELOG-AI.md)** | Log modifiche AI assistant | Storia |
+| **[repo-map.md](./repo-map.md)** | Mappa file generata (auto) | Auto |
+
+> Per modifiche **prodotto** → tocca `PRD.md`.
+> Per modifiche **archittettura/codice** → tocca `REPORT-TECNICO.md`.
+> Per **preferenze utente** → `~/.claude/projects/.../memory/MEMORY.md` (locale, non in repo).
+
+---
+
+## 🧱 Stack
+
+**Frontend** (`src/`):
+- React 19 + TypeScript + Vite 6
+- React Router 7 (SPA)
+- Tailwind CSS 4 + tailwind-merge
+- Recharts (charts), Mapbox GL / MapLibre (mappe), Three.js (3D), Framer Motion + GSAP
+- i18next (IT/EN)
+- `@google/genai` (JARVIS voice assistant)
+
+**Backend** (`backend/`):
+- FastAPI 0.115 + uvicorn
+- Motor (Mongo async)
+- Anthropic + Gemini SDK (AI run analysis, JARVIS)
+- garminconnect / garth (Garmin sync)
+- fitdecode (FIT files)
+- slowapi (rate limiting — opzionale)
+
+**Hosting** (`render.yaml`):
+- Backend → Render web service (Python)
+- Frontend → Render static site (Vite build)
+
+---
+
+## 🔑 Env-var
+
+### Frontend (`.env`)
+
+| Var | Note |
+|---|---|
+| `VITE_BACKEND_URL` | URL backend FastAPI |
+| `VITE_MAPBOX_TOKEN` | Public token Mapbox (`pk.*`) — restringere per dominio |
+| `GEMINI_API_KEY` | Gemini key per JARVIS client-side |
+
+### Backend (`backend/.env`)
+
+| Var | Obbligatoria | Note |
+|---|---|---|
+| `MONGO_URL` | ✅ | Connection string Mongo |
+| `DB_NAME` | ✅ | Default `DANIDB` |
+| `STRAVA_CLIENT_ID` + `STRAVA_CLIENT_SECRET` | ✅ | OAuth Strava |
+| `BACKEND_URL` | ✅ | URL pubblico backend (per redirect Strava) |
+| `FRONTEND_URL` | ✅ | URL frontend (per redirect post-OAuth) |
+| `ALLOWED_ORIGINS` | – | CORS whitelist comma-separated. Default = dev + prod Render |
+| `ANTHROPIC_API_KEY` | – | AI run analysis |
+| `GEMINI_API_KEY` + `JARVIS_GEMINI_KEY` | – | AI prompt JARVIS server-side |
+| `GARMIN_EMAIL` + `GARMIN_PASSWORD` | – | Garmin sync (opzionale) |
+
+> ⚠️ I file `.env` sono in `.gitignore`. NON committare segreti. Usa `.env.example` come template.
+
+---
+
+## 🛠️ Comandi
+
+```bash
+npm run dev              # backend + frontend in parallelo
+npm run build            # build prod (Vite → dist/)
+npm run preview          # serve dist/ locale
+npm run lint             # type-check (tsc --noEmit)
+npm run lint:eslint      # ESLint (regole React Hooks + react-refresh)
+npm run format           # Prettier write
+npm run format:check     # Prettier check
+npm run build:analyze    # build + bundle visualizer (apre dist/stats.html)
+npm run context:update   # rigenera repo-map.md / .json
+```
+
+---
+
+## 🔒 Note di sicurezza
+
+- **CORS**: whitelist via `ALLOWED_ORIGINS`. No wildcard in prod.
+- **Rate limiting**: 120 req/min per IP global, 10/min per AI endpoint (`/api/ai/analyze-run`, `/api/training-plan/generate`), 30/min per `/api/jarvis/chat`. Implementato via `slowapi` (no-op se non installato).
+- **Secrets**: `.env*` (eccetto `.env.example`) ignorati. Per audit periodico → `gitleaks` o `trufflehog`.
+- **NoSQL injection**: zero `$where` / `$regex` user-input. Tutte le query Mongo sono dict-based via motor (parametrizzate by default).
+- **Mapbox token**: public (`pk.*`). Restringere per dominio nella dashboard Mapbox per evitare abuso quota.
+
+---
+
+## 🧪 Test
+
+Test rapido backend (richiede MONGO_URL):
+
+```bash
+python test_backend.py
+```
+
+Frontend: niente test runner ufficiale. Type-check via `npm run lint` (tsc strict).
+
+---
+
+## 📁 Struttura repo
+
+```
+src/                  React app
+  components/         View principali (DashboardView, StatisticsView, ...)
+  hooks/              useApi (cache layer), useToast, ...
+  utils/              cardiacDrift, paceFormat, racePredictions, cadence
+  api.ts              fetch wrapper backend
+  types/api.ts        Tipi condivisi
+backend/
+  server.py           FastAPI app (~7500 righe — God file, da splittare)
+  requirements.txt
+public/               Asset statici
+scripts/              Tooling (update-ai-context, ...)
+docs/                 Note interne dev
+restyling/            Snapshot/branch UX
+```
+
+---
+
+## 🤝 Contribuire
+
+1. Branch da `main`
+2. `npm run lint && npm run lint:eslint && npm run format:check` prima di PR
+3. Aggiorna **`REPORT-TECNICO.md`** se tocchi architettura/util/component
+4. Aggiorna **`PRD.md`** se cambi feature prodotto
+5. Aggiungi entry in **`CHANGELOG-AI.md`** se la modifica è AI-driven
+
+---
+
+## 🔧 Troubleshooting
+
+| Problema | Soluzione |
+|---|---|
+| Garmin 429 | Vedi `MEMORY.md` → `garmin_ratelimit.md` (procedura sblocco con `garth_generate_token.py`) |
+| CORS blocca chiamate | Aggiungi origin a `ALLOWED_ORIGINS` in `backend/.env` |
+| `slowapi` import fail | `pip install slowapi` (o lascia: il limiter degrada graceful a no-op) |
+| Bundle troppo grosso | `npm run build:analyze` → ispeziona `dist/stats.html` |
