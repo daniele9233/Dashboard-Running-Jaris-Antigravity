@@ -458,7 +458,13 @@ async def event_stream(request: Request):
 # ── ROUTERS ──────────────────────────────────────────────────────────────────
 # Pattern: estrazione progressiva endpoint da questo file in `backend/routers/`.
 # Round 5 ha estratto health/version come pattern. Vedi REPORT-TECNICO sezione 15.
-from backend.routers import health as _health_router  # noqa: E402
+#
+# Import layout-resilient: Render usa `rootDir: backend` (CWD=backend/), dev locale
+# può usare `python -m backend.server` (CWD=root). Try entrambi.
+try:
+    from routers import health as _health_router  # CWD=backend/ (Render prod)
+except ImportError:  # pragma: no cover
+    from backend.routers import health as _health_router  # type: ignore  # CWD=root (dev locale)
 
 app.include_router(_health_router.router)
 

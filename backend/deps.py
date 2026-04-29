@@ -27,10 +27,19 @@ sarà fully split, sostituire con `request.app.state.db`.
 from typing import Optional
 
 
+def _import_server():
+    """Layout-resilient import: prova `server` (CWD=backend/, Render prod) poi `backend.server` (dev)."""
+    try:
+        import server as _s  # noqa: PLC0415
+        return _s
+    except ImportError:  # pragma: no cover
+        from backend import server as _s  # type: ignore  # noqa: PLC0415
+        return _s
+
+
 async def get_db():
     """Restituisce l'istanza Mongo db. Late import per evitare circular."""
-    from backend.server import db  # noqa: PLC0415
-    return db
+    return _import_server().db
 
 
 async def get_athlete_id() -> Optional[int]:
@@ -39,8 +48,7 @@ async def get_athlete_id() -> Optional[int]:
     Quando arriva l'auth (#1 deferred), questa funzione leggerà da JWT/cookie
     invece che dal "ultimo token salvato".
     """
-    from backend.server import _get_athlete_id  # noqa: PLC0415
-    return await _get_athlete_id()
+    return await _import_server()._get_athlete_id()
 
 
 async def get_publish_event():
@@ -49,5 +57,4 @@ async def get_publish_event():
     Restituisce la funzione `publish_event(payload: dict)`. Late import per
     evitare circolarità.
     """
-    from backend.server import publish_event  # noqa: PLC0415
-    return publish_event
+    return _import_server().publish_event
