@@ -12,6 +12,7 @@ import { Responsive, WidthProvider } from "react-grid-layout/legacy";
 const ResponsiveGrid = WidthProvider(Responsive);
 import { GridCard } from "./GridCard";
 import { FirstRunOnboarding } from "./FirstRunOnboarding";
+import { InfoTooltip } from "./dashboard/widgets/InfoTooltip";
 import { useLayout } from "../context/LayoutContext";
 import { WIDGET_REGISTRY } from "./dashboard/widgetRegistry";
 
@@ -30,51 +31,7 @@ function useMediaQuery(query: string): boolean {
   return match;
 }
 
-// ─── Info Tooltip ─────────────────────────────────────────────────────────────
-function InfoTooltip({ title, lines }: { title: string; lines: string[] }) {
-  const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-  const ref = useRef<HTMLDivElement>(null);
-  const showTooltip = () => {
-    const rect = ref.current?.getBoundingClientRect();
-    if (rect) {
-      setPosition({
-        top: rect.bottom + 12,
-        left: Math.min(window.innerWidth - 384, Math.max(16, rect.right - 384)),
-      });
-    }
-    setOpen(true);
-  };
-  return (
-    <div className="relative inline-flex" ref={ref}>
-      <button
-        onMouseEnter={showTooltip}
-        onMouseLeave={() => setOpen(false)}
-        onFocus={showTooltip}
-        onBlur={() => setOpen(false)}
-        className="text-[#555] hover:text-[#A0A0A0] transition-colors focus:outline-none"
-      >
-        <Info size={13} />
-      </button>
-      {open && createPortal(
-        <div
-          className="fixed z-[9999] w-96 max-h-[70vh] overflow-y-auto bg-[#111] border border-white/15 rounded-2xl p-4 shadow-2xl pointer-events-none"
-          style={{ top: position.top, left: position.left }}
-        >
-          <div className="text-[#C0FF00] text-[10px] font-black tracking-widest mb-2">{title}</div>
-          <ul className="space-y-1.5">
-            {lines.map((l, i) => (
-              <li key={i} className="text-[#D6D6D6] text-[11px] leading-relaxed flex gap-1.5">
-                <span className="text-[#555] shrink-0">·</span>{l}
-              </li>
-            ))}
-          </ul>
-        </div>,
-        document.body,
-      )}
-    </div>
-  );
-}
+// InfoTooltip extracted to ./dashboard/widgets/InfoTooltip.tsx (round 6 #14)
 import { LastRunMap } from "./LastRunMap";
 import { FitnessChart } from "./dashboard/widgets/FitnessChart";
 import { HRZones } from "./dashboard/widgets/HRZones";
@@ -90,22 +47,8 @@ import { computeDrift as computeDriftCanonical } from "../utils/cardiacDrift";
 import { parsePaceToSecs, secsToPaceStr, hmsToSecs, formatDuration, fmtPbTime } from "../utils/paceFormat";
 import { buildRacePredictions } from "../utils/racePredictions";
 
-function bestPbTime(runs: Run[], minKm: number, maxKm: number, targetKm: number): string {
-  const c = runs.filter(r =>
-    !r.is_treadmill &&
-    r.distance_km >= minKm &&
-    r.distance_km <= maxKm &&
-    r.duration_minutes > 0
-  );
-  if (!c.length) return '—';
-  // Find best pace run, then project to exact target distance
-  const best = c.reduce((b, r) => {
-    const pace = r.duration_minutes / r.distance_km;
-    return pace < b.duration_minutes / b.distance_km ? r : b;
-  });
-  const projectedMin = (best.duration_minutes / best.distance_km) * targetKm;
-  return fmtPbTime(projectedMin);
-}
+// `bestPbTime` rimosso (round 6 — #3 dead code). Backend espone già le PB
+// projections via `analytics.race_predictions` + `buildRacePredictions` util.
 
 function timeUntil(dateStr: string): { days: number; hours: number; minutes: number } | null {
   const target = new Date(dateStr);

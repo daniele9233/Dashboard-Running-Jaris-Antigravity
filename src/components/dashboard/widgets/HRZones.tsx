@@ -63,7 +63,9 @@ export function HRZones({ lastRun }: { lastRun: Run | null }) {
 
         {/* Donut */}
         <div className="flex items-center justify-center shrink-0" style={{ width: '44%' }}>
-          <svg viewBox="0 0 200 200" className="w-full h-full" style={{ maxWidth: 200, maxHeight: 200 }}>
+          <svg viewBox="0 0 200 200" className="w-full h-full" style={{ maxWidth: 200, maxHeight: 200 }} role="img" aria-label={`Distribuzione zone cardiache: ${zones.map(z => `${z.n} ${z.pct}%`).join(', ')}`}>
+            <title>Heart Rate Zones distribution</title>
+            <desc>Grafico a ciambella delle 5 zone cardiache di Daniels per l'ultima corsa</desc>
             {zones.map((z, i) => {
               const a1 = startAngle + gap / 2;
               const a2 = startAngle + (z.pct / total) * 360 - gap / 2;

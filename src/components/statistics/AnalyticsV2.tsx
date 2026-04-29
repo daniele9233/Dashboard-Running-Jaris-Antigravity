@@ -31,7 +31,15 @@ const BG_DARK = '#111111';
 const RACE_ORANGE = '#FF5B00';
 
 // Fallback km marker for drift chart when no run data is available
-const DRIFT_START_KM = '8';
+/**
+ * Drift start km derivata dalla corsa reale: half-distance clamped a [4, 8].
+ * Sostituisce la constant '8' hardcoded (#13 round 6).
+ * Es: corsa 10km → start at 5km. Corsa 6km → start at 4km. Corsa 20km → start at 8km.
+ */
+function deriveDriftStartKm(distanceKm: number | undefined): string {
+  if (!distanceKm || distanceKm < 6) return '4';
+  return String(Math.max(4, Math.min(8, Math.round(distanceKm / 2))));
+}
 
 // Zone Data
 const zonesV2 = [
@@ -1088,8 +1096,9 @@ export function AnalyticsV2({
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 
     if (!suitable) {
-      return { driftChartData: [], driftRunLabel: 'Dati insufficienti', driftStartKm: DRIFT_START_KM };
+      return { driftChartData: [], driftRunLabel: 'Dati insufficienti', driftStartKm: '4' };
     }
+    const driftStartFallback = deriveDriftStartKm(suitable.distance_km);
     const pts = suitable.splits.slice(0, 15).map(s => ({
       km: `${s.km}`,
       pace: parsePaceDecimal(s.pace),
@@ -1098,7 +1107,7 @@ export function AnalyticsV2({
 
     // Find drift start: first km where HR increase > 3 bpm relative to first 3km avg HR
     const baseHr = pts.slice(0, 3).reduce((s, p) => s + p.hr, 0) / Math.min(3, pts.length);
-    const driftKm = pts.find((p, i) => i >= 3 && p.hr > baseHr * 1.05)?.km ?? pts[Math.floor(pts.length * 0.6)]?.km ?? '8';
+    const driftKm = pts.find((p, i) => i >= 3 && p.hr > baseHr * 1.05)?.km ?? pts[Math.floor(pts.length * 0.6)]?.km ?? driftStartFallback;
 
     const label = suitable.date ? new Date(suitable.date).toLocaleDateString('it', { day: '2-digit', month: 'short', year: '2-digit' }) : 'Ultima corsa';
     return { driftChartData: pts, driftRunLabel: label, driftStartKm: driftKm };

@@ -150,7 +150,11 @@ export function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }
             style={{ cursor: "crosshair" }}
             onMouseMove={onMove}
             onMouseLeave={() => setHoverIdx(null)}
+            role="img"
+            aria-label={`Andamento condizione fisica (CTL) ultimi ${FF_TAB_LABELS[range]}`}
           >
+            <title>Condizione fisica — CTL nel tempo</title>
+            <desc>Grafico ad area che mostra l'andamento del Chronic Training Load nel periodo selezionato</desc>
             <defs>
               <linearGradient id="ffGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#F97316" stopOpacity="0.55" />

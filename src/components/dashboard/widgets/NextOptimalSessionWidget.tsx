@@ -123,7 +123,9 @@ export function NextOptimalSessionWidget({
       <div className="flex-1 flex flex-col items-center justify-center">
         {/* Semicircle gauge — Garmin-style */}
         <div className="relative w-full mx-auto" style={{ maxWidth: '220px', aspectRatio: '200 / 120' }}>
-          <svg viewBox="0 0 200 120" className="w-full h-full overflow-visible">
+          <svg viewBox="0 0 200 120" className="w-full h-full overflow-visible" role="img" aria-label={isReady ? 'Recupero completo, pronto per la prossima sessione' : `${h} ore al recupero`}>
+            <title>Recovery gauge — Next Optimal Session</title>
+            <desc>Indicatore semicircolare delle ore residue prima della prossima sessione ottimale</desc>
             <defs>
               <linearGradient id="nos-grad" x1="0" y1="0" x2="1" y2="0">
                 <stop offset="0%"   stopColor={ringColor} stopOpacity="0.35" />

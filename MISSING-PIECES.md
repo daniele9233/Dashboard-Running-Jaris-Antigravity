@@ -1,6 +1,6 @@
-# MISSING PIECES — checklist finale post round 5
+# MISSING PIECES — checklist finale post round 6
 
-Stato al **2026-04-29** dopo 5 round di fix + deploy `b749d00` su GitHub.
+Stato al **2026-04-29** dopo 6 round di fix.
 
 > 🔗 Ultima commit: [`b749d00`](https://github.com/daniele9233/Dashboard-Running-Jaris-Antigravity/commit/b749d00)
 > 🌐 Backend live: https://dani-backend-ea0s.onrender.com (auto-deploy Render)
@@ -53,9 +53,21 @@ Stato al **2026-04-29** dopo 5 round di fix + deploy `b749d00` su GitHub.
 - [x] **#15 PATTERN** server.py: router `health` extracted + `deps.py` per DI
 - [x] **#3 PATTERN** thresholdPace migrato client → backend (`paces.threshold_empirical`)
 
+### Round 6 — Polish + a11y + mobile + scaffolds (10 fix)
+- [x] **#13 DONE** DRIFT_START_KM derivato da corsa reale (half-clamp [4,8])
+- [x] **#18 DONE** `engines: { node>=20, npm>=10 }` + name fix `metic-lab`
+- [x] **#12 PARTIAL** Audit V2/V3/V4/V5 (nessuna è "alternativa", sono sezioni distinte). `StatsRisk.tsx` dead code eliminato (-216 righe).
+- [x] **#23 PATTERN** a11y: `role="img"` + `<title>` + `<desc>` + `aria-label` su 3 widget chart
+- [x] **#24 PATTERN** `Skeleton` component shared (variant block/text/card/circle + aria-busy)
+- [x] **#22 DONE** Mobile: Sidebar drawer pattern <768px (hamburger + backdrop + ESC), TopBar overflow-x-scroll, logo hidden mobile
+- [x] **#6 ext PATTERN** VO2MaxChart empty state migliorato (spiega perché + quante corse servono)
+- [x] **#3 PARTIAL** `bestPbTime` rimosso (dead code), DashboardView -16 righe
+- [x] **#14 PARTIAL** `InfoTooltip` extracted (-44 righe). DashboardView 1775 → 1155 (-35% cumulato round 5+6)
+- [x] **#16 SCAFFOLD** `backend/worker.py` stub + plan completo arq+Redis activation
+
 ---
 
-## ❌ Cosa MANCA (priorità)
+## ❌ Cosa MANCA (priorità) — post round 6
 
 ### 🔴 P0 — Bloccanti per prodotto commerciale (~3-4 settimane)
 
@@ -92,9 +104,9 @@ Stato al **2026-04-29** dopo 5 round di fix + deploy `b749d00` su GitHub.
 
 ---
 
-#### ☐ #14 DashboardView split (~1.5-2 giorni residue)
+#### ☐ #14 DashboardView split (~1-1.5 giorni residue)
 
-**Cosa**: god component a 1215 righe (era 1775). Pattern stabilito round 5.
+**Cosa**: god component a 1155 righe (era 1775, -620 cumulati round 5+6). Pattern stabilito.
 
 **Da estrarre** (in `src/components/dashboard/widgets/`):
 - [ ] `bestPbTime` helper + `timeUntil` helper
@@ -133,12 +145,15 @@ Stato al **2026-04-29** dopo 5 round di fix + deploy `b749d00` su GitHub.
 
 #### ☐ #16 Sync queue background (Celery / RQ / arq) — 2 settimane
 
-- [ ] Worker process separato (`backend/worker.py`)
-- [ ] Broker Redis (Render addon o Upstash free)
-- [ ] Endpoint `POST /api/strava/sync` ritorna `task_id` immediato
-- [ ] `GET /api/sync/status/:task_id` per UI poll
-- [ ] Retry policy exponential backoff su 429/5xx
-- [ ] Frontend: loading toast + progress
+**Stato post round 6**: scaffold + plan creato in `backend/worker.py`. Provider scelto = arq.
+
+- [x] Stub `backend/worker.py` con 3 task placeholder + WorkerSettings commentato
+- [ ] Aggiungere Redis su Render (addon o Upstash free)
+- [ ] `pip install arq` + decommentare WorkerSettings
+- [ ] Creare `routers/sync.py` con `enqueue` + `status` endpoint
+- [ ] Sostituire chiamate inline con enqueue
+- [ ] Avviare worker process (Render second service)
+- [ ] Frontend `useSyncStatus(taskId)` hook + toast progress
 
 **Why**: Strava OAuth callback timeout su utenti con storia >1000 corse.
 
@@ -166,52 +181,54 @@ Stato al **2026-04-29** dopo 5 round di fix + deploy `b749d00` su GitHub.
 
 ---
 
-### 🟡 P2 — Polish (~2-3 settimane)
+### 🟡 P2 — Polish (~1-2 settimane residue)
 
-#### ☐ #12 Dead code cleanup V2/V3/V4/V5 (1 giorno + product decision)
+#### ✅ #12 V2/V3/V4/V5 audit — DONE round 6 (parziale)
 
-- [ ] AnalyticsV2 vs V3 vs V4 vs V5 → scegliere winner
-- [ ] BiologyFutureV2 vs BiologyFutureLab → scegliere winner
-- [ ] RunnerDna (con redirect da `/runner-dna-v2`)
-- [ ] Eliminare le altre versioni
-- [ ] Rigenerare `repo-map.md`
+Audit completato: nessuna è "versione alternativa" — sono sezioni distinte
+di StatisticsView. `StatsRisk.tsx` dead code eliminato (-216 righe). Nessuna
+ulteriore eliminazione possibile senza decisione prodotto su rinaming.
 
-#### ☐ #13 DRIFT_START_KM hardcoded (30 min)
+#### ✅ #13 DRIFT_START_KM — DONE round 6
 
-- [ ] Derivare da `min(8, distance / 2)` invece di constant '8'
+Derivato da `Math.max(4, Math.min(8, Math.round(distance/2)))`. Magic number
+`'8'` rimosso.
 
-#### ☐ #22 Mobile responsive (2-3 giorni)
+#### ✅ #22 Mobile responsive — DONE round 6 (base)
 
-- [ ] Sidebar drawer pattern (collapse default <768px, hamburger)
-- [ ] TopBar overflow-x-scroll OR collapse dropdown
-- [ ] Charts forzare height fissa <250px su mobile
-- [ ] Test 375px (iPhone SE) + 414px (Pro Max)
+- [x] Sidebar drawer < 768px (hamburger + backdrop + ESC)
+- [x] TopBar overflow-x-scroll + logo hidden mobile
+- [ ] Test fisico 375px (iPhone SE) + 414px → DA FARE manualmente
+- [ ] Charts forzare height fissa < 250px su mobile
 
-#### ☐ #23 a11y (1 settimana)
+#### ☐ #23 a11y residuo (~3-4 giorni)
 
+**Round 6 fatto**: 3 widget con `role="img"` + `<title>` + `<desc>`. Avatar `aria-label`. Hamburger menu `aria-label`. Tooltip `role="tooltip"`. InfoTooltip `aria-label`. Sidebar `role="dialog"`.
+
+- [ ] Estendere `role="img"` agli altri 8+ chart SVG (VO2MaxChart, MainChart, FitnessFreshness, CardiacDrift, AnaerobicThreshold, BadgesGrid donut, ecc.)
 - [ ] Audit con `axe-core` + Lighthouse a11y score
-- [ ] `aria-label` su tutti i bottoni icon-only
-- [ ] Charts SVG: `<title>` + `<desc>` + `role="img"`
 - [ ] Color contrast: testi `var(--app-text-muted)` ricalibrare se < 4.5:1
 - [ ] Tab order check + focus visible
 - [ ] Skip-to-content link
 
-#### ☐ #24 Loading states convention (1 giorno)
+#### ☐ #24 Loading states — Skeleton creato, da diffondere (~0.5 giorno)
 
-- [ ] Convention: skeleton sempre per dati / spinner solo per azioni
-- [ ] Estrarre `<Skeleton />` shared component
-- [ ] Sostituire 30+ pattern raw `animate-pulse` / `animate-spin`
-- [ ] ESLint warning su raw
+**Round 6**: `<Skeleton variant="block|text|card|circle" />` componente creato.
+
+- [ ] Sostituire 30+ pattern raw `animate-pulse` / `animate-spin` con `<Skeleton />`
+- [ ] Creare `<ActionSpinner />` per azioni utente
+- [ ] ESLint warning custom su raw `animate-(pulse|spin)`
 
 ---
 
-### ⚪ P3 — Nice-to-have (<1 giorno)
+### ✅ P3 — Nice-to-have — DONE round 6
 
-#### ☐ #18 Dependency drift audit (4-8 ore)
+#### ✅ #18 engines + name fix — DONE
 
-- [ ] Aggiungere `"engines": { "node": ">=20", "npm": ">=10" }` in package.json
-- [ ] Audit per ogni major dep (vite 6, react 19, tailwind 4): stable o RC?
-- [ ] Renovate / Dependabot config
+`"engines": { "node": ">=20", "npm": ">=10" }` aggiunto. Renamed `react-example` → `metic-lab`.
+
+- [ ] Audit per ogni major dep (vite 6, react 19, tailwind 4) — opzionale
+- [ ] Renovate / Dependabot config — opzionale
 
 ---
 
@@ -227,16 +244,15 @@ Stato al **2026-04-29** dopo 5 round di fix + deploy `b749d00` su GitHub.
 
 ---
 
-## 📊 Costi finali
+## 📊 Costi finali — post round 6
 
 | Priorità | Punti aperti | Stima residua |
 |---|---|---|
-| 🔴 P0 | #1 (1-2w), #3 parziale (1.5w), #14 parziale (1.5d), #15 parziale (2d) | ~3-4 settimane |
-| 🟠 P1 | #16 (2w), #6 ext (2-3d), #21 parziale (0.5-1d) | ~2-3 settimane |
-| 🟡 P2 | #12, #13, #22, #23, #24 | ~2-3 settimane |
-| ⚪ P3 | #18 | < 1 giorno |
-| ✅ DONE round 5 | #17 SSE | – |
-| **Totale residuo** | **11 punti** | **~7-10 settimane** (era 10-13 pre-round 5) |
+| 🔴 P0 | #1 (1-2w), #3 parziale (1.5w), #14 parziale (1d), #15 parziale (2d) | ~3-4 settimane |
+| 🟠 P1 | #16 (2w worker activation), #6 ext widgets (1d), #21 parziale (0.5-1d) | ~2 settimane |
+| 🟡 P2 | #23 residuo (3-4d), #24 diffusione (0.5d), #22 mobile testing (0.5d) | ~1 settimana |
+| ✅ DONE round 5+6 | #17 SSE, #13 DRIFT, #18 engines, #12 audit, #22 base, #6 base, #14 partial, #15 partial, #3 partial, #16 scaffold, #23 base, #24 base | – |
+| **Totale residuo** | **7 punti** (P0 + P1 + a11y/loading polish) | **~6-7 settimane** (era 7-10 pre-round 6) |
 
 ---
 

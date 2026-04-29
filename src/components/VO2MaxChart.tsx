@@ -242,9 +242,15 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
               )}
             </>
           ) : (
-            <div className="text-center py-4">
-              <div className="text-2xl font-black text-text-muted">—</div>
-              <div className="text-[10px] text-text-muted mt-1">Aggiungi corse per calcolare</div>
+            <div className="text-center py-4 px-3">
+              <div className="text-3xl mb-2">🏃</div>
+              <div className="text-sm font-black text-white mb-1">VDOT non disponibile</div>
+              <div className="text-[10px] text-text-muted leading-relaxed">
+                Servono almeno {runs.length === 0 ? "5 corse" : `${5 - runs.length} corse in più`} di ≥5 km
+                {runs.length > 0 ? " a sforzo costante (HR ≥ 80%)" : ""}.
+                <br />
+                <span className="text-[#C0FF00]/80">Sincronizza più attività per attivare il calcolo.</span>
+              </div>
             </div>
           )}
         </div>

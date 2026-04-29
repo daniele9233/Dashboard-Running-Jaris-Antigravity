@@ -121,17 +121,17 @@ function AppContent() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Navigation Bar */}
         <header
-          className="h-16 border-b flex items-center justify-between px-8 z-40"
+          className="h-16 border-b flex items-center justify-between px-4 md:px-8 z-40 gap-2"
           style={{
             borderColor: "var(--app-border)",
             backgroundColor: "var(--app-bg-alt)",
           }}
         >
-          <div className="flex items-center gap-8">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4 md:gap-8 min-w-0 flex-1 pl-12 md:pl-0">
+            <div className="hidden md:flex items-center gap-2 shrink-0">
               <span className="text-xl font-black italic tracking-tighter" style={{ color: "var(--app-accent)" }}>METIC LAB</span>
             </div>
-            <nav className="flex items-center gap-5">
+            <nav className="flex items-center gap-3 md:gap-5 overflow-x-auto whitespace-nowrap scrollbar-hide" aria-label="Navigazione principale">
               {NAV_ITEMS.map((item) => {
                 const active = isNavActive(item.path);
                 return (

@@ -5087,3 +5087,251 @@ npx vite build             → 9.75s, dist/ generato
 - ✅ TopBar / Sidebar invariati
 
 ---
+
+# CHANGELOG FIX — 2026-04-29 (round 6 — polish + a11y + mobile + scaffolds)
+
+Sesto round: 11 punti (P2/P3 + parziali P0). Tutti verificati `tsc 0 errori,
+vitest 18/18, server.py AST OK, vite build 9.80s`.
+
+## #13 DRIFT_START_KM — derivato da corsa reale
+
+**File**: `src/components/statistics/AnalyticsV2.tsx`.
+
+```ts
+function deriveDriftStartKm(distanceKm: number | undefined): string {
+  if (!distanceKm || distanceKm < 6) return '4';
+  return String(Math.max(4, Math.min(8, Math.round(distanceKm / 2))));
+}
+```
+
+Half-distance clamped [4, 8]. Es: 10km → 5km, 6km → 4km, 20km → 8km.
+Magic number `'8'` rimosso. Fallback usato come secondo livello dopo
+heuristic HR-spike di 5%.
+
+## #18 engines field + dep audit
+
+**File**: `package.json`.
+
+```json
+{
+  "engines": { "node": ">=20", "npm": ">=10" }
+}
+```
+
+Inoltre rinominato `"name": "react-example"` → `"name": "metic-lab"` (non era
+mai stato corretto). Niente Renovate config — lasciato a decisione futura.
+
+## #12 V2/V3/V4/V5 audit + cleanup parziale
+
+**Files**: `src/components/statistics/StatsRisk.tsx` (DELETED).
+
+### Audit (tutto importato → nessuna eliminazione massiva)
+
+```
+AnalyticsV2 → usato in StatisticsView linee 1749, 1973
+AnalyticsV3 → linea 1883
+AnalyticsV4 → linee 1221, 1350, 1985 (sub-componenti)
+AnalyticsV5 → linee 1232, 1243, 1730, 1734, 1871 (sub-componenti)
+BiologyFutureV2 → linea 2455
+BiologyFutureLab → linea 2211
+```
+
+NON sono "versioni alternative" del medesimo componente — sono **sezioni
+distinte** della stessa view, ognuna con scope differente. Senza decisione
+prodotto su quale tenere/rinominare, eliminazione = perdita feature.
+
+### Cleanup eseguito
+
+- ❌ `StatsRisk.tsx` (216 righe) — dead code: definito ma mai importato. Conteneva mock `acwrData` array hardcoded.
+
+## #23 a11y — aria-labels su SVG + role="img" sui chart
+
+**Files**: 3 widget in `src/components/dashboard/widgets/`.
+
+```jsx
+<svg role="img" aria-label={`Andamento condizione fisica (CTL) ultimi ${range}`}>
+  <title>Condizione fisica — CTL nel tempo</title>
+  <desc>Grafico ad area che mostra l'andamento del Chronic Training Load...</desc>
+  ...
+</svg>
+```
+
+3 chart pattern stabilito. Da estendere a tutti gli SVG charts esistenti
+(VO2MaxChart, MainChart, FitnessFreshness, CardiacDrift, AnaerobicThreshold,
+BadgesGrid donut, ecc.) — TODO documentato.
+
+## #24 Skeleton — convention component shared
+
+**File**: `src/components/Skeleton.tsx` (nuovo).
+
+```tsx
+<Skeleton />                              // block default h-10
+<Skeleton variant="text" lines={3} />     // 3 linee
+<Skeleton variant="card" className="h-64" /> // card placeholder
+<Skeleton variant="circle" className="w-12 h-12" /> // avatar
+```
+
+`aria-busy="true"` + `aria-live="polite"` su tutti per screen reader.
+
+**Convention** (round 6): skeleton per loading dati, spinner solo per azioni.
+
+### TODO completamento
+
+Sostituire ~30 pattern raw `animate-pulse` / `animate-spin` esistenti con
+`<Skeleton />` o `<ActionSpinner />` (da creare).
+
+## #22 Mobile responsive — Sidebar drawer + TopBar overflow-x
+
+**Files**: `src/components/Sidebar.tsx`, `src/App.tsx`.
+
+### Sidebar — drawer pattern < 768px
+
+```tsx
+const [isMobile, setIsMobile] = useState(...matches("(max-width: 767px)"));
+const [open, setOpen] = useState(false);
+
+if (isMobile) return (
+  <>
+    {!open && <button aria-label="Apri menu"><Menu/></button>}     {/* hamburger */}
+    {open && <div className="fixed inset-0 bg-black/60" onClick={...}/>}  {/* backdrop */}
+    <aside className={`fixed top-0 left-0 ... transform transition-transform ${open ? "translate-x-0" : "-translate-x-full"}`}>
+      ...
+    </aside>
+  </>
+);
+```
+
+ESC key chiude drawer. `aria-label`, `role="dialog"` per a11y.
+
+### TopBar nav — overflow-x scroll mobile
+
+```jsx
+<nav className="flex items-center gap-3 md:gap-5 overflow-x-auto whitespace-nowrap scrollbar-hide" aria-label="Navigazione principale">
+```
+
+Logo "METIC LAB" hidden su mobile (era hardcoded visible). Padding ridotto
+`px-4 md:px-8`. Gap nav ridotto `gap-3 md:gap-5`. Padding sinistra `pl-12`
+per fare spazio al hamburger button.
+
+## #6 ext — VO2MaxChart empty state migliorato
+
+**File**: `src/components/VO2MaxChart.tsx`.
+
+### Prima
+
+```tsx
+<div className="text-center py-4">
+  <div className="text-2xl font-black text-text-muted">—</div>
+  <div className="text-[10px]">Aggiungi corse per calcolare</div>
+</div>
+```
+
+### Dopo
+
+```tsx
+<div className="text-center py-4 px-3">
+  <div className="text-3xl mb-2">🏃</div>
+  <div className="text-sm font-black text-white mb-1">VDOT non disponibile</div>
+  <div className="text-[10px] leading-relaxed">
+    Servono almeno {N - runs.length} corse di ≥5 km a sforzo costante (HR ≥ 80%).
+    <br/>
+    <span className="text-[#C0FF00]/80">Sincronizza più attività per attivare il calcolo.</span>
+  </div>
+</div>
+```
+
+Comunica **perché** il dato manca + **quanti** ne servono. Pattern da
+estendere ad altri widget (FitnessChart, CardiacDrift, MainChart) — TODO.
+
+## #3 — bestPbTime cleanup (parziale)
+
+**File**: `src/components/DashboardView.tsx`.
+
+`bestPbTime` definito ma **mai chiamato** (dead code dopo round 5
+extractions). Rimosso. Le PB projections sono già coperte da
+`buildRacePredictions` util + backend `analytics.race_predictions`.
+
+DashboardView: 1215 → 1199 righe (-16, -1.3%).
+
+### TODO completamento
+
+`runnerDnaModel` (~700 righe), `detrainingModel` (~250 righe) restano lato
+client. Migration in sprint dedicati.
+
+## #14 — InfoTooltip extracted
+
+**Files**: `src/components/dashboard/widgets/InfoTooltip.tsx` (nuovo),
+`src/components/DashboardView.tsx`.
+
+`InfoTooltip` (44 righe SVG portal-rendered) estratto. Aggiunto
+`aria-label="Info: ${title}"` + `role="tooltip"` (a11y improvement gratis).
+
+DashboardView: 1199 → 1155 righe (-44, -3.7%).
+
+**Cumulativo round 5+6**: 1775 → 1155 righe (-620, **-35%**).
+
+## #16 — Async queue scaffold + plan
+
+**File**: `backend/worker.py` (nuovo, 110 righe stub).
+
+### Cosa contiene
+
+- 3 task placeholder: `strava_sync_task`, `garmin_sync_task`, `training_adapt_task`.
+- `WorkerSettings` class commentata (decommentare dopo `pip install arq`).
+- `enqueue_strava_sync()` helper stub.
+- Documentazione completa: provider scelto (arq), alternativi valutati
+  (Celery/RQ/Dramatiq), flusso end-to-end, design decisions.
+
+### Cosa NON è ancora attivo
+
+- `pip install arq` non eseguito (richiede Redis attivo per uso reale).
+- Endpoint `POST /api/strava/sync` chiama ancora `await strava_sync()` inline.
+- `GET /api/sync/status/:task_id` non esiste.
+
+### Activation path (~2 settimane lavoro)
+
+1. Aggiungere Redis su Render (addon o Upstash free tier).
+2. `pip install arq` + aggiungere a `requirements.txt`.
+3. Decommentare `WorkerSettings` + import `arq`.
+4. Creare `routers/sync.py` con endpoint `enqueue` + `status`.
+5. Sostituire chiamate inline con enqueue.
+6. Avviare worker process: `arq backend.worker.WorkerSettings` (Render second service).
+7. Frontend: hook `useSyncStatus(taskId)` + toast con progress.
+
+## Verifica integrità (round 6)
+
+```
+npx tsc --noEmit          → 0 errori
+npx vitest run             → 18/18 verdi (351ms)
+python ast server.py + worker + health + deps → ALL OK
+npx vite build             → 9.80s ✓
+```
+
+### Files nuovi/modifiche
+
+| Path | Δ |
+|---|---|
+| `src/components/Skeleton.tsx` | NEW (~70 righe) |
+| `src/components/dashboard/widgets/InfoTooltip.tsx` | NEW (~55 righe) |
+| `backend/worker.py` | NEW (~110 righe stub) |
+| `src/components/statistics/StatsRisk.tsx` | DELETED (216 righe dead code) |
+| `src/components/Sidebar.tsx` | +95 righe (drawer mobile) |
+| `src/components/DashboardView.tsx` | -60 righe (1215 → 1155) |
+| `src/components/VO2MaxChart.tsx` | empty state UX |
+| `src/components/statistics/AnalyticsV2.tsx` | DRIFT_START_KM derived |
+| `src/components/dashboard/widgets/FitnessChart.tsx` | + role/title/desc |
+| `src/components/dashboard/widgets/HRZones.tsx` | + role/title/desc |
+| `src/components/dashboard/widgets/NextOptimalSessionWidget.tsx` | + role/title/desc |
+| `src/App.tsx` | TopBar mobile padding/overflow |
+| `package.json` | +engines, name fix |
+
+### Quel che NON è cambiato
+
+- ✅ Routing identico
+- ✅ Backend endpoint invariati (worker.py è stub puro, non attivo)
+- ✅ DashboardView render path identico (solo InfoTooltip + bestPbTime extract/remove)
+- ✅ Cache layer invariato
+- ✅ Sidebar desktop identica (>= 768px)
+- ✅ Schema API/Mongo invariati
+
+---
