@@ -4,7 +4,7 @@ Stato al **2026-04-29** dopo 6 round di fix.
 
 > 🔗 Ultima commit: [`b749d00`](https://github.com/daniele9233/Dashboard-Running-Jaris-Antigravity/commit/b749d00)
 > 🌐 Backend live: https://dani-backend-ea0s.onrender.com (auto-deploy Render)
-> 🌐 Frontend live: https://dani-frontend-ea0s.onrender.com (auto-deploy Render static)
+> 🌐 Frontend live: https://dani-frontend-y63x.onrender.com (auto-deploy Render static)
 
 ---
 
@@ -262,7 +262,7 @@ Derivato da `Math.max(4, Math.min(8, Math.round(distance/2)))`. Magic number
 |---|---|---|
 | GitHub `main` | ✅ pushed | `https://github.com/daniele9233/Dashboard-Running-Jaris-Antigravity/commit/b749d00` |
 | Backend Render | 🟡 building | https://dani-backend-ea0s.onrender.com |
-| Frontend Render | 🟡 building | https://dani-frontend-ea0s.onrender.com |
+| Frontend Render | 🟡 building | https://dani-frontend-y63x.onrender.com |
 | GitHub Actions CI | 🟡 first run | `.github/workflows/ci.yml` |
 
 **Auto-deploy**: Render rileva push su `main` e ricrea entrambi i servizi.

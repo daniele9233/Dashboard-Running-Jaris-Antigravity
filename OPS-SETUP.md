@@ -28,7 +28,7 @@ nessuna notifica. Fix arrivato 24h dopo.
    - ☐ `Deploy succeeded` (opzionale, rumoroso)
 6. Save.
 
-**Frontend service `dani-frontend-ea0s`**: ripeti gli stessi step.
+**Frontend service `dani-frontend-y63x`**: ripeti gli stessi step.
 
 ### Verifica funziona
 
@@ -55,7 +55,7 @@ attiva con sola env var.
 
 ### Configura su Render
 
-1. https://dashboard.render.com → service `dani-frontend-ea0s`
+1. https://dashboard.render.com → service `dani-frontend-y63x`
 2. Tab **Environment** → **Add Environment Variable**
 3. Key: `VITE_SENTRY_DSN`
 4. Value: `<DSN copiato>`
@@ -70,7 +70,7 @@ VITE_SENTRY_DSN=<DSN>
 
 ### Verifica funziona
 
-Apri il sito in prod (https://dani-frontend-ea0s.onrender.com). DevTools →
+Apri il sito in prod (https://dani-frontend-y63x.onrender.com). DevTools →
 Console → digita:
 ```js
 throw new Error('test sentry');

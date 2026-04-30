@@ -81,7 +81,8 @@ app = FastAPI(title="Altrove", lifespan=lifespan)
 # i browser rifiutano comunque le credenziali. La whitelist è obbligatoria.
 _DEFAULT_ORIGINS = (
     "http://localhost:3000,http://localhost:3001,http://localhost:5173,"
-    "https://dani-frontend-ea0s.onrender.com"
+    "https://dani-frontend-ea0s.onrender.com,"
+    "https://dani-frontend-y63x.onrender.com"
 )
 ALLOWED_ORIGINS = [
     o.strip() for o in os.environ.get("ALLOWED_ORIGINS", _DEFAULT_ORIGINS).split(",")

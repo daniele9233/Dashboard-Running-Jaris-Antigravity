@@ -13,6 +13,8 @@ services:
         value: "3.11"
 
   # ── FRONTEND ───────────────────────────────────────────────────────────────
+  # URL pubblico effettivo: https://dani-frontend-y63x.onrender.com
+  # (Render ha generato suffix random `y63x` quando il nome era già preso)
   - type: static
     name: dani-frontend-ea0s
     region: frankfurt
