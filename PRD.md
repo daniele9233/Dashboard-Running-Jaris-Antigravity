@@ -7,6 +7,7 @@
 **Stato:** In sviluppo attivo — single-tenant in produzione
 
 > **Documenti correlati**:
+> - [`PRD-VS-REALITY.md`](./PRD-VS-REALITY.md) — ⚠️ Audit divergenze PRD ↔ codice (RF-BADGE/MEDAL/WEEK obsoleti)
 > - [`REPORT-TECNICO.md`](./REPORT-TECNICO.md) — Architettura tecnica + 8 round CHANGELOG dettagliato (5400+ righe)
 > - [`MISSING-PIECES.md`](./MISSING-PIECES.md) — Checklist feature mancanti con priorità
 > - [`OPS-SETUP.md`](./OPS-SETUP.md) — Setup Render alerts + Sentry (30 min manuale)
