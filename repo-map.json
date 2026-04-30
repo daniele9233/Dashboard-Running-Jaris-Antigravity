@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-04-29T20:59:16.055Z",
+  "generated_at": "2026-04-29T21:07:35.362Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 127,
+    "files": 128,
     "backend_routes": 54,
     "frontend_routes": 13,
     "api_clients": 48
@@ -285,9 +285,9 @@
       "exports": [],
       "routes": [],
       "imports": [],
-      "hash": "c58637e2d3a76b946e3c221c353bd073d35fef05e3b73df2b4e0e3d76a217bd3",
-      "last_modified": "2026-04-29T06:01:50.969Z",
-      "size_bytes": 208
+      "hash": "0e72cf97ac137feb4cd82de8954359576d1364ea7002b1b8a3996abb9552e272",
+      "last_modified": "2026-04-29T21:07:05.108Z",
+      "size_bytes": 290
     },
     {
       "path": "backend/routers/__init__.py",
@@ -500,6 +500,40 @@
       "hash": "d98964fe6b740e1a9a450bd5570321c9842857ff574fefb0c9f52e060fa94a23",
       "last_modified": "2026-04-04T18:22:40.163Z",
       "size_bytes": 1085
+    },
+    {
+      "path": "backend/test_smoke.py",
+      "kind": "backend-script",
+      "purpose": "Backend helper or diagnostic script test_smoke.py.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "dashboard",
+        "layout",
+        "profile",
+        "statistics",
+        "strava",
+        "training"
+      ],
+      "exports": [
+        "client",
+        "test_app_loads_in_dev_layout",
+        "test_app_loads_in_render_layout",
+        "test_health_root",
+        "test_routes_critical_present",
+        "test_sse_endpoint_registered",
+        "test_version_endpoint"
+      ],
+      "routes": [],
+      "imports": [
+        "fastapi.testclient",
+        "pathlib",
+        "server"
+      ],
+      "hash": "6e82e643cc82a3f7c85e8342922ed986a013eb8744e2815e66139e3f65c4a73c",
+      "last_modified": "2026-04-29T21:06:32.364Z",
+      "size_bytes": 4192
     },
     {
       "path": "backend/worker.py",
@@ -857,9 +891,9 @@
       "exports": [],
       "routes": [],
       "imports": [],
-      "hash": "0cbcb541724dc15698c3ea1ee870324c2765083b89ab9de2fbe0954438f80b7d",
-      "last_modified": "2026-04-29T20:43:46.689Z",
-      "size_bytes": 2407
+      "hash": "2a0b0b00d9e6a531bdd6afcc38e5743cd5fece7d778c8c31edeaff13e27d0486",
+      "last_modified": "2026-04-29T21:07:13.639Z",
+      "size_bytes": 2441
     },
     {
       "path": "PRD.md",
@@ -3327,24 +3361,28 @@
     {
       "path": "src/utils/telemetry.ts",
       "kind": "frontend-utility",
-      "purpose": "Shared utility module exporting initTelemetry, reportError, reportEvent.",
+      "purpose": "Shared utility module exporting identifyUser, initTelemetry, reportError, reportEvent.",
       "touch_when": [
         "activities",
         "ai",
-        "api",
-        "statistics",
+        "dashboard",
+        "profile",
+        "training",
         "types"
       ],
       "exports": [
+        "identifyUser",
         "initTelemetry",
         "reportError",
         "reportEvent"
       ],
       "routes": [],
-      "imports": [],
-      "hash": "e051739d07d9b565cbf436da4fbbf6ebb6b5fa537fc57aee07fc444630dc44bd",
-      "last_modified": "2026-04-29T06:14:34.938Z",
-      "size_bytes": 2843
+      "imports": [
+        "@sentry/react"
+      ],
+      "hash": "8966528d9e2ef427cd209c03673b208771593d32ba69cfb3fac1a7770dafaac7",
+      "last_modified": "2026-04-29T21:07:35.362Z",
+      "size_bytes": 3987
     },
     {
       "path": "tsconfig.json",

@@ -9,3 +9,5 @@ fitdecode>=0.10.0
 garminconnect>=0.2.0
 garth>=0.4.38
 slowapi>=0.1.9
+pytest>=7.0
+httpx>=0.27.2  # già presente come dep, esplicitato per TestClient

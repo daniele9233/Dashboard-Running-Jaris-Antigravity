@@ -35,3 +35,7 @@ Thumbs.db
 .env*
 !.env.example
 .env
+
+# Claude harness state (locale)
+.claude/
+

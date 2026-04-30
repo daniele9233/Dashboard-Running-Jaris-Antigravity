@@ -71,11 +71,11 @@ jobs:
       - name: AST syntax check
         run: python -c "import ast; ast.parse(open('backend/server.py', encoding='utf-8').read())"
 
-      - name: Pytest (skip se nessun test)
-        run: |
-          if compgen -G "backend/test_*.py" > /dev/null || compgen -G "backend/tests/*.py" > /dev/null; then
-            python -m pytest backend/ -v
-          else
-            echo "Nessun test pytest in backend/ — skip."
-          fi
-        continue-on-error: true
+      - name: Pytest smoke (BLOCKING — round 7)
+        # NOT continue-on-error: round 5 ha rotto deploy silenziosamente per 24h.
+        # Smoke test verifica `from server import app` con CWD=backend/ (Render
+        # layout). Senza questo gate, ogni PR può rompere prod invisibilmente.
+        # Solo test_smoke.py (test_models.py async pre-esistente richiede pytest-asyncio).
+        env:
+          MONGO_URL: mongodb://localhost:27017  # mock — TestClient non triggera lifespan
+        run: python -m pytest backend/test_smoke.py -v
