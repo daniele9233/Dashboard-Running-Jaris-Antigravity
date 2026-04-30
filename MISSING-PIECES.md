@@ -1,10 +1,13 @@
-# MISSING PIECES — checklist finale post round 6
+# MISSING PIECES — checklist finale post round 8
 
-Stato al **2026-04-29** dopo 6 round di fix.
+Stato al **2026-04-30** dopo 8 round di fix.
 
-> 🔗 Ultima commit: [`b749d00`](https://github.com/daniele9233/Dashboard-Running-Jaris-Antigravity/commit/b749d00)
-> 🌐 Backend live: https://dani-backend-ea0s.onrender.com (auto-deploy Render)
-> 🌐 Frontend live: https://dani-frontend-y63x.onrender.com (auto-deploy Render static)
+> 🔗 Ultima commit live: [`6351fc9`](https://github.com/daniele9233/Dashboard-Running-Jaris-Antigravity/commit/6351fc9)
+> 🌐 Backend live: https://dani-backend-ea0s.onrender.com — `version: 6351fc9` ✓
+> 🌐 Frontend live: https://dani-frontend-y63x.onrender.com — last build 30 Apr 07:12 ✓
+> 🛡️ CI gate attivo: `pytest backend/test_smoke.py` 6/6 BLOCKING su PR
+> 📊 DashboardView: 1775→1041 (-41%) — 4 widget extracted
+> 📦 server.py: 9/55 endpoint estratti in routers/
 
 ---
 
@@ -64,6 +67,19 @@ Stato al **2026-04-29** dopo 6 round di fix.
 - [x] **#3 PARTIAL** `bestPbTime` rimosso (dead code), DashboardView -16 righe
 - [x] **#14 PARTIAL** `InfoTooltip` extracted (-44 righe). DashboardView 1775 → 1155 (-35% cumulato round 5+6)
 - [x] **#16 SCAFFOLD** `backend/worker.py` stub + plan completo arq+Redis activation
+
+### Round 7 — Production observability triad (3 fix)
+- [x] **CI #1 DONE** Backend pytest smoke `backend/test_smoke.py` 6/6 verdi BLOCKING (catturerebbe il bug che ha rotto round 5 deploy 24h)
+- [x] **Sentry #2 DONE** `@sentry/react` installato + telemetry.ts riscritto con Sentry.captureException + setUser + addBreadcrumb (DSN env-driven, no-op se assente)
+- [x] **OPS #3 DONE** `OPS-SETUP.md` (250 righe) — guida click-only Render alerts + Sentry signup + UptimeRobot
+- [x] **DEPLOY FIX** `from backend.X` import error con `rootDir: backend` Render → try/except layout-resilient
+- [x] **CORS FIX** Frontend prod URL reale `dani-frontend-y63x` (Render generato suffix random) → whitelist updated. Da round 3 a round 7 il frontend prod chiamava backend BLOCCATO da CORS, vedeva solo cache stale
+
+### Round 8 — P0 advancements (4 fix parziali)
+- [x] **#14 PARTIAL** `WeeklyKmChart` extracted in `dashboard/widgets/`. Cumulato round 5+6+8: 1775→1041 (**-41%**). 4 widget estratti.
+- [x] **#15 PATTERN++** 2 router nuovi: `routers/profile.py` (4 endpoint) + `routers/runs.py` (3 endpoint). Cumulato 9/55 (16%). Pattern Depends DI provato.
+- [x] **#3 PARTIAL** `injuryRisk` verificato già backend (POST /api/training-plan/adapt → ACWR model). `detraining` (371 righe TS): SKIP sprint dedicato.
+- [x] **#1 SCAFFOLD** `backend/auth.py` (135 righe — `AUTH_ENABLED` flag + `get_current_user_id` Depends + migration script). `src/context/AuthContext.tsx` (115 righe — AuthProvider + `useAuth` + `withAuthHeader` + Sentry user identification). 8-step activation path documentato. **NON attivo** — single-tenant invariato.
 
 ---
 

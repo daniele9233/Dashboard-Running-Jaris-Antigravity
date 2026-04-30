@@ -1,19 +1,26 @@
 # CHECKLIST PUNTI MANCANTI
 
-Stato al **2026-04-29** dopo round 1-5 di fix. Audit originale = 35 punti.
-**Eseguiti completi**: 23 (round 1-4 + #19 doc Mapbox).
-**Pattern proven (parziali)**: 5 (round 5 → #3, #14, #15, #17, #21 — pattern stabilito, completamento documentato).
-**Mancanti completi**: 7 punti.
+Stato al **2026-04-30** dopo round 1-8 di fix. Audit originale = 35 punti.
 
-### Riepilogo round 5
+> **Per stato dettagliato post round 8 vedi [`MISSING-PIECES.md`](./MISSING-PIECES.md)**.
 
-| Punto | Status | Dettaglio |
+**Eseguiti completi**: 26 (round 1-7).
+**Pattern proven (parziali)**: 5 (round 5+8 → #3, #14, #15, #1 scaffold, #21).
+**Deploy hardening**: 3 (Render import fix, CORS fix, CI gate BLOCKING).
+**Mancanti completi**: 6 punti.
+
+### Riepilogo round 5-8 (post-audit fix work)
+
+| Punto | Status post round 8 | Dettaglio |
 |---|---|---|
-| #3 Math → backend | 🟡 PATTERN | thresholdPace migrato. 5 moduli restano (runnerDna, detraining, ACWR, bestPbTime, polarized). |
-| #14 DashboardView split | 🟡 PATTERN | -560 righe (1775→1215). 3 widget estratti. ~7 widget/helpers restano. |
-| #15 server.py split | 🟡 PATTERN | router `health` estratto + `deps.py` per DI. 2/55 endpoint. |
-| #17 SSE | ✅ DONE | event bus + 5 event types + frontend hook + auto-cache-invalidate. |
+| #3 Math → backend | 🟡 PATTERN+ | thresholdPace + bestPbTime + injuryRisk done. detraining/runnerDna restano sprint. |
+| #14 DashboardView split | 🟡 PATTERN+ | **-41% (1775→1041)**, 4 widget extracted. StatusOfForm + Status of Form gauge restano. |
+| #15 server.py split | 🟡 PATTERN+ | 9/55 endpoint estratti (16%): health, profile, runs. 46 endpoint restano. |
+| #17 SSE | ✅ DONE | event bus + 5 event types + frontend hook + auto-cache-invalidate. CORS y63x verificato. |
 | #21 i18n | 🟡 PATTERN | 4 namespace nuovi (IT+EN). FirstRunOnboarding + ErrorBoundary i18n-ed. ~150 stringhe restano. |
+| #1 Auth | 🟡 SCAFFOLD | `backend/auth.py` + `AuthContext.tsx` pronti, NON attivi. 8-step activation documentato. |
+| **Deploy** | ✅ FIX | Render import error (round 7) + CORS y63x (round 7) + CI gate (round 7). Backend live `6351fc9`. |
+| **Observability** | ✅ READY | Sentry SDK wired (manca solo DSN env var Render). Render alerts: `OPS-SETUP.md` 30 min utente. |
 
 > Legenda priorità:
 > - 🔴 **P0 — Bloccante prima di prod commerciale**

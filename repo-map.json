@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-04-30T07:09:36.875Z",
+  "generated_at": "2026-04-30T07:20:46.240Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -993,16 +993,16 @@
         "layout",
         "map",
         "profile",
+        "runner-dna",
         "statistics",
-        "strava",
-        "training"
+        "strava"
       ],
       "exports": [],
       "routes": [],
       "imports": [],
-      "hash": "f4d216818f353fce5faaf23057a44fb2182ed5973a9df7d9bb58adbf404e1b95",
-      "last_modified": "2026-04-13T14:38:37.405Z",
-      "size_bytes": 16676
+      "hash": "0b67c767425e0985a563ca8dfc70d720572ebd2625dc0430b0cf49c92c0a4723",
+      "last_modified": "2026-04-30T07:20:46.241Z",
+      "size_bytes": 19935
     },
     {
       "path": "public/garmin-auth.html",

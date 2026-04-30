@@ -1,10 +1,17 @@
 # PRD — METIC LAB Running Training Dashboard
 
 ## Documento dei Requisiti di Prodotto
-**Versione:** 1.0
-**Data:** 28 Marzo 2026
+**Versione:** 1.1 (rev post 8 round audit)
+**Data:** 30 Aprile 2026 (rev) / 28 Marzo 2026 (originale)
 **Autore:** Daniele Pascolini
-**Stato:** In sviluppo attivo
+**Stato:** In sviluppo attivo — single-tenant in produzione
+
+> **Documenti correlati**:
+> - [`REPORT-TECNICO.md`](./REPORT-TECNICO.md) — Architettura tecnica + 8 round CHANGELOG dettagliato (5400+ righe)
+> - [`MISSING-PIECES.md`](./MISSING-PIECES.md) — Checklist feature mancanti con priorità
+> - [`OPS-SETUP.md`](./OPS-SETUP.md) — Setup Render alerts + Sentry (30 min manuale)
+> - [`README.md`](./README.md) — Quick start dev 5 min
+> - [`CHECKLIST-PENDING.md`](./CHECKLIST-PENDING.md) — Audit originale 35 punti
 
 ---
 
@@ -20,21 +27,60 @@ METIC LAB e una dashboard web per runner che integra dati Strava, analisi scient
 
 ## 2. Architettura Tecnica
 
-### Stack
+### Stack (rev 1.1)
+
 | Layer | Tecnologia | Motivazione |
 |---|---|---|
-| Frontend | React 18 + TypeScript + Vite | SPA veloce, tipizzazione, HMR |
-| Styling | Tailwind CSS | Utility-first, dark theme nativo |
-| Mappe | MapLibre GL JS | Open-source, no API key |
-| Grafici | SVG custom + componenti React | Controllo totale, no dipendenze pesanti |
-| Backend | FastAPI (Python 3.11) | Async nativo, validazione Pydantic, auto-docs |
+| Frontend | **React 19** + TypeScript 5.8 + Vite 6 | SPA veloce, tipizzazione, HMR, code-splitting |
+| Routing | React Router 7 | SPA navigation con `React.lazy` per chunk separati |
+| Styling | Tailwind CSS 4 | Utility-first, dark theme nativo |
+| Mappe | Mapbox GL + MapLibre GL + react-map-gl | Mapbox per stile dusk 3D, MapLibre per fallback open |
+| Grafici | Recharts + SVG custom + Three.js (3D) | Componenti pronti + controllo totale dove serve |
+| Animazioni | Framer Motion + GSAP | Transizioni JARVIS overlay + UI accents |
+| i18n | i18next (IT/EN) | Multi-lingua (~50% strings restano hardcoded — da completare) |
+| Backend | FastAPI 0.115 (Python 3.11) | Async nativo, validazione Pydantic, auto-docs |
 | Database | MongoDB Atlas (Motor async) | Schema flessibile, free tier generoso |
-| AI | Claude Sonnet 4.6 + Gemini (fallback) | Analisi personalizzate |
-| Auth | Strava OAuth 2.0 (fase 1), JWT (fase 2) | Identificazione utente tramite athlete_id |
-| Hosting | Render.com | Auto-deploy da GitHub |
+| Cache | localStorage + memory cache custom (`useApi` hook) | SWR pattern + cross-tab sync via storage event |
+| Server-push | Server-Sent Events (round 5) | Notifiche live `sync_complete` / `training_adapted` |
+| AI | Claude Sonnet 4.6 + Gemini (fallback) | Analisi personalizzate (JARVIS voice) |
+| Auth | Strava OAuth (single-tenant) — JWT scaffold pronto (round 8) | Vedi `backend/auth.py` + `src/context/AuthContext.tsx` |
+| Telemetry | Sentry SDK (round 7, da attivare con DSN) | Error tracking prod |
+| Rate limit | slowapi (round 3) | 120/min default + 10/min AI endpoints |
+| CORS | env-driven whitelist (round 3) | No wildcard, prod safe |
+| Test | Vitest 18/18 unit + pytest 6/6 smoke (round 4+7) | CI gate su backend smoke |
+| CI/CD | GitHub Actions (round 4) + Render auto-deploy | TS check + lint + test + build + Python AST |
+| Hosting | Render.com free tier | Backend `dani-backend-ea0s` + Frontend `dani-frontend-y63x` |
+| Bundle splitting | Vite manualChunks vendor (round 3) + React.lazy routes | vendor-react/mapbox/three/charts/motion/i18n separati |
 
-### Principio architetturale: Multi-utente dal giorno zero
-Ogni documento MongoDB contiene `athlete_id`. Ogni query filtra per `athlete_id`. Nessuna eccezione. Questo garantisce isolamento dei dati e scalabilita da 1 a 1000+ utenti senza refactoring.
+### Principio architetturale: Multi-utente "in scaffold"
+**Stato attuale (rev 1.1)**: il backend usa l'ultimo `strava_token` salvato → comportamento single-tenant. Il principio originario "multi-utente dal giorno zero" è in **scaffold pronto ma non attivo**:
+
+- ✅ `backend/auth.py` — `AUTH_ENABLED` env flag + `get_current_user_id` Depends helper + migration script `migrate_assign_default_user`
+- ✅ `src/context/AuthContext.tsx` — `AuthProvider` + `useAuth` + `withAuthHeader` + Sentry user identification
+- ⏳ Mongo `user_id` su tutte le collection — da migrare con script
+- ⏳ JWT provider scelta — design JWT custom (no vendor lock-in) vs Clerk/Supabase
+
+**Activation path**: 8 step documentati in `backend/auth.py` docstring. Costo stimato 1-2 settimane.
+
+### Collezioni MongoDB
+```
+profile           — Un documento per utente (single-tenant: 1 doc)
+runs              — Corse (Strava + Garmin CSV)
+training_plan     — Piano allenamento per-utente
+analytics_cache   — Cache KPI computed (versionato schema pro-v9)
+runner_dna_cache  — Cache scoring DNA runner
+strava_tokens     — OAuth tokens Strava
+garmin_csv_data   — Telemetria CSV Garmin Connect
+recovery_checkins — Check-in mattutini
+gct_analysis     — Ground contact time analysis
+fitness_freshness — CTL/ATL/TSB historical
+user_layout       — Dashboard grid layout per-user
+```
+
+### Endpoint backend (post round 8)
+- 60+ route registrate
+- Router estratti (round 5+8): `routers/health.py`, `routers/profile.py`, `routers/runs.py` — 9/55 endpoint migrati
+- Endpoint nuovi: `GET /api/events/stream` (SSE), `GET /api/vdot/paces` con `threshold_empirical` (math migrato lato server)
 
 ### Collezioni MongoDB
 ```
