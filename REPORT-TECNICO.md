@@ -5335,3 +5335,82 @@ npx vite build             → 9.80s ✓
 - ✅ Schema API/Mongo invariati
 
 ---
+
+# CHANGELOG FIX — 2026-04-30 (round 8 — P0 advancements)
+
+User ha chiesto: "fai tutti i punti definiti dentro a P0". P0 totale realisticamente
+~5-6 settimane. Sessione singola → tutti i punti AVANZANO, nessuno completato 100%.
+Cap onesto: 6h work effettive, ogni step verificato.
+
+## #14 DashboardView — WeeklyKmChart extracted
+
+`src/components/dashboard/widgets/WeeklyKmChart.tsx` (nuovo, ~110 righe).
+Self-contained: state interno chartPeriod + memos chartData + weeklyKmTotal.
+
+DashboardView: 1155 → 1041 righe (-114, -10%).
+Cumulato round 5+6+8: 1775 → 1041 (-734, **-41%**).
+
+Skip StatusOfForm (12+ props, costo refactor > beneficio).
+
+## #15 server.py — routers/profile.py + routers/runs.py
+
+Pattern Depends DI esteso a 7 endpoint:
+- `routers/profile.py`: GET/PATCH /api/profile, GET/PUT /api/user/layout
+- `routers/runs.py`: GET /api/runs, GET /api/runs/{id}, GET /api/runs/{id}/splits
+
+Helpers in `deps.py`: aggiunti `oid`, `oids`, `normalise_run_quality_fields`
+con late-import pattern.
+
+Cumulato round 5+8: 9/55 endpoint estratti (16%).
+
+## #3 Math heavy → backend
+
+- injuryRisk: verificato già backend (POST /api/training-plan/adapt → modello ACWR).
+  TrainingGrid.tsx solo descrizione tooltip, nessuna replica.
+- detraining (371 righe TS): SKIP — sprint dedicato required.
+
+Cumulato round 5+6+8: thresholdPace migrato, bestPbTime dead-code rimosso,
+injuryRisk verificato. Restano runnerDnaModel + detrainingModel (sprint).
+
+## #1 Auth scaffold
+
+`backend/auth.py` (135 righe, NON attivo):
+- `AUTH_ENABLED` env flag (default false)
+- `get_current_user_id()` Depends helper → ritorna "default" se disabilitato
+- `get_user_scope_query()` → {} se disabilitato, {"user_id": x} altrimenti
+- `migrate_assign_default_user()` script one-shot per backfill user_id="legacy"
+- Design: JWT custom (no vendor lock-in). Documentate alternative (Clerk, Supabase, Auth0).
+
+`src/context/AuthContext.tsx` (115 righe, NON mounted):
+- `AuthProvider` con `enabled` flag interno (default false)
+- `useAuth()` hook → ritorna user "default" se non attivo
+- `withAuthHeader()` helper per fetch con Bearer JWT
+- Sentry `identifyUser()` integrato
+- Login/logout stub con TODO esatti per implementation
+
+Activation path documentato in entrambi i file (8 step).
+
+## Verifica integrità (round 8)
+
+```
+npx tsc --noEmit                         → 0 errori
+npx vitest run                           → 18/18 verdi
+pytest backend/test_smoke.py             → 6/6 verdi
+python ast.parse {server, auth, deps, 3 routers} → ALL OK
+npx vite build                           → 16.59s ✓
+```
+
+## Files nuovi/modifiche
+
+| Path | Δ |
+|---|---|
+| `src/components/dashboard/widgets/WeeklyKmChart.tsx` | NEW (~110) |
+| `backend/routers/profile.py` | NEW (~75) |
+| `backend/routers/runs.py` | NEW (~50) |
+| `backend/auth.py` | NEW (~135) — scaffold |
+| `src/context/AuthContext.tsx` | NEW (~115) — scaffold |
+| `backend/deps.py` | +oid/oids/normalise helpers |
+| `backend/server.py` | -126 righe (3 endpoint blocks rimossi) |
+| `src/components/DashboardView.tsx` | -114 (1155→1041) |
+
+---

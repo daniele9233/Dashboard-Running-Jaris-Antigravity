@@ -464,10 +464,16 @@ async def event_stream(request: Request):
 # può usare `python -m backend.server` (CWD=root). Try entrambi.
 try:
     from routers import health as _health_router  # CWD=backend/ (Render prod)
+    from routers import profile as _profile_router
+    from routers import runs as _runs_router
 except ImportError:  # pragma: no cover
-    from backend.routers import health as _health_router  # type: ignore  # CWD=root (dev locale)
+    from backend.routers import health as _health_router  # type: ignore
+    from backend.routers import profile as _profile_router  # type: ignore
+    from backend.routers import runs as _runs_router  # type: ignore
 
 app.include_router(_health_router.router)
+app.include_router(_profile_router.router)
+app.include_router(_runs_router.router)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  STRAVA OAUTH
@@ -920,104 +926,8 @@ async def strava_sync():
     return {"ok": True, "synced": synced, "auto_adapt": adapt_result}
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  PROFILE
-# ═══════════════════════════════════════════════════════════════════════════════
-
-@app.get("/api/profile")
-async def get_profile():
-    athlete_id = await _get_athlete_id()
-    q = {"athlete_id": athlete_id} if athlete_id else {}
-    doc = await db.profile.find_one(q)
-    if not doc:
-        return JSONResponse({"error": "no_profile"}, status_code=404)
-    return oid(doc)
-
-
-@app.patch("/api/profile")
-async def update_profile(request: Request):
-    body = await request.json()
-    body.pop("id", None)
-    body.pop("_id", None)
-    athlete_id = await _get_athlete_id()
-    q = {"athlete_id": athlete_id} if athlete_id else {}
-    await db.profile.update_one(q, {"$set": body}, upsert=True)
-    doc = await db.profile.find_one(q)
-    return oid(doc)
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  USER LAYOUT (dashboard grid persistence)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-@app.get("/api/user/layout")
-async def get_user_layout():
-    athlete_id = await _get_athlete_id()
-    q = {"athlete_id": athlete_id} if athlete_id else {"athlete_id": None}
-    doc = await db.user_layout.find_one(q)
-    if not doc:
-        return {"layouts": None, "hidden_keys": []}
-    hidden = doc.get("hidden_keys") or []
-    if not isinstance(hidden, list):
-        hidden = []
-    return {
-        "layouts": doc.get("layouts"),
-        "hidden_keys": [h for h in hidden if isinstance(h, str)],
-    }
-
-
-@app.put("/api/user/layout")
-async def put_user_layout(request: Request):
-    body = await request.json()
-    layouts = body.get("layouts")
-    hidden_keys_in = body.get("hidden_keys")
-    update: dict = {"layouts": layouts, "updated_at": dt.datetime.utcnow()}
-    if isinstance(hidden_keys_in, list):
-        update["hidden_keys"] = [k for k in hidden_keys_in if isinstance(k, str)]
-    athlete_id = await _get_athlete_id()
-    q = {"athlete_id": athlete_id} if athlete_id else {"athlete_id": None}
-    await db.user_layout.update_one(q, {"$set": update}, upsert=True)
-    return {"ok": True}
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  RUNS
-# ═══════════════════════════════════════════════════════════════════════════════
-
-@app.get("/api/runs")
-async def get_runs():
-    athlete_id = await _get_athlete_id()
-    q = {"athlete_id": athlete_id} if athlete_id else {}
-    # Exclude heavy fields (streams) from list endpoint to save memory
-    projection = {"streams": 0}
-    cursor = db.runs.find(q, projection).sort("date", -1)
-    runs = await cursor.to_list(length=500)
-    runs = [_normalise_run_quality_fields(dict(run)) for run in runs]
-    return {"runs": oids(runs)}
-
-
-@app.get("/api/runs/{run_id}")
-async def get_run(run_id: str):
-    from bson import ObjectId
-    try:
-        doc = await db.runs.find_one({"_id": ObjectId(run_id)})
-    except Exception:
-        doc = await db.runs.find_one({"strava_id": int(run_id)}) if run_id.isdigit() else None
-    if not doc:
-        return JSONResponse({"error": "not_found"}, status_code=404)
-    return oid(_normalise_run_quality_fields(doc))
-
-
-@app.get("/api/runs/{run_id}/splits")
-async def get_run_splits(run_id: str):
-    from bson import ObjectId
-    try:
-        doc = await db.runs.find_one({"_id": ObjectId(run_id)}, {"splits": 1})
-    except Exception:
-        doc = await db.runs.find_one({"strava_id": int(run_id)}, {"splits": 1}) if run_id.isdigit() else None
-    if not doc:
-        return JSONResponse({"error": "not_found"}, status_code=404)
-    return {"splits": doc.get("splits", [])}
+# Endpoints PROFILE / USER LAYOUT / RUNS estratti in routers/ (round 8 — #15).
+# Vedi backend/routers/profile.py + backend/routers/runs.py.
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

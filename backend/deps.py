@@ -58,3 +58,18 @@ async def get_publish_event():
     evitare circolarità.
     """
     return _import_server().publish_event
+
+
+# ── Helpers diretti (non Depends — usati lato router come funzioni) ───────────
+
+def oid(doc):
+    """Mongo _id → string id field."""
+    return _import_server().oid(doc)
+
+
+def oids(docs):
+    return _import_server().oids(docs)
+
+
+def normalise_run_quality_fields(run_doc: dict) -> dict:
+    return _import_server()._normalise_run_quality_fields(run_doc)
