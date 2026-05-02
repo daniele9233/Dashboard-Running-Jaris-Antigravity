@@ -50,9 +50,13 @@ FISH_AUDIO_API_KEY = os.environ.get("FISH_AUDIO_API_KEY", "")
 GARMIN_EMAIL       = os.environ.get("GARMIN_EMAIL", "")
 GARMIN_PASSWORD    = os.environ.get("GARMIN_PASSWORD", "")
 APP_VERSION        = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT") or os.environ.get("COMMIT_SHA") or "local"
-ANALYTICS_SCHEMA_VERSION = "pro-v9-2026-04-19"
-RUNNER_DNA_SCHEMA_VERSION = "runner-dna-v4-2026-04-22"
+ANALYTICS_SCHEMA_VERSION = "pro-v10-2026-05-02"
+RUNNER_DNA_SCHEMA_VERSION = "runner-dna-v5-2026-05-02"
 GARMIN_CSV_REPAIR_VERSION = "garmin-csv-repair-v2-2026-04-22"
+
+VDOT_RECENCY_WEIGHT_30D = 0.70
+VDOT_RECENCY_DECAY_LAMBDA = -math.log(VDOT_RECENCY_WEIGHT_30D) / 30.0
+VDOT_RECENT_ANCHOR_DAYS = 7
 
 # Build the callback URL from the current host (set via Render env or default)
 BACKEND_URL        = os.environ.get("BACKEND_URL", "https://dani-backend-ea0s.onrender.com")
@@ -287,6 +291,13 @@ def analytics_run_projection(include_splits: bool = False) -> dict:
         "has_gps": 1,
         "polyline": 1,
         "start_latlng": 1,
+        "weather": 1,
+        "temperature": 1,
+        "apparent_temperature": 1,
+        "humidity": 1,
+        "wind_speed": 1,
+        "temp_min_c": 1,
+        "temp_max_c": 1,
         "avg_ground_contact_time": 1,
         "avg_vertical_oscillation": 1,
         "avg_vertical_ratio": 1,
@@ -1951,6 +1962,16 @@ async def generate_training_plan(request: Request):
         "is_treadmill": 1,
         "strava_id": 1,
         "activity_id": 1,
+        "run_type": 1,
+        "notes": 1,
+        "splits": 1,
+        "weather": 1,
+        "temperature": 1,
+        "apparent_temperature": 1,
+        "humidity": 1,
+        "wind_speed": 1,
+        "temp_min_c": 1,
+        "temp_max_c": 1,
     }
     all_runs = await db.runs.find(q_gps, vdot_projection).sort("date", -1).to_list(None)
     dist_km = RACE_DISTANCES.get(goal_race, 5.0)
@@ -2940,6 +2961,205 @@ async def recalculate_fitness_freshness():
 #  ANALYTICS
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def _coerce_float(value) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        if isinstance(value, str):
+            value = value.replace(",", ".").strip()
+            if not value:
+                return None
+        v = float(value)
+        return v if math.isfinite(v) else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _run_date_obj(run: dict) -> Optional[dt.date]:
+    value = run.get("date")
+    if isinstance(value, dt.datetime):
+        return value.date()
+    if isinstance(value, dt.date):
+        return value
+    if isinstance(value, str):
+        try:
+            return dt.date.fromisoformat(value[:10])
+        except ValueError:
+            return None
+    return None
+
+
+def _vdot_recency_weight(run: dict, as_of: Optional[dt.date] = None) -> float:
+    run_date = _run_date_obj(run)
+    if not run_date:
+        return 1.0
+    anchor = as_of or dt.date.today()
+    age_days = max(0, (anchor - run_date).days)
+    return math.exp(-VDOT_RECENCY_DECAY_LAMBDA * age_days)
+
+
+def _weather_value(run: dict, *keys: str) -> Optional[float]:
+    for key in keys:
+        v = _coerce_float(run.get(key))
+        if v is not None:
+            return v
+    weather = run.get("weather")
+    if isinstance(weather, dict):
+        for key in keys:
+            v = _coerce_float(weather.get(key))
+            if v is not None:
+                return v
+    return None
+
+
+def _environmental_pace_adjustment_sec_per_km(run: dict) -> float:
+    """Estimate seconds/km lost to non-ideal weather when data is available."""
+    temp = _weather_value(run, "apparent_temperature", "apparent", "feels_like")
+    if temp is None:
+        temp = _weather_value(run, "temperature", "temp_c")
+    if temp is None:
+        tmin = _weather_value(run, "temp_min_c")
+        tmax = _weather_value(run, "temp_max_c")
+        if tmin is not None and tmax is not None:
+            temp = (tmin + tmax) / 2
+    humidity = _weather_value(run, "humidity", "relative_humidity")
+    wind = _weather_value(run, "wind_speed", "wind", "wind_speed_10m")
+
+    if temp is None and humidity is None and wind is None:
+        return 0.0
+
+    effective_temp = temp if temp is not None else 10.0
+    humidity = humidity if humidity is not None else 60.0
+    wind = wind if wind is not None else 8.0
+    distance_factor = max(0.6, min(1.35, float(run.get("distance_km") or 0) / 10.0))
+
+    heat_penalty = max(0.0, effective_temp - 18.0) * 1.9
+    cold_penalty = max(0.0, 5.0 - effective_temp) * 0.7
+    humidity_penalty = max(0.0, humidity - 65.0) * 0.16
+    wind_penalty = max(0.0, wind - 18.0) * 0.18
+    synergy_penalty = (
+        ((effective_temp - 22.0) * (humidity - 70.0)) / 85.0
+        if effective_temp > 22.0 and humidity > 70.0
+        else 0.0
+    )
+    return max(0.0, min(35.0, (heat_penalty + cold_penalty + humidity_penalty + wind_penalty + synergy_penalty) * distance_factor))
+
+
+def _is_interval_session(run: dict) -> bool:
+    text = " ".join(
+        str(run.get(key) or "").lower()
+        for key in ("run_type", "name", "notes")
+    )
+    keys = ("interval", "ripet", "repeat", "vo2", "fartlek", "800", "1000", "400")
+    if any(k in text for k in keys):
+        return True
+
+    full_splits = [
+        s for s in (run.get("splits") or [])
+        if _coerce_float(s.get("distance")) and _coerce_float(s.get("distance")) >= 900
+    ]
+    if len(full_splits) < 4:
+        return False
+
+    paces = []
+    for split in full_splits:
+        pace = split.get("pace")
+        if isinstance(pace, str) and ":" in pace:
+            try:
+                m, s = pace.split(":")[:2]
+                paces.append(int(m) * 60 + int(s))
+            except (TypeError, ValueError):
+                continue
+        else:
+            elapsed = _coerce_float(split.get("elapsed_time"))
+            distance = _coerce_float(split.get("distance"))
+            if elapsed and distance and distance > 0:
+                paces.append(elapsed / (distance / 1000.0))
+
+    if len(paces) < 4:
+        return False
+
+    spread = max(paces) - min(paces)
+    adjacent_swings = sum(1 for a, b in zip(paces, paces[1:]) if abs(a - b) >= 18)
+    alternating = sum(
+        1 for a, b, c in zip(paces, paces[1:], paces[2:])
+        if (a < b > c) or (a > b < c)
+    )
+    return spread >= 25 and adjacent_swings >= 2 and alternating >= 1
+
+
+def _vdot_from_effort(
+    run: dict,
+    dist_km: float,
+    duration_min: float,
+    pace_s: float,
+    avg_hr: Optional[float],
+    max_hr: int,
+) -> Optional[float]:
+    if dist_km < 3 or dist_km > 21:
+        return None
+    if pace_s < 150 or pace_s > 540:
+        return None
+    if duration_min < 10:
+        return None
+
+    environmental_delta = _environmental_pace_adjustment_sec_per_km(run)
+    corrected_pace_s = max(150.0, pace_s - environmental_delta)
+    speed_mpm = 60000 / corrected_pace_s
+    vo2 = -4.60 + 0.182258 * speed_mpm + 0.000104 * speed_mpm ** 2
+
+    pct_max_duration = (0.8 + 0.1894393 * math.exp(-0.012778 * duration_min)
+                        + 0.2989558 * math.exp(-0.1932605 * duration_min))
+
+    if avg_hr and max_hr > 0:
+        hr_pct = avg_hr / max_hr
+        if hr_pct < 0.75:
+            return None
+        if hr_pct >= 0.92:
+            pct_max = pct_max_duration
+        else:
+            pct_max = max(0.55, min(1.0, hr_pct - 0.02))
+            if duration_min >= 15:
+                pct_max = min(pct_max_duration, pct_max)
+    else:
+        pct_max = pct_max_duration
+
+    if pct_max <= 0:
+        return None
+    return vo2 / pct_max
+
+
+def _interval_vdot_from_splits(run: dict, max_hr: int) -> Optional[float]:
+    if not _is_interval_session(run):
+        return None
+    full_splits = [
+        s for s in (run.get("splits") or [])
+        if _coerce_float(s.get("distance")) and _coerce_float(s.get("distance")) >= 900
+        and _coerce_float(s.get("elapsed_time")) and _coerce_float(s.get("elapsed_time")) > 0
+    ]
+    if len(full_splits) < 3:
+        return None
+
+    candidates = []
+    max_k = min(6, len(full_splits))
+    for k in range(3, max_k + 1):
+        for i in range(len(full_splits) - k + 1):
+            window = full_splits[i:i + k]
+            dist_km = sum(float(s.get("distance") or 0) for s in window) / 1000.0
+            elapsed_s = sum(float(s.get("elapsed_time") or 0) for s in window)
+            if dist_km < 3 or elapsed_s <= 0:
+                continue
+            pace_s = elapsed_s / dist_km
+            hr_values = [_coerce_float(s.get("hr")) for s in window]
+            hr_values = [h for h in hr_values if h is not None]
+            split_hr = sum(hr_values) / len(hr_values) if hr_values else run.get("avg_hr")
+            vdot = _vdot_from_effort(run, dist_km, elapsed_s / 60.0, pace_s, split_hr, max_hr)
+            if vdot:
+                candidates.append(vdot)
+
+    return max(candidates) if candidates else None
+
+
 def _vdot_from_run(r: dict, max_hr: int = 190, resting_hr: int = 50) -> Optional[float]:
     """Calculate VDOT from a single run — Daniels VO2 (2013) + HR-based effort correction.
 
@@ -2962,7 +3182,7 @@ def _vdot_from_run(r: dict, max_hr: int = 190, resting_hr: int = 50) -> Optional
     if r.get("is_treadmill"):
         return None
     dist = r.get("distance_km", 0)
-    if dist < 4 or dist > 21:
+    if dist < 3 or dist > 21:
         return None
     pace_str = r.get("avg_pace", "")
     if not pace_str or ":" not in pace_str:
@@ -2972,48 +3192,12 @@ def _vdot_from_run(r: dict, max_hr: int = 190, resting_hr: int = 50) -> Optional
         pace_s = int(parts[0]) * 60 + int(parts[1])
     except (ValueError, IndexError):
         return None
-    if pace_s < 150 or pace_s > 540:
-        return None
     duration_min = r.get("duration_minutes", 0) or 0
-    if duration_min < 10:
-        return None
-
-    speed_mpm = 60000 / pace_s
-    vo2 = -4.60 + 0.182258 * speed_mpm + 0.000104 * speed_mpm ** 2
-
     avg_hr = r.get("avg_hr")
-    pct_max_duration = (0.8 + 0.1894393 * math.exp(-0.012778 * duration_min)
-                        + 0.2989558 * math.exp(-0.1932605 * duration_min))
-
-    if avg_hr and max_hr > 0:
-        hr_pct = avg_hr / max_hr
-        # Scartare corse davvero facili: non utili per stimare VDOT
-        if hr_pct < 0.75:
-            return None
-        if hr_pct >= 0.92:
-            # Sforzo quasi-massimale: formula Daniels di durata affidabile
-            pct_max = pct_max_duration
-        else:
-            # Sforzo sub-massimale: mapping HR%→VO2% calibrato sulle zone Daniels.
-            # Tabella Daniels (HRmax% medio → VO2max%):
-            #   E-pace 0.715 → 0.70  | M-pace 0.825 → 0.80
-            #   T-pace 0.895 → 0.88  | I-pace 0.975 → 0.98
-            # Fit lineare pratico: pct ≈ HR% − 0.02 nel range sub-soglia.
-            # Più conservativo di Karvonen/Swain che tendono a sovrastimare VDOT
-            # nelle corse medie (HR 80-85%).
-            pct_max = max(0.55, min(1.0, hr_pct - 0.02))
-            # Su corse lunghe (≥15min) scegli la più conservativa fra durata-Daniels e HR
-            # per evitare che un tempo run breve ma vicino al massimale gonfi il VDOT.
-            if duration_min >= 15:
-                pct_max = min(pct_max_duration, pct_max)
-    else:
-        # No HR: assumi sforzo vicino al massimale per la durata data (Daniels race-effort)
-        pct_max = pct_max_duration
-
-    if pct_max <= 0:
-        return None
-    return vo2 / pct_max
-
+    total_vdot = _vdot_from_effort(r, dist, duration_min, pace_s, avg_hr, max_hr)
+    interval_vdot = _interval_vdot_from_splits(r, max_hr)
+    candidates = [v for v in (total_vdot, interval_vdot) if v]
+    return max(candidates) if candidates else None
 
 def _calc_vdot(runs: list, max_hr: int = 190, weeks_window: int = 8,
                resting_hr: int = 50) -> Optional[float]:
@@ -3049,17 +3233,37 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
                 "peak_source": None, "training_months": 0, "weekly_volume": 0,
                 "race_specific_vdot": None}
 
-    cutoff_8w = (_dt.date.today() - _dt.timedelta(weeks=weeks_window)).isoformat()
-    cutoff_16w = (_dt.date.today() - _dt.timedelta(weeks=16)).isoformat()
-
-    recent_8 = [(r, v) for r, v in run_vdots if r.get("date", "") >= cutoff_8w]
-    recent_16 = [(r, v) for r, v in run_vdots if r.get("date", "") >= cutoff_16w]
-
-    # Helper: average of top-N values (more robust than single max)
+    today = _dt.date.today()
     def _top_avg(values, n=3):
         sorted_vals = sorted(values, reverse=True)
         top = sorted_vals[:n]
         return sum(top) / len(top) if top else None
+
+    def _weighted_top_current(candidates, top_n=6):
+        if not candidates:
+            return None
+        relevant = [
+            item for item in candidates
+            if _vdot_recency_weight(item[0], today) >= 0.35
+        ]
+        if len(relevant) >= 2:
+            candidates = relevant
+        ranked = sorted(candidates, key=lambda item: item[1], reverse=True)[:top_n]
+        weighted_sum = 0.0
+        total_weight = 0.0
+        for run, value in ranked:
+            w = _vdot_recency_weight(run, today)
+            weighted_sum += value * w
+            total_weight += w
+        return weighted_sum / total_weight if total_weight > 0 else None
+
+    def _recent_anchor(candidates):
+        cutoff = today - _dt.timedelta(days=VDOT_RECENT_ANCHOR_DAYS)
+        recent_values = [
+            value for run, value in candidates
+            if (_run_date_obj(run) or _dt.date.min) >= cutoff
+        ]
+        return max(recent_values) if recent_values else None
 
     # ── Race-specific VDOT: only runs >= 70% of goal distance ────────────────
     race_specific_vdot = None
@@ -3075,14 +3279,13 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
             else:
                 race_specific_vdot = round(max(v for _, v in race_runs), 1)
 
-    # Current: average of top-3 recent VDOT values
-
-    if recent_8 and len(recent_8) >= 2:
-        current = _top_avg([v for _, v in recent_8], n=3)
-    elif recent_16 and len(recent_16) >= 2:
-        current = _top_avg([v for _, v in recent_16], n=3)
-    elif run_vdots and len(run_vdots) >= 2:
-        current = _top_avg([v for _, v in run_vdots], n=3)
+    # Current: capacity estimate from the best recent samples, with exponential
+    # recency decay (30-day-old run weighs 0.70). This avoids hard 8-week cliffs.
+    if run_vdots and len(run_vdots) >= 2:
+        current = _weighted_top_current(run_vdots)
+        anchor = _recent_anchor(run_vdots)
+        if anchor:
+            current = max(current or anchor, anchor)
     else:
         current = max(v for _, v in run_vdots) if run_vdots else None
     current = round(current, 1) if current else None
@@ -3113,7 +3316,8 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
             pass
 
     # Recent weekly volume
-    recent_runs = [r for r in runs if r.get("date", "") >= cutoff_8w]
+    volume_cutoff = (today - _dt.timedelta(weeks=weeks_window)).isoformat()
+    recent_runs = [r for r in runs if r.get("date", "") >= volume_cutoff]
     recent_km = sum(r.get("distance_km", 0) for r in recent_runs)
     weekly_volume = round(recent_km / max(1, weeks_window), 1)
 
@@ -4028,7 +4232,7 @@ async def get_pro_analytics(
     skip_runs_for_csv_chart = tab == "biomechanics" and chart in csv_only_biomech_charts
     needs_splits = (
         tab == "all"
-        or (tab == "potential_progress" and (not chart or chart == "best_efforts_progression"))
+        or (tab == "potential_progress" and (not chart or chart in {"vo2_vdot_trend", "threshold_progression", "race_evolution", "best_efforts_progression"}))
         or (tab == "biomechanics" and (chart == "cardiac_drift" or (detail and not chart)))
     )
     all_runs = []
@@ -5413,7 +5617,7 @@ async def get_runner_dna():
     ):
         return {"dna": cached["dna_data"]}
 
-    runs = await db.runs.find(q, {"streams": 0, "polyline": 0, "splits": 0}).sort("date", 1).to_list(1000)
+    runs = await db.runs.find(q, {"streams": 0, "polyline": 0}).sort("date", 1).to_list(1000)
     runs = [_normalise_run_quality_fields(dict(run)) for run in runs]
     profile = await db.profile.find_one(q) or {}
     ff_docs = await db.fitness_freshness.find(q).sort("date", -1).to_list(30)
@@ -6617,7 +6821,12 @@ async def jarvis_chat(request: Request):
         db.profile.find_one(q),
         db.fitness_freshness.find_one(q, sort=[("date", -1)]),
         db.runs.find_one(q, sort=[("date", -1)]),
-        db.runs.find(q, {"date": 1, "distance_km": 1, "duration_minutes": 1, "avg_hr": 1, "avg_pace": 1})
+        db.runs.find(q, {
+            "date": 1, "name": 1, "run_type": 1, "notes": 1,
+            "distance_km": 1, "duration_minutes": 1, "avg_hr": 1, "avg_pace": 1,
+            "splits": 1, "temperature": 1, "apparent_temperature": 1,
+            "humidity": 1, "wind_speed": 1, "weather": 1,
+        })
             .sort("date", -1).to_list(100),
     )
 
