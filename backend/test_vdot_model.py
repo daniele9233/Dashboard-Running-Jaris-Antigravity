@@ -117,3 +117,31 @@ def test_recent_quality_session_anchors_current_vdot():
     assert current is not None
     assert recent_vdot is not None
     assert current == round(recent_vdot, 1)
+
+
+def test_vdot_chart_bucket_uses_current_model_not_monthly_average():
+    interval = _run(pace_s=281, avg_hr=158)
+    interval.update({
+        "date": "2026-04-28",
+        "run_type": "tempo",
+        "distance_km": 4.3,
+        "duration_minutes": 20.22,
+        "avg_pace": "4:41",
+        "splits": [
+            {"distance": 1000.4, "elapsed_time": 272, "pace": "4:31", "hr": 145.2},
+            {"distance": 1000.1, "elapsed_time": 298, "pace": "4:57", "hr": 157.3},
+            {"distance": 1000.8, "elapsed_time": 267, "pace": "4:26", "hr": 162.9},
+            {"distance": 998.7, "elapsed_time": 304, "pace": "5:03", "hr": 163.0},
+        ],
+    })
+    easy = _run(pace_s=330, avg_hr=145)
+    easy["date"] = "2026-04-20"
+
+    chart, _, _ = server._build_vdot_chart([easy, interval], 180, "month", "vo2_vdot_trend")
+    row = chart["series_card"][-1]
+    interval_vdot = round(server._vdot_from_run(interval, max_hr=180), 1)
+    easy_vdot = server._vdot_from_run(easy, max_hr=180)
+    old_monthly_average = round((interval_vdot + easy_vdot) / 2, 1)
+
+    assert row["vdot"] == interval_vdot
+    assert row["vdot"] > old_monthly_average

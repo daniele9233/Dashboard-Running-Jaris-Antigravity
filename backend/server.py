@@ -50,7 +50,7 @@ FISH_AUDIO_API_KEY = os.environ.get("FISH_AUDIO_API_KEY", "")
 GARMIN_EMAIL       = os.environ.get("GARMIN_EMAIL", "")
 GARMIN_PASSWORD    = os.environ.get("GARMIN_PASSWORD", "")
 APP_VERSION        = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT") or os.environ.get("COMMIT_SHA") or "local"
-ANALYTICS_SCHEMA_VERSION = "pro-v10-2026-05-02"
+ANALYTICS_SCHEMA_VERSION = "pro-v11-2026-05-02"
 RUNNER_DNA_SCHEMA_VERSION = "runner-dna-v5-2026-05-02"
 GARMIN_CSV_REPAIR_VERSION = "garmin-csv-repair-v2-2026-04-22"
 
@@ -3200,16 +3200,17 @@ def _vdot_from_run(r: dict, max_hr: int = 190, resting_hr: int = 50) -> Optional
     return max(candidates) if candidates else None
 
 def _calc_vdot(runs: list, max_hr: int = 190, weeks_window: int = 8,
-               resting_hr: int = 50) -> Optional[float]:
+               resting_hr: int = 50, as_of: Optional[dt.date] = None) -> Optional[float]:
     """Estimate current VDOT (backward compat wrapper)."""
-    h = _calc_vdot_with_history(runs, max_hr, weeks_window, resting_hr=resting_hr)
+    h = _calc_vdot_with_history(runs, max_hr, weeks_window, resting_hr=resting_hr, as_of=as_of)
     return h["current"]
 
 
 def _calc_vdot_with_history(runs: list, max_hr: int = 190,
                              weeks_window: int = 8,
                              goal_dist_km: float = 0,
-                             resting_hr: int = 50) -> dict:
+                             resting_hr: int = 50,
+                             as_of: Optional[dt.date] = None) -> dict:
     """Full athlete history analysis for training plan calibration.
 
     Returns:
@@ -3233,7 +3234,7 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
                 "peak_source": None, "training_months": 0, "weekly_volume": 0,
                 "race_specific_vdot": None}
 
-    today = _dt.date.today()
+    today = as_of or _dt.date.today()
     def _top_avg(values, n=3):
         sorted_vals = sorted(values, reverse=True)
         top = sorted_vals[:n]
@@ -3889,20 +3890,41 @@ def _build_vdot_chart(
         value = _vdot_from_run(r, max_hr, resting_hr)
         if not value:
             continue
-        capped = min(value, 65.0)
         date = r.get("date", "")
         detail_key = _bucket_key(date, resolution)
         month_key = _bucket_key(date, "month")
         if detail_key:
-            buckets.setdefault(detail_key, []).append(capped)
+            buckets.setdefault(detail_key, []).append(r)
         if month_key:
-            month_buckets.setdefault(month_key, []).append(capped)
-    detail = [
-        {"date": key, "vdot": round(_avg(vals) or 0, 1), "vo2max": round(_avg(vals) or 0, 1), "sample_size": len(vals), "quality": "hr_validated"}
-        for key, vals in sorted(buckets.items())
-    ]
-    card = [{"date": key, "vdot": round(_avg(vals) or 0, 1), "vo2max": round(_avg(vals) or 0, 1), "sample_size": len(vals)} for key, vals in sorted(month_buckets.items())]
-    current = detail[-1]["vdot"] if detail else None
+            month_buckets.setdefault(month_key, []).append(r)
+
+    def _bucket_as_of(group: list) -> Optional[dt.date]:
+        dates = [_run_date_obj(r) for r in group]
+        dates = [d for d in dates if d is not None]
+        return max(dates) if dates else None
+
+    def _bucket_point(key: str, group: list) -> Optional[dict]:
+        values = [min(_vdot_from_run(r, max_hr, resting_hr) or 0, 65.0) for r in group]
+        values = [v for v in values if v > 0]
+        if not values:
+            return None
+        vdot = _calc_vdot(group, max_hr, resting_hr=resting_hr, as_of=_bucket_as_of(group)) or _avg(values)
+        if not vdot:
+            return None
+        vdot = min(vdot, 65.0)
+        return {
+            "date": key,
+            "vdot": round(vdot, 1),
+            "vo2max": round(vdot, 1),
+            "sample_size": len(values),
+            "best_session_vdot": round(max(values), 1),
+            "avg_session_vdot": round(_avg(values) or 0, 1),
+            "quality": "vdot_model_v2",
+        }
+
+    detail = [p for p in (_bucket_point(key, group) for key, group in sorted(buckets.items())) if p]
+    card = [p for p in (_bucket_point(key, group) for key, group in sorted(month_buckets.items())) if p]
+    current = _calc_vdot(runs, max_hr, resting_hr=resting_hr)
     vdot_chart = None
     if want_vdot:
         vdot_chart = _chart("vo2_vdot_trend", "VO2 Max / VDOT Trend", "VDOT", {"current": current}, card, detail, {"current_vdot": current}, len(detail))

@@ -1261,9 +1261,7 @@ export function AnalyticsV2({
         if (r.is_treadmill) return false;
         const rd = new Date(r.date);
         const sameMonth = rd.getFullYear() === d.getFullYear() && rd.getMonth() === d.getMonth();
-        const paceMinKm = r.avg_pace ? parsePaceDecimal(r.avg_pace) : 99;
-        const hrPct = r.avg_hr_pct ?? (maxHr && r.avg_hr ? r.avg_hr / maxHr : 0);
-        return sameMonth && (r.distance_km ?? 0) >= 5 && (hrPct >= 0.80 || paceMinKm <= 5.75);
+        return sameMonth && (r.distance_km ?? 0) >= 3;
       });
       if (monthRuns.length === 0) return null;
       // Pick best qualifying run (highest estimated VDOT)
@@ -1311,8 +1309,7 @@ export function AnalyticsV2({
       if (run.is_treadmill) continue;
       const distanceKm = run.distance_km ?? 0;
       const paceMinKm = run.avg_pace ? parsePaceDecimal(run.avg_pace) : 99;
-      const hrPct = run.avg_hr_pct ?? (maxHr && run.avg_hr ? run.avg_hr / maxHr : 0);
-      if (distanceKm < 5 || (hrPct < 0.80 && paceMinKm > 5.75)) continue;
+      if (distanceKm < 3) continue;
       const durationMin = run.duration_minutes > 0 ? run.duration_minutes : paceMinKm * distanceKm;
       const estimate = estimateVdotV2(distanceKm, durationMin);
       const name = weekStartKey(run.date);
@@ -1839,11 +1836,11 @@ export function AnalyticsV2({
                tooltip={{
                  title: 'VO₂MAX / VDOT TREND',
                  lines: [
-                   'VDOT: indice Jack Daniels calcolato da distanza e durata delle corse qualificanti.',
-                   'Qualificanti: ≥ 5km, non treadmill, HRpct ≥ 80% oppure ritmo ≤ 5:45/km.',
-                   'Ogni mese: miglior stima VDOT tra le corse qualificanti.',
-                   'Forward-fill: i mesi senza dati mantengono l\'ultimo valore valido.',
-                   'Ultimo mese forzato al valore VDOT calcolato dal profilo atleta.',
+                   'VDOT: modello backend Jack Daniels con correzione sforzo, meteo e decadimento temporale.',
+                   'Qualificanti: corse outdoor da 3km a 21km, non treadmill.',
+                   'Le ripetute sono riconosciute dagli split anche se Strava le etichetta come tempo o run.',
+                   'Ogni punto usa il modello VDOT corrente del periodo, non una media semplice delle corse.',
+                   'Il valore recente migliore ancora il trend quando rappresenta la forma attuale.',
                  ],
                }}
              />
