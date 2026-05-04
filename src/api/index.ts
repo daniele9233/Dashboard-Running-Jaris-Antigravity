@@ -72,6 +72,22 @@ export const generateTrainingPlan = (data: {
     } | null;
     training_months?: number;
     weekly_volume?: number;
+    history_context?: {
+      days_since_last_run: number;
+      longest_stop_days_6m: number;
+      weekly_volume_4w: number;
+      weekly_volume_8w: number;
+      recent_peak_weekly_km: number;
+      quality_sessions_8w: number;
+      interval_sessions_8w: number;
+      tempo_sessions_8w: number;
+      long_runs_8w: number;
+      easy_ratio_8w: number;
+      aerobic_base_score: number;
+      readiness_score: number;
+      training_status: string;
+      load: { ctl: number; atl: number; tsb: number };
+    };
     test_vdot?: number | null;
     plan_mode?: 'conservative' | 'balanced' | 'aggressive' | null;
     strategy_options?: Array<{
@@ -177,9 +193,48 @@ export const getSupercompensation = () => api.get<SupercompensationResponse>('/a
 export const getBadges = () => api.get<BadgesResponse>('/api/badges');
 
 // ─── STRAVA ──────────────────────────────────────────────────────────────────
+export interface StravaConnection {
+  athlete_id: number | null;
+  name: string | null;
+  profile_pic: string | null;
+  active: boolean;
+}
+
+export interface StravaStatus {
+  connected: boolean;
+  athlete_id: number | null;
+  name: string | null;
+  connections: StravaConnection[];
+}
+
+export interface StravaDisconnectResponse {
+  ok: boolean;
+  revoked: boolean;
+  connected: boolean;
+  athlete_id?: number | null;
+  active_athlete_id?: number | null;
+  connections?: StravaConnection[];
+  revoke_error?: string | null;
+}
+
+export interface StravaConnectionsResponse {
+  active_athlete_id: number | null;
+  connections: StravaConnection[];
+}
+
 export const getStravaAuthUrl = () => api.get<{ url: string; redirect_uri: string }>('/api/strava/auth-url');
 
+export const getStravaStatus = () => api.get<StravaStatus>('/api/strava/status');
+
+export const getStravaConnections = () => api.get<StravaConnectionsResponse>('/api/strava/connections');
+
+export const setActiveStravaAthlete = (athleteId: number) =>
+  api.patch<StravaConnectionsResponse>('/api/strava/active-athlete', { athlete_id: athleteId });
+
 export const syncStrava = () => api.post('/api/strava/sync');
+
+export const disconnectStrava = (athleteId?: number | null) =>
+  api.delete<StravaDisconnectResponse>(`/api/strava/connection${athleteId ? `?athlete_id=${athleteId}` : ''}`);
 
 export const exchangeStravaCode = (code: string) =>
   api.post('/api/strava/exchange-code', { code });

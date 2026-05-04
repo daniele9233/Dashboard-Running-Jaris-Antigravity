@@ -131,9 +131,16 @@ def oids(docs):
     return [oid(d) for d in docs]
 
 
+async def _get_active_strava_token() -> Optional[dict]:
+    tok = await db.strava_tokens.find_one({"active": True}, sort=[("_id", -1)])
+    if tok:
+        return tok
+    return await db.strava_tokens.find_one(sort=[("_id", -1)])
+
+
 async def _get_athlete_id() -> Optional[int]:
-    """Get the current athlete_id from the latest Strava token."""
-    tok = await db.strava_tokens.find_one(sort=[("_id", -1)])
+    """Get the current athlete_id from the active Strava token."""
+    tok = await _get_active_strava_token()
     return tok.get("athlete_id") if tok else None
 
 
@@ -503,6 +510,72 @@ async def strava_auth_url():
     return {"url": url, "redirect_uri": STRAVA_REDIRECT_URI}
 
 
+@app.get("/api/strava/status")
+async def strava_status():
+    tokens = await _get_active_strava_token()
+    if not tokens:
+        return {"connected": False, "athlete_id": None, "name": None, "connections": []}
+
+    athlete_id = tokens.get("athlete_id")
+    profile = await db.profile.find_one({"athlete_id": athlete_id}) if athlete_id else None
+    connections = await _strava_connections_payload()
+    return {
+        "connected": True,
+        "athlete_id": athlete_id,
+        "name": profile.get("name") if profile else None,
+        "connections": connections,
+    }
+
+
+async def _strava_connections_payload() -> list[dict]:
+    active_token = await _get_active_strava_token()
+    active_athlete_id = active_token.get("athlete_id") if active_token else None
+    tokens = await db.strava_tokens.find({}).sort([("active", -1), ("_id", -1)]).to_list(100)
+    connections = []
+    for token in tokens:
+        athlete_id = token.get("athlete_id")
+        profile = await db.profile.find_one({"athlete_id": athlete_id}) if athlete_id else None
+        connections.append({
+            "athlete_id": athlete_id,
+            "name": profile.get("name") if profile else None,
+            "profile_pic": profile.get("profile_pic") or profile.get("strava_profile_pic") if profile else None,
+            "active": bool(token.get("active")) or athlete_id == active_athlete_id,
+        })
+    return connections
+
+
+@app.get("/api/strava/connections")
+async def strava_connections():
+    active = await _get_active_strava_token()
+    return {
+        "active_athlete_id": active.get("athlete_id") if active else None,
+        "connections": await _strava_connections_payload(),
+    }
+
+
+@app.patch("/api/strava/active-athlete")
+async def strava_set_active_athlete(request: Request):
+    body = await request.json()
+    athlete_id = body.get("athlete_id")
+    try:
+        athlete_id = int(athlete_id)
+    except (TypeError, ValueError):
+        return JSONResponse({"error": "invalid_athlete_id"}, status_code=400)
+
+    existing = await db.strava_tokens.find_one({"athlete_id": athlete_id})
+    if not existing:
+        return JSONResponse({"error": "not_found"}, status_code=404)
+
+    await db.strava_tokens.update_many({}, {"$set": {"active": False}})
+    await db.strava_tokens.update_one({"athlete_id": athlete_id}, {"$set": {"active": True}})
+    await publish_event({"type": "active_athlete_changed", "source": "strava", "athlete_id": athlete_id})
+    return {
+        "ok": True,
+        "active_athlete_id": athlete_id,
+        "connections": await _strava_connections_payload(),
+    }
+
+
 @app.get("/api/strava/callback")
 async def strava_callback(code: str = Query(None), error: str = Query(None)):
     """
@@ -539,7 +612,10 @@ async def strava_exchange_code(request: Request):
         "refresh_token": data.get("refresh_token"),
         "expires_at": data.get("expires_at"),
         "athlete_id": data.get("athlete", {}).get("id"),
+        "active": True,
     }
+
+    await db.strava_tokens.update_many({}, {"$set": {"active": False}})
 
     # Upsert tokens in DB
     await db.strava_tokens.update_one(
@@ -580,6 +656,60 @@ async def strava_exchange_code(request: Request):
     return {"ok": True, "athlete_id": athlete_id}
 
 
+@app.delete("/api/strava/connection")
+async def strava_disconnect(athlete_id: Optional[int] = Query(None)):
+    tokens = await db.strava_tokens.find_one({"athlete_id": athlete_id}) if athlete_id else await _get_active_strava_token()
+    if not tokens:
+        connections = await _strava_connections_payload()
+        active = await _get_active_strava_token()
+        return {
+            "ok": True,
+            "revoked": False,
+            "connected": bool(active),
+            "connections": connections,
+            "active_athlete_id": active.get("athlete_id") if active else None,
+        }
+
+    athlete_id = tokens.get("athlete_id")
+    was_active = bool(tokens.get("active"))
+    revoke_ok = False
+    revoke_error = None
+
+    try:
+        tokens = await _refresh_token_if_needed(tokens)
+        access_token = tokens.get("access_token")
+        if access_token:
+            async with httpx.AsyncClient(timeout=15.0) as http:
+                resp = await http.post(
+                    "https://www.strava.com/oauth/deauthorize",
+                    params={"access_token": access_token},
+                )
+            revoke_ok = 200 <= resp.status_code < 300
+            if not revoke_ok:
+                revoke_error = resp.text
+    except Exception as e:
+        revoke_error = str(e)
+
+    delete_q = {"athlete_id": athlete_id} if athlete_id else {"_id": tokens["_id"]}
+    await db.strava_tokens.delete_many(delete_q)
+    if was_active:
+        next_token = await db.strava_tokens.find_one(sort=[("_id", -1)])
+        if next_token:
+            await db.strava_tokens.update_one({"_id": next_token["_id"]}, {"$set": {"active": True}})
+
+    active = await _get_active_strava_token()
+
+    return {
+        "ok": True,
+        "revoked": revoke_ok,
+        "connected": bool(active),
+        "athlete_id": athlete_id,
+        "active_athlete_id": active.get("athlete_id") if active else None,
+        "connections": await _strava_connections_payload(),
+        "revoke_error": revoke_error,
+    }
+
+
 async def _refresh_token_if_needed(tokens: dict) -> dict:
     """Refresh the Strava access token if expired."""
     import time
@@ -604,7 +734,7 @@ async def _refresh_token_if_needed(tokens: dict) -> dict:
 
     await db.strava_tokens.update_one(
         {"athlete_id": tokens["athlete_id"]},
-        {"$set": tokens},
+        {"$set": {k: v for k, v in tokens.items() if k != "_id"}},
     )
     return tokens
 
@@ -719,7 +849,7 @@ def _format_pace(speed_ms: float) -> str:
 @app.post("/api/strava/sync")
 async def strava_sync():
     """Fetch ALL activities from Strava (paginated) and upsert into DB."""
-    tokens = await db.strava_tokens.find_one(sort=[("_id", -1)])
+    tokens = await _get_active_strava_token()
     if not tokens:
         await publish_event({"type": "sync_error", "source": "strava", "error": "not_connected"})
         return JSONResponse({"error": "not_connected"}, status_code=400)
@@ -1240,12 +1370,20 @@ def _clamp_int(value: float, lo: int = 5, hi: int = 95) -> int:
     return int(max(lo, min(hi, round(value))))
 
 
-def _build_strategy_options(current_vdot: float, target_vdot: float, weeks: int, feasibility: dict) -> list:
+def _build_strategy_options(current_vdot: float, target_vdot: float, weeks: int, feasibility: dict,
+                            history_context: Optional[dict] = None) -> list:
     gap = max(0.0, target_vdot - current_vdot)
     mesocycles = max(weeks / 3.5, 0.1)
     conservative_rate = float(feasibility.get("conservative_rate") or 0.5)
     optimistic_rate = float(feasibility.get("optimistic_rate") or 0.8)
     balanced_rate = (conservative_rate + optimistic_rate) / 2.0
+    history_context = history_context or {}
+    readiness = float(history_context.get("readiness_score", 65) or 65)
+    stop_days = int(history_context.get("days_since_last_run", 0) or 0)
+    quality_count = int(history_context.get("quality_sessions_8w", 0) or 0)
+    readiness_adjustment = (readiness - 65) / 5.0
+    stop_penalty = max(0.0, min(18.0, (stop_days - 10) * 0.45)) if stop_days > 10 else 0.0
+    quality_bonus = min(5.0, quality_count * 0.8)
     rate_map = {
         "conservative_rate": conservative_rate,
         "balanced_rate": balanced_rate,
@@ -1282,12 +1420,15 @@ def _build_strategy_options(current_vdot: float, target_vdot: float, weeks: int,
             if weeks < 12:
                 success_pct -= (12 - weeks) * scoring["short_penalty"]
 
+            success_pct += readiness_adjustment + quality_bonus - stop_penalty
+
         overreach = max(0.0, gap - capacity)
         completion_pct = cfg["completion_base"] - overreach * 6
         if key == "aggressive":
             completion_pct -= max(0.0, gap - conservative_rate * mesocycles) * 3
         elif key == "conservative":
             completion_pct += 4
+        completion_pct += readiness_adjustment - (stop_penalty * 0.7)
 
         options.append({
             "mode": key,
@@ -1399,7 +1540,7 @@ def _tp_quality_session(phase: str, goal: str, dist_km: float,
                 f"2 km warm-up · 20 min continui @ {tp}/km (soglia ~88% VO₂max) · "
                 f"2 km defaticamento. VDOT settimana: {week_vdot}.", tp)
 
-    if phase == "Intensità":
+    if phase.startswith("Intensit"):
         if goal == "5K":
             return ("intervals", "VO₂max 400 m",
                     f"2 km warm-up · 12×400 m @ {ip}/km (95–100% VO₂max) con 90 s jog recupero · "
@@ -1471,7 +1612,7 @@ def _tp_secondary_quality_session(phase: str, goal: str, dist_km: float,
                 f"2 km warm-up @ {ep}/km · 3×6 min @ {tp}/km (soglia) con 2 min recupero jog · "
                 f"2 km defaticamento. Totale 20 min di lavoro di soglia. VDOT: {week_vdot}.", tp)
 
-    if phase == "Intensità":
+    if phase.startswith("Intensit"):
         # Short VO2max intervals — quick, sharp, not exhausting
         return ("intervals", "Ripetute Brevi VO₂max",
                 f"2 km warm-up @ {ep}/km · 8×400 m @ {ip}/km con 60 s jog recupero · "
@@ -1624,7 +1765,7 @@ def _tp_strength_exercises(phase: str, day_type: str, week_in_phase: int = 0) ->
             # Conversione: heavy strength + plyometrics moderate
             return prehab[:2] + strength_heavy + plyo_moderate + core
 
-        elif phase == "Intensità":
+        elif phase.startswith("Intensit"):
             # Peak SSC + mantenimento forza: volume forza ridotto, qualità plyo alta
             return prehab[:1] + strength_maintenance + plyo_high + core
 
@@ -1644,7 +1785,7 @@ def _tp_strength_exercises(phase: str, day_type: str, week_in_phase: int = 0) ->
                 {"name": "Calf Raise Monopodalico", "sets": 2, "reps": "12/lato",
                  "note": "A corpo libero post-corsa. Rinforzo Achille di mantenimento."},
             ] + prehab[:2] + core_light
-        elif phase == "Intensità":
+        elif phase.startswith("Intensit"):
             return prehab[:2] + [
                 {"name": "Pogo Jumps", "sets": 2, "reps": "12 rip",
                  "note": "Priming SSC leggero. Non superare la fatica della seduta di qualità."},
@@ -1772,41 +1913,95 @@ def _tp_build_sessions(week_start, week_km: float, phase: str, goal: str,
     return sessions
 
 
+def _tp_has_quality_history(history_context: Optional[dict]) -> bool:
+    history_context = history_context or {}
+    return (
+        int(history_context.get("quality_sessions_8w", 0) or 0) >= 2
+        or int(history_context.get("interval_sessions_8w", 0) or 0) >= 1
+        or int(history_context.get("tempo_sessions_8w", 0) or 0) >= 2
+    )
+
+
+def _tp_history_phase_alloc(weeks_total: int, history_context: Optional[dict]) -> list[tuple[str, float]]:
+    history_context = history_context or {}
+    stop_days = int(history_context.get("days_since_last_run", 0) or 0)
+    readiness = float(history_context.get("readiness_score", 65) or 65)
+    aerobic_score = float(history_context.get("aerobic_base_score", 50) or 50)
+    has_quality = _tp_has_quality_history(history_context)
+
+    if stop_days >= 21 or readiness < 45:
+        return [
+            ("Base Aerobica", 0.38), ("Sviluppo", 0.20), ("Intensità", 0.16),
+            ("Specifico", 0.10), ("Taper", 0.10), ("Gara", 0.06),
+        ]
+
+    if has_quality and aerobic_score >= 60 and readiness >= 60:
+        if weeks_total <= 10:
+            return [
+                ("Base Aerobica", 0.10), ("Sviluppo", 0.15), ("Intensità", 0.45),
+                ("Specifico", 0.15), ("Taper", 0.10), ("Gara", 0.05),
+            ]
+        return [
+            ("Base Aerobica", 0.14), ("Sviluppo", 0.22), ("Intensità", 0.28),
+            ("Specifico", 0.18), ("Taper", 0.12), ("Gara", 0.06),
+        ]
+
+    if aerobic_score >= 60:
+        return [
+            ("Base Aerobica", 0.20), ("Sviluppo", 0.22), ("Intensità", 0.24),
+            ("Specifico", 0.16), ("Taper", 0.12), ("Gara", 0.06),
+        ]
+
+    return [
+        ("Base Aerobica", 0.30), ("Sviluppo", 0.22), ("Intensità", 0.20),
+        ("Specifico", 0.12), ("Taper", 0.10), ("Gara", 0.06),
+    ]
+
+
+def _calibrate_plan_volume(goal_race: str, profile_max_weekly_km: float,
+                           history_context: Optional[dict]) -> tuple[float, float]:
+    history_context = history_context or {}
+    recent_volume = float(history_context.get("weekly_volume_8w", 0) or history_context.get("weekly_volume", 0) or 0)
+    recent_peak = float(history_context.get("recent_peak_weekly_km", 0) or 0)
+    stop_days = int(history_context.get("days_since_last_run", 0) or 0)
+    readiness = float(history_context.get("readiness_score", 65) or 65)
+    defaults_floor = {"5K": 14.0, "10K": 18.0, "Half Marathon": 22.0, "Marathon": 28.0}
+
+    if recent_volume <= 0:
+        recent_volume = min(profile_max_weekly_km * 0.45, defaults_floor.get(goal_race, 18.0))
+
+    if stop_days >= 28:
+        start_km = max(8.0, min(recent_volume * 0.70, 16.0))
+        cap = max(start_km * 1.45, min(profile_max_weekly_km * 0.65, max(recent_peak * 0.85, start_km)))
+    elif stop_days >= 14 or readiness < 45:
+        start_km = max(10.0, recent_volume * 0.80)
+        cap = max(start_km * 1.55, min(profile_max_weekly_km * 0.75, max(recent_peak, recent_volume * 1.25)))
+    elif recent_peak > 0:
+        start_km = max(10.0, recent_volume * 0.90)
+        cap = min(profile_max_weekly_km, max(recent_peak * 1.08, recent_volume * 1.25, defaults_floor.get(goal_race, 18.0)))
+    else:
+        start_km = max(10.0, recent_volume * 0.90)
+        cap = min(profile_max_weekly_km, max(recent_volume * 1.35, defaults_floor.get(goal_race, 18.0)))
+
+    cap = max(10.0, min(profile_max_weekly_km, cap))
+    start_km = max(6.0, min(start_km, cap))
+    return round(cap, 1), round(start_km, 1)
+
+
 def _generate_plan_weeks(goal_race: str, weeks_total: int, max_weekly_km: float,
                           current_vdot: float, target_vdot: float,
                           athlete_id, target_time_str: str,
                           start_date_str: str = None,
-                          plan_mode: str = "balanced") -> list:
+                          plan_mode: str = "balanced",
+                          history_context: Optional[dict] = None,
+                          start_weekly_km: Optional[float] = None) -> list:
     """Generate goal-driven periodized plan with weekly VDOT progression."""
     from datetime import date, timedelta
 
     weeks_total = max(8, min(int(weeks_total), 32))
 
     # ── Periodization: phase allocation (Daniels 4-phase model adapted) ──────
-    if weeks_total <= 10:
-        # For short plans (≤10 weeks), maximize quality sessions.
-        # Every week should have at least 1 quality session except taper/race.
-        # Base: 1-2 weeks (build aerobic foundation quickly)
-        # Sviluppo: 1 week (threshold work)
-        # Intensità: 3-4 weeks (VO2max intervals — most important for 5K)
-        # Specifico: 1 week (race pace practice)
-        # Taper: 1 week
-        # Gara: 1 week
-        raw_phases = [
-            ("Base Aerobica", 0.15), ("Sviluppo", 0.10), ("Intensità", 0.45),
-            ("Specifico", 0.15), ("Taper", 0.10), ("Gara", 0.05),
-        ]
-    elif weeks_total <= 16:
-        raw_phases = [
-            ("Base Aerobica", 0.25), ("Sviluppo", 0.20), ("Intensità", 0.25),
-            ("Specifico", 0.10), ("Taper", 0.12), ("Gara", 0.08),
-        ]
-    else:
-        raw_phases = [
-            ("Base Aerobica", 0.22), ("Sviluppo", 0.18), ("Intensità", 0.22),
-            ("Specifico", 0.18), ("Taper", 0.12), ("Gara", 0.08),
-        ]
-
+    raw_phases = _tp_history_phase_alloc(weeks_total, history_context)
     phase_alloc = []
     remaining = weeks_total
     for i, (name, frac) in enumerate(raw_phases):
@@ -1827,7 +2022,8 @@ def _generate_plan_weeks(goal_race: str, weeks_total: int, max_weekly_km: float,
     build_factor = 1.05 if plan_mode == "conservative" else 1.10 if plan_mode == "aggressive" else 1.08
     recovery_every = 3 if plan_mode == "conservative" else 5 if plan_mode == "aggressive" else 4
     recovery_drop = 0.58 if plan_mode == "conservative" else 0.72 if plan_mode == "aggressive" else 0.65
-    start_km = max(12.0, max_weekly_km * start_factor)
+    start_km = start_weekly_km if start_weekly_km is not None else max(12.0, max_weekly_km * start_factor)
+    start_km = max(6.0, min(float(start_km), max_weekly_km))
     current_km = start_km
 
     # Use caller-provided start date if valid, otherwise next Monday
@@ -1973,13 +2169,18 @@ async def generate_training_plan(request: Request):
         "temp_min_c": 1,
         "temp_max_c": 1,
     }
-    all_runs = await db.runs.find(q_gps, vdot_projection).sort("date", -1).to_list(None)
+    all_runs, ff_latest = await asyncio.gather(
+        db.runs.find(q_gps, vdot_projection).sort("date", -1).to_list(None),
+        db.fitness_freshness.find_one(q, sort=[("date", -1)]),
+    )
     dist_km = RACE_DISTANCES.get(goal_race, 5.0)
     history = _calc_vdot_with_history(all_runs, max_hr, weeks_window=8, goal_dist_km=dist_km, resting_hr=resting_hr)
+    history_context = _build_training_history_context(all_runs, history, ff_latest, max_hr=max_hr)
     # current_vdot is ALWAYS the same regardless of goal distance —
     # it's derived from best recent runs (all qualifying distances).
     # race_specific_vdot was causing different VDOT per distance → removed.
     current_vdot = history["current"] or 30.0
+    current_vdot = _apply_stop_adjustment_to_vdot(current_vdot, history_context)
     peak_vdot = history["peak"] or current_vdot
 
     # ── Optional test calibration ────────────────────────────────────────────
@@ -2029,7 +2230,9 @@ async def generate_training_plan(request: Request):
         feasibility["suggested_weeks"] = weeks_needed
         feasibility["suggested_months"] = months_needed
 
-    strategy_options = _build_strategy_options(current_vdot, original_target_vdot, weeks_to_race, feasibility)
+    strategy_options = _build_strategy_options(
+        current_vdot, original_target_vdot, weeks_to_race, feasibility, history_context
+    )
 
     if feasibility.get("suggested_weeks"):
         w = feasibility["suggested_weeks"]
@@ -2048,6 +2251,7 @@ async def generate_training_plan(request: Request):
             "peak_source": history.get("peak_source"),
             "training_months": history["training_months"],
             "weekly_volume": history["weekly_volume"],
+            "history_context": history_context,
             "test_vdot": test_vdot,
             "plan_mode": None,
             "strategy_options": strategy_options,
@@ -2059,11 +2263,14 @@ async def generate_training_plan(request: Request):
         }
 
     # ── Generate the plan ────────────────────────────────────────────────────
+    max_weekly_km, start_weekly_km = _calibrate_plan_volume(goal_race, max_weekly_km, history_context)
     weeks = _generate_plan_weeks(
         goal_race, suggested_weeks, max_weekly_km,
         current_vdot, effective_target_vdot, athlete_id, target_time_str,
         start_date_str=start_date_str,
         plan_mode=plan_mode,
+        history_context=history_context,
+        start_weekly_km=start_weekly_km,
     )
 
     await db.training_plan.delete_many(q)
@@ -2077,6 +2284,9 @@ async def generate_training_plan(request: Request):
         "plan_current_vdot": current_vdot,
         "plan_weeks": suggested_weeks,
         "plan_mode": plan_mode,
+        "plan_history_context": history_context,
+        "plan_start_weekly_km": start_weekly_km,
+        "plan_peak_weekly_km": max_weekly_km,
         "plan_generated_at": dt.datetime.now().isoformat(),
         "plan_last_auto_adapt": None,
         "plan_last_auto_adapt_run_key": None,
@@ -2104,6 +2314,7 @@ async def generate_training_plan(request: Request):
         "peak_source": history.get("peak_source"),
         "training_months": history["training_months"],
         "weekly_volume": history["weekly_volume"],
+        "history_context": history_context,
         "test_vdot": test_vdot,
         "plan_mode": plan_mode,
         "strategy_options": strategy_options,
@@ -3266,6 +3477,8 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
         ]
         return max(recent_values) if recent_values else None
 
+    cutoff_16w = (today - _dt.timedelta(weeks=16)).isoformat()
+
     # ── Race-specific VDOT: only runs >= 70% of goal distance ────────────────
     race_specific_vdot = None
     if goal_dist_km > 0:
@@ -3331,6 +3544,148 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
         "weekly_volume": weekly_volume,
         "race_specific_vdot": race_specific_vdot,
     }
+
+
+def _build_training_history_context(runs: list, history: dict, ff_latest: Optional[dict] = None,
+                                    as_of: Optional[dt.date] = None,
+                                    max_hr: int = 190) -> dict:
+    """Summarize past training into knobs the plan generator can actually use."""
+    today = as_of or dt.date.today()
+    dated_runs = [(r, _run_date_obj(r)) for r in runs if _run_date_obj(r)]
+    dated_runs.sort(key=lambda item: item[1])
+
+    if not dated_runs:
+        return {
+            "days_since_last_run": 999,
+            "longest_stop_days_6m": 999,
+            "weekly_volume_4w": 0.0,
+            "weekly_volume_8w": 0.0,
+            "recent_peak_weekly_km": 0.0,
+            "quality_sessions_8w": 0,
+            "interval_sessions_8w": 0,
+            "tempo_sessions_8w": 0,
+            "long_runs_8w": 0,
+            "easy_ratio_8w": 0.0,
+            "aerobic_base_score": 0,
+            "readiness_score": 15,
+            "training_status": "no_recent_data",
+            "load": {"ctl": 0.0, "atl": 0.0, "tsb": 0.0},
+        }
+
+    def _km_in_window(days: int) -> float:
+        cutoff = today - dt.timedelta(days=days)
+        return sum(float(r.get("distance_km") or 0) for r, d in dated_runs if d >= cutoff)
+
+    def _week_key(day: dt.date) -> str:
+        monday = day - dt.timedelta(days=day.weekday())
+        return monday.isoformat()
+
+    last_run_date = dated_runs[-1][1]
+    days_since_last_run = max(0, (today - last_run_date).days)
+
+    six_months_ago = today - dt.timedelta(days=183)
+    recent_dates = [d for _, d in dated_runs if d >= six_months_ago]
+    longest_gap = 0
+    prev = six_months_ago
+    for d in recent_dates:
+        longest_gap = max(longest_gap, (d - prev).days - 1)
+        prev = d
+    longest_gap = max(longest_gap, (today - prev).days)
+
+    cutoff_8w = today - dt.timedelta(weeks=8)
+    recent_runs = [(r, d) for r, d in dated_runs if d >= cutoff_8w]
+    weekly_volume_4w = round(_km_in_window(28) / 4, 1)
+    weekly_volume_8w = round(_km_in_window(56) / 8, 1)
+
+    weekly_totals: dict[str, float] = {}
+    for r, d in recent_runs:
+        key = _week_key(d)
+        weekly_totals[key] = weekly_totals.get(key, 0.0) + float(r.get("distance_km") or 0)
+    recent_peak_weekly_km = round(max(weekly_totals.values(), default=0.0), 1)
+
+    quality_sessions = 0
+    interval_sessions = 0
+    tempo_sessions = 0
+    long_runs = 0
+    easy_like = 0
+    for r, _ in recent_runs:
+        text = " ".join(str(r.get(k) or "").lower() for k in ("run_type", "name", "notes"))
+        dist = float(r.get("distance_km") or 0)
+        avg_hr = _coerce_float(r.get("avg_hr"))
+        max_hr_hint = _coerce_float(r.get("max_hr")) or float(max_hr or 190)
+        hr_pct = avg_hr / max_hr_hint if avg_hr and max_hr_hint > 0 else 0.0
+        is_interval = _is_interval_session(r) or any(k in text for k in ("interval", "ripet", "vo2", "fartlek", "400", "800", "1000"))
+        is_tempo = any(k in text for k in ("tempo", "threshold", "soglia", "medio", "progress")) or hr_pct >= 0.82
+        if is_interval:
+            interval_sessions += 1
+            quality_sessions += 1
+        elif is_tempo:
+            tempo_sessions += 1
+            quality_sessions += 1
+        elif dist >= 14:
+            long_runs += 1
+        if dist >= 3 and (avg_hr is None or hr_pct <= 0.78) and not is_interval:
+            easy_like += 1
+
+    run_count = len(recent_runs)
+    easy_ratio = round(easy_like / run_count, 2) if run_count else 0.0
+    consistency = min(35.0, run_count / 24.0 * 35.0)
+    volume_score = min(35.0, weekly_volume_8w / 45.0 * 35.0)
+    easy_score = min(20.0, easy_ratio / 0.75 * 20.0)
+    long_score = min(10.0, long_runs / 4.0 * 10.0)
+    aerobic_base_score = round(consistency + volume_score + easy_score + long_score)
+
+    ctl = float((ff_latest or {}).get("ctl", 0) or 0)
+    atl = float((ff_latest or {}).get("atl", 0) or 0)
+    tsb = float((ff_latest or {}).get("tsb", 0) or 0)
+    stop_penalty = min(45.0, max(0, days_since_last_run - 7) * 1.4)
+    fatigue_penalty = 18.0 if tsb < -15 else 10.0 if tsb < -10 else 0.0
+    load_bonus = min(12.0, ctl / 6.0)
+    readiness_score = round(max(5.0, min(95.0, aerobic_base_score + load_bonus - stop_penalty - fatigue_penalty)))
+
+    if days_since_last_run >= 21:
+        training_status = "return_from_stop"
+    elif quality_sessions >= 2 and aerobic_base_score >= 60:
+        training_status = "trained_with_quality"
+    elif aerobic_base_score >= 60:
+        training_status = "aerobic_base_built"
+    elif weekly_volume_8w >= 15:
+        training_status = "building_base"
+    else:
+        training_status = "low_recent_load"
+
+    return {
+        "days_since_last_run": days_since_last_run,
+        "longest_stop_days_6m": longest_gap,
+        "weekly_volume_4w": weekly_volume_4w,
+        "weekly_volume_8w": weekly_volume_8w,
+        "weekly_volume": history.get("weekly_volume", weekly_volume_8w),
+        "recent_peak_weekly_km": recent_peak_weekly_km,
+        "quality_sessions_8w": quality_sessions,
+        "interval_sessions_8w": interval_sessions,
+        "tempo_sessions_8w": tempo_sessions,
+        "long_runs_8w": long_runs,
+        "easy_ratio_8w": easy_ratio,
+        "aerobic_base_score": aerobic_base_score,
+        "readiness_score": readiness_score,
+        "training_status": training_status,
+        "load": {"ctl": round(ctl, 1), "atl": round(atl, 1), "tsb": round(tsb, 1)},
+    }
+
+
+def _apply_stop_adjustment_to_vdot(current_vdot: float, history_context: dict) -> float:
+    stop_days = int(history_context.get("days_since_last_run", 0) or 0)
+    if stop_days < 14:
+        return current_vdot
+    if stop_days < 28:
+        penalty = 0.4
+    elif stop_days < 56:
+        penalty = 1.0
+    elif stop_days < 84:
+        penalty = 1.8
+    else:
+        penalty = 2.6
+    return round(max(25.0, current_vdot - penalty), 1)
 
 
 def _vdot_to_race_time(vdot: float, dist_km: float) -> Optional[str]:
@@ -6282,7 +6637,7 @@ async def backfill_dynamics(limit: int = 20):
     
     Limited to 20 runs per call to avoid Strava rate limits.
     """
-    tokens = await db.strava_tokens.find_one(sort=[("_id", -1)])
+    tokens = await _get_active_strava_token()
     if not tokens:
         return JSONResponse({"error": "not_connected"}, status_code=400)
     

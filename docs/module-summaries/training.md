@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Training renders the calendar and manages plan generation, adaptation and session completion. Backend logic uses VDOT, target race, plan mode, weeks, start date and fitness signals.
+Training renders the calendar and manages plan generation, adaptation and session completion. Backend logic uses VDOT, target race, plan mode, weeks, start date, fitness signals and `history_context` from real training history.
 
 ## Main Files
 
@@ -24,6 +24,7 @@ Training renders the calendar and manages plan generation, adaptation and sessio
 
 - Plan generation modal.
 - Strategy cards.
+- History context summary in the generation result.
 - VDOT calibration test.
 - Year/month/week calendar rendering.
 - Session completion/adaptation logic.
@@ -32,5 +33,7 @@ Training renders the calendar and manages plan generation, adaptation and sessio
 ## Watch Outs
 
 - Keep strategy probability consistent between preview and generated plan.
+- Keep `history_context` aligned across backend response types and `TrainingGrid` UI.
+- Stop history should soften VDOT and bias phases toward Base Aerobica; quality history can reduce base duration.
 - Auto-adaptation must respond to future Strava syncs.
 - Do not mark sessions complete without clear matching logic.

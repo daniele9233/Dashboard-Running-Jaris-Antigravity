@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import Map, { Source, Layer } from "react-map-gl/maplibre";
@@ -6,7 +6,19 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { Award, Clock, Activity, Zap, Calendar, Edit3, Share2, RefreshCw, Link2, X, Check, Heart, ChevronRight, Upload, Camera, Bot } from "lucide-react";
 import { useApi, invalidateCache } from "../hooks/useApi";
 import { API_CACHE } from "../hooks/apiCacheKeys";
-import { getProfile, updateProfile, getStravaAuthUrl, syncStrava, getBestEfforts, getHeatmap, getRuns } from "../api";
+import {
+  disconnectStrava,
+  getBestEfforts,
+  getHeatmap,
+  getProfile,
+  getRuns,
+  getStravaAuthUrl,
+  getStravaStatus,
+  setActiveStravaAthlete,
+  syncStrava,
+  updateProfile,
+  type StravaStatus,
+} from "../api";
 import { useJarvisContext } from "../context/JarvisContext";
 import type { Profile, BestEffort, Run } from "../types/api";
 
@@ -81,6 +93,144 @@ function heatmapColor(km: number) {
   if (km < 10) return "bg-[#047857]";
   if (km < 20) return "bg-[#10B981]";
   return "bg-[#34D399]";
+}
+
+const PERSONAL_RECORDS_STORAGE_KEY = "metic:profile:personal-records:v1";
+
+type PersonalRecordSnapshot = Record<string, { time: string; pace: string; date: string; run_id?: string }>;
+type PersonalRecordCelebration = {
+  effort: BestEffort;
+  deltaSeconds: number | null;
+  isNewDistance: boolean;
+};
+
+function parseRecordTimeSeconds(value: string): number | null {
+  const parts = value.split(":").map(part => Number(part));
+  if (parts.some(part => !Number.isFinite(part))) return null;
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  return null;
+}
+
+function formatRecordDelta(seconds: number | null) {
+  if (seconds === null || seconds <= 0) return "Prima volta su questa distanza";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m <= 0) return `${s}s piu veloce`;
+  return `${m}:${String(s).padStart(2, "0")} piu veloce`;
+}
+
+function snapshotPersonalRecords(efforts: BestEffort[]): PersonalRecordSnapshot {
+  return Object.fromEntries(
+    efforts.map((effort) => [
+      effort.distance,
+      { time: effort.time, pace: effort.pace, date: effort.date, run_id: effort.run_id },
+    ]),
+  );
+}
+
+function readPersonalRecordsSnapshot(): PersonalRecordSnapshot | null {
+  try {
+    const raw = window.localStorage.getItem(PERSONAL_RECORDS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PersonalRecordSnapshot;
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePersonalRecordsSnapshot(snapshot: PersonalRecordSnapshot) {
+  try {
+    window.localStorage.setItem(PERSONAL_RECORDS_STORAGE_KEY, JSON.stringify(snapshot));
+  } catch {
+    // Ignore storage limits/privacy mode.
+  }
+}
+
+function findPersonalRecordCelebration(efforts: BestEffort[], previous: PersonalRecordSnapshot): PersonalRecordCelebration | null {
+  const candidates = efforts
+    .map((effort) => {
+      const prev = previous[effort.distance];
+      const currentSeconds = parseRecordTimeSeconds(effort.time);
+      const previousSeconds = prev ? parseRecordTimeSeconds(prev.time) : null;
+      if (!prev) {
+        return { effort, deltaSeconds: null, isNewDistance: true };
+      }
+      if (currentSeconds !== null && previousSeconds !== null && currentSeconds < previousSeconds) {
+        return { effort, deltaSeconds: previousSeconds - currentSeconds, isNewDistance: false };
+      }
+      return null;
+    })
+    .filter((item): item is PersonalRecordCelebration => item !== null);
+
+  if (!candidates.length) return null;
+  return candidates.sort((a, b) => (b.deltaSeconds ?? 0) - (a.deltaSeconds ?? 0))[0];
+}
+
+function PersonalRecordCelebrationOverlay({ celebration, onClose }: { celebration: PersonalRecordCelebration; onClose: () => void }) {
+  const { effort, deltaSeconds, isNewDistance } = celebration;
+  const colors = ["#C0FF00", "#3B82F6", "#F59E0B", "#10B981", "#F43F5E"];
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 px-4 backdrop-blur-md">
+      <button
+        type="button"
+        aria-label="Chiudi animazione record"
+        onClick={onClose}
+        className="absolute right-5 top-5 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-300 transition-colors hover:border-white/30 hover:text-white"
+      >
+        <X className="h-5 w-5" />
+      </button>
+
+      <div className="pr-celebration-shell relative w-full max-w-xl overflow-hidden rounded-2xl border border-[#C0FF00]/35 bg-[#0B0F0D] p-8 text-center shadow-[0_30px_100px_rgba(0,0,0,0.7)]">
+        {Array.from({ length: 32 }).map((_, index) => (
+          <span
+            key={index}
+            className="pr-confetti"
+            style={{
+              left: `${4 + ((index * 13) % 92)}%`,
+              animationDelay: `${(index % 8) * 90}ms`,
+              backgroundColor: colors[index % colors.length],
+              width: `${6 + (index % 3) * 3}px`,
+              height: `${12 + (index % 4) * 4}px`,
+            }}
+          />
+        ))}
+
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-[#C0FF00]/30 bg-[#C0FF00]/10 shadow-[0_0_40px_rgba(192,255,0,0.25)]">
+          <Award className="h-8 w-8 text-[#C0FF00]" />
+        </div>
+        <div className="text-xs font-black uppercase tracking-[0.35em] text-[#C0FF00]">
+          {isNewDistance ? "Nuovo Personal Record" : "Record battuto"}
+        </div>
+        <div className="mt-3 text-4xl font-black text-white sm:text-5xl">{effort.distance}</div>
+        <div className="pr-record-ring mx-auto my-7 flex h-36 w-36 items-center justify-center rounded-full border border-[#C0FF00]/30 bg-[#121212]">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Tempo</div>
+            <div className="mt-1 text-3xl font-black text-white">{effort.time}</div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 text-left">
+          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+            <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Miglioramento</div>
+            <div className="mt-1 text-sm font-bold text-[#C0FF00]">{formatRecordDelta(deltaSeconds)}</div>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+            <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Passo</div>
+            <div className="mt-1 text-sm font-bold text-white">{effort.pace}</div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-6 w-full rounded-xl bg-[#C0FF00] px-4 py-3 text-sm font-black uppercase tracking-wider text-black transition-transform hover:scale-[1.01]"
+        >
+          Visto
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function heatmapGlow(km: number) {
@@ -546,8 +696,13 @@ export function ProfileView() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [switchingAthleteId, setSwitchingAthleteId] = useState<number | null>(null);
   const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [stravaStatus, setStravaStatus] = useState<StravaStatus | null>(null);
   const [rulePeriod, setRulePeriod] = useState<7 | 14>(7);
+  const [recordCelebration, setRecordCelebration] = useState<PersonalRecordCelebration | null>(null);
+  const lastCelebratedRecordKey = useRef<string | null>(null);
   const { enabled: jarvisEnabled, setEnabled: setJarvisEnabled } = useJarvisContext();
 
   const activeProfile = profile ?? profileData;
@@ -568,6 +723,57 @@ export function ProfileView() {
   const efforts = effortsData?.efforts ?? [];
   const profilePic = activeProfile?.profile_pic || activeProfile?.strava_profile_pic || "";
   const allRuns = runsData?.runs ?? [];
+  const stravaConnected = stravaStatus?.connected ?? Boolean(activeProfile?.athlete_id);
+  const stravaConnections = stravaStatus?.connections ?? [];
+
+  const invalidateAthleteScopedCaches = () => {
+    invalidateCache(API_CACHE.PROFILE);
+    invalidateCache(API_CACHE.RUNS);
+    invalidateCache(API_CACHE.DASHBOARD);
+    invalidateCache(API_CACHE.ANALYTICS);
+    invalidateCache(API_CACHE.BEST_EFFORTS);
+    invalidateCache(API_CACHE.HEATMAP);
+    invalidateCache(API_CACHE.SUPERCOMPENSATION);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getStravaStatus()
+      .then((status) => {
+        if (!cancelled) setStravaStatus(status);
+      })
+      .catch(() => {
+        if (!cancelled) setStravaStatus({ connected: false, athlete_id: null, name: null, connections: [] });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (efforts.length === 0) return;
+    const currentSnapshot = snapshotPersonalRecords(efforts);
+    const previousSnapshot = readPersonalRecordsSnapshot();
+
+    if (!previousSnapshot) {
+      writePersonalRecordsSnapshot(currentSnapshot);
+      return;
+    }
+
+    const celebration = findPersonalRecordCelebration(efforts, previousSnapshot);
+    writePersonalRecordsSnapshot(currentSnapshot);
+
+    if (!celebration) return;
+    const key = `${celebration.effort.distance}:${celebration.effort.time}:${celebration.effort.date}`;
+    if (lastCelebratedRecordKey.current === key) return;
+    lastCelebratedRecordKey.current = key;
+    setRecordCelebration(celebration);
+
+    const timer = window.setTimeout(() => setRecordCelebration(null), 6800);
+    return () => window.clearTimeout(timer);
+  }, [efforts]);
 
   const heatmapGrid = useMemo(() => {
     // Usa allRuns (backend classifica già con run_type: easy, tempo, intervals, long, recovery)
@@ -598,22 +804,79 @@ export function ProfileView() {
   };
 
   const handleStravaSync = async () => {
+    if (stravaStatus && !stravaStatus.connected) {
+      setSyncResult("Connetti Strava prima di sincronizzare.");
+      return;
+    }
+
     setSyncing(true);
     setSyncResult(null);
     try {
       const res = (await syncStrava()) as { synced?: number };
       // New runs synced → drop everything that depends on runs
-      invalidateCache(API_CACHE.RUNS);
-      invalidateCache(API_CACHE.DASHBOARD);
-      invalidateCache(API_CACHE.ANALYTICS);
-      invalidateCache(API_CACHE.BEST_EFFORTS);
-      invalidateCache(API_CACHE.HEATMAP);
-      invalidateCache(API_CACHE.SUPERCOMPENSATION);
+      invalidateAthleteScopedCaches();
       setSyncResult(`${res.synced ?? 0} corse sincronizzate!`);
     } catch {
       setSyncResult("Errore nella sincronizzazione. Connetti prima Strava.");
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleStravaSwitch = async (athleteId: number | null) => {
+    if (!athleteId) return;
+
+    setSwitchingAthleteId(athleteId);
+    setSyncResult(null);
+    try {
+      const res = await setActiveStravaAthlete(athleteId);
+      const active = res.connections.find((connection) => connection.active) ?? null;
+      setProfile(null);
+      setStravaStatus({
+        connected: res.connections.length > 0,
+        athlete_id: res.active_athlete_id,
+        name: active?.name ?? null,
+        connections: res.connections,
+      });
+      invalidateAthleteScopedCaches();
+      getProfile().then(setProfile).catch(() => setProfile(null));
+      setSyncResult("Atleta attivo cambiato.");
+    } catch {
+      setSyncResult("Errore nel cambio atleta.");
+    } finally {
+      setSwitchingAthleteId(null);
+    }
+  };
+
+  const handleStravaDisconnect = async (athleteId?: number | null) => {
+    if (!window.confirm("Scollegare questo atleta da Strava? Le corse gia importate restano nel database.")) return;
+
+    setDisconnecting(true);
+    setSyncResult(null);
+    try {
+      const res = await disconnectStrava(athleteId);
+      const connections = res.connections ?? [];
+      const active = connections.find((connection) => connection.active) ?? null;
+      setProfile(null);
+      setStravaStatus({
+        connected: res.connected,
+        athlete_id: active?.athlete_id ?? res.active_athlete_id ?? null,
+        name: active?.name ?? null,
+        connections,
+      });
+      invalidateAthleteScopedCaches();
+      if (res.connected) {
+        getProfile().then(setProfile).catch(() => setProfile(null));
+      }
+      setSyncResult(
+        res.revoked
+          ? "Atleta Strava scollegato."
+          : "Token locale rimosso. Se Strava mostra ancora l'atleta connesso, revoca l'app dalle impostazioni Strava.",
+      );
+    } catch {
+      setSyncResult("Errore durante lo scollegamento di Strava.");
+    } finally {
+      setDisconnecting(false);
     }
   };
 
@@ -624,6 +887,13 @@ export function ProfileView() {
       )}
 
       {/* Hero Section — Map of last run */}
+      {recordCelebration && (
+        <PersonalRecordCelebrationOverlay
+          celebration={recordCelebration}
+          onClose={() => setRecordCelebration(null)}
+        />
+      )}
+
       <div className="relative h-72">
         <HeroMap lastRun={lastRun} />
         <div className="absolute bottom-0 left-0 w-full px-8 translate-y-1/3 flex items-end justify-between">
@@ -1092,10 +1362,65 @@ export function ProfileView() {
               <h2 className="text-lg font-bold text-white">Strava</h2>
             </div>
             <div className="space-y-3">
+              <div className="flex items-center justify-between rounded-xl border border-[#2A2A2A] bg-[#121212] px-3 py-2.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`h-2 w-2 rounded-full ${stravaConnected ? "bg-emerald-400" : "bg-gray-600"}`} />
+                  <span className="truncate text-sm font-bold text-white">
+                    {stravaConnected ? `Attivo: ${stravaStatus?.name ?? activeProfile?.name ?? "Atleta Strava"}` : "Nessun atleta collegato"}
+                  </span>
+                </div>
+                {stravaConnections.length > 0 && (
+                  <span className="text-xs font-bold text-gray-500">{stravaConnections.length}</span>
+                )}
+              </div>
+
+              {stravaConnections.length > 0 && (
+                <div className="space-y-2">
+                  {stravaConnections.map((connection) => (
+                    <div key={connection.athlete_id ?? connection.name} className="flex items-center gap-2 rounded-xl border border-[#242424] bg-[#101010] p-2">
+                      <div className="h-9 w-9 flex-shrink-0 overflow-hidden rounded-full bg-[#242424]">
+                        {connection.profile_pic ? (
+                          <img src={connection.profile_pic} alt={connection.name ?? "Atleta Strava"} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-xs font-black text-gray-500">
+                            {(connection.name ?? "S")[0]?.toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-bold text-white">{connection.name ?? "Atleta Strava"}</div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                          {connection.active ? "Attivo" : `ID ${connection.athlete_id ?? "-"}`}
+                        </div>
+                      </div>
+                      {!connection.active && (
+                        <button
+                          type="button"
+                          onClick={() => handleStravaSwitch(connection.athlete_id)}
+                          disabled={switchingAthleteId === connection.athlete_id}
+                          className="rounded-lg border border-[#2A2A2A] px-3 py-2 text-xs font-bold text-gray-300 transition-colors hover:border-[#FC4C02]/60 hover:text-white disabled:opacity-50"
+                        >
+                          {switchingAthleteId === connection.athlete_id ? "..." : "Usa"}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        aria-label="Scollega atleta Strava"
+                        onClick={() => handleStravaDisconnect(connection.athlete_id)}
+                        disabled={disconnecting}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#3A2323] text-rose-300 transition-colors hover:border-rose-500/50 hover:bg-rose-500/10 disabled:opacity-50"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <button onClick={handleStravaConnect} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#FC4C02] hover:bg-[#E34402] rounded-xl text-sm font-bold text-white transition-colors">
-                <Link2 className="w-4 h-4" /> Connetti Strava
+                <Link2 className="w-4 h-4" /> {stravaConnections.length > 0 ? "Aggiungi atleta Strava" : "Connetti Strava"}
               </button>
-              <button onClick={handleStravaSync} disabled={syncing} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#1E1E1E] hover:bg-[#2A2A2A] border border-[#2A2A2A] rounded-xl text-sm font-bold text-gray-300 transition-colors disabled:opacity-50">
+              <button onClick={handleStravaSync} disabled={!stravaConnected || syncing} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#1E1E1E] hover:bg-[#2A2A2A] border border-[#2A2A2A] rounded-xl text-sm font-bold text-gray-300 transition-colors disabled:opacity-50">
                 <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
                 {syncing ? "Sincronizzazione..." : "Sincronizza Corse"}
               </button>
@@ -1116,7 +1441,15 @@ export function ProfileView() {
             ) : (
               <div className="space-y-3">
                 {efforts.map((pr, i) => (
-                  <div key={i} onClick={() => pr.run_id && navigate(`/activities/${pr.run_id}`)} className="flex items-center justify-between p-3.5 bg-[#121212] border border-[#2A2A2A] rounded-xl hover:border-[#3B82F6]/50 transition-colors group cursor-pointer">
+                  <div
+                    key={i}
+                    onClick={() => pr.run_id && navigate(`/activities/${pr.run_id}`)}
+                    className={`flex items-center justify-between p-3.5 bg-[#121212] border rounded-xl hover:border-[#3B82F6]/50 transition-colors group cursor-pointer ${
+                      recordCelebration?.effort.distance === pr.distance
+                        ? "pr-card-celebrate border-[#C0FF00]/70"
+                        : "border-[#2A2A2A]"
+                    }`}
+                  >
                     <div>
                       <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-0.5">{pr.distance}</div>
                       <div className="text-lg font-bold text-white group-hover:text-[#3B82F6] transition-colors">{pr.time}</div>

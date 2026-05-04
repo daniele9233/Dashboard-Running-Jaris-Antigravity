@@ -4,6 +4,32 @@
 
 ---
 
+## Aggiornamento 2026-05-04 — Strava multi-atleta + VDOT history-aware
+
+### Strava multi-atleta locale
+
+- `backend/server.py` ora usa `_get_active_strava_token()` invece dell'ultimo token salvato.
+- `strava_tokens` puo contenere piu record; un solo record ha `active: true`.
+- Nuovi endpoint:
+  - `GET /api/strava/status`
+  - `GET /api/strava/connections`
+  - `PATCH /api/strava/active-athlete`
+  - `DELETE /api/strava/connection?athlete_id=...`
+- `POST /api/strava/sync` e `POST /api/admin/backfill-dynamics` lavorano sull'atleta attivo.
+- `ProfileView` mostra la lista atleti collegati, consente switch attivo, aggiunta account e scollegamento singolo atleta.
+- Lo scollegamento prova anche la deauthorization Strava, poi rimuove il token locale e promuove un altro atleta ad attivo se esiste.
+
+### VDOT e piano history-aware
+
+- Aggiunto `history_context` alla generazione piano: giorni da ultima corsa, stop massimo 6 mesi, volume 4/8 settimane, picco recente, sessioni qualita/intervalli/tempo/long, easy ratio, aerobic base score, readiness, CTL/ATL/TSB.
+- `_apply_stop_adjustment_to_vdot()` attenua il VDOT corrente quando lo storico indica stop prolungato.
+- `_tp_history_phase_alloc()` modifica la distribuzione delle fasi: ritorno da stop aumenta Base Aerobica; storico con qualita riduce Base e anticipa Intensita.
+- `_calibrate_plan_volume()` calibra volume iniziale/cap usando volume recente, picco recente, readiness e stop.
+- `TrainingGrid` mostra nel modal generazione lo stato allenamento, giorni di stop, volume 8 settimane e sessioni qualita.
+- `backend/test_vdot_model.py` copre path goal-distance, stop history e quality history.
+
+---
+
 ## CHECKLIST COMPLETA DEI MODULI
 
 Il progetto è una SPA React 19 + TypeScript con backend Python FastAPI. Frontend ~33.000 righe TS/TSX, backend ~7.500 righe Python. Identificati 29 punti di analisi:

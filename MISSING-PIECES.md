@@ -2,6 +2,8 @@
 
 Stato al **2026-04-30** dopo 8 round di fix.
 
+Aggiornamento **2026-05-04**: Strava non e piu "ultimo token vince". L'app supporta piu atleti Strava locali con un atleta `active`, switch da Profilo e disconnect per atleta. Resta mancante l'auth SaaS multi-utente (`user_id`/JWT/cookie): piu persone senza login separato condividono ancora lo stesso database/app runtime.
+
 > 🔗 Ultima commit live: [`6351fc9`](https://github.com/daniele9233/Dashboard-Running-Jaris-Antigravity/commit/6351fc9)
 > 🌐 Backend live: https://dani-backend-ea0s.onrender.com — `version: 6351fc9` ✓
 > 🌐 Frontend live: https://dani-frontend-y63x.onrender.com — last build 30 Apr 07:12 ✓
@@ -102,7 +104,7 @@ Stato al **2026-04-30** dopo 8 round di fix.
 - [ ] Frontend: `<AuthProvider>`, `LoginPage`, redirect logic, hook `useAuth()`
 - [ ] Strava OAuth: associare token a user attivo
 
-**Why bloccante**: senza auth, NON si può vendere come SaaS. Secondo utente sovrascrive il primo.
+**Why bloccante**: senza auth, NON si può vendere come SaaS. Il secondo atleta Strava non sovrascrive piu il primo, ma utenti reali diversi non hanno ancora isolamento `user_id`.
 
 ---
 

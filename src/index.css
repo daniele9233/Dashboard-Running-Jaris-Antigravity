@@ -85,6 +85,58 @@ body {
 .mapboxgl-ctrl-bottom-left,
 .mapboxgl-ctrl-bottom-right { display: none !important; }
 
+@keyframes prOverlayIn {
+  0% { opacity: 0; transform: translateY(18px) scale(0.96); }
+  70% { opacity: 1; transform: translateY(-2px) scale(1.01); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes prRingPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(192,255,0,0.28), 0 0 40px rgba(59,130,246,0.18); }
+  50% { box-shadow: 0 0 0 18px rgba(192,255,0,0), 0 0 70px rgba(192,255,0,0.32); }
+}
+
+@keyframes prConfettiFall {
+  0% { opacity: 0; transform: translate3d(0, -30px, 0) rotate(0deg); }
+  12% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(30px, 360px, 0) rotate(540deg); }
+}
+
+@keyframes prCardCelebrate {
+  0%, 100% { box-shadow: 0 0 0 rgba(192,255,0,0); transform: translateY(0); }
+  45% { box-shadow: 0 0 28px rgba(192,255,0,0.22); transform: translateY(-2px); }
+}
+
+.pr-celebration-shell {
+  animation: prOverlayIn 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.pr-record-ring {
+  animation: prRingPulse 1.4s ease-in-out infinite;
+}
+
+.pr-confetti {
+  position: absolute;
+  top: -24px;
+  display: block;
+  border-radius: 3px;
+  opacity: 0;
+  animation: prConfettiFall 1.9s cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
+}
+
+.pr-card-celebrate {
+  animation: prCardCelebrate 1.3s ease-in-out 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-celebration-shell,
+  .pr-record-ring,
+  .pr-confetti,
+  .pr-card-celebrate {
+    animation: none !important;
+  }
+}
+
 /* ─── Theme-aware helper classes ───────────────────────────────────────── */
 .themed-bg { background-color: var(--app-bg); }
 .themed-bg-alt { background-color: var(--app-bg-alt); }

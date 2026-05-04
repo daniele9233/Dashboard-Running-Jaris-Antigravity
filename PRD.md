@@ -1,10 +1,10 @@
 # PRD — METIC LAB Running Training Dashboard
 
 ## Documento dei Requisiti di Prodotto
-**Versione:** 1.1 (rev post 8 round audit)
-**Data:** 30 Aprile 2026 (rev) / 28 Marzo 2026 (originale)
+**Versione:** 1.2 (rev multi-atleta Strava + VDOT history-aware)
+**Data:** 4 Maggio 2026 (rev) / 28 Marzo 2026 (originale)
 **Autore:** Daniele Pascolini
-**Stato:** In sviluppo attivo — single-tenant in produzione
+**Stato:** In sviluppo attivo — multi-atleta Strava locale, auth SaaS non ancora attiva
 
 > **Documenti correlati**:
 > - [`PRD-VS-REALITY.md`](./PRD-VS-REALITY.md) — ⚠️ Audit divergenze PRD ↔ codice (RF-BADGE/MEDAL/WEEK obsoleti)
@@ -44,7 +44,7 @@ METIC LAB e una dashboard web per runner che integra dati Strava, analisi scient
 | Cache | localStorage + memory cache custom (`useApi` hook) | SWR pattern + cross-tab sync via storage event |
 | Server-push | Server-Sent Events (round 5) | Notifiche live `sync_complete` / `training_adapted` |
 | AI | Claude Sonnet 4.6 + Gemini (fallback) | Analisi personalizzate (JARVIS voice) |
-| Auth | Strava OAuth (single-tenant) — JWT scaffold pronto (round 8) | Vedi `backend/auth.py` + `src/context/AuthContext.tsx` |
+| Auth | Strava OAuth multi-atleta locale + JWT scaffold pronto (round 8) | Token multipli in `strava_tokens`; SaaS auth ancora non attiva |
 | Telemetry | Sentry SDK (round 7, da attivare con DSN) | Error tracking prod |
 | Rate limit | slowapi (round 3) | 120/min default + 10/min AI endpoints |
 | CORS | env-driven whitelist (round 3) | No wildcard, prod safe |
@@ -53,24 +53,28 @@ METIC LAB e una dashboard web per runner che integra dati Strava, analisi scient
 | Hosting | Render.com free tier | Backend `dani-backend-ea0s` + Frontend `dani-frontend-y63x` |
 | Bundle splitting | Vite manualChunks vendor (round 3) + React.lazy routes | vendor-react/mapbox/three/charts/motion/i18n separati |
 
-### Principio architetturale: Multi-utente "in scaffold"
-**Stato attuale (rev 1.1)**: il backend usa l'ultimo `strava_token` salvato → comportamento single-tenant. Il principio originario "multi-utente dal giorno zero" è in **scaffold pronto ma non attivo**:
+### Principio architetturale: multi-atleta Strava attivo, multi-tenant SaaS in scaffold
+**Stato attuale (rev 1.2)**: il backend non usa piu l'ultimo `strava_token` in modo implicito. `strava_tokens` puo contenere piu atleti e uno solo e marcato `active`; tutte le letture runtime continuano a essere scoped da `athlete_id` dell'atleta attivo. Questo risolve il cambio atleta dentro l'app, ma non equivale ancora a SaaS multi-utente con login separato.
 
 - ✅ `backend/auth.py` — `AUTH_ENABLED` env flag + `get_current_user_id` Depends helper + migration script `migrate_assign_default_user`
 - ✅ `src/context/AuthContext.tsx` — `AuthProvider` + `useAuth` + `withAuthHeader` + Sentry user identification
+- ✅ `GET /api/strava/status`, `GET /api/strava/connections`, `PATCH /api/strava/active-athlete`, `DELETE /api/strava/connection` per gestire piu atleti Strava locali
+- ✅ `ProfileView` espone lista atleti, switch attivo, aggiunta nuovo atleta e scollegamento specifico
 - ⏳ Mongo `user_id` su tutte le collection — da migrare con script
 - ⏳ JWT provider scelta — design JWT custom (no vendor lock-in) vs Clerk/Supabase
 
 **Activation path**: 8 step documentati in `backend/auth.py` docstring. Costo stimato 1-2 settimane.
 
+**Vincolo esterno Strava**: il codice supporta piu token, ma Strava puo bloccare l'OAuth se l'app e ancora in quota "1 atleta connesso". Per collegare piu account reali serve aumentare l'athlete capacity dal portale sviluppatori Strava.
+
 ### Collezioni MongoDB
 ```
-profile           — Un documento per utente (single-tenant: 1 doc)
+profile           — Un documento per atleta Strava (`athlete_id`)
 runs              — Corse (Strava + Garmin CSV)
 training_plan     — Piano allenamento per-utente
 analytics_cache   — Cache KPI computed (versionato schema pro-v9)
 runner_dna_cache  — Cache scoring DNA runner
-strava_tokens     — OAuth tokens Strava
+strava_tokens     — OAuth tokens Strava, multipli, con flag `active`
 garmin_csv_data   — Telemetria CSV Garmin Connect
 recovery_checkins — Check-in mattutini
 gct_analysis     — Ground contact time analysis
@@ -141,6 +145,13 @@ weekly_reports    — Report settimanali AI
 **RF-STRAVA-03**: Streams limitati:
 - HR stream e distance stream scaricati solo per dettaglio singola corsa
 - MAI caricare streams in endpoint lista (memory fix: 512MB Render)
+
+**RF-STRAVA-04**: Gestione multi-atleta locale:
+- L'app puo salvare piu connessioni Strava in `strava_tokens`
+- Un solo atleta e attivo alla volta tramite flag `active`
+- `ProfileView` mostra tutti gli atleti collegati e permette `Usa`, `Aggiungi atleta Strava`, `Scollega`
+- `POST /api/strava/sync`, dashboard, analytics, piano e profilo lavorano sull'atleta attivo
+- Scollegamento chiama `POST https://www.strava.com/oauth/deauthorize` e poi rimuove il token locale
 
 ---
 
@@ -220,7 +231,11 @@ weekly_reports    — Report settimanali AI
 | Interval | ~98% | Ripetute |
 | Repetition | ~105% | Sprint |
 
-**RF-VDOT-04**: Storico VDOT salvato in `vo2max_history` con data e valore.
+**RF-VDOT-04**: Storico VDOT e contesto allenamento calcolati runtime:
+- VDOT history deriva dalle corse qualificate in `runs`, non da una collection separata `vo2max_history`
+- `_build_training_history_context` calcola stop, volume 4/8 settimane, picco recente, sessioni qualita, long run, easy ratio, readiness e load CTL/ATL/TSB
+- `_apply_stop_adjustment_to_vdot` attenua il VDOT corrente dopo stop prolungati
+- Il frontend piano mostra `history_context` nel risultato generazione
 
 ---
 
@@ -232,6 +247,8 @@ weekly_reports    — Report settimanali AI
 - 6 fasi: Ripresa → Base Aerobica → Sviluppo → Prep. Specifica → Picco → Tapering
 - Settimane di recupero ogni 3-4 settimane (-30% volume)
 - Passi derivati dal VDOT dell'utente
+- Allocazione fasi e volume iniziale sono adattati allo storico reale: ritorno da stop aumenta Base Aerobica, storico con qualita riduce Base e anticipa Intensita
+- Le strategy options includono readiness/stop/qualita nella probabilita di successo e completamento
 
 **RF-PLAN-02**: Sessioni del piano:
 - Ogni sessione ha: tipo, titolo, descrizione, distanza target, passo target, durata target

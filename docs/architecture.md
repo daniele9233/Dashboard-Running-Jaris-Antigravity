@@ -29,7 +29,7 @@ The app uses component-level data fetching through `useApi()` and purpose-built 
 `backend/server.py` is the central backend module. It contains:
 
 - lifespan and MongoDB setup.
-- Strava OAuth/sync.
+- Strava OAuth/sync and local multi-athlete active-token selection.
 - Garmin auth/sync/CSV import.
 - dashboard aggregation.
 - training plan generation/adaptation.
@@ -55,8 +55,9 @@ Main collections mentioned in product docs/code:
 - `weekly_reports`
 - `recovery_checkins`
 - `adaptation_log`
+- `strava_tokens`
 
-Every user-scoped collection must use `athlete_id`.
+Every user-scoped collection must use `athlete_id`. Current local identity is the active Strava athlete; full SaaS `user_id` isolation is still scaffolded but not enabled.
 
 ## Deployment
 

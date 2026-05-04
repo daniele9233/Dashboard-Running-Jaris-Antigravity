@@ -17,11 +17,17 @@ This file is a human summary. For generated endpoint extraction, use `repo-map.m
 ### Strava
 
 - `GET /api/strava/auth-url`
+- `GET /api/strava/status`
+- `GET /api/strava/connections`
+- `PATCH /api/strava/active-athlete`
 - `GET /api/strava/callback`
 - `POST /api/strava/exchange-code`
+- `DELETE /api/strava/connection`
 - `POST /api/strava/sync`
 
 Consumers: profile, dashboard, activities, training auto-adaptation, Runner DNA.
+
+Notes: Strava is local multi-athlete. `strava_tokens` can store multiple athletes; one is active. Sync and athlete-scoped reads use the active athlete. External Strava app quota can still block authorizing a second real athlete.
 
 ### Profile/Layout
 

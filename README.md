@@ -2,7 +2,7 @@
 
 Dashboard di training & analytics per podisti — frontend React 19 + backend FastAPI/MongoDB.
 
-> Single-tenant: l'app è pensata per un singolo runner (config Strava/Garmin nelle env-var server).
+> Stato auth: l'app supporta piu atleti Strava locali con un atleta attivo alla volta. Il multi-tenant SaaS con login separato (`user_id`/JWT) e ancora in scaffold.
 
 ---
 

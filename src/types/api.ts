@@ -8,6 +8,7 @@ export interface PB {
 
 export interface Profile {
   id: string;
+  athlete_id?: number | null;
   name: string;
   age: number;
   weight_kg: number;

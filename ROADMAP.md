@@ -29,6 +29,10 @@
 
 - [x] **Statistics — Analytics Pro**: eliminato tab "Carico & Rischio". Uniti "Dashboard" + "Performance" in unico tab "Analytics Pro". 3 tab totali: Analytics Pro, Biologia & Futuro, Badge. Layout identico alla dashboard (card #111111, bordi #1E1E1E, accent #C0FF00). SectionLabel per separare macro-sezioni. `InfoTooltip` (ⓘ) su ogni grafico. Tutti i chart dinamici da Strava: KPI grid, FitnessFreshness, Volume+Zone, VDOT, Race Predictions, Zone Daniels, MainChart, VO2MaxChart, Paces Trend, Cadenza, Soglia Anaerobica, Deriva Cardiaca, GCT, Dislivello.
 
+- [x] **Strava — Multi-atleta locale**: `strava_tokens` supporta piu atleti collegati contemporaneamente con flag `active`. Aggiunti endpoint status/connections/switch/disconnect e UI Profilo per selezionare atleta attivo, aggiungere account e scollegare un atleta specifico. Nota: serve quota Strava >1 per autorizzare davvero piu account esterni.
+
+- [x] **VDOT/Piano — History-aware**: generazione piano arricchita con `history_context` (stop, volume 4/8 settimane, picco recente, qualita, long run, easy ratio, CTL/ATL/TSB). VDOT corrente viene attenuato dopo stop prolungati; fasi e volume iniziale si adattano allo storico reale; TrainingGrid mostra lo stato usato dal modello.
+
 ## Todo
 
 - [ ] **Gamification — Badge & Trofei**: implementare sistema badge con 100+ trofei in 8 categorie: Milestone distanza, Costanza, Miglioramenti, Allenamento, Mezza maratona, Scienza, Velocità lampo, Fun & Speciali. Vedi specifica completa in chat.

@@ -5,9 +5,11 @@
 1. Frontend asks `/api/strava/auth-url`.
 2. User authorizes Strava.
 3. Frontend exchanges code through `/api/strava/exchange-code`.
-4. Sync runs through `/api/strava/sync`.
-5. Backend upserts runs, splits, cadence, route polyline/start coordinates and profile totals.
-6. Backend recomputes fitness/freshness, best efforts, VDOT-related state and invalidates dependent caches.
+4. Backend stores the token as `active: true` and marks other local Strava athletes inactive.
+5. Profile can call `/api/strava/connections` and `/api/strava/active-athlete` to switch the active athlete.
+6. Sync runs through `/api/strava/sync` for the active athlete.
+7. Backend upserts runs, splits, cadence, route polyline/start coordinates and profile totals.
+8. Backend recomputes fitness/freshness, best efforts, VDOT-related state and invalidates dependent caches.
 
 Important: run list endpoints should remain lean. Full stream data belongs in detail endpoints only.
 
@@ -51,8 +53,10 @@ Dashboard data comes from `/api/dashboard`, which aggregates profile, current we
 1. User enters goal race/time/weeks/start date in frontend.
 2. Frontend calls `/api/training-plan/generate`.
 3. Backend computes current VDOT, target VDOT, feasibility and strategy.
-4. Backend writes training weeks.
-5. Future Strava sync can auto-adapt the plan through backend logic and `/api/training-plan/adapt`.
+4. Backend computes `history_context` (stop days, recent volume, recent peak, quality sessions, easy ratio, readiness and CTL/ATL/TSB).
+5. Backend uses `history_context` to soften VDOT after stops, allocate phases and calibrate starting volume.
+6. Backend writes training weeks.
+7. Future Strava sync can auto-adapt the plan through backend logic and `/api/training-plan/adapt`.
 
 ## Analytics Flow
 

@@ -4,6 +4,8 @@ Verifica documentale: **PRD.md sezione 3 "Requisiti Funzionali"** confrontata co
 
 > **Scope**: solo lettura. Zero codice modificato. Output = lista gap.
 
+> **Aggiornamento 2026-05-04**: audit integrato con modifiche successive. Strava ora supporta piu atleti locali con flag `active`; rimane non attivo il multi-tenant SaaS con `user_id`. VDOT/piano ora includono `history_context`, stop adjustment, phase allocation e volume calibration basati sullo storico reale.
+
 > **Legenda**:
 > - ✅ **DONE**: implementato come da PRD
 > - ⚠️ **PARZIALE**: parzialmente implementato, divergenze minori
@@ -17,11 +19,11 @@ Verifica documentale: **PRD.md sezione 3 "Requisiti Funzionali"** confrontata co
 
 | Sezione PRD | Stato | Note |
 |---|---|---|
-| 3.1 Auth + Profilo | ⚠️ PARZIALE | Single-tenant, multi-tenant scaffold solo (round 8) |
-| 3.2 Strava Integration | ✅ DONE | OAuth + sync + streams ok |
+| 3.1 Auth + Profilo | ⚠️ PARZIALE | Multi-atleta Strava locale; manca auth SaaS `user_id` |
+| 3.2 Strava Integration | ✅ DONE | OAuth + sync + streams + switch/disconnect atleta attivo |
 | 3.3 Dashboard | ⚠️ PARZIALE | RF-DASH-01 ok, RF-DASH-02 ok, RF-DASH-03 Live Telemetry ok, **Adaptation Summary** non trovata in dashboard |
 | 3.4 VDOT system | ✅ DONE | Daniels formula corretta, zone, storia |
-| 3.5 Piano Allenamento | ⚠️ PARZIALE | **Solo 2/5 modelli auto-adapt** (ACWR + Tapering), mancano Foster Monotonia + Spike Detection + Seiler Polarized full |
+| 3.5 Piano Allenamento | ⚠️ PARZIALE | History-aware VDOT/volume/fasi implementato; restano divergenze documentali sui modelli auto-adapt |
 | 3.6 Dettaglio Corsa | ✅ DONE | Splits, HR, decoupling, AI 9 sezioni |
 | 3.7 Analytics | ✅ DONE | Tutto presente |
 | 3.8 Recovery & Risk | ⚠️ PARZIALE | Recovery score backend ok, **Injury Risk gauge frontend MANCANTE** |

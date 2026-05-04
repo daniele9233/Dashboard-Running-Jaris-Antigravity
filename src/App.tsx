@@ -89,6 +89,7 @@ function AppContent() {
         .then(() => syncStrava())
         .then(() => {
           // Strava OAuth + sync done → drop everything that depends on runs
+          invalidateCache(API_CACHE.PROFILE);
           invalidateCache(API_CACHE.RUNS);
           invalidateCache(API_CACHE.DASHBOARD);
           invalidateCache(API_CACHE.ANALYTICS);

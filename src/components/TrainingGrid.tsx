@@ -452,6 +452,22 @@ interface GenerateResult {
   } | null;
   training_months?: number;
   weekly_volume?: number;
+  history_context?: {
+    days_since_last_run: number;
+    longest_stop_days_6m: number;
+    weekly_volume_4w: number;
+    weekly_volume_8w: number;
+    recent_peak_weekly_km: number;
+    quality_sessions_8w: number;
+    interval_sessions_8w: number;
+    tempo_sessions_8w: number;
+    long_runs_8w: number;
+    easy_ratio_8w: number;
+    aerobic_base_score: number;
+    readiness_score: number;
+    training_status: string;
+    load: { ctl: number; atl: number; tsb: number };
+  };
   test_vdot?: number | null;
   plan_mode?: PlanMode | null;
   strategy_options?: StrategyOption[];
@@ -866,6 +882,27 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
                   <div className="text-3xl font-bold text-[#3B82F6]">{result.target_vdot}</div>
                 </div>
               </div>
+
+              {result.history_context && (
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="bg-[#121212] border border-[#2A2A2A] rounded-lg p-3">
+                    <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Stato</div>
+                    <div className="text-xs font-bold text-white">{result.history_context.training_status.replaceAll('_', ' ')}</div>
+                  </div>
+                  <div className="bg-[#121212] border border-[#2A2A2A] rounded-lg p-3">
+                    <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Stop</div>
+                    <div className="text-xs font-bold text-white">{result.history_context.days_since_last_run} gg</div>
+                  </div>
+                  <div className="bg-[#121212] border border-[#2A2A2A] rounded-lg p-3">
+                    <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Volume 8 sett.</div>
+                    <div className="text-xs font-bold text-white">{result.history_context.weekly_volume_8w} km/w</div>
+                  </div>
+                  <div className="bg-[#121212] border border-[#2A2A2A] rounded-lg p-3">
+                    <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Qualita 8 sett.</div>
+                    <div className="text-xs font-bold text-white">{result.history_context.quality_sessions_8w}</div>
+                  </div>
+                </div>
+              )}
 
               {/* Peak context */}
               {result.peak_vdot && result.peak_vdot !== result.current_vdot && (

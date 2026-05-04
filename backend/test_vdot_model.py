@@ -145,3 +145,64 @@ def test_vdot_chart_bucket_uses_current_model_not_monthly_average():
 
     assert row["vdot"] == interval_vdot
     assert row["vdot"] > old_monthly_average
+
+
+def test_history_vdot_goal_distance_path_does_not_crash():
+    as_of = server.dt.date(2026, 5, 2)
+    runs = [
+        {**_run(days_ago=4, pace_s=282, avg_hr=160), "date": "2026-04-28", "distance_km": 10.0, "duration_minutes": 47.0},
+        {**_run(days_ago=18, pace_s=288, avg_hr=158), "date": "2026-04-14", "distance_km": 10.0, "duration_minutes": 48.0},
+    ]
+
+    history = server._calc_vdot_with_history(runs, max_hr=180, goal_dist_km=10.0, as_of=as_of)
+
+    assert history["current"] is not None
+    assert history["race_specific_vdot"] is not None
+
+
+def test_stop_history_softens_vdot_and_starts_with_base_phase():
+    as_of = server.dt.date(2026, 5, 2)
+    runs = [
+        {**_run(pace_s=280, avg_hr=160), "date": "2026-03-01", "distance_km": 8.0, "duration_minutes": 37.3},
+        {**_run(pace_s=285, avg_hr=158), "date": "2026-02-22", "distance_km": 8.0, "duration_minutes": 38.0},
+    ]
+    history = server._calc_vdot_with_history(runs, max_hr=180, goal_dist_km=5.0, as_of=as_of)
+    ctx = server._build_training_history_context(runs, history, as_of=as_of)
+    adjusted = server._apply_stop_adjustment_to_vdot(history["current"], ctx)
+    phases = server._tp_history_phase_alloc(12, ctx)
+
+    assert ctx["training_status"] == "return_from_stop"
+    assert adjusted < history["current"]
+    assert phases[0][0] == "Base Aerobica"
+    assert phases[0][1] >= 0.35
+
+
+def test_quality_history_reduces_base_phase():
+    as_of = server.dt.date(2026, 5, 2)
+    runs = []
+    for i in range(16):
+        runs.append({
+            **_run(pace_s=335, avg_hr=140),
+            "date": (as_of - server.dt.timedelta(days=i * 3)).isoformat(),
+            "distance_km": 8.0,
+            "duration_minutes": 44.6,
+            "run_type": "easy",
+        })
+    for days_ago in (5, 12, 19):
+        runs.append({
+            **_run(pace_s=270, avg_hr=162),
+            "date": (as_of - server.dt.timedelta(days=days_ago)).isoformat(),
+            "distance_km": 6.0,
+            "duration_minutes": 27.0,
+            "run_type": "intervals",
+            "name": "Ripetute 800",
+        })
+
+    history = server._calc_vdot_with_history(runs, max_hr=180, goal_dist_km=5.0, as_of=as_of)
+    ctx = server._build_training_history_context(runs, history, as_of=as_of)
+    phases = server._tp_history_phase_alloc(12, ctx)
+
+    assert ctx["quality_sessions_8w"] >= 2
+    assert ctx["training_status"] == "trained_with_quality"
+    assert phases[0][0] == "Base Aerobica"
+    assert phases[0][1] <= 0.15

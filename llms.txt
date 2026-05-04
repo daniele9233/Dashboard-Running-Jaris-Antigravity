@@ -6,6 +6,8 @@ This is the first file every AI coding agent should read.
 
 METIC LAB is a running performance dashboard for a runner. It combines Strava sync, Garmin running dynamics, scientific training logic, dashboard analytics, Runner DNA, training plan generation, and AI coaching.
 
+Strava supports multiple locally connected athletes; one athlete is active at a time. This is not yet full SaaS auth.
+
 The product goal is not only tracking. It should explain form, fatigue, fitness, biomechanics, race readiness, and training decisions in a way that is useful to a serious amateur runner.
 
 ## Stack
@@ -59,6 +61,7 @@ The product goal is not only tracking. It should explain form, fatigue, fitness,
 - Do not assume Garmin cadence is half-cadence. Use canonical `avg_cadence_spm` when present.
 - Do not load full activity streams in list views; this project has Render memory constraints.
 - All backend data queries should remain athlete-scoped by `athlete_id`.
+- Use the active Strava athlete (`_get_active_strava_token`) for current-user behavior; do not fall back to "latest token wins".
 - Runner DNA cache must be invalidated after data changes that affect profile, Garmin CSV, fitness/freshness, or synced runs.
 - After meaningful architecture/API/model changes, run `npm run context:update` and add a note to `CHANGELOG-AI.md`.
 
@@ -68,6 +71,7 @@ The product goal is not only tracking. It should explain form, fatigue, fitness,
 - Activities list/map/detail: `src/components/ActivitiesView.tsx`, `src/components/RoutesView.tsx`, `src/components/LiveTelemetry3DMap.tsx`.
 - Training plan UI: `src/components/TrainingView.tsx`, `src/components/TrainingGrid.tsx`, `src/components/TrainingSidebar.tsx`.
 - Training plan backend logic: `backend/server.py` around `/api/training-plan/*`.
+- Strava multi-athlete UI/API: `src/components/ProfileView.tsx`, `src/api/index.ts`, `backend/server.py` around `/api/strava/*`.
 - Runner DNA backend logic: `backend/server.py` around `/api/runner-dna`.
 - Runner DNA V2 UI/model: `src/components/RunnerDnaV2View.tsx`, `src/hooks/useRunnerDnaUiModel.ts`, `src/utils/runnerDnaModel.ts`.
 - Garmin CSV import/link: `backend/server.py` around `/api/garmin/csv-*`.
