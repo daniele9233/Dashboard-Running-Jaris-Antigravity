@@ -855,15 +855,31 @@ def _is_strava_run_activity(activity: dict) -> bool:
 
 def _strava_error_response(resp: httpx.Response, fallback_status: int = 502) -> JSONResponse:
     retry_after = resp.headers.get("retry-after")
+    read_limit = resp.headers.get("x-readratelimit-limit")
+    read_usage = resp.headers.get("x-readratelimit-usage")
     rate_payload = {
         "limit": resp.headers.get("x-ratelimit-limit"),
         "usage": resp.headers.get("x-ratelimit-usage"),
+        "read_limit": read_limit,
+        "read_usage": read_usage,
     }
 
     if resp.status_code == 429:
+        message = "Limite Strava raggiunto. Riprova tra qualche minuto: il sync ora non verra' conteggiato come 0 corse."
+        try:
+            read_limit_day = int((read_limit or "").split(",")[1])
+            read_usage_day = int((read_usage or "").split(",")[1])
+            if read_usage_day >= read_limit_day:
+                message = (
+                    "Limite giornaliero Strava raggiunto. Riprova dopo il reset giornaliero Strava; "
+                    "il nuovo sync usera' molte meno chiamate e non verra' conteggiato come 0 corse."
+                )
+        except (IndexError, ValueError):
+            pass
+
         body = {
             "error": "strava_rate_limited",
-            "message": "Limite Strava raggiunto. Riprova tra qualche minuto: il sync ora non verra' conteggiato come 0 corse.",
+            "message": message,
             "retry_after": int(retry_after) if retry_after and retry_after.isdigit() else None,
             "rate_limit": rate_payload,
         }

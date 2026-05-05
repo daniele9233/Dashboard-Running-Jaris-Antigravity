@@ -133,6 +133,26 @@ def test_strava_rate_limit_error_is_not_reported_as_zero_sync():
     assert b"strava_rate_limited" in out.body
 
 
+def test_strava_daily_read_limit_gets_specific_message():
+    sys.path.insert(0, str(BACKEND_DIR))
+    from server import _strava_error_response  # type: ignore
+
+    resp = httpx.Response(
+        429,
+        headers={
+            "x-ratelimit-limit": "200,2000",
+            "x-ratelimit-usage": "2,1436",
+            "x-readratelimit-limit": "100,1000",
+            "x-readratelimit-usage": "2,1436",
+        },
+        request=httpx.Request("GET", "https://www.strava.com/api/v3/athlete/activities"),
+    )
+
+    out = _strava_error_response(resp)
+    assert out.status_code == 429
+    assert b"Limite giornaliero Strava" in out.body
+
+
 def test_strava_run_detection_accepts_sport_type_variants():
     sys.path.insert(0, str(BACKEND_DIR))
     from server import _is_strava_run_activity  # type: ignore
