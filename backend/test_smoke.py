@@ -20,6 +20,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import httpx
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 BACKEND_DIR = REPO_ROOT / "backend"
@@ -115,3 +116,27 @@ def test_routes_critical_present(client):
     ]
     missing = [c for c in critical if c not in routes]
     assert not missing, f"Critical routes missing: {missing}"
+
+
+def test_strava_rate_limit_error_is_not_reported_as_zero_sync():
+    sys.path.insert(0, str(BACKEND_DIR))
+    from server import _strava_error_response  # type: ignore
+
+    resp = httpx.Response(
+        429,
+        headers={"x-ratelimit-limit": "200,2000", "x-ratelimit-usage": "200,1500"},
+        request=httpx.Request("GET", "https://www.strava.com/api/v3/athlete/activities"),
+    )
+
+    out = _strava_error_response(resp)
+    assert out.status_code == 429
+    assert b"strava_rate_limited" in out.body
+
+
+def test_strava_run_detection_accepts_sport_type_variants():
+    sys.path.insert(0, str(BACKEND_DIR))
+    from server import _is_strava_run_activity  # type: ignore
+
+    assert _is_strava_run_activity({"type": "Run"})
+    assert _is_strava_run_activity({"type": "Workout", "sport_type": "TrailRun"})
+    assert _is_strava_run_activity({"type": "Ride", "sport_type": "Ride"}) is False

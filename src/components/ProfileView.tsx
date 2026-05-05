@@ -812,12 +812,18 @@ export function ProfileView() {
     setSyncing(true);
     setSyncResult(null);
     try {
-      const res = (await syncStrava()) as { synced?: number };
+      const res = (await syncStrava()) as { synced?: number; skipped_existing?: number; scanned?: number };
       // New runs synced → drop everything that depends on runs
       invalidateAthleteScopedCaches();
-      setSyncResult(`${res.synced ?? 0} corse sincronizzate!`);
-    } catch {
-      setSyncResult("Errore nella sincronizzazione. Connetti prima Strava.");
+      const synced = res.synced ?? 0;
+      setSyncResult(
+        synced > 0
+          ? `${synced} corse sincronizzate!`
+          : "Sync completato: nessuna nuova corsa trovata."
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message.replace(/^\d+:\s*/, "") : "";
+      setSyncResult(message || "Errore nella sincronizzazione. Connetti prima Strava.");
     } finally {
       setSyncing(false);
     }

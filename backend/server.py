@@ -846,6 +846,48 @@ def _format_pace(speed_ms: float) -> str:
     return f"{m}:{s:02d}"
 
 
+def _is_strava_run_activity(activity: dict) -> bool:
+    """Return True for Strava activity variants that should be imported as runs."""
+    activity_type = activity.get("type")
+    sport_type = activity.get("sport_type")
+    return activity_type in {"Run", "VirtualRun"} or sport_type in {"Run", "TrailRun", "VirtualRun"}
+
+
+def _strava_error_response(resp: httpx.Response, fallback_status: int = 502) -> JSONResponse:
+    retry_after = resp.headers.get("retry-after")
+    rate_payload = {
+        "limit": resp.headers.get("x-ratelimit-limit"),
+        "usage": resp.headers.get("x-ratelimit-usage"),
+    }
+
+    if resp.status_code == 429:
+        body = {
+            "error": "strava_rate_limited",
+            "message": "Limite Strava raggiunto. Riprova tra qualche minuto: il sync ora non verra' conteggiato come 0 corse.",
+            "retry_after": int(retry_after) if retry_after and retry_after.isdigit() else None,
+            "rate_limit": rate_payload,
+        }
+        return JSONResponse(body, status_code=429)
+
+    if resp.status_code in {401, 403}:
+        return JSONResponse(
+            {
+                "error": "strava_auth_required",
+                "message": "Autorizzazione Strava non valida o permessi insufficienti. Ricollega Strava dal profilo.",
+            },
+            status_code=resp.status_code,
+        )
+
+    return JSONResponse(
+        {
+            "error": "strava_fetch_failed",
+            "message": f"Strava non ha risposto correttamente (HTTP {resp.status_code}).",
+            "status_code": resp.status_code,
+        },
+        status_code=fallback_status,
+    )
+
+
 @app.post("/api/strava/sync")
 async def strava_sync():
     """Fetch ALL activities from Strava (paginated) and upsert into DB."""
@@ -859,9 +901,17 @@ async def strava_sync():
     athlete_id = tokens.get("athlete_id")
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
     synced = 0
+    skipped_existing = 0
+    scanned = 0
+    existing_runs = await db.runs.count_documents(
+        {"athlete_id": athlete_id, "strava_id": {"$exists": True, "$ne": None}}
+    ) if athlete_id else await db.runs.count_documents({"strava_id": {"$exists": True, "$ne": None}})
+    max_pages = 1 if existing_runs > 0 else 10
 
     async with httpx.AsyncClient(timeout=30.0) as http:
-        # 1) Paginate through ALL activities
+        # 1) Paginate Strava activities. Once history exists, read only the latest
+        # page and import missing runs; reprocessing every old run burns Strava's
+        # rate limit and can make a valid new sync look like "0 corse".
         all_activities = []
         page = 1
         while True:
@@ -871,11 +921,19 @@ async def strava_sync():
                 params={"per_page": 200, "page": page},
             )
             if resp.status_code != 200:
-                break
+                await publish_event({
+                    "type": "sync_error",
+                    "source": "strava",
+                    "error": "rate_limited" if resp.status_code == 429 else f"http_{resp.status_code}",
+                })
+                return _strava_error_response(resp)
+
             batch = resp.json()
             if not batch:
                 break
             all_activities.extend(batch)
+            if page >= max_pages:
+                break
             page += 1
 
         # Get profile for HR % calculation
@@ -885,10 +943,16 @@ async def strava_sync():
 
         # 2) Process each run
         for act in all_activities:
-            if act.get("type") != "Run":
+            scanned += 1
+            if not _is_strava_run_activity(act):
                 continue
 
             strava_id = act["id"]
+            existing = await db.runs.find_one({"strava_id": strava_id}, {"_id": 1})
+            if existing:
+                skipped_existing += 1
+                continue
+
             distance_km = round(act.get("distance", 0) / 1000, 2)
             duration_min = round(act.get("moving_time", 0) / 60, 2)
             avg_speed = act.get("average_speed", 0)
@@ -896,6 +960,8 @@ async def strava_sync():
             avg_hr = act.get("average_heartrate")
             max_hr = act.get("max_heartrate")
             date_str = act.get("start_date_local", "")[:10]
+            start_date = act.get("start_date")
+            start_date_local = act.get("start_date_local")
 
             # Get summary polyline from the activity list data
             summary_polyline = act.get("map", {}).get("summary_polyline", "")
@@ -997,6 +1063,9 @@ async def strava_sync():
                 "strava_id": strava_id,
                 "name": act.get("name", ""),
                 "date": date_str,
+                "start_date": start_date,
+                "start_date_local": start_date_local,
+                "sport_type": act.get("sport_type"),
                 "distance_km": distance_km,
                 "duration_minutes": duration_min,
                 "avg_pace": avg_pace,
@@ -1064,7 +1133,14 @@ async def strava_sync():
             pass  # never fail the sync because of adapt
 
     await publish_event({"type": "sync_complete", "source": "strava", "count": synced})
-    return {"ok": True, "synced": synced, "auto_adapt": adapt_result}
+    return {
+        "ok": True,
+        "synced": synced,
+        "created": synced,
+        "skipped_existing": skipped_existing,
+        "scanned": scanned,
+        "auto_adapt": adapt_result,
+    }
 
 
 # Endpoints PROFILE / USER LAYOUT / RUNS estratti in routers/ (round 8 — #15).
