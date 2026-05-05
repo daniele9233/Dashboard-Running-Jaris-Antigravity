@@ -37,12 +37,39 @@ import base64
 load_dotenv()
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"), override=False)
 
+PUBLIC_FRONTEND_URL = "https://dani-frontend-y63x.onrender.com"
+PUBLIC_BACKEND_URL = "https://dani-backend-ea0s.onrender.com"
+
+
+def _is_render_runtime() -> bool:
+    return any(os.environ.get(name) for name in ("RENDER", "RENDER_SERVICE_ID", "RENDER_EXTERNAL_HOSTNAME", "RENDER_GIT_COMMIT"))
+
+
+def _normalise_frontend_url(raw_url: Optional[str], is_render: Optional[bool] = None) -> str:
+    raw = (raw_url or "").strip().rstrip("/")
+    render_runtime = _is_render_runtime() if is_render is None else is_render
+    if not raw:
+        return PUBLIC_FRONTEND_URL if render_runtime else "http://localhost:5173"
+    if render_runtime and ("localhost" in raw or "127.0.0.1" in raw):
+        return PUBLIC_FRONTEND_URL
+    return raw
+
+
+def _normalise_backend_url(raw_url: Optional[str], is_render: Optional[bool] = None) -> str:
+    raw = (raw_url or "").strip().rstrip("/")
+    render_runtime = _is_render_runtime() if is_render is None else is_render
+    if not raw:
+        return PUBLIC_BACKEND_URL if render_runtime else "http://localhost:8000"
+    if render_runtime and ("localhost" in raw or "127.0.0.1" in raw):
+        return PUBLIC_BACKEND_URL
+    return raw
+
 # ── ENV ──────────────────────────────────────────────────────────────────────
 MONGO_URL          = os.environ.get("MONGO_URL", "")
 DB_NAME            = os.environ.get("DB_NAME", "DANIDB")
 STRAVA_CLIENT_ID   = os.environ.get("STRAVA_CLIENT_ID", "")
 STRAVA_CLIENT_SECRET = os.environ.get("STRAVA_CLIENT_SECRET", "")
-FRONTEND_URL       = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL       = _normalise_frontend_url(os.environ.get("FRONTEND_URL"))
 ANTHROPIC_API_KEY  = os.environ.get("ANTHROPIC_API_KEY", "")
 GEMINI_API_KEY     = os.environ.get("GEMINI_API_KEY", "")
 JARVIS_GEMINI_KEY  = os.environ.get("JARVIS_GEMINI_KEY", "") or GEMINI_API_KEY
@@ -59,7 +86,7 @@ VDOT_RECENCY_DECAY_LAMBDA = -math.log(VDOT_RECENCY_WEIGHT_30D) / 30.0
 VDOT_RECENT_ANCHOR_DAYS = 7
 
 # Build the callback URL from the current host (set via Render env or default)
-BACKEND_URL        = os.environ.get("BACKEND_URL", "https://dani-backend-ea0s.onrender.com")
+BACKEND_URL        = _normalise_backend_url(os.environ.get("BACKEND_URL"))
 STRAVA_REDIRECT_URI = f"{BACKEND_URL}/api/strava/callback"
 STRAVA_SCOPE       = "read,activity:read_all"
 

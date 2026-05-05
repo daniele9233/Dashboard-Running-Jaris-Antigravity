@@ -160,3 +160,13 @@ def test_strava_run_detection_accepts_sport_type_variants():
     assert _is_strava_run_activity({"type": "Run"})
     assert _is_strava_run_activity({"type": "Workout", "sport_type": "TrailRun"})
     assert _is_strava_run_activity({"type": "Ride", "sport_type": "Ride"}) is False
+
+
+def test_render_frontend_url_never_points_to_localhost():
+    sys.path.insert(0, str(BACKEND_DIR))
+    from server import PUBLIC_BACKEND_URL, PUBLIC_FRONTEND_URL, _normalise_backend_url, _normalise_frontend_url  # type: ignore
+
+    assert _normalise_frontend_url("http://localhost:3000", is_render=True) == PUBLIC_FRONTEND_URL
+    assert _normalise_frontend_url("http://127.0.0.1:3000", is_render=True) == PUBLIC_FRONTEND_URL
+    assert _normalise_backend_url("http://localhost:8000", is_render=True) == PUBLIC_BACKEND_URL
+    assert _normalise_frontend_url("http://localhost:3000", is_render=False) == "http://localhost:3000"
