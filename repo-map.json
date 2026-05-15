@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-05T11:17:08.424Z",
+  "generated_at": "2026-05-15T08:27:40.360Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,9 +14,9 @@
     ]
   },
   "counts": {
-    "files": 135,
+    "files": 136,
     "backend_routes": 51,
-    "frontend_routes": 13,
+    "frontend_routes": 14,
     "api_clients": 52
   },
   "files": [
@@ -1514,6 +1514,7 @@
         "/runner-dna",
         "/runner-dna-v2",
         "/statistics",
+        "/supplements",
         "/training"
       ],
       "imports": [
@@ -1530,9 +1531,9 @@
         "react-i18next",
         "react-router-dom"
       ],
-      "hash": "528e98e85f74a9c6b5fc55f0f9dc49f381593c2efa6a00a23c83e4d941a74606",
-      "last_modified": "2026-05-04T09:50:51.164Z",
-      "size_bytes": 9941
+      "hash": "e6198ea68b5ba27022fdff649dd63bd7c9a483558be205c911e849a01b49d3ef",
+      "last_modified": "2026-05-15T07:58:47.505Z",
+      "size_bytes": 10219
     },
     {
       "path": "src/components/ActivitiesView.tsx",
@@ -1802,9 +1803,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "40c433f12165876a862dd04ab6f212b69cf6c2c958cb5824c1957a8b61b4617b",
-      "last_modified": "2026-04-30T07:04:18.407Z",
-      "size_bytes": 5289
+      "hash": "cb5cd8da19b388a98f8457e57b8d6b50d22f68e40c415de2979a9d9fb76b56ca",
+      "last_modified": "2026-05-15T07:36:45.892Z",
+      "size_bytes": 5592
     },
     {
       "path": "src/components/DashboardView.tsx",
@@ -2698,9 +2699,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "b0603eda7f3033dcac4d1a3ed127b640e04ee48b9a6765e8edc6d870bd6c353d",
-      "last_modified": "2026-04-28T05:02:06.953Z",
-      "size_bytes": 122655
+      "hash": "71ca02c680be474d57364230390ca17c2716343ae10a8d48f48696568f426894",
+      "last_modified": "2026-05-15T07:43:44.579Z",
+      "size_bytes": 122853
     },
     {
       "path": "src/components/statistics/StatsCalc.tsx",
@@ -2800,6 +2801,31 @@
       "hash": "5fde989616e4a946ecb5d312497ae3d236fe494aa4cc49c2f6c14017aad9a038",
       "last_modified": "2026-04-05T20:59:12.303Z",
       "size_bytes": 11604
+    },
+    {
+      "path": "src/components/supplements/SupplementsView.tsx",
+      "kind": "frontend-view",
+      "purpose": "Page/view component for Supplements.",
+      "touch_when": [
+        "ai",
+        "layout",
+        "profile",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "SupplementsView"
+      ],
+      "routes": [],
+      "imports": [
+        "lucide-react",
+        "react",
+        "recharts"
+      ],
+      "hash": "d863b0e783915724fbae3c7b95aace312f185198c8ea017032a0043aa4ea1d1c",
+      "last_modified": "2026-05-15T08:27:40.361Z",
+      "size_bytes": 35395
     },
     {
       "path": "src/components/TopStats.tsx",
@@ -3217,9 +3243,9 @@
       ],
       "routes": [],
       "imports": [],
-      "hash": "86de17e7329816e66632e1e9b562c58ad6e384e01fd5ee10e4a0938725e1c164",
-      "last_modified": "2026-04-29T11:04:06.940Z",
-      "size_bytes": 19465
+      "hash": "c0fa79ee168d8d35dbd2da924fe80616086434eb96322789878583c47fb46d63",
+      "last_modified": "2026-05-15T07:56:31.452Z",
+      "size_bytes": 19536
     },
     {
       "path": "src/index.css",
@@ -3996,79 +4022,85 @@
       "path": "*",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 192
+      "line": 195
     },
     {
       "path": "/",
       "element": "DashboardView",
       "file": "src/App.tsx",
-      "line": 180
+      "line": 182
     },
     {
       "path": "/activities",
       "element": "ActivitiesView",
       "file": "src/App.tsx",
-      "line": 181
+      "line": 183
     },
     {
       "path": "/activities/:runId",
       "element": "RoutesViewWrapper",
       "file": "src/App.tsx",
-      "line": 182
+      "line": 184
     },
     {
       "path": "/biometrics",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 190
+      "line": 193
     },
     {
       "path": "/insights",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 191
+      "line": 194
     },
     {
       "path": "/profile",
       "element": "ProfileView",
       "file": "src/App.tsx",
-      "line": 188
+      "line": 191
     },
     {
       "path": "/ranking",
       "element": "RankingView",
       "file": "src/App.tsx",
-      "line": 185
+      "line": 187
     },
     {
       "path": "/recovery",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 189
+      "line": 192
     },
     {
       "path": "/runner-dna",
       "element": "RunnerDnaView",
       "file": "src/App.tsx",
-      "line": 184
+      "line": 186
     },
     {
       "path": "/runner-dna-v2",
       "element": "Navigate",
       "file": "src/App.tsx",
-      "line": 186
+      "line": 188
     },
     {
       "path": "/statistics",
       "element": "StatisticsView",
       "file": "src/App.tsx",
-      "line": 187
+      "line": 189
+    },
+    {
+      "path": "/supplements",
+      "element": "SupplementsView",
+      "file": "src/App.tsx",
+      "line": 190
     },
     {
       "path": "/training",
       "element": "TrainingView",
       "file": "src/App.tsx",
-      "line": 183
+      "line": 185
     }
   ],
   "api_clients": [

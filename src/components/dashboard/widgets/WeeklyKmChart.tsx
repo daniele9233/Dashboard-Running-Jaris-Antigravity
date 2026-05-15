@@ -20,9 +20,14 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     if (chartPeriod === '7d') {
       const now = new Date();
+      const dow = now.getDay(); // 0=Sun
+      const daysFromMon = dow === 0 ? 6 : dow - 1;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - daysFromMon);
+      monday.setHours(0, 0, 0, 0);
       return Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(now);
-        d.setDate(now.getDate() - (6 - i));
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
         const ds = toLocal(d);
         const km = runs.filter(r => r.date.slice(0, 10) === ds).reduce((s, r) => s + r.distance_km, 0);
         const label = d.toLocaleDateString('en', { weekday: 'short' }).slice(0, 3).toUpperCase();
@@ -56,10 +61,12 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
 
   const weeklyKmTotal = useMemo(() => {
     const now = new Date();
-    const cutoff = new Date(now);
-    cutoff.setDate(now.getDate() - 6);
-    cutoff.setHours(0, 0, 0, 0);
-    return runs.filter(r => new Date(r.date) >= cutoff).reduce((s, r) => s + r.distance_km, 0);
+    const dow = now.getDay();
+    const daysFromMon = dow === 0 ? 6 : dow - 1;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - daysFromMon);
+    monday.setHours(0, 0, 0, 0);
+    return runs.filter(r => new Date(r.date) >= monday).reduce((s, r) => s + r.distance_km, 0);
   }, [runs]);
 
   return (

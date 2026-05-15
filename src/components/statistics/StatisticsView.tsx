@@ -830,6 +830,11 @@ export function StatisticsView() {
     () => runs.filter((r) => !r.is_treadmill && (r.has_gps ?? Boolean(r.polyline || r.start_latlng))),
     [runs]
   );
+  // km charts include treadmill runs (distance counts, but treadmill excluded from analytics)
+  const kmRuns = React.useMemo(
+    () => runs.filter((r) => (r.distance_km ?? 0) > 0),
+    [runs]
+  );
   const fallbackCharts = React.useMemo(() => buildClientAnalyticsFallbacks(statsRuns), [statsRuns]);
   const vdot = vdotData?.vdot ?? null;
   const level = vdot ? vdotLevel(vdot, t) : null;
@@ -1209,7 +1214,7 @@ export function StatisticsView() {
                 <div key="load-main-chart">
                   <GridCard disabled={isMobile} onRemove={() => loadFormLayout.hideWidget('load-main-chart')}>
                     <div className="h-full min-h-[360px]">
-                      <MainChart runs={statsRuns} />
+                      <MainChart runs={kmRuns} />
                     </div>
                   </GridCard>
                 </div>
@@ -1342,7 +1347,7 @@ export function StatisticsView() {
                <div>
                  {/* ── MainChart ── */}
                  <div className="h-[420px]">
-                   <MainChart runs={statsRuns} />
+                   <MainChart runs={kmRuns} />
                  </div>
                </div>
                <div>
