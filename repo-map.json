@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-15T08:27:40.360Z",
+  "generated_at": "2026-05-15T13:40:09.374Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 136,
+    "files": 137,
     "backend_routes": 51,
     "frontend_routes": 14,
     "api_clients": 52
@@ -1532,7 +1532,7 @@
         "react-router-dom"
       ],
       "hash": "e6198ea68b5ba27022fdff649dd63bd7c9a483558be205c911e849a01b49d3ef",
-      "last_modified": "2026-05-15T07:58:47.505Z",
+      "last_modified": "2026-05-15T12:43:17.160Z",
       "size_bytes": 10219
     },
     {
@@ -2180,9 +2180,9 @@
         "react-map-gl/maplibre",
         "react-router-dom"
       ],
-      "hash": "67399800796bf00803ef81f24a9e2c15c4b44f04582bc23076990caee0592839",
-      "last_modified": "2026-05-05T10:54:05.378Z",
-      "size_bytes": 74741
+      "hash": "a082370642732678036fef4466d4ee15299efb62f9db58626a0729829a416f34",
+      "last_modified": "2026-05-15T12:43:12.756Z",
+      "size_bytes": 60759
     },
     {
       "path": "src/components/RacePredictions.tsx",
@@ -2602,6 +2602,34 @@
       "size_bytes": 58256
     },
     {
+      "path": "src/components/statistics/CaricoFormaV2.tsx",
+      "kind": "frontend-statistics-component",
+      "purpose": "React component CaricoFormaV2.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "dashboard",
+        "garmin",
+        "layout",
+        "statistics",
+        "types"
+      ],
+      "exports": [
+        "CaricoFormaV2",
+        "CaricoFormaV2Props"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "../dashboard/widgets/WeeklyKmChart",
+        "react",
+        "recharts"
+      ],
+      "hash": "34c804240d0e34ec8847034135a361fd7b6ee38cf013777cc8443dc910f22a6d",
+      "last_modified": "2026-05-15T13:40:09.375Z",
+      "size_bytes": 28664
+    },
+    {
       "path": "src/components/statistics/ChartFullscreenModal.tsx",
       "kind": "frontend-statistics-component",
       "purpose": "React component ChartFullscreenModal.",
@@ -2690,6 +2718,7 @@
         "./AnalyticsV5",
         "./BiologyFutureLab",
         "./BiologyFutureV2",
+        "./CaricoFormaV2",
         "./ChartFullscreenModal",
         "./EnvironmentalNormalizerView",
         "./StatsDrift",
@@ -2699,9 +2728,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "71ca02c680be474d57364230390ca17c2716343ae10a8d48f48696568f426894",
-      "last_modified": "2026-05-15T07:43:44.579Z",
-      "size_bytes": 122853
+      "hash": "0e261b7b06f7cab873f3222287ae0612ced27a970dbe7bf189a3900acaba46a9",
+      "last_modified": "2026-05-15T13:31:23.618Z",
+      "size_bytes": 123761
     },
     {
       "path": "src/components/statistics/StatsCalc.tsx",
@@ -2823,8 +2852,8 @@
         "react",
         "recharts"
       ],
-      "hash": "d863b0e783915724fbae3c7b95aace312f185198c8ea017032a0043aa4ea1d1c",
-      "last_modified": "2026-05-15T08:27:40.361Z",
+      "hash": "feee89ab63b663c0d940f0e2928764d775804718dc7b7ff1b73f5963efb8c4b6",
+      "last_modified": "2026-05-15T12:42:18.366Z",
       "size_bytes": 35395
     },
     {

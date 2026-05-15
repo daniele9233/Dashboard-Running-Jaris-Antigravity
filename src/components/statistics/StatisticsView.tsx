@@ -12,6 +12,7 @@ import { BiologyFutureV2 } from './BiologyFutureV2';
 import { BiologyFutureLab } from './BiologyFutureLab';
 import { EnvironmentalNormalizerView } from './EnvironmentalNormalizerView';
 import { AnalyticsV4CadenceSpeedMatrix, AnalyticsV4PaceZoneDistribution } from './AnalyticsV4';
+import { CaricoFormaV2 } from './CaricoFormaV2';
 import { AnalyticsV5BestEffortsProgression, AnalyticsV5EffortMatrix, AnalyticsV5PaceDistributionBell } from './AnalyticsV5';
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 import { useApi } from '../../hooks/useApi';
@@ -914,8 +915,9 @@ export function StatisticsView() {
 
 
   const tabs = [
-    { id: 'analytics',   label: 'Carico & Forma',              icon: LayoutGrid },
-    { id: 'analyticsv2', label: 'Potenziale & Progressi',      icon: Radar },
+    { id: 'analytics',      label: 'Carico & Forma',           icon: LayoutGrid },
+    { id: 'analytics-cf-v2', label: 'Carico & Forma v2',       icon: BarChart3  },
+    { id: 'analyticsv2',    label: 'Potenziale & Progressi',   icon: Radar },
     { id: 'analyticsv3', label: 'Biomeccanica & Efficienza',   icon: Activity },
     { id: 'biology',     label: 'Biologia & Futuro',           icon: FlaskConical },
     { id: 'environment', label: 'Clima & Ritmo',               icon: CloudSun },
@@ -1743,6 +1745,20 @@ export function StatisticsView() {
              </div>
              )}
 
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════
+            CARICO & FORMA V2
+        ════════════════════════════════════════════════════ */}
+        {activeTab === 'analytics-cf-v2' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <CaricoFormaV2
+              ffHistory={ffHistory}
+              kmRuns={kmRuns}
+              paceDistributionChart={loadCharts.pace_distribution}
+              effortMatrixChart={loadCharts.effort_matrix}
+            />
           </div>
         )}
 

@@ -45,7 +45,7 @@ const SUPPLEMENTS: SupplementDef[] = [
     name: "Beta-Alanina",
     dose: "4 g/die",
     color: "#3B82F6",
-    startDate: "2026-05-16",
+    startDate: "2026-05-15",
     tau: 35,
     fullDays: 70,
     source: "Harris 2006, Hill 2007",
