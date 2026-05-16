@@ -25,9 +25,9 @@ const MUTED  = '#666666';
 const NEON_GREEN = '#ccff00';
 const NEON_ORANGE = '#ff5b00';
 
+const GLASS = "backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50";
+
 const cardStyle = (accent = NEON): React.CSSProperties => ({
-  background: CARD,
-  border: `1px solid ${BORDER}`,
   borderLeft: `3px solid ${accent}`,
 });
 
@@ -761,7 +761,7 @@ export function AnalyticsV3({
 
         {/* Pentagon Radar */}
         <div
-          className="rounded-3xl p-8 group"
+          className={`rounded-3xl p-8 group ${GLASS}`}
           style={cardStyle(NEON)}
         >
           <div className="flex items-center justify-between gap-3 mb-6">
@@ -791,7 +791,7 @@ export function AnalyticsV3({
 
         {/* Efficiency Correlation */}
         <div
-          className="rounded-3xl p-8 group"
+          className={`rounded-3xl p-8 group ${GLASS}`}
           style={cardStyle(ORANGE)}
         >
           <div className="flex items-center justify-between mb-6">
@@ -882,7 +882,7 @@ export function AnalyticsV3({
           LONG-TERM TRAINING ADAPTATION
       ══════════════════════════════════════════════════ */}
       <div
-        className="rounded-3xl p-8 group"
+        className={`rounded-3xl p-8 group ${GLASS}`}
         style={cardStyle(NEON)}
       >
         <div className="flex items-center justify-between mb-8">

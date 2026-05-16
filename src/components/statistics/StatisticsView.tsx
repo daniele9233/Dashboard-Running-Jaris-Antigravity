@@ -206,10 +206,8 @@ function Card({
   const isPro = variant === 'pro';
   return (
     <div
-      className={`${isPro ? 'rounded-2xl p-7 shadow-2xl' : 'rounded-3xl p-8'} ${className}`}
+      className={`${isPro ? 'rounded-2xl p-7 shadow-2xl' : 'rounded-3xl p-8'} backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 ${className}`}
       style={{
-        background: PRO_PANEL,
-        border: `1px solid ${isPro ? PRO_BORDER_STRONG : PRO_BORDER}`,
         borderLeft: `3px solid ${isPro ? PRO_ACCENT : accent}`,
       }}
     >
@@ -1619,7 +1617,7 @@ export function StatisticsView() {
                      return (
                        <div
                          key={key}
-                         className="bg-[#0D0D0D] border border-[#1A1A1A] rounded-xl p-4 text-center"
+                         className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center"
                        >
                          <div
                            className="text-[9px] font-black uppercase tracking-widest mb-2"
@@ -2135,15 +2133,15 @@ export function StatisticsView() {
                     <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, total?.ready_pct ?? 0))}%`, backgroundColor: color }} />
                   </div>
                   <div className="grid grid-cols-3 gap-3 text-center">
-                    <div className="bg-[#111] border border-[#1E1E1E] rounded-[6px] p-3">
+                    <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                       <div className="text-white font-mono font-black">{total?.runs ?? 0}</div>
                       <div className="text-[9px] text-[#666] uppercase font-black">corse</div>
                     </div>
-                    <div className="bg-[#111] border border-[#1E1E1E] rounded-[6px] p-3">
+                    <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                       <div className="text-white font-mono font-black">{total?.load ?? 0}</div>
                       <div className="text-[9px] text-[#666] uppercase font-black">carico</div>
                     </div>
-                    <div className="bg-[#111] border border-[#1E1E1E] rounded-[6px] p-3">
+                    <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                       <div className="text-white font-mono font-black">{total?.missing_pct ?? 0}%</div>
                       <div className="text-[9px] text-[#666] uppercase font-black">manca</div>
                     </div>
@@ -2177,7 +2175,7 @@ export function StatisticsView() {
                       ? new Date(`${run.benefit_date}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
                       : 'N/D';
                     return (
-                      <div key={`${run.id}-${run.date}`} className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center bg-[#111] border border-[#1E1E1E] rounded-[6px] p-4 hover:border-[#333] transition-colors">
+                      <div key={`${run.id}-${run.date}`} className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 hover:border-white/[0.2] transition-colors">
                         <div className="lg:col-span-4 min-w-0">
                           <div className="text-white font-black uppercase tracking-wide truncate">{run.name || 'Corsa'}</div>
                           <div className="text-[10px] text-[#666] font-bold uppercase tracking-widest mt-1">
@@ -2200,11 +2198,11 @@ export function StatisticsView() {
                           </div>
                         </div>
                         <div className="lg:col-span-3 grid grid-cols-2 gap-3">
-                          <div className="bg-[#0D0D0D] border border-[#1E1E1E] rounded-[6px] p-3">
+                          <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                             <div className="text-lg font-mono font-black text-white">{run.missing_pct}%</div>
                             <div className="text-[9px] text-[#666] uppercase font-black">manca</div>
                           </div>
-                          <div className="bg-[#0D0D0D] border border-[#1E1E1E] rounded-[6px] p-3">
+                          <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                             <div className="text-lg font-mono font-black" style={{ color }}>{run.days_remaining}</div>
                             <div className="text-[9px] text-[#666] uppercase font-black">gg - {benefitDate}</div>
                           </div>

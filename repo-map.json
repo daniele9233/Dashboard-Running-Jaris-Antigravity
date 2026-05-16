@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-16T19:23:26.066Z",
+  "generated_at": "2026-05-16T19:56:03.713Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2154,9 +2154,9 @@
         "react",
         "recharts"
       ],
-      "hash": "bb2e1cc4c770b0387336796cc5e6ea5e41b6c9e0b4ca87c0647a3fae5a703134",
-      "last_modified": "2026-05-16T19:15:27.464Z",
-      "size_bytes": 20022
+      "hash": "01f0f19abab117fb1a860c6485d9bdc5b7d1f8a6ee71dfe43007c84f1d0534ce",
+      "last_modified": "2026-05-16T19:25:20.350Z",
+      "size_bytes": 20154
     },
     {
       "path": "src/components/MapFallback.tsx",
@@ -2505,9 +2505,9 @@
         "react",
         "recharts"
       ],
-      "hash": "63cc6a204f2954c5633af9c41acc9a79f26f38b8d5054f39f55ba2490aa7852e",
-      "last_modified": "2026-05-16T19:23:26.067Z",
-      "size_bytes": 53430
+      "hash": "6351d26ae61d2b41c810229b800c14c364e5ed559346bc2835610df717fe55b8",
+      "last_modified": "2026-05-16T19:55:55.925Z",
+      "size_bytes": 53594
     },
     {
       "path": "src/components/statistics/AnalyticsV4.tsx",
@@ -2597,9 +2597,9 @@
         "react",
         "recharts"
       ],
-      "hash": "a1cea39257252ecbf765d19df77132ca37b21f9e6704d791e6083937f9004332",
-      "last_modified": "2026-05-16T19:19:19.394Z",
-      "size_bytes": 38641
+      "hash": "163404ca0d46efd97754ca275150696f6fe294e6340307497679e6cc71f1d7d4",
+      "last_modified": "2026-05-16T19:24:21.435Z",
+      "size_bytes": 38770
     },
     {
       "path": "src/components/statistics/BiologyFutureLab.tsx",
@@ -2815,9 +2815,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "20601a01d1179403a1446b57ac746bf6b6e51b45efa531ac455790ed2f0c7f63",
-      "last_modified": "2026-05-16T19:23:17.830Z",
-      "size_bytes": 123963
+      "hash": "9c83f205f6812387935f7b42c67a27533a1d3abaa9297d5835b94e738be11776",
+      "last_modified": "2026-05-16T19:56:03.714Z",
+      "size_bytes": 124927
     },
     {
       "path": "src/components/statistics/StatsCalc.tsx",
@@ -2992,9 +2992,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "5437a6db7add62a8f92934bab8aa77bb2ba5ae6f04507a31db0678845ada0c23",
-      "last_modified": "2026-05-16T19:23:11.718Z",
-      "size_bytes": 80256
+      "hash": "293d8e9f03442c228a956268ab22877007e209eb38980808d15fa94092040b4e",
+      "last_modified": "2026-05-16T19:25:48.436Z",
+      "size_bytes": 80638
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
