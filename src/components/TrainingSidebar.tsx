@@ -213,7 +213,7 @@ export function TrainingSidebar() {
 
         {/* Week progress summary */}
         {currentWeek && (
-          <div className="mt-6 p-4 bg-[#121212] rounded-xl border border-[#2A2A2A] space-y-2">
+          <div className="mt-6 p-4 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 space-y-2">
             <div className="flex justify-between text-xs text-gray-500">
               <span>Target settimana</span>
               <span className="text-white font-bold">{currentWeek.target_km} km</span>

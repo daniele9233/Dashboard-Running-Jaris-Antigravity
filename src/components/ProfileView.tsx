@@ -858,7 +858,7 @@ export function ProfileView() {
               { label: t("profile.maxHr"), value: String(maxHr), unit: "bpm", icon: Heart, color: "text-[#F43F5E]" },
               { label: "Personal Best", value: String(efforts.length), unit: "distanze", icon: Award, color: "text-[#10B981]" },
             ].map((stat, i) => (
-              <div key={i} className="bg-[#181818] border border-[#2A2A2A] rounded-2xl p-5 hover:border-[#3A3A3A] transition-colors">
+              <div key={i} className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 transition-colors">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{stat.label}</span>
                   <stat.icon className={`w-5 h-5 ${stat.color}`} />
@@ -959,22 +959,22 @@ export function ProfileView() {
 
                 {/* Stats grid */}
                 <div className="grid grid-cols-4 gap-3 mt-5 pt-4 border-t border-[#242424] relative">
-                  <div className="bg-[#0D0D0D] border border-[#1D1D1D] rounded-xl p-3 text-center">
+                  <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
                     <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Streak</div>
                     <div className="text-xl font-black text-[#10B981]">{currentStreak}</div>
                     <div className="text-[10px] text-gray-600">giorni</div>
                   </div>
-                  <div className="bg-[#0D0D0D] border border-[#1D1D1D] rounded-xl p-3 text-center">
+                  <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
                     <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Best Streak</div>
                     <div className="text-xl font-black text-[#EAB308]">{bestStreak}</div>
                     <div className="text-[10px] text-gray-600">giorni</div>
                   </div>
-                  <div className="bg-[#0D0D0D] border border-[#1D1D1D] rounded-xl p-3 text-center">
+                  <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
                     <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Media/Run</div>
                     <div className="text-xl font-black text-white">{avgKmActive.toFixed(1)}</div>
                     <div className="text-[10px] text-gray-600">km</div>
                   </div>
-                  <div className="bg-[#0D0D0D] border border-[#1D1D1D] rounded-xl p-3 text-center">
+                  <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
                     <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Giorno Top</div>
                     <div className="text-xl font-black text-[#3B82F6]">{favDay}</div>
                     <div className="text-[10px] text-gray-600">{dayTotals[favDayIdx] > 0 ? `${dayTotals[favDayIdx]} corse` : ""}</div>
@@ -1012,7 +1012,7 @@ export function ProfileView() {
           })()}
 
           {/* Training Zones */}
-          <div className="bg-[#181818] border border-[#2A2A2A] rounded-2xl p-6">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-lg font-bold text-white">Zone di Allenamento</h2>
@@ -1043,7 +1043,7 @@ export function ProfileView() {
                 { label: "Peso", value: activeProfile?.weight_kg ? `${activeProfile.weight_kg} kg` : "—" },
                 { label: "Altezza", value: activeProfile?.height_cm ? `${activeProfile.height_cm} cm` : "—" },
               ].map((s, i) => (
-                <div key={i} className="bg-[#121212] rounded-xl p-3">
+                <div key={i} className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                   <div className="text-xs text-gray-500 mb-1">{s.label}</div>
                   <div className="text-base font-bold text-white">{s.value}</div>
                 </div>
@@ -1052,7 +1052,7 @@ export function ProfileView() {
           </div>
 
           {/* 80/20 Rule */}
-          <div className="bg-[#181818] border border-[#2A2A2A] rounded-2xl p-6">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-lg font-bold text-white">Regola 80/20</h2>
@@ -1112,7 +1112,7 @@ export function ProfileView() {
           </div>
 
           {/* Strava Integration */}
-          <div className="bg-[#181818] border border-[#2A2A2A] rounded-2xl p-6">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 rounded-xl bg-[#FC4C02]/20 flex items-center justify-center">
                 <svg viewBox="0 0 24 24" className="w-5 h-5 text-[#FC4C02]" fill="currentColor">
@@ -1191,7 +1191,7 @@ export function ProfileView() {
           </div>
 
           {/* Personal Records */}
-          <div className="bg-[#181818] border border-[#2A2A2A] rounded-2xl p-6">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
             <h2 className="text-lg font-bold text-white mb-6">Personal Records</h2>
             {efforts.length === 0 ? (
               <div className="text-center py-6 text-gray-500 text-sm">

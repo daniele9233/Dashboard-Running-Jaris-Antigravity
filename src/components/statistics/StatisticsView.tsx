@@ -1178,7 +1178,7 @@ export function StatisticsView() {
                       ].map((kpi, i) => (
                         <div
                           key={i}
-                          className="bg-[#0E0E0E] border border-[#2A2A2A] rounded-2xl p-6 relative overflow-hidden hover:border-[#333] transition-colors shadow-2xl"
+                          className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 relative overflow-hidden hover:border-white/[0.2] transition-colors"
                           style={{ borderLeft: `3px solid ${kpi.color}` }}
                         >
                           <div className="flex justify-between items-start mb-4">
@@ -1297,7 +1297,7 @@ export function StatisticsView() {
                ].map((kpi, i) => (
                  <div
                    key={i}
-                   className="bg-[#0E0E0E] border border-[#2A2A2A] rounded-2xl p-6 relative overflow-hidden hover:border-[#333] transition-colors shadow-2xl"
+                   className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 relative overflow-hidden hover:border-white/[0.2] transition-colors"
                    style={{ borderLeft: `3px solid ${kpi.color}` }}
                  >
                    <div className="flex justify-between items-start mb-4">
@@ -1804,7 +1804,7 @@ export function StatisticsView() {
                   ].map(({ key, label, color, sub }) => (
                     <div
                       key={key}
-                      className="bg-[#111111] border border-[#2A2A2A] rounded-2xl p-5 text-center"
+                      className="rounded-2xl p-5 text-center backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
                     >
                       <div
                         className="text-[10px] font-black uppercase tracking-widest mb-1"
@@ -1858,7 +1858,7 @@ export function StatisticsView() {
                   ].map(({ key, zone, name, desc, pct, color }) => (
                     <div
                       key={key}
-                      className="bg-[#111111] border border-[#2A2A2A] rounded-2xl p-5 flex flex-col gap-2"
+                      className="rounded-2xl p-5 flex flex-col gap-2 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-2xl font-black italic" style={{ color }}>
@@ -2396,7 +2396,7 @@ export function StatisticsView() {
                   ].map((item, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between p-4 bg-[#0D0D0D] border border-[#1A1A1A] rounded-2xl"
+                      className="flex items-center justify-between p-4 rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
                     >
                       <div className="flex items-center gap-4">
                         <div className="p-2 rounded-xl bg-[#111] border border-[#1E1E1E]">

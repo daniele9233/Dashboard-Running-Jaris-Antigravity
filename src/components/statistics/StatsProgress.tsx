@@ -45,7 +45,7 @@ export function StatsProgress() {
         {/* Left Column */}
         <div className="flex flex-col gap-6">
           {/* VO2 MAX */}
-          <div className="bg-[#181818] rounded-2xl p-6 border border-[#2A2A2A] flex-1 flex flex-col justify-center">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex-1 flex flex-col justify-center">
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">VO2 Max Stimato</span>
           </div>
@@ -72,7 +72,7 @@ export function StatsProgress() {
         </div>
 
         {/* OBIETTIVO */}
-        <div className="bg-[#181818] rounded-2xl p-6 border border-[#2A2A2A] flex-1 flex flex-col justify-center">
+        <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex-1 flex flex-col justify-center">
           <div className="flex items-center gap-2 mb-6">
             <Target className="w-4 h-4 text-[#10B981]" />
             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Obiettivo Mezza Maratona</span>
@@ -101,7 +101,7 @@ export function StatsProgress() {
         </div>
 
       {/* SOGLIA ANAEROBICA */}
-      <div className="bg-[#181818] rounded-2xl p-6 border border-[#2A2A2A] xl:col-span-2 flex flex-col">
+      <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 xl:col-span-2 flex flex-col">
         <div className="flex items-center gap-2 mb-6">
           <Activity className="w-4 h-4 text-[#10B981]" />
           <span className="text-sm font-bold text-white uppercase tracking-wider">Soglia Anaerobica</span>
@@ -169,7 +169,7 @@ export function StatsProgress() {
       {/* Bottom Section */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
       {/* ANDAMENTO VO2MAX */}
-      <div className="bg-[#181818] rounded-2xl p-6 border border-[#2A2A2A] flex flex-col">
+      <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex flex-col">
         <div className="flex items-center gap-2 mb-2">
           <div className="w-3 h-3 rounded-full bg-[#F43F5E]"></div>
           <span className="text-sm font-bold text-white uppercase tracking-wider">Andamento VO2Max</span>
@@ -188,7 +188,7 @@ export function StatsProgress() {
       </div>
 
       {/* ANDAMENTO PACES */}
-      <div className="bg-[#181818] rounded-2xl p-6 border border-[#2A2A2A] flex flex-col">
+      <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex flex-col">
         <div className="flex items-center gap-2 mb-1">
           <TrendingUp className="w-4 h-4 text-[#3B82F6]" />
           <span className="text-sm font-bold text-white uppercase tracking-wider">Andamento Paces</span>
@@ -215,7 +215,7 @@ export function StatsProgress() {
       </div>
 
       {/* CADENZA */}
-      <div className="bg-[#181818] rounded-2xl p-6 border border-[#2A2A2A] flex flex-col">
+      <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex flex-col">
         <div className="flex items-center gap-2 mb-1">
           <div className="flex gap-0.5">
             <div className="w-1.5 h-3 bg-[#3B82F6] rounded-full"></div>

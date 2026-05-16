@@ -49,7 +49,7 @@ export function CardiacDrift({ runs }: { runs: Run[] }) {
 
   if (!latest) {
     return (
-      <div className="bg-bg-card border border-white/8 rounded-xl p-5 flex items-center justify-center">
+      <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex items-center justify-center">
         <p className="text-xs text-text-muted">
           Sincronizza corse con dati GPS e frequenza cardiaca per vedere la deriva cardiaca.
         </p>
@@ -65,7 +65,7 @@ export function CardiacDrift({ runs }: { runs: Run[] }) {
   const improving = results.length >= 2 && results[0].drift < results[1].drift;
 
   return (
-    <div className="bg-bg-card border border-white/8 rounded-xl p-5">
+    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">

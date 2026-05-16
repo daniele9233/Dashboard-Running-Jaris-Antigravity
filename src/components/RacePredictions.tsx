@@ -231,7 +231,7 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
   ];
 
   return (
-    <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 h-full flex flex-col">
+    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-2">

@@ -202,7 +202,7 @@ export function AnaerobicThreshold({ runs, vdot }: Props) {
 
   return (
     <div
-      className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-xl p-5 flex flex-col"
+      className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex flex-col"
       style={{ minHeight: 320, borderLeft: "3px solid #F43F5E" }}
     >
 

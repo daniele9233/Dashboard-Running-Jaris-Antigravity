@@ -107,7 +107,7 @@ function AdaptPlanModal({ onClose, onDone }: { onClose: () => void; onDone: () =
                 { icon: "✅", label: "Compliance (Costanza)",       desc: "Se hai saltato troppi allenamenti negli ultimi 14 giorni, il piano si ammorbidisce per farti riprendere senza stress." },
                 { icon: "🏁", label: "Taper (Scarico Pre-Gara)",     desc: "A meno di 14 giorni dalla gara, riduce i chilometri per farti arrivare al via con gambe fresche e cariche." },
               ].map(m => (
-                <div key={m.label} className="flex items-start gap-3 p-3 bg-[#121212] rounded-lg border border-[#2A2A2A]">
+                <div key={m.label} className="flex items-start gap-3 p-3 rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_16px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)] bg-gradient-to-br from-white/[0.05] to-black/40">
                   <span className="text-lg">{m.icon}</span>
                   <div>
                     <span className="text-sm font-bold text-gray-200">{m.label}</span>
@@ -129,15 +129,15 @@ function AdaptPlanModal({ onClose, onDone }: { onClose: () => void; onDone: () =
             <div className="space-y-4">
               {/* Summary bar */}
               <div className="flex gap-3 mb-2">
-                <div className="flex-1 bg-[#121212] rounded-lg p-3 border border-[#2A2A2A] text-center">
+                <div className="flex-1 rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_16px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)] bg-gradient-to-br from-white/[0.05] to-black/40 p-3 text-center">
                   <div className="text-xl font-bold text-amber-400">{summary.triggered}</div>
                   <div className="text-xs text-gray-500">modelli attivati</div>
                 </div>
-                <div className="flex-1 bg-[#121212] rounded-lg p-3 border border-[#2A2A2A] text-center">
+                <div className="flex-1 rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_16px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)] bg-gradient-to-br from-white/[0.05] to-black/40 p-3 text-center">
                   <div className="text-xl font-bold text-white">{summary.weeks}</div>
                   <div className="text-xs text-gray-500">settimane modificate</div>
                 </div>
-                <div className="flex-1 bg-[#121212] rounded-lg p-3 border border-[#2A2A2A] text-center">
+                <div className="flex-1 rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_16px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)] bg-gradient-to-br from-white/[0.05] to-black/40 p-3 text-center">
                   <div className="text-xl font-bold text-white">{summary.sessions}</div>
                   <div className="text-xs text-gray-500">sessioni aggiornate</div>
                 </div>
@@ -337,16 +337,16 @@ function EvaluateTestModal({ onClose, onDone }: { onClose: () => void; onDone: (
             <div className="space-y-4">
               {/* VDOT comparison */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4 text-center">
+                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center">
                   <div className="text-[10px] text-gray-500 uppercase mb-1">VDOT Precedente</div>
                   <div className="text-2xl font-bold text-gray-400">{result.previous_plan_vdot}</div>
                 </div>
-                <div className="bg-[#121212] border border-purple-500/30 rounded-xl p-4 text-center">
+                <div className="rounded-xl backdrop-blur-2xl border border-purple-500/30 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center">
                   <div className="text-[10px] text-purple-400 uppercase mb-1">VDOT Test</div>
                   <div className="text-2xl font-bold text-purple-400">{result.test_vdot}</div>
                   <div className="text-[10px] text-gray-500 mt-1">Passo: {result.test_pace}/km</div>
                 </div>
-                <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4 text-center">
+                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center">
                   <div className="text-[10px] text-gray-500 uppercase mb-1">Nuovo Target</div>
                   <div className="text-2xl font-bold text-white">{result.new_target_vdot}</div>
                 </div>
@@ -383,7 +383,7 @@ function EvaluateTestModal({ onClose, onDone }: { onClose: () => void; onDone: (
               </div>
 
               {/* Confidence */}
-              <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-gray-400 uppercase">Confidenza nel piano</span>
                   <span className="text-sm font-bold text-purple-400">{result.confidence}%</span>
@@ -752,7 +752,7 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
           {/* ── PHASE: CALIBRATION ── */}
           {phase === 'calibration' && (
             <div className="space-y-5">
-              <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
                 <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Calibrazione VDOT</div>
                 <p className="text-sm text-gray-400 leading-relaxed">
                   Per un piano piu preciso puoi inserire un test massimale. Se lo salti, il sistema usa lo storico Strava ed e meno certo.
@@ -812,7 +812,7 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
           {/* ── PHASE: STRATEGY ── */}
           {phase === 'strategy' && result && (
             <div className="space-y-5">
-              <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
                 <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
                   Scegli una strategia
                 </div>
@@ -822,16 +822,16 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
               </div>
 
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
                   <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">VDOT attuale</div>
                   <div className="text-2xl font-bold text-white">{result.current_vdot}</div>
                   {result.test_vdot && <div className="text-[10px] text-[#C0FF00] mt-1">da anchor test</div>}
                 </div>
-                <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
                   <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">VDOT obiettivo</div>
                   <div className="text-2xl font-bold text-[#3B82F6]">{result.target_vdot}</div>
                 </div>
-                <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
                   <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Gap</div>
                   <div className={`text-2xl font-bold ${feasColor}`}>+{Math.max(0, result.target_vdot - result.current_vdot).toFixed(1)}</div>
                 </div>
@@ -872,12 +872,12 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
             <div className="space-y-4">
               {/* VDOT Summary */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4 text-center">
+                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center">
                   <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">VDOT Attuale</div>
                   <div className="text-3xl font-bold text-white">{result.current_vdot}</div>
                   {result.test_vdot && <div className="text-[9px] text-[#C0FF00] mt-0.5">calibrato da test</div>}
                 </div>
-                <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4 text-center">
+                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center">
                   <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">VDOT Target</div>
                   <div className="text-3xl font-bold text-[#3B82F6]">{result.target_vdot}</div>
                 </div>
@@ -917,7 +917,7 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
               )}
 
               {selectedStrategy && (
-                <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
                   <div className="flex items-start justify-between gap-4 mb-3">
                     <div>
                       <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Strategia scelta</div>
@@ -945,7 +945,7 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
               )}
 
               {/* Gap indicator */}
-              <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-gray-400 uppercase">Progressione richiesta</span>
                   <span className={`text-sm font-bold ${feasColor}`}>
@@ -963,7 +963,7 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
 
               {/* Race predictions */}
               {Object.keys(result.race_predictions).length > 0 && (
-                <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
                   <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
                     Previsioni a VDOT {result.target_vdot}
                   </div>
@@ -1314,7 +1314,7 @@ export function TrainingGrid() {
           </h2>
 
           {display ? (
-            <div className={`rounded-xl p-8 border-l-4 bg-[#121212] ${display.completed ? 'opacity-75' : ''}`} style={{ borderLeftColor: display.color }}>
+            <div className={`rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-8 border-l-4 ${display.completed ? 'opacity-75' : ''}`} style={{ borderLeftColor: display.color }}>
               <div className="flex items-center justify-between mb-8 pb-6 border-b border-[#2A2A2A]">
                 <h3 className="text-2xl font-bold text-gray-200">{display.title}</h3>
                 <span className={`px-4 py-1.5 rounded-full text-sm font-medium border ${

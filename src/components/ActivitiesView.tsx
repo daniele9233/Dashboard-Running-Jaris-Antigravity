@@ -542,13 +542,13 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                 onMouseLeave={() => setHoveredRunId(null)}
                 onClick={() => hasCoords && handleRunClick(run)}
                 className={cn(
-                  'w-full bg-[#0F172A]/40 backdrop-blur-xl border p-3 sm:p-4 rounded-2xl flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 transition-all group relative',
+                  'w-full rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 sm:p-4 flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 transition-all group relative',
                   hasCoords ? 'cursor-pointer' : 'cursor-default',
                   isSelected
-                    ? 'border-[#C0FF00]/50 bg-[#C0FF00]/[0.04] shadow-[0_0_24px_rgba(192,255,0,0.07)]'
+                    ? '!border-[#C0FF00]/50 !bg-[#C0FF00]/[0.04] shadow-[0_0_24px_rgba(192,255,0,0.07)]'
                     : isHovered
-                    ? 'border-white/12 bg-white/[0.025]'
-                    : 'border-white/5'
+                    ? '!border-white/20'
+                    : ''
                 )}
               >
                 {/* selected pulse ring */}

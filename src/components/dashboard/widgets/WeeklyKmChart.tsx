@@ -66,7 +66,7 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
   }, [runs]);
 
   return (
-    <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 flex flex-col">
+    <div className="h-full rounded-3xl p-8 flex flex-col backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
       <div className="flex items-center justify-between mb-2">
         <div>
           <div className="text-[#A0A0A0] text-xs font-black tracking-widest">

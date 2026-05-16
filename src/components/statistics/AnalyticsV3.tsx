@@ -402,7 +402,7 @@ function TelemetryMetricCard({
   accent: string;
 }) {
   return (
-    <div className="rounded-2xl border border-gray-800/70 bg-white/[0.025] p-5">
+    <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
       <div className="flex items-start justify-between gap-3">
         <span className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">{label}</span>
         <span className="h-2 w-2 rounded-full shadow-[0_0_12px_currentColor]" style={{ color: accent, backgroundColor: accent }} />
@@ -470,7 +470,7 @@ function GroundContactStability({
   };
 
   return (
-    <main className="relative w-full bg-[#111] rounded-[2rem] border border-gray-800 shadow-2xl flex flex-col overflow-hidden">
+    <main className="relative w-full rounded-[2rem] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 flex flex-col overflow-hidden">
       <div className="absolute left-0 top-16 bottom-16 w-1 bg-[#ccff00] rounded-r-full shadow-[0_0_15px_#ccff00]" />
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 sm:p-8 border-b border-gray-800/60 ml-2">
@@ -510,7 +510,7 @@ function GroundContactStability({
             </button>
           </div>
 
-          <div className="relative w-full overflow-hidden rounded-3xl border border-gray-800/40 bg-[#060606] p-6 shadow-inner">
+          <div className="relative w-full overflow-hidden rounded-3xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
             <div className="pointer-events-none absolute inset-0 opacity-25" style={{
               backgroundImage: 'linear-gradient(rgba(204,255,0,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(204,255,0,0.05) 1px, transparent 1px)',
               backgroundSize: '28px 28px',
@@ -546,7 +546,7 @@ function GroundContactStability({
               />
             </div>
 
-            <div className="relative mt-5 rounded-2xl border border-[#ccff00]/20 bg-[#ccff00]/[0.04] p-4">
+            <div className="relative mt-5 rounded-2xl backdrop-blur-2xl border border-[#ccff00]/20 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
               <div className="mb-2 flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
                 <span>Stability confidence</span>
                 <span className="text-[#ccff00]">{latestRuns || sampleSize} campioni</span>
@@ -562,7 +562,7 @@ function GroundContactStability({
             </div>
           </div>
 
-          <div className="mt-5 rounded-2xl border border-gray-800/70 bg-white/[0.025] p-4 text-xs leading-5 text-gray-500">
+          <div className="mt-5 rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-xs leading-5 text-gray-500">
             <span className="font-black uppercase tracking-wider text-gray-300">Come leggerlo: </span>
             GCT piu basso e stabile e positivo. Cadenza e rapporto verticale aiutano a capire se l'appoggio e reattivo o dispersivo.
             I dati L/R Load e Peak Force non arrivano dai CSV Garmin/API attuali, quindi non vengono mostrati come numeri principali.
@@ -676,7 +676,7 @@ function GroundContactStability({
 
 function MetricBox({ title, value, unit }: { title: string; value: string; unit: string }) {
   return (
-    <div className="flex-1 bg-white/[0.02] border border-white/5 rounded-2xl p-5 sm:p-6 backdrop-blur-sm shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] hover:bg-white/[0.04] transition-colors cursor-default group">
+    <div className="flex-1 rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 sm:p-6 hover:border-white/[0.2] transition-colors cursor-default group">
       <span className="text-[10px] sm:text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 block">{title}</span>
       <div className="flex items-baseline gap-1">
         <span className="text-3xl sm:text-4xl font-black text-white tracking-tighter group-hover:text-gray-100 transition-colors">{value}</span>
@@ -994,7 +994,7 @@ export function AnalyticsV3({
         details={
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             {radarAxesReal.map((a) => (
-              <div key={a.label} className="rounded-xl border border-white/10 bg-white/[0.02] p-3 text-center">
+              <div key={a.label} className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
                 <p className="text-[9px] font-black tracking-widest uppercase" style={{ color: MUTED }}>{a.label}</p>
                 <p className="mt-1 text-xl font-black" style={{ color: NEON }}>{a.value}</p>
               </div>
@@ -1017,11 +1017,11 @@ export function AnalyticsV3({
         accent={ORANGE}
         details={
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
               <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>PEAK SPEED RATIO</p>
               <p className="mt-1 text-xl font-black text-white">1.42 <span className="text-xs font-bold" style={{ color: MUTED }}>m/s</span></p>
             </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
               <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>AVG EFFICIENCY</p>
               <p className="mt-1 text-xl font-black text-white">0.82 <span className="text-xs font-bold" style={{ color: MUTED }}>km/l</span></p>
             </div>
@@ -1053,11 +1053,11 @@ export function AnalyticsV3({
               BANISTER-COGGAN SUPERCOMPENSATION MODEL
             </p>
             <div className="grid grid-cols-2 gap-3 sm:w-[420px]">
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                 <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>PEAK ADAPTATION</p>
                 <p className="mt-1 text-sm font-black" style={{ color: NEON }}>JUNE - JULY WINDOW</p>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                 <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>READINESS INDEX</p>
                 <p className="mt-1 text-sm font-black text-white">87.4 / 100</p>
               </div>

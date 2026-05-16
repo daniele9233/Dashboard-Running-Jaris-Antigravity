@@ -154,7 +154,7 @@ export function SupercompensationChart({ currentFf }: SupercompensationChartProp
 
   if (!currentFf || ctl <= 0) {
     return (
-      <div className="bg-bg-card border border-[#1E293B] rounded-xl h-full flex items-center justify-center">
+      <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 h-full flex items-center justify-center">
         <p className="text-xs text-text-muted text-center px-4">
           Sincronizza le corse per vedere la proiezione della forma futura.
         </p>
@@ -165,7 +165,7 @@ export function SupercompensationChart({ currentFf }: SupercompensationChartProp
   const currentRange = RANGE_OPTIONS.find((r) => r.days === rangeDays)!;
 
   return (
-    <div className="bg-bg-card border border-[#1E293B] rounded-xl h-full flex flex-col p-4">
+    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 h-full flex flex-col p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-3 shrink-0">
         <div className="flex items-center gap-2">

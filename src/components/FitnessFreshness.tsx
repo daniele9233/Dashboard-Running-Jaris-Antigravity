@@ -298,13 +298,8 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl p-6 group"
-      style={{
-        background: "radial-gradient(circle at top left, rgba(192,255,0,0.08), transparent 22%), radial-gradient(circle at top right, rgba(99,102,241,0.08), transparent 34%), #0B0B0B",
-        border: "1px solid #20290F",
-        borderLeft: `3px solid ${CLR_TSB}`,
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.02), 0 0 0 1px rgba(192,255,0,0.04)",
-      }}
+      className="relative overflow-hidden rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 group"
+      style={{ borderLeft: `3px solid ${CLR_TSB}` }}
     >
       {/* â”€â”€ Header â”€â”€ */}
       <div className="flex items-center justify-between mb-5">
@@ -410,15 +405,15 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
         details={
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-4 items-center">
             <div className="grid grid-cols-3 gap-3">
-              <div className="bg-[#111] border border-[#2A2A2A] rounded-xl p-3">
+              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                 <div className="text-[9px] text-[#555] uppercase tracking-widest font-black">Condizione</div>
                 <div className="text-xl font-black" style={{ color: CLR_CTL }}>{ctl.toFixed(1)}</div>
               </div>
-              <div className="bg-[#111] border border-[#2A2A2A] rounded-xl p-3">
+              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                 <div className="text-[9px] text-[#555] uppercase tracking-widest font-black">Affaticamento</div>
                 <div className="text-xl font-black" style={{ color: CLR_ATL }}>{atl.toFixed(1)}</div>
               </div>
-              <div className="bg-[#111] border border-[#2A2A2A] rounded-xl p-3">
+              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                 <div className="text-[9px] text-[#555] uppercase tracking-widest font-black">Forma</div>
                 <div className="text-xl font-black" style={{ color: statusColor }}>{tsb >= 0 ? '+' : ''}{tsb.toFixed(1)}</div>
               </div>

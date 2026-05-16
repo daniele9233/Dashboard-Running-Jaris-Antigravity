@@ -107,7 +107,7 @@ function CardHeader({
 
 function StatChip({ label, value, hint, color = ACCENT }: { label: string; value: string; hint?: string; color?: string }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
+    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
       <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">{label}</div>
       <div className="mt-2 text-2xl font-black leading-none" style={{ color }}>{value}</div>
       {hint && <div className="mt-2 text-[10px] font-semibold leading-relaxed text-gray-600">{hint}</div>}
@@ -187,7 +187,7 @@ function FlowDiagram() {
       {steps.map((step, i) => (
         <div
           key={step.label}
-          className="rounded-xl border border-white/10 bg-white/[0.025] p-4 relative"
+          className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 relative"
           style={{ borderLeft: `3px solid ${step.color}` }}
         >
           <div className="flex items-center gap-2 mb-3">
@@ -347,21 +347,21 @@ export function BiologyFutureLab({ profile, runs, vdot }: Props) {
       <Card accent="#22C55E">
         <CardHeader icon={Sparkle} title="Perche D0-D7 NON e Detraining" subtitle="Tapering science (Bosquet 2007 - Mujika 2018)" accent="#22C55E" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
+          <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
             <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#22C55E' }}>FATICA RESIDUA ↓</div>
             <p className="mt-2 text-[12px] font-semibold text-gray-400 leading-relaxed">
               Lo stop dissipa ATL accumulato. <span className="text-white font-black">TSB sale</span>: muscoli rigenerano,
               cortisol scende, sistema nervoso recupera reattivita. Nessuna perdita strutturale.
             </p>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
+          <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
             <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#22C55E' }}>GLICOGENO ↑ +4%</div>
             <p className="mt-2 text-[12px] font-semibold text-gray-400 leading-relaxed">
               Senza scarico quotidiano, le riserve di glicogeno muscolare super-compensano.
               Hematocrit sale +2% bilanciando il calo plasmatico (Mujika 2010).
             </p>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
+          <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
             <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#22C55E' }}>PERFORMANCE +1/+3%</div>
             <p className="mt-2 text-[12px] font-semibold text-gray-400 leading-relaxed">
               Bosquet 2007 (meta-analisi 27 studi): taper di 8-14gg con riduzione volume 41-60% migliora la performance
@@ -369,7 +369,7 @@ export function BiologyFutureLab({ profile, runs, vdot }: Props) {
             </p>
           </div>
         </div>
-        <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.025] p-4">
+        <div className="mt-5 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Quando inizia il vero detraining</div>
           <p className="mt-2 text-[12px] font-semibold text-gray-400 leading-relaxed">
             Coyle 1984 mostra il primo calo VO2max <span className="text-white font-black">a 12 giorni di stop completo</span> (-2.6%).
@@ -516,7 +516,7 @@ export function BiologyFutureLab({ profile, runs, vdot }: Props) {
         <CardHeader icon={Repeat} title="Back-to-Fit Ratio" subtitle="Giorni di richiamo per recuperare" />
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {summary.backToFit.map((b) => (
-            <div key={b.daysOff} className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
+            <div key={b.daysOff} className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
               <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Stop {b.daysOff} giorni</div>
               <div className="mt-3 flex items-baseline gap-1">
                 <span className="text-3xl font-black text-white">{b.daysToRecover}</span>
@@ -529,7 +529,7 @@ export function BiologyFutureLab({ profile, runs, vdot }: Props) {
             </div>
           ))}
         </div>
-        <div className="mt-5 rounded-xl border border-[#D4FF00]/20 bg-[#D4FF00]/5 p-4 flex gap-3">
+        <div className="mt-5 rounded-xl backdrop-blur-2xl border border-[#D4FF00]/20 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 flex gap-3">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: ACCENT }} />
           <p className="text-[12px] font-semibold text-gray-300 leading-relaxed">
             Il ratio aumenta con eta sopra 35a e con basso storico. Il tuo ratio personale e

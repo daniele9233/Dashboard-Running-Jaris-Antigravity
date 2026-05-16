@@ -99,7 +99,7 @@ export function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }
   const hov = hoverIdx !== null ? data[hoverIdx] : null;
 
   return (
-    <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col">
+    <div className="h-full rounded-3xl p-6 flex flex-col backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
       {/* Header */}
       <div className="flex items-start justify-between mb-4 flex-wrap gap-4">
         <div>

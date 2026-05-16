@@ -324,7 +324,7 @@ function SmallStat({
   color?: string;
 }) {
   return (
-    <div className="rounded-[8px] border border-white/10 bg-white/[0.025] p-4">
+    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
       <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">{label}</div>
       <div className="mt-3 break-words text-xl font-black leading-tight text-white sm:text-2xl" style={{ color }}>
         {value}
@@ -437,12 +437,12 @@ export function BiologyFutureV2({
             </div>
           </div>
 
-          <div className="flex flex-col items-center justify-center gap-5 rounded-[8px] border border-white/10 bg-black/30 p-5 sm:flex-row">
+          <div className="flex flex-col items-center justify-center gap-5 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 sm:flex-row">
             <RingGauge value={readiness} label="Readiness" sublabel="picco previsto" />
             <div className="w-full min-w-0 space-y-3">
               {flow.map((step, index) => (
                 <div key={step.label} className="flex items-center gap-3">
-                  <div className="min-w-0 flex-1 rounded-[8px] border border-white/10 bg-white/[0.025] p-4">
+                  <div className="min-w-0 flex-1 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">{step.label}</span>
                       <span className="text-xl font-black leading-none" style={{ color: step.color }}>
@@ -534,7 +534,7 @@ export function BiologyFutureV2({
               Nessun impatto calcolabile
             </div>
           )}
-          <div className="mt-4 rounded-[8px] border border-[#C0FF00]/20 bg-[#C0FF00]/10 p-4">
+          <div className="mt-4 rounded-xl backdrop-blur-2xl border border-[#C0FF00]/20 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
             <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: ACCENT }}>Lettura coach</div>
             <p className="mt-2 text-sm font-semibold leading-relaxed text-gray-300">
               I benefici recenti sembrano piu spendibili su <span className="font-black text-white">{mostUsefulDistance}</span>.
@@ -591,7 +591,7 @@ export function BiologyFutureV2({
               const targets = getRunDistanceTargets(run);
 
               return (
-                <article key={`${run.id}-${run.date}`} className="grid grid-cols-1 gap-4 rounded-[8px] border border-white/10 bg-white/[0.025] p-4 xl:grid-cols-12">
+                <article key={`${run.id}-${run.date}`} className="grid grid-cols-1 gap-4 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 xl:grid-cols-12">
                   <div className="xl:col-span-3">
                     <div className="flex items-center gap-2">
                       <span className="h-2.5 w-2.5 rounded-full shadow-[0_0_12px_currentColor]" style={{ color: meta.color, backgroundColor: meta.color }} />
@@ -678,21 +678,21 @@ export function BiologyFutureV2({
           text="Il modello non dice solo che un allenamento e stato fatto. Lo trasforma in carico biologico, tempo di maturazione e trasferimento sulla distanza."
         />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="rounded-[8px] border border-white/10 bg-white/[0.025] p-5">
+          <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
             <Zap className="h-5 w-5" style={{ color: ACCENT }} />
             <h3 className="mt-4 text-lg font-black text-white">Stress controllato</h3>
             <p className="mt-2 text-sm font-semibold leading-relaxed text-gray-500">
               Distanza, durata, passo, FC e tipo corsa stimano quanto forte e stato lo stimolo.
             </p>
           </div>
-          <div className="rounded-[8px] border border-white/10 bg-white/[0.025] p-5">
+          <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
             <Dna className="h-5 w-5" style={{ color: CYAN }} />
             <h3 className="mt-4 text-lg font-black text-white">Adattamento</h3>
             <p className="mt-2 text-sm font-semibold leading-relaxed text-gray-500">
               Ogni stimolo finisce in una famiglia: gesto veloce, metabolismo o struttura resistente.
             </p>
           </div>
-          <div className="rounded-[8px] border border-white/10 bg-white/[0.025] p-5">
+          <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
             <Activity className="h-5 w-5" style={{ color: ORANGE }} />
             <h3 className="mt-4 text-lg font-black text-white">Performance</h3>
             <p className="mt-2 text-sm font-semibold leading-relaxed text-gray-500">
@@ -839,7 +839,7 @@ function TimelineEvent({
 
 function SnapshotStat({ label, value, color, hint }: { label: string; value: string; color: string; hint?: string }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
+    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
       <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">{label}</div>
       <div className="mt-2 text-2xl font-black leading-none" style={{ color }}>{value}</div>
       {hint && <div className="mt-2 text-[10px] font-semibold leading-relaxed text-gray-600">{hint}</div>}
@@ -1065,7 +1065,7 @@ function DetrainingPredictor({
             </div>
           </div>
         </div>
-        <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.025] p-4">
+        <div className="mt-4 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Differenziale (fermo − taper)</div>
           <div className="mt-2 text-sm font-semibold text-gray-300 leading-relaxed">
             VO2 <span className="font-black text-white">{((point.vo2Pct - pointFull.vo2Pct) * 100).toFixed(1)} pp</span> in piu con il fermo.
@@ -1091,7 +1091,7 @@ function DetrainingPredictor({
           {whatIfRows.map((r, i) => {
             const fullProj = projectRaceTime(base10kSec, summaryFull.curve, r.day);
             return (
-              <div key={r.day} className="rounded-xl border border-white/10 bg-white/[0.025] p-4 text-center">
+              <div key={r.day} className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center">
                 <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Stop {r.day} gg</div>
                 <div className="mt-2 text-xl font-black text-white">{r.label}</div>
                 <div
@@ -1160,7 +1160,7 @@ function DetrainingPredictor({
             restano dormienti nelle fibre. Quando riprendi, accelerano la sintesi proteica.
             Murach 2020 e Seaborne 2018 (memoria epigenetica) confermano: chi ha corso anni recupera in modo non-lineare e piu rapido.
           </p>
-          <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.025] p-4">
+          <div className="mt-5 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
             <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Bonus muscle memory</div>
             <div className="mt-2 text-3xl font-black" style={{ color: PURPLE }}>+{memoryBonusCapped}%</div>
             <p className="mt-1 text-[11px] font-semibold text-gray-600 leading-relaxed">

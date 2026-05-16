@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-16T16:24:31.967Z",
+  "generated_at": "2026-05-16T19:23:26.066Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -1597,9 +1597,9 @@
         "react-i18next",
         "react-map-gl/mapbox"
       ],
-      "hash": "e64c545a7f5511176e858087ddfec42c234729690601746e48f9366af8b728ab",
-      "last_modified": "2026-05-16T07:37:26.270Z",
-      "size_bytes": 44844
+      "hash": "daf77e65c5c4e54fbe5bb482be692a02348d71140e6692787e8029f28041207b",
+      "last_modified": "2026-05-16T19:21:53.122Z",
+      "size_bytes": 44942
     },
     {
       "path": "src/components/AdaptationPanel.tsx",
@@ -1617,9 +1617,9 @@
         "../types/api",
         "react"
       ],
-      "hash": "a2da1a5dc462c4489df02763685fbebd6fe82ec016b8dc3a7b1571839222b073",
-      "last_modified": "2026-04-05T21:12:49.637Z",
-      "size_bytes": 11775
+      "hash": "0bb8e765ee44ccacf21e0a676b133947a88e28b591b025dcdece71448295f001",
+      "last_modified": "2026-05-16T19:11:20.057Z",
+      "size_bytes": 12037
     },
     {
       "path": "src/components/AnaerobicThreshold.tsx",
@@ -1642,9 +1642,9 @@
         "react",
         "recharts"
       ],
-      "hash": "2778a7ae826ae69c13e6d85ddad4de0c8a98b64a2db658dc50e989e49ea1f242",
-      "last_modified": "2026-05-16T16:24:11.825Z",
-      "size_bytes": 15369
+      "hash": "2f72ceb3a3e110ce054898a80376b6e6921c6fca256a47abea5ca85ae58234e4",
+      "last_modified": "2026-05-16T19:20:33.713Z",
+      "size_bytes": 15498
     },
     {
       "path": "src/components/BadgesGrid.tsx",
@@ -1666,9 +1666,9 @@
         "../types/api",
         "react"
       ],
-      "hash": "9191abfcfcd66efc477e1cf423798210ef598377c3c7519651526b5c60b47fa6",
-      "last_modified": "2026-04-29T05:54:08.532Z",
-      "size_bytes": 4518
+      "hash": "6f134e8c8d299e63d8dc2804e83f1f590cda0b49d588438885e185600596f9eb",
+      "last_modified": "2026-05-16T19:16:42.103Z",
+      "size_bytes": 4647
     },
     {
       "path": "src/components/CardiacDrift.tsx",
@@ -1693,9 +1693,9 @@
         "react",
         "recharts"
       ],
-      "hash": "04e166b76f8d333ca35582de6c3a584ec180e7a02e2a4565e5961a5eb6813b24",
-      "last_modified": "2026-04-28T04:44:18.977Z",
-      "size_bytes": 9714
+      "hash": "f6d69da1e37503e69423b7ac01413a1fc2f55f5075245504822d7415608049c0",
+      "last_modified": "2026-05-16T19:11:16.459Z",
+      "size_bytes": 9980
     },
     {
       "path": "src/components/dashboard/widgetRegistry.ts",
@@ -1739,9 +1739,9 @@
         "../../../types/api",
         "react"
       ],
-      "hash": "8ad1630927dcf260009f7fc301b8fa4f754f8b62feee4191f42b1b458b0119c2",
-      "last_modified": "2026-04-29T20:44:33.110Z",
-      "size_bytes": 10861
+      "hash": "e9e6433baf38912edd90e28a2c01dfafa4a2033fbd85ebdc5234fb8ad8199ef0",
+      "last_modified": "2026-05-16T19:05:11.121Z",
+      "size_bytes": 10987
     },
     {
       "path": "src/components/dashboard/widgets/HRZones.tsx",
@@ -1762,9 +1762,9 @@
         "../../../types/api",
         "react"
       ],
-      "hash": "afa3a3b11e99859ccec4e8fe26ee25cd56dc993eca17012b39c6408a64aed855",
-      "last_modified": "2026-04-29T20:44:39.543Z",
-      "size_bytes": 7191
+      "hash": "60c4ff75f09c977737db5034a5039cb3acf2c459ac1bf61cc12342560e7898ee",
+      "last_modified": "2026-05-16T19:05:09.107Z",
+      "size_bytes": 7317
     },
     {
       "path": "src/components/dashboard/widgets/InfoTooltip.tsx",
@@ -1807,9 +1807,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "e52173f3ab2f07b1bde703d153b50a91cd550482da1c849647d867723cc0e3c0",
-      "last_modified": "2026-04-29T20:44:45.178Z",
-      "size_bytes": 7367
+      "hash": "8058855668e0e1590979a2150bf03d14a3872ec020bf55af6ef4205e71585f74",
+      "last_modified": "2026-05-16T19:05:07.311Z",
+      "size_bytes": 7493
     },
     {
       "path": "src/components/dashboard/widgets/WeeklyKmChart.tsx",
@@ -1832,9 +1832,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "43d4f3576072ccfad05b0cb408aca32b60733f70a08ca1a5cf95b5ab3d3c3b8c",
-      "last_modified": "2026-05-15T18:59:16.691Z",
-      "size_bytes": 5374
+      "hash": "f396edbccee842ba2cf5e91f2c0727aec1dc8c2f370e38a13dc67442eb124364",
+      "last_modified": "2026-05-16T19:05:03.433Z",
+      "size_bytes": 5500
     },
     {
       "path": "src/components/DashboardView.tsx",
@@ -1884,9 +1884,9 @@
         "react-router-dom",
         "recharts"
       ],
-      "hash": "791276fd86c50cbf0a182877fb2436e9401f8fa798ee426020d06c6cdd041653",
-      "last_modified": "2026-05-16T16:24:15.234Z",
-      "size_bytes": 56338
+      "hash": "f2ccf403a22247beb286b267839ae6c300578cdf06cace2680e4fd5da0b9a72d",
+      "last_modified": "2026-05-16T19:20:53.833Z",
+      "size_bytes": 57348
     },
     {
       "path": "src/components/DetrainingWidget.tsx",
@@ -1912,9 +1912,9 @@
         "motion/react",
         "react"
       ],
-      "hash": "baf8a387378294da42f2e536a4b19766b06d3d609d5f570dd13bacfb9839abba",
-      "last_modified": "2026-04-27T10:05:05.856Z",
-      "size_bytes": 7828
+      "hash": "c503f4b05db8f733061651d2eb336a3d4c5dc6b00c750cc82664fab36c55d505",
+      "last_modified": "2026-05-16T19:05:05.185Z",
+      "size_bytes": 7954
     },
     {
       "path": "src/components/ErrorBoundary.tsx",
@@ -1991,9 +1991,9 @@
         "react",
         "recharts"
       ],
-      "hash": "b4f759507c428d4fce4b04e4f7ce242a1d9a821a5dc39455ec881c4257c0478d",
-      "last_modified": "2026-04-23T19:44:14.373Z",
-      "size_bytes": 18811
+      "hash": "4adb9578b81db4e4037d6a276462dead665b095e10b51c82dde408432023c975",
+      "last_modified": "2026-05-16T19:22:49.897Z",
+      "size_bytes": 19020
     },
     {
       "path": "src/components/GridCard.tsx",
@@ -2154,9 +2154,9 @@
         "react",
         "recharts"
       ],
-      "hash": "d6e19ca3f3c97ce153c94c4511188ef840f338323bd35b1cda01bbd1568bb750",
-      "last_modified": "2026-04-23T19:33:09.706Z",
-      "size_bytes": 19906
+      "hash": "bb2e1cc4c770b0387336796cc5e6ea5e41b6c9e0b4ca87c0647a3fae5a703134",
+      "last_modified": "2026-05-16T19:15:27.464Z",
+      "size_bytes": 20022
     },
     {
       "path": "src/components/MapFallback.tsx",
@@ -2209,9 +2209,9 @@
         "react-map-gl/maplibre",
         "react-router-dom"
       ],
-      "hash": "a7fe57235c17612a2b2fe0921292b5d7cc017f66aec98d0e9df0b924c1748a3f",
-      "last_modified": "2026-05-16T07:40:53.435Z",
-      "size_bytes": 61184
+      "hash": "3b3fcb8ee7d1ceae136160173930afeb359e0b99258a94109f856f96789c7460",
+      "last_modified": "2026-05-16T19:18:06.229Z",
+      "size_bytes": 62475
     },
     {
       "path": "src/components/RacePredictions.tsx",
@@ -2235,9 +2235,9 @@
         "react",
         "recharts"
       ],
-      "hash": "08db6cf0fae58c9fbfb7fe7d0d7a92da441c523d57397abc919d00e440d12c10",
-      "last_modified": "2026-04-17T21:23:48.077Z",
-      "size_bytes": 16436
+      "hash": "41684ece92b9732b87c9366d6c83a9a58e3a6d61812d32c880d9ca0ce88af42a",
+      "last_modified": "2026-05-16T19:11:25.425Z",
+      "size_bytes": 16573
     },
     {
       "path": "src/components/RankingView.tsx",
@@ -2285,9 +2285,9 @@
         "react",
         "react-router-dom"
       ],
-      "hash": "79503f450757c30d691272d5df6109fe9c7d77158774965401a7a356bb83b71a",
-      "last_modified": "2026-03-28T14:22:26.864Z",
-      "size_bytes": 5719
+      "hash": "bf110b60971600e23c81443eeeeb40d6902570f181bf2eefb18b9da5cede5d98",
+      "last_modified": "2026-05-16T19:11:18.216Z",
+      "size_bytes": 5850
     },
     {
       "path": "src/components/RoutesView.tsx",
@@ -2377,9 +2377,9 @@
         "react",
         "recharts"
       ],
-      "hash": "75bf3cf46f4678d66eeb799bc56cd3cba15c2842a47e656761bca635903e1cee",
-      "last_modified": "2026-05-16T07:39:59.925Z",
-      "size_bytes": 116810
+      "hash": "a21f6e9e6cacf6d74bbd8ca43a66f639d5543523b5d0d31f8bc78cb3395bdb6a",
+      "last_modified": "2026-05-16T19:18:56.588Z",
+      "size_bytes": 117649
     },
     {
       "path": "src/components/SettingsControls.tsx",
@@ -2473,9 +2473,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "e08b42a424edba3764c97342a177d53710e7d4a2f6473b4398d4594931c9cf78",
-      "last_modified": "2026-05-16T16:24:31.967Z",
-      "size_bytes": 158291
+      "hash": "845175052dc5737257e9cb47e9790bd7887605b3e8fdd627e69107755700fd3d",
+      "last_modified": "2026-05-16T19:20:04.709Z",
+      "size_bytes": 163270
     },
     {
       "path": "src/components/statistics/AnalyticsV3.tsx",
@@ -2505,9 +2505,9 @@
         "react",
         "recharts"
       ],
-      "hash": "33654a6a5e48395f48438ce3ef684e55290477b691c6e66aeab7ff6f0c179862",
-      "last_modified": "2026-04-22T21:01:12.952Z",
-      "size_bytes": 51883
+      "hash": "63cc6a204f2954c5633af9c41acc9a79f26f38b8d5054f39f55ba2490aa7852e",
+      "last_modified": "2026-05-16T19:23:26.067Z",
+      "size_bytes": 53430
     },
     {
       "path": "src/components/statistics/AnalyticsV4.tsx",
@@ -2536,9 +2536,9 @@
         "react",
         "recharts"
       ],
-      "hash": "f4f402f07964280d2664e961212de0ddf40db26f5a2faf4866ab75c64f9b91fc",
-      "last_modified": "2026-04-23T19:35:17.700Z",
-      "size_bytes": 35297
+      "hash": "3983148cf7bcbdccda711b8e8f9734e61b13857c08ad45ff6790a4b571f3746f",
+      "last_modified": "2026-05-16T19:20:11.794Z",
+      "size_bytes": 36162
     },
     {
       "path": "src/components/statistics/AnalyticsV5.tsx",
@@ -2597,9 +2597,9 @@
         "react",
         "recharts"
       ],
-      "hash": "af4a7919ab0df7d754eb3241ccf390004e83389931436c1d5874a04e385c8daa",
-      "last_modified": "2026-05-16T07:34:07.758Z",
-      "size_bytes": 38008
+      "hash": "a1cea39257252ecbf765d19df77132ca37b21f9e6704d791e6083937f9004332",
+      "last_modified": "2026-05-16T19:19:19.394Z",
+      "size_bytes": 38641
     },
     {
       "path": "src/components/statistics/BiologyFutureLab.tsx",
@@ -2626,9 +2626,9 @@
         "react",
         "recharts"
       ],
-      "hash": "beb889f0e9e35cb0dd4b626f529b8c7997beb9eb6ceadcb10aca97809ed54142",
-      "last_modified": "2026-04-27T10:05:05.857Z",
-      "size_bytes": 29557
+      "hash": "040e4848858525e34351f3df7a7df6368726f8fc3985c19b666bbc3336d7ac79",
+      "last_modified": "2026-05-16T19:23:08.387Z",
+      "size_bytes": 30563
     },
     {
       "path": "src/components/statistics/BiologyFutureV2.tsx",
@@ -2657,9 +2657,9 @@
         "react",
         "recharts"
       ],
-      "hash": "8f02b7f549b6e4e6c3d94b0f282246d10003866a57daa5ee724582cf50b89512",
-      "last_modified": "2026-04-27T10:05:05.858Z",
-      "size_bytes": 58256
+      "hash": "583012e0bc5c8af3073ab85a94f0f7c27172360813d456ce27bea9f83eac36f6",
+      "last_modified": "2026-05-16T19:22:54.213Z",
+      "size_bytes": 59746
     },
     {
       "path": "src/components/statistics/CaricoFormaV2.tsx",
@@ -2683,9 +2683,9 @@
         "react",
         "recharts"
       ],
-      "hash": "13886ceff463dcf7dc8299d5546fbbec603507e4a066b9ff8d59974649e44e2a",
-      "last_modified": "2026-05-15T19:15:03.470Z",
-      "size_bytes": 39682
+      "hash": "2c94577d0d959af3aa6d2717ea46dc4db1796003212863e0628c8d078d0336d7",
+      "last_modified": "2026-05-16T19:00:54.432Z",
+      "size_bytes": 40312
     },
     {
       "path": "src/components/statistics/ChartFullscreenModal.tsx",
@@ -2762,9 +2762,9 @@
         "react",
         "recharts"
       ],
-      "hash": "a532e0121e999588ca8d1db3585ebbc49cb0adbddbc1f0a0b4f88877b85e1881",
-      "last_modified": "2026-05-15T19:32:36.762Z",
-      "size_bytes": 51938
+      "hash": "4d4750592c8350061c011e2b6bc415b1788c9ad1b5e66d0792d71c34f4950e7b",
+      "last_modified": "2026-05-16T19:21:38.880Z",
+      "size_bytes": 53699
     },
     {
       "path": "src/components/statistics/StatisticsView.tsx",
@@ -2815,9 +2815,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "4179abb3d94d4c76c92f3f63c22c719e1dccbc32b85014c73a7ae72a3fce0ade",
-      "last_modified": "2026-05-16T07:33:41.840Z",
-      "size_bytes": 123330
+      "hash": "20601a01d1179403a1446b57ac746bf6b6e51b45efa531ac455790ed2f0c7f63",
+      "last_modified": "2026-05-16T19:23:17.830Z",
+      "size_bytes": 123963
     },
     {
       "path": "src/components/statistics/StatsCalc.tsx",
@@ -2837,9 +2837,9 @@
         "lucide-react",
         "recharts"
       ],
-      "hash": "0c42c64127b04d28c2bd601744efc8c8244a29d81f4dcfa08104747eca5d9225",
-      "last_modified": "2026-03-27T18:57:02.550Z",
-      "size_bytes": 12913
+      "hash": "ba7d2a17a6540b6bca9b0f8cf3931f9d5e77a4818df7ea250704a225221664f2",
+      "last_modified": "2026-05-16T19:16:09.287Z",
+      "size_bytes": 14074
     },
     {
       "path": "src/components/statistics/StatsDrift.tsx",
@@ -2865,9 +2865,9 @@
         "react",
         "recharts"
       ],
-      "hash": "72e973da8d78d9b76309e223705febd63afcef266b4003aa763ee6986fe11d88",
-      "last_modified": "2026-04-24T06:03:01.603Z",
-      "size_bytes": 18371
+      "hash": "4b100caacd645fad873b295a5ea623b91dedf4119e71eaaba6068b3d8356a62b",
+      "last_modified": "2026-05-16T19:15:43.075Z",
+      "size_bytes": 18353
     },
     {
       "path": "src/components/statistics/StatsProgress.tsx",
@@ -2888,9 +2888,9 @@
         "lucide-react",
         "recharts"
       ],
-      "hash": "b1edcbf8543a6c5b1c8f02c75159a537b2db6fa1060d86d10d0b32d9107df07d",
-      "last_modified": "2026-04-06T21:18:05.829Z",
-      "size_bytes": 13675
+      "hash": "7a35182307a252688c8b91716b46517f8eb04e104fceaae6cc0bc5518e516e0d",
+      "last_modified": "2026-05-16T19:15:54.188Z",
+      "size_bytes": 14480
     },
     {
       "path": "src/components/SupercompensationChart.tsx",
@@ -2914,9 +2914,9 @@
         "react",
         "recharts"
       ],
-      "hash": "5fde989616e4a946ecb5d312497ae3d236fe494aa4cc49c2f6c14017aad9a038",
-      "last_modified": "2026-04-05T20:59:12.303Z",
-      "size_bytes": 11604
+      "hash": "a7cccce5f3ff822a4b08a3dc6d79def097f5ecc321c64ef889971b6a32a9785a",
+      "last_modified": "2026-05-16T19:11:26.805Z",
+      "size_bytes": 11866
     },
     {
       "path": "src/components/supplements/SupplementsView.tsx",
@@ -2940,9 +2940,9 @@
         "react",
         "recharts"
       ],
-      "hash": "14052907df9a2dcce3c089f193b39e64b143b3ae8faebee218475d19d7a23806",
-      "last_modified": "2026-05-16T12:23:08.761Z",
-      "size_bytes": 46421
+      "hash": "93ba48dc512d7e9ed16384d588870485ae1d60efda330413c09447ad4328220b",
+      "last_modified": "2026-05-16T19:21:35.270Z",
+      "size_bytes": 46959
     },
     {
       "path": "src/components/TopStats.tsx",
@@ -2963,9 +2963,9 @@
         "react",
         "recharts"
       ],
-      "hash": "4107fafdd1b6d1b6b042e0f06c7eb8383e29ada54d47cb2a3a663bcd6ad8ebce",
-      "last_modified": "2026-04-05T08:56:27.358Z",
-      "size_bytes": 5205
+      "hash": "842c07e170fff7a17436ec8c345014f418a524089b2ae0a184950e5566e33691",
+      "last_modified": "2026-05-16T19:11:23.696Z",
+      "size_bytes": 5336
     },
     {
       "path": "src/components/TrainingGrid.tsx",
@@ -2992,9 +2992,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "dadf5cdda275e43a8d396894b13d74ee49b7ef6188f67e68be7d635d298a308b",
-      "last_modified": "2026-05-03T09:23:38.013Z",
-      "size_bytes": 77740
+      "hash": "5437a6db7add62a8f92934bab8aa77bb2ba5ae6f04507a31db0678845ada0c23",
+      "last_modified": "2026-05-16T19:23:11.718Z",
+      "size_bytes": 80256
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -3022,9 +3022,9 @@
         "react",
         "recharts"
       ],
-      "hash": "1596bc3140515a8bc14aa400481584329beb0e1f9afde8470af32657c5320f55",
-      "last_modified": "2026-04-28T05:02:46.234Z",
-      "size_bytes": 10443
+      "hash": "340f8482499b4aacc46992d5015629072ab3f8e73d49eba7c39552bad36059a8",
+      "last_modified": "2026-05-16T19:20:41.062Z",
+      "size_bytes": 10572
     },
     {
       "path": "src/components/TrainingView.tsx",
@@ -3070,9 +3070,9 @@
         "react",
         "recharts"
       ],
-      "hash": "89a78f3cb477d44478b5c55c65060703026608efa2503a030ba2bb7411539aff",
-      "last_modified": "2026-04-29T20:46:15.319Z",
-      "size_bytes": 12836
+      "hash": "69e6a933ac758b2e0ba60217fe6cd200dfc561b290457a6e5853040bc97c270a",
+      "last_modified": "2026-05-16T19:15:37.845Z",
+      "size_bytes": 12965
     },
     {
       "path": "src/components/WeeklyStatsPanel.tsx",
@@ -3093,9 +3093,9 @@
         "react",
         "recharts"
       ],
-      "hash": "ad6c605d7d414df3da4233eda1f1e61e1eb680b5dfebb64e10533175b12d986f",
-      "last_modified": "2026-04-16T18:34:31.234Z",
-      "size_bytes": 5623
+      "hash": "6df4cf2fe679432756c7b1fca5e930de4d53b850d70e8ab4e9b4f76d8730b837",
+      "last_modified": "2026-05-16T19:11:21.836Z",
+      "size_bytes": 5885
     },
     {
       "path": "src/context/AuthContext.tsx",

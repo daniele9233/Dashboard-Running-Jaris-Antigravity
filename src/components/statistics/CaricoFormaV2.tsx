@@ -107,7 +107,7 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
 
   return (
     <div
-      className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col gap-4"
+      className="rounded-3xl p-6 flex flex-col gap-4 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
     >
       {/* Header row */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -318,7 +318,7 @@ function PaceZonesCard({ runs }: { runs: Run[] }) {
 
   return (
     <div
-      className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6"
+      className="rounded-3xl p-6 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
     >
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -410,7 +410,7 @@ function PaceDistributionCard({ chart }: { chart?: ProAnalyticsChart }) {
 
   return (
     <div
-      className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 flex flex-col gap-6"
+      className="rounded-3xl p-8 flex flex-col gap-6 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
     >
       <div className="flex items-start justify-between">
         <div>
@@ -532,7 +532,7 @@ function EffortMatrixCard({ chart }: { chart?: ProAnalyticsChart }) {
 
   return (
     <div
-      className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 flex flex-col gap-6"
+      className="rounded-3xl p-8 flex flex-col gap-6 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
     >
       <div className="flex items-start justify-between">
         <div>
@@ -760,7 +760,7 @@ function CaricoKmChart({ runs }: { runs: Run[] }) {
 
   return (
     <div
-      className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col"
+      className="h-full rounded-3xl p-6 flex flex-col backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
     >
       <div className="flex justify-between items-start mb-4">
         <div>

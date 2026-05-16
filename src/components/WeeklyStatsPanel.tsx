@@ -52,14 +52,14 @@ export function WeeklyStatsPanel({ runs }: WeeklyStatsPanelProps) {
 
   if (runs.length === 0) {
     return (
-      <div className="bg-bg-card border border-[#1E293B] rounded-xl flex items-center justify-center h-full">
+      <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 flex items-center justify-center h-full">
         <p className="text-xs text-text-muted">Sincronizza corse per i dati settimanali</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-bg-card border border-[#1E293B] rounded-xl h-full flex overflow-hidden">
+    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 h-full flex overflow-hidden">
       {/* Left: weekly km bars */}
       <div className="flex-1 p-4 flex flex-col min-w-0">
         <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest mb-2">

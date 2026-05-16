@@ -393,7 +393,7 @@ export function DashboardView() {
           {!hiddenKeys.includes("status-form") && (
           <div key="status-form">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("status-form")}>
-            <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 relative overflow-hidden flex flex-col justify-between">
+            <div className="h-full rounded-3xl p-8 relative overflow-hidden flex flex-col justify-between backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
             <div className="flex justify-between items-start mb-6">
               <div>
                 <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-2">LIVE BIO-FEED</div>
@@ -533,7 +533,7 @@ export function DashboardView() {
           {!hiddenKeys.includes("vo2max") && (
           <div key="vo2max">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("vo2max")}>
-            <div className="h-full bg-[#1a1a1a] border border-white/[0.06] border-t-4 border-t-[#C0FF00] rounded-3xl p-6 flex flex-col justify-between">
+            <div className="h-full rounded-3xl p-6 flex flex-col justify-between backdrop-blur-2xl border border-white/[0.12] border-t-4 border-t-[#C0FF00] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
             <div className="flex justify-between items-start">
               <Wind className="text-[#C0FF00]" size={24} />
               <div className="bg-white/10 text-[#A0A0A0] px-2 py-1 rounded text-[10px] font-black tracking-widest">
@@ -558,7 +558,7 @@ export function DashboardView() {
           {!hiddenKeys.includes("previsione-gara") && (
           <div key="previsione-gara">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("previsione-gara")}>
-            <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col">
+            <div className="h-full rounded-3xl p-6 flex flex-col backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
             <div className="flex items-center gap-2 mb-4">
               <Target className="text-[#C0FF00]" size={14} />
               <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest">PREVISIONE GARA</span>
@@ -672,7 +672,7 @@ export function DashboardView() {
           {!hiddenKeys.includes("soglia") && (
           <div key="soglia">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("soglia")}>
-            <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col justify-between">
+            <div className="h-full rounded-3xl p-6 flex flex-col justify-between backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
             <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">{t("dashboard.anaerobicThreshold").toUpperCase()}</div>
             <div className="flex items-stretch gap-5 mb-4">
               <div className="flex-1">
@@ -711,7 +711,7 @@ export function DashboardView() {
           {!hiddenKeys.includes("deriva") && (
           <div key="deriva">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("deriva")}>
-            <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col overflow-hidden">
+            <div className="h-full rounded-3xl p-6 flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest">
@@ -875,7 +875,7 @@ export function DashboardView() {
                 `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 
               return (
-                <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-5 flex flex-col overflow-hidden">
+                <div className="h-full rounded-3xl p-5 flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
                   {/* Header */}
                   <div className="flex items-center justify-between mb-4 shrink-0">
                     <div>
@@ -969,7 +969,7 @@ export function DashboardView() {
           <div key="session-logs">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("session-logs")}>
           {recentRuns.length > 0 ? (
-            <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-4 md:p-6 lg:p-8 w-full overflow-auto">
+            <div className="h-full rounded-3xl p-4 md:p-6 lg:p-8 w-full overflow-auto backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
             <div className="mb-6 md:mb-8">
               <div className="text-[#A0A0A0] text-[10px] md:text-xs font-black tracking-widest mb-2">{t("dashboard.sessionLogs").toUpperCase()}</div>
               <h2 className="text-white text-xl md:text-2xl font-black tracking-tighter italic">{t("dashboard.performanceHistory")}</h2>
@@ -1006,7 +1006,7 @@ export function DashboardView() {
                     <div
                       key={run.id}
                       onClick={() => navigate(`/activities/${run.id}`)}
-                      className="flex flex-col gap-3 md:grid md:grid-cols-7 md:gap-0 md:items-center bg-[#111] rounded-2xl p-4 cursor-pointer hover:bg-[#1a1a1a] hover:border hover:border-white/10 transition-all"
+                      className="flex flex-col gap-3 md:grid md:grid-cols-7 md:gap-0 md:items-center rounded-2xl backdrop-blur-2xl border border-white/[0.08] shadow-[0_4px_16px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.05)] bg-gradient-to-br from-white/[0.04] to-black/40 p-4 cursor-pointer hover:border-white/[0.18] transition-all"
                     >
                       <div className="md:col-span-2 flex items-center gap-3">
                         <Activity className="text-[#C0FF00] shrink-0" size={18} />

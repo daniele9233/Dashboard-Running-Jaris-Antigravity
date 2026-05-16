@@ -406,7 +406,7 @@ export function AthletePotentialVector({
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-3xl p-4 md:p-6 lg:p-12 overflow-hidden">
+    <div className="rounded-3xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-6 lg:p-12 overflow-hidden">
       <div className="grid lg:grid-cols-12 gap-6 md:gap-10 lg:gap-16">
 
         {/* ─── LEFT COLUMN: TITLE + NAV ─────────────────────────────── */}
@@ -505,25 +505,25 @@ export function AthletePotentialVector({
                 Volume Recente
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#0E0E0E] border border-white/[0.05] rounded-2xl p-3 flex flex-col gap-0.5">
+                <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 flex flex-col gap-0.5">
                   <span className="font-mono text-[9px] text-[#555] tracking-[0.2em] uppercase">7 giorni</span>
                   <span className="text-xl font-light text-zinc-100 tabular-nums">
                     {athleteSnapshot.km7}<span className="text-[10px] text-[#666] font-mono ml-1">km</span>
                   </span>
                 </div>
-                <div className="bg-[#0E0E0E] border border-white/[0.05] rounded-2xl p-3 flex flex-col gap-0.5">
+                <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 flex flex-col gap-0.5">
                   <span className="font-mono text-[9px] text-[#555] tracking-[0.2em] uppercase">30 giorni</span>
                   <span className="text-xl font-light text-zinc-100 tabular-nums">
                     {athleteSnapshot.km30}<span className="text-[10px] text-[#666] font-mono ml-1">km</span>
                   </span>
                 </div>
-                <div className="bg-[#0E0E0E] border border-white/[0.05] rounded-2xl p-3 flex flex-col gap-0.5">
+                <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 flex flex-col gap-0.5">
                   <span className="font-mono text-[9px] text-[#555] tracking-[0.2em] uppercase">Uscite 30g</span>
                   <span className="text-xl font-light text-zinc-100 tabular-nums">
                     {athleteSnapshot.runs30}
                   </span>
                 </div>
-                <div className="bg-[#0E0E0E] border border-white/[0.05] rounded-2xl p-3 flex flex-col gap-0.5">
+                <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 flex flex-col gap-0.5">
                   <span className="font-mono text-[9px] text-[#555] tracking-[0.2em] uppercase">Ore 90g</span>
                   <span className="text-xl font-light text-zinc-100 tabular-nums">
                     {athleteSnapshot.hours90}<span className="text-[10px] text-[#666] font-mono ml-1">h</span>

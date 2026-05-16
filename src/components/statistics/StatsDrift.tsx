@@ -280,13 +280,8 @@ export function StatsDrift({ runs }: { runs: Run[] }) {
 
   return (
     <div
-      className="rounded-2xl p-6 group"
-      style={{
-        background: "radial-gradient(circle at top left, rgba(192,255,0,0.08), transparent 24%), radial-gradient(circle at top right, rgba(255,77,141,0.06), transparent 28%), #0B0B0B",
-        border: `1px solid ${DRIFT_PANEL_BORDER}`,
-        borderLeft: `3px solid ${DRIFT_NEON}`,
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.02), 0 0 0 1px rgba(192,255,0,0.04)",
-      }}
+      className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 group"
+      style={{ borderLeft: `3px solid ${DRIFT_NEON}` }}
     >
       {/* Section header */}
       <div className="flex items-center justify-between mb-5">

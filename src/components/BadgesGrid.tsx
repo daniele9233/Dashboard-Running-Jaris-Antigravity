@@ -67,7 +67,7 @@ function LegendaryBadgeCard({ unlocked }: { unlocked: boolean }) {
       className={`relative rounded-2xl border-2 p-6 transition-all ${
         unlocked
           ? "bg-gradient-to-br from-[#1E1E1E] to-[#2A1E00] border-[#F59E0B] shadow-lg shadow-[#F59E0B]/20"
-          : "bg-[#121212] border-[#2A2A2A] opacity-50"
+          : "backdrop-blur-2xl border-white/[0.06] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.03] to-black/50 opacity-50"
       }`}
     >
       {unlocked && (

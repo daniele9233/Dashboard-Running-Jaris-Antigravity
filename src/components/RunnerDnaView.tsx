@@ -505,7 +505,7 @@ function BenchmarkBar({
   };
 
   return (
-    <div className="rounded-2xl border border-white/[0.04] bg-[#04070B] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+    <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{label}</div>
@@ -606,7 +606,7 @@ function DynMetric({
   const label2    = isOptimal ? "Elite"   : isGood ? "Buono"   : "Da migliorare";
 
   return (
-    <div className="bg-[#0A0A0A] border border-white/[0.05] rounded-2xl p-5 flex flex-col gap-3 hover:border-white/10 transition-colors">
+    <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex flex-col gap-3 hover:border-white/[0.2] transition-colors">
       <div className="text-[9px] font-black tracking-[0.2em] text-gray-600 uppercase">{label}</div>
       <div className="flex items-end gap-1.5">
         <span className="text-3xl font-black leading-none" style={{ color }}>{value}</span>
@@ -800,14 +800,14 @@ function PotentialBiologySection({
         </div>
 
         <div className="grid gap-4">
-          <div className="rounded-2xl border border-white/[0.06] bg-[#05070A] p-5">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
             <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Cos'e davvero</div>
             <p className="mt-3 text-sm leading-7 text-slate-300">
               Il potenziale biologico assoluto non dice solo quanto puoi valere, ma quanto del tuo motore stai lasciando sul tavolo. Quando la forbice e ampia, il corpo puo ancora correre meglio di quanto sta correndo oggi.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/[0.06] bg-[#05070A] p-5">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Se continui cosi</div>
@@ -857,7 +857,7 @@ function PotentialBiologySection({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/[0.06] bg-[#05070A] p-5">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
             <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Come ci arrivo</div>
             <div className="mt-4 space-y-3">
               {focusAreas.map((item, index) => (
@@ -1943,14 +1943,14 @@ export function RunnerDnaView() {
             </div>
 
             <div className="grid gap-4">
-              <div className="rounded-2xl border border-white/[0.06] bg-[#05070A] p-5">
+              <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
                 <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Cos'e davvero</div>
                 <p className="mt-3 text-sm leading-7 text-slate-300">
                   Il potenziale biologico assoluto non dice solo quanto puoi valere, ma quanto del tuo motore stai lasciando sul tavolo. Quando la forbice e ampia, il corpo puo ancora correre meglio di quanto sta correndo oggi.
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-white/[0.06] bg-[#05070A] p-5">
+              <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
                 <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Come ci arrivo</div>
                 <div className="mt-4 space-y-3">
                   {focusAreas.map((item, index) => (

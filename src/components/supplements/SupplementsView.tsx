@@ -375,8 +375,7 @@ export function SupplementsView() {
 
       {/* ── Saturation Chart ── */}
       <section
-        className="rounded-2xl p-4 md:p-6 border"
-        style={{ backgroundColor: "var(--app-bg-alt)", borderColor: "var(--app-border)" }}
+        className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-6"
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div>
@@ -448,8 +447,8 @@ export function SupplementsView() {
 
       {/* ── PB Protocol ── */}
       <section
-        className="rounded-2xl p-4 md:p-6 border"
-        style={{ backgroundColor: "var(--app-bg-alt)", borderColor: "#C0FF00", borderLeftWidth: "4px" }}
+        className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-6"
+        style={{ borderColor: "#C0FF00", borderLeftWidth: "4px" }}
       >
         <div className="flex items-center gap-3 mb-1">
           <Trophy className="w-6 h-6" style={{ color: "#C0FF00" }} />
@@ -564,7 +563,7 @@ export function SupplementsView() {
         </div>
 
         {/* Dose reference */}
-        <div className="rounded-xl p-4 mb-4 border" style={{ backgroundColor: "#0a0a0a", borderColor: "rgba(192,255,0,0.2)" }}>
+        <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 mb-4" style={{ borderColor: "rgba(192,255,0,0.2)" }}>
           <h4 className="text-xs font-black tracking-widest mb-3" style={{ color: "#C0FF00" }}>
             RIFERIMENTO DOSI BICARBONATO ({USER_WEIGHT_KG} KG)
           </h4>
@@ -587,7 +586,7 @@ export function SupplementsView() {
         </div>
 
         {/* Note scientifiche */}
-        <div className="rounded-xl p-4 border" style={{ backgroundColor: "#0a0a0a", borderColor: "rgba(245,158,11,0.3)" }}>
+        <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4" style={{ borderColor: "rgba(245,158,11,0.3)" }}>
           <div className="flex items-start gap-2 mb-2">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#F59E0B" }} />
             <h4 className="text-xs font-black tracking-widest" style={{ color: "#F59E0B" }}>
@@ -684,8 +683,8 @@ function SupplementCard({ sup, saving, savedFlash, checks, weekOffset, onDateCha
 
   return (
     <div
-      className="rounded-2xl p-5 md:p-6 border relative overflow-hidden"
-      style={{ backgroundColor: "var(--app-bg-alt)", borderColor: "var(--app-border)", borderLeft: `3px solid ${sup.color}` }}
+      className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 md:p-6 relative overflow-hidden"
+      style={{ borderLeft: `3px solid ${sup.color}` }}
     >
       {/* Background glow */}
       <div

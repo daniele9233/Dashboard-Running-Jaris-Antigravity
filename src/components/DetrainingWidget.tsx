@@ -77,7 +77,7 @@ export function DetrainingWidget({ profile, runs, vdot, base5kSec: base5kSecProp
   const fullPct = Math.max(0, fVo2Loss);
 
   return (
-    <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col">
+    <div className="h-full rounded-3xl p-6 flex flex-col backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Icon className="w-3.5 h-3.5" style={{ color: state.color }} />

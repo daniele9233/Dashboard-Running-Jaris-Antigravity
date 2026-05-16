@@ -68,7 +68,7 @@ export function RecentActivities({ runs }: RecentActivitiesProps) {
   }, [runs]);
 
   return (
-    <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 flex flex-col h-full">
+    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex flex-col h-full">
       <h3 className="text-sm font-medium text-text-primary mb-6">Recent Activities</h3>
 
       {groups.length === 0 ? (

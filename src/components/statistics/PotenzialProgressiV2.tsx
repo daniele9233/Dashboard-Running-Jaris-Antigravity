@@ -219,7 +219,7 @@ function DnaBar({ icon: Icon, label, value, color, desc }: {
   icon: any; label: string; value: number; color: string; desc: string;
 }) {
   return (
-    <div className="bg-[#0E0E0E] border border-white/[0.05] rounded-2xl p-4 flex flex-col gap-2.5 hover:border-white/[0.12] transition-all group">
+    <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 flex flex-col gap-2.5 hover:border-white/[0.2] transition-all group">
       <div className="flex items-center gap-2">
         <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
           style={{ background: `${color}18`, border: `1px solid ${color}30` }}>
@@ -532,7 +532,7 @@ export function PotenzialProgressiV2({
       {/* ═══════════════════════════════════════════════════════════
           HERO — VDOT gauge + identità runner + KPI 90gg
       ═══════════════════════════════════════════════════════════ */}
-      <div className="relative bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 lg:p-8 overflow-hidden">
+      <div className="relative rounded-3xl p-6 lg:p-8 overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
         {/* Glow background */}
         <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-[0.07] blur-3xl pointer-events-none"
           style={{ background: `radial-gradient(circle, ${level.color}, transparent)` }} />
@@ -579,7 +579,7 @@ export function PotenzialProgressiV2({
               { label: "Ore", value: stats90.hours, color: VIOLET },
               { label: "D+ metri", value: stats90.elevation, color: AMBER },
             ].map(s => (
-              <div key={s.label} className="bg-[#0E0E0E] border border-white/[0.05] rounded-2xl px-3 py-2.5 flex flex-col gap-0.5">
+              <div key={s.label} className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 px-3 py-2.5 flex flex-col gap-0.5">
                 <div className="text-[9px] font-black tracking-widest uppercase" style={{ color: s.color }}>{s.label}</div>
                 <div className="text-xl font-black text-white tabular-nums leading-none">{s.value}</div>
               </div>
@@ -591,7 +591,7 @@ export function PotenzialProgressiV2({
       {/* ═══════════════════════════════════════════════════════════
           DNA RUNNER — 4 sistemi fisiologici
       ═══════════════════════════════════════════════════════════ */}
-      <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 lg:p-8">
+      <div className="rounded-3xl p-6 lg:p-8 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
         <div className="flex items-end justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -612,7 +612,7 @@ export function PotenzialProgressiV2({
       {/* ═══════════════════════════════════════════════════════════
           PREVISIONI GARA — 4 cards con PB gap
       ═══════════════════════════════════════════════════════════ */}
-      <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 lg:p-8">
+      <div className="rounded-3xl p-6 lg:p-8 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
         <div className="flex items-end justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -630,7 +630,7 @@ export function PotenzialProgressiV2({
             const beatsPb = r.gap !== null && r.gap > 5;
             const closeToPb = r.gap !== null && Math.abs(r.gap) <= 5;
             return (
-              <div key={r.key} className="relative bg-[#0E0E0E] border border-white/[0.05] rounded-2xl p-5 overflow-hidden hover:border-white/[0.15] transition-all group">
+              <div key={r.key} className="relative rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 overflow-hidden hover:border-white/[0.2] transition-all group">
                 {/* Top color stripe */}
                 <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: `linear-gradient(90deg, ${r.color}, ${r.color}33)` }} />
                 <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-10 blur-2xl group-hover:opacity-20 transition-opacity"
@@ -696,7 +696,7 @@ export function PotenzialProgressiV2({
       {/* ═══════════════════════════════════════════════════════════
           MOMENTUM — trend VDOT 12 mesi + proiezione futura
       ═══════════════════════════════════════════════════════════ */}
-      <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 lg:p-8">
+      <div className="rounded-3xl p-6 lg:p-8 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
         <div className="flex items-end justify-between gap-4 mb-5 flex-wrap">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -762,19 +762,19 @@ export function PotenzialProgressiV2({
         )}
 
         <div className="grid grid-cols-3 gap-3 mt-5">
-          <div className="bg-[#0E0E0E] border border-white/[0.05] rounded-2xl px-4 py-3 flex flex-col gap-1">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 px-4 py-3 flex flex-col gap-1">
             <div className="text-[9px] font-black text-[#555] tracking-widest uppercase">Crescita 90gg</div>
             <div className="text-xl font-black tabular-nums" style={{ color: vdotDelta90 && vdotDelta90 > 0 ? CYAN : ROSE }}>
               {vdotDelta90 !== null ? `${vdotDelta90 > 0 ? "+" : ""}${vdotDelta90}` : "—"}
             </div>
           </div>
-          <div className="bg-[#0E0E0E] border border-white/[0.05] rounded-2xl px-4 py-3 flex flex-col gap-1">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 px-4 py-3 flex flex-col gap-1">
             <div className="text-[9px] font-black text-[#555] tracking-widest uppercase">Prossimo livello</div>
             <div className="text-xl font-black tabular-nums" style={{ color: vdotLevel(level.nextThreshold).color }}>
               VDOT {level.nextThreshold}
             </div>
           </div>
-          <div className="bg-[#0E0E0E] border border-white/[0.05] rounded-2xl px-4 py-3 flex flex-col gap-1">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 px-4 py-3 flex flex-col gap-1">
             <div className="text-[9px] font-black text-[#555] tracking-widest uppercase">Stima sblocco</div>
             <div className="text-xl font-black tabular-nums text-white">
               {(() => {
@@ -797,7 +797,7 @@ export function PotenzialProgressiV2({
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
 
         {/* Radar */}
-        <div className="lg:col-span-2 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col gap-4">
+        <div className="lg:col-span-2 rounded-3xl p-6 flex flex-col gap-4 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Heart size={14} style={{ color: LIME }} />
@@ -840,7 +840,7 @@ export function PotenzialProgressiV2({
         </div>
 
         {/* Milestones */}
-        <div className="lg:col-span-3 bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col gap-4">
+        <div className="lg:col-span-3 rounded-3xl p-6 flex flex-col gap-4 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Award size={14} style={{ color: LIME }} />
@@ -857,7 +857,7 @@ export function PotenzialProgressiV2({
           ) : (
             <div className="flex flex-col gap-3">
               {milestones.map((m, i) => (
-                <div key={i} className="bg-[#0E0E0E] border border-white/[0.05] rounded-2xl p-4 flex items-center gap-4 hover:border-white/[0.12] transition-all group">
+                <div key={i} className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 flex items-center gap-4 hover:border-white/[0.2] transition-all group">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                     style={{ background: `${m.color}18`, border: `1px solid ${m.color}30` }}>
                     <m.icon size={16} style={{ color: m.color }} />
@@ -894,7 +894,7 @@ export function PotenzialProgressiV2({
       {/* ═══════════════════════════════════════════════════════════
           PACE EVOLUTION — passo medio mensile
       ═══════════════════════════════════════════════════════════ */}
-      <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 lg:p-8">
+      <div className="rounded-3xl p-6 lg:p-8 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
         <div className="flex items-end justify-between gap-4 mb-5 flex-wrap">
           <div>
             <div className="flex items-center gap-2 mb-1">

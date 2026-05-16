@@ -361,9 +361,9 @@ export function AnalyticsV4CadenceSpeedMatrix({ chart, onRequestDetail }: { char
         accent={CY}
         details={
           <div className="grid grid-cols-3 gap-4">
-            <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]"><Lbl color={DM}>AVG CADENCE</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>{avgCadence || '—'} spm</p></div>
-            <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]"><Lbl color={DM}>OPT. WINDOW</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: N, fontFamily: 'monospace' }}>170-180</p></div>
-            <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]"><Lbl color={DM}>OVER-STRIDE</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: OR, fontFamily: 'monospace' }}>{overStride}%</p></div>
+            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>AVG CADENCE</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>{avgCadence || '—'} spm</p></div>
+            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>OPT. WINDOW</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: N, fontFamily: 'monospace' }}>170-180</p></div>
+            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>OVER-STRIDE</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: OR, fontFamily: 'monospace' }}>{overStride}%</p></div>
           </div>
         }
       >
@@ -510,8 +510,8 @@ export function AnalyticsV4PaceZoneDistribution({ chart, onRequestDetail }: { ch
         accent={N}
         details={
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]"><Lbl color={DM}>RAPPORTO 80/20</Lbl><p style={{ fontSize: 22, fontWeight: 900, color: N, fontFamily: 'monospace' }}>{easyPct} / {highPct}</p></div>
-            <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]"><Lbl color={DM}>CORSE VALIDATE</Lbl><p style={{ fontSize: 22, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>{chart?.quality?.sample_size ?? 0}</p></div>
+            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>RAPPORTO 80/20</Lbl><p style={{ fontSize: 22, fontWeight: 900, color: N, fontFamily: 'monospace' }}>{easyPct} / {highPct}</p></div>
+            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>CORSE VALIDATE</Lbl><p style={{ fontSize: 22, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>{chart?.quality?.sample_size ?? 0}</p></div>
           </div>
         }
       >

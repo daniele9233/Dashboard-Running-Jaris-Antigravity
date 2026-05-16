@@ -113,7 +113,7 @@ export function NextOptimalSessionWidget({
   const arcLen = Math.PI * 85;
 
   return (
-    <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 h-full flex flex-col">
+    <div className="rounded-3xl p-6 h-full flex flex-col backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
       {/* Header */}
       <div className="flex items-center gap-2 mb-3">
         <Timer className="text-[#C0FF00]" size={14} />

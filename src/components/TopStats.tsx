@@ -75,7 +75,7 @@ export function TopStats({ runs }: TopStatsProps) {
   return (
     <div className="mb-6">
       {/* ── Total Distance ── */}
-      <div className="bg-bg-card border border-[#1E293B] rounded-xl p-5 flex flex-col justify-between max-w-sm">
+      <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex flex-col justify-between max-w-sm">
         <div className="flex justify-between items-start mb-4">
           <div>
             <h3 className="text-xs text-text-muted font-semibold tracking-wider mb-1 uppercase">Total Distance</h3>
