@@ -77,14 +77,14 @@ export function DetrainingWidget({ profile, runs, vdot, base5kSec: base5kSecProp
   const fullPct = Math.max(0, fVo2Loss);
 
   return (
-    <div className="h-full rounded-3xl p-6 flex flex-col backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+    <div className="h-full rounded-[24px] p-6 flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Icon className="w-3.5 h-3.5" style={{ color: state.color }} />
           <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest">DETRAINING</span>
         </div>
         <span
-          className="px-2 py-1 rounded-md text-[9px] font-black tracking-widest uppercase"
+          className="px-2 py-1 rounded-[12px] text-[9px] font-black tracking-widest uppercase"
           style={{ background: `${state.color}22`, color: state.color }}
         >
           {state.label}
@@ -144,18 +144,18 @@ export function DetrainingWidget({ profile, runs, vdot, base5kSec: base5kSecProp
 
       {/* 5K pace comparison */}
       <div className="grid grid-cols-3 gap-2 mt-auto">
-        <div className="rounded-xl bg-white/[0.025] border border-white/[0.06] p-3">
+        <div className="rounded-[16px] bg-white/[0.025] border border-white/[0.06] p-3">
           <div className="text-[9px] font-black tracking-widest uppercase text-gray-500">5K base</div>
           <div className="text-white text-lg font-black font-mono mt-1">{formatSec(base5kSec)}</div>
         </div>
-        <div className="rounded-xl border p-3" style={{ background: `${GREEN}10`, borderColor: `${GREEN}33` }}>
+        <div className="rounded-[16px] border p-3" style={{ background: `${GREEN}10`, borderColor: `${GREEN}33` }}>
           <div className="text-[9px] font-black tracking-widest uppercase" style={{ color: GREEN }}>5K taper</div>
           <div className="text-white text-lg font-black font-mono mt-1">{formatSec(t5k)}</div>
           <div className="text-[9px] font-bold mt-0.5" style={{ color: tDeltaSec < 0 ? GREEN : '#666' }}>
             {tDeltaSec < 0 ? '↓' : '+'}{Math.abs(Math.round(tDeltaSec))}s
           </div>
         </div>
-        <div className="rounded-xl border p-3" style={{ background: `${RED}10`, borderColor: `${RED}33` }}>
+        <div className="rounded-[16px] border p-3" style={{ background: `${RED}10`, borderColor: `${RED}33` }}>
           <div className="text-[9px] font-black tracking-widest uppercase" style={{ color: RED }}>5K fermo</div>
           <div className="text-white text-lg font-black font-mono mt-1">{formatSec(f5k)}</div>
           <div className="text-[9px] font-bold mt-0.5" style={{ color: fDeltaSec > 5 ? RED : '#666' }}>

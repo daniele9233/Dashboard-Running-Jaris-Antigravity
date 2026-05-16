@@ -66,7 +66,7 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
   }, [runs]);
 
   return (
-    <div className="h-full rounded-3xl p-8 flex flex-col backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+    <div className="h-full rounded-[24px] p-8 flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
       <div className="flex items-center justify-between mb-2">
         <div>
           <div className="text-[#A0A0A0] text-xs font-black tracking-widest">
@@ -83,13 +83,13 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
             </div>
           )}
         </div>
-        <div className="flex bg-[#111] rounded-lg border border-white/[0.06] p-0.5" role="tablist" aria-label="Periodo grafico">
+        <div className="flex bg-[#111] rounded-[12px] border border-white/[0.06] p-0.5" role="tablist" aria-label="Periodo grafico">
           {(['7d', 'month', 'year'] as const).map(p => (
             <button
               key={p}
               type="button"
               onClick={() => setChartPeriod(p)}
-              className={`px-3 py-1 rounded-md text-[10px] font-black tracking-wider transition-all ${
+              className={`px-3 py-1 rounded-[12px] text-[10px] font-black tracking-wider transition-all ${
                 chartPeriod === p ? 'bg-[#C0FF00] text-black' : 'text-gray-500 hover:text-white'
               }`}
               role="tab"
@@ -110,7 +110,7 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
               contentStyle={{
                 backgroundColor: "#111",
                 border: "1px solid #333",
-                borderRadius: "8px",
+                borderRadius: "12px",
                 color: "#fff",
               }}
             />

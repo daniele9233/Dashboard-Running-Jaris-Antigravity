@@ -102,7 +102,7 @@ export function LastRunMap({ run }: LastRunMapProps) {
 
   if (!run) {
     return (
-      <div className="rounded-3xl overflow-hidden h-full bg-[#0F172A] flex items-center justify-center">
+      <div className="rounded-[24px] overflow-hidden h-full bg-[#0F172A] flex items-center justify-center">
         <div className="text-center text-gray-600">
           <MapPin className="w-8 h-8 mx-auto mb-2 opacity-20" />
           <p className="text-xs">Nessuna corsa</p>
@@ -113,7 +113,7 @@ export function LastRunMap({ run }: LastRunMapProps) {
 
   if (!bounds) {
     return (
-      <div className="relative rounded-3xl overflow-hidden h-full min-h-[300px]"
+      <div className="relative rounded-[24px] overflow-hidden h-full min-h-[300px]"
            style={{ background: "linear-gradient(135deg, #0f1923 0%, #1a2535 100%)" }}>
         <svg className="absolute inset-0 w-full h-full opacity-5" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -123,11 +123,11 @@ export function LastRunMap({ run }: LastRunMapProps) {
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
         </svg>
-        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1 flex items-center gap-1.5">
+        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-[12px] px-2.5 py-1 flex items-center gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full bg-[#C0FF00] animate-pulse" />
           <span className="text-[10px] font-bold text-[#C0FF00] uppercase tracking-wider">Ultima Corsa</span>
         </div>
-        <div className="absolute top-3 right-3 bg-white/5 border border-white/10 rounded-lg px-2 py-1">
+        <div className="absolute top-3 right-3 bg-white/5 border border-white/10 rounded-[12px] px-2 py-1">
           <span className="text-[10px] text-gray-500 uppercase tracking-wider">No GPS</span>
         </div>
         <div className="absolute inset-0 flex items-center justify-center">
@@ -175,7 +175,7 @@ export function LastRunMap({ run }: LastRunMapProps) {
   }
 
   return (
-    <div ref={containerRef} className="relative rounded-3xl overflow-hidden h-full border border-white/[0.04]">
+    <div ref={containerRef} className="relative rounded-[24px] overflow-hidden h-full border border-white/[0.04]">
       <Map
         ref={mapRef}
         mapboxAccessToken={MAPBOX_TOKEN}
@@ -225,7 +225,7 @@ export function LastRunMap({ run }: LastRunMapProps) {
         )}
       </Map>
 
-      <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1 flex items-center gap-1.5">
+      <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm rounded-[12px] px-2.5 py-1 flex items-center gap-1.5">
         <div className="w-1.5 h-1.5 rounded-full bg-[#C0FF00] animate-pulse" />
         <span className="text-[10px] font-bold text-[#C0FF00] uppercase tracking-wider">Ultima Corsa</span>
       </div>

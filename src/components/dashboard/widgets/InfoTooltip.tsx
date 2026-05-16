@@ -40,7 +40,7 @@ export function InfoTooltip({ title, lines }: { title: string; lines: string[] }
       {open &&
         createPortal(
           <div
-            className="fixed z-[9999] w-96 max-h-[70vh] overflow-y-auto bg-[#111] border border-white/15 rounded-2xl p-4 shadow-2xl pointer-events-none"
+            className="fixed z-[9999] w-96 max-h-[70vh] overflow-y-auto bg-[#111] border border-white/15 rounded-[16px] p-4 shadow-[0_4px_24px_rgba(0,0,0,0.4)] pointer-events-none"
             style={{ top: position.top, left: position.left }}
             role="tooltip"
           >

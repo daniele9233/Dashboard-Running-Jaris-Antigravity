@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-16T19:59:43.427Z",
+  "generated_at": "2026-05-16T21:14:46.352Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -1739,9 +1739,9 @@
         "../../../types/api",
         "react"
       ],
-      "hash": "e9e6433baf38912edd90e28a2c01dfafa4a2033fbd85ebdc5234fb8ad8199ef0",
-      "last_modified": "2026-05-16T19:05:11.121Z",
-      "size_bytes": 10987
+      "hash": "2070d6be0f19b8d58e783ec6883e42b14ef326559b5e00e8f063713caf14b89c",
+      "last_modified": "2026-05-16T21:13:57.506Z",
+      "size_bytes": 11011
     },
     {
       "path": "src/components/dashboard/widgets/HRZones.tsx",
@@ -1762,9 +1762,9 @@
         "../../../types/api",
         "react"
       ],
-      "hash": "60c4ff75f09c977737db5034a5039cb3acf2c459ac1bf61cc12342560e7898ee",
-      "last_modified": "2026-05-16T19:05:09.107Z",
-      "size_bytes": 7317
+      "hash": "5cbf14e878b0edb691db746b69f8c02d6966347b6272e6a76faa55f39af6deed",
+      "last_modified": "2026-05-16T21:14:07.132Z",
+      "size_bytes": 7324
     },
     {
       "path": "src/components/dashboard/widgets/InfoTooltip.tsx",
@@ -1782,9 +1782,9 @@
         "react",
         "react-dom"
       ],
-      "hash": "182dff2a7d85f429d9c54367330c051fd22935fcebf50668ac2ed9346346bed3",
-      "last_modified": "2026-04-29T20:47:32.242Z",
-      "size_bytes": 2116
+      "hash": "5281c199c380f17934320f52f05e1b985a4c7696956edd6df148dd06ae471623",
+      "last_modified": "2026-05-16T21:14:20.923Z",
+      "size_bytes": 2144
     },
     {
       "path": "src/components/dashboard/widgets/NextOptimalSessionWidget.tsx",
@@ -1807,9 +1807,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "8058855668e0e1590979a2150bf03d14a3872ec020bf55af6ef4205e71585f74",
-      "last_modified": "2026-05-16T19:05:07.311Z",
-      "size_bytes": 7493
+      "hash": "9d5600e54266b1dd68fb5c4a164e811e57af18eeac40183c099f83c7db8fffa8",
+      "last_modified": "2026-05-16T21:14:15.482Z",
+      "size_bytes": 7515
     },
     {
       "path": "src/components/dashboard/widgets/WeeklyKmChart.tsx",
@@ -1832,9 +1832,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "f396edbccee842ba2cf5e91f2c0727aec1dc8c2f370e38a13dc67442eb124364",
-      "last_modified": "2026-05-16T19:05:03.433Z",
-      "size_bytes": 5500
+      "hash": "5f54ec8f10006be4c93fdd078014d79f373f12d092bd180d11fa96bc46f3b3c7",
+      "last_modified": "2026-05-16T21:13:46.844Z",
+      "size_bytes": 5528
     },
     {
       "path": "src/components/DashboardView.tsx",
@@ -1884,9 +1884,9 @@
         "react-router-dom",
         "recharts"
       ],
-      "hash": "f2ccf403a22247beb286b267839ae6c300578cdf06cace2680e4fd5da0b9a72d",
-      "last_modified": "2026-05-16T19:20:53.833Z",
-      "size_bytes": 57348
+      "hash": "31a98898cd58913de3dbd31b71b3faf05d56751d971073ef445caf648d827ca4",
+      "last_modified": "2026-05-16T21:13:31.390Z",
+      "size_bytes": 57512
     },
     {
       "path": "src/components/DetrainingWidget.tsx",
@@ -1912,9 +1912,9 @@
         "motion/react",
         "react"
       ],
-      "hash": "c503f4b05db8f733061651d2eb336a3d4c5dc6b00c750cc82664fab36c55d505",
-      "last_modified": "2026-05-16T19:05:05.185Z",
-      "size_bytes": 7954
+      "hash": "0f477223c10462f5e2eba2a1d3bf682fc851f5cc6568446c2e2b2eea76a325bf",
+      "last_modified": "2026-05-16T21:14:37.000Z",
+      "size_bytes": 7989
     },
     {
       "path": "src/components/ErrorBoundary.tsx",
@@ -2098,9 +2098,9 @@
         "react",
         "react-map-gl/mapbox"
       ],
-      "hash": "39514963b8db1ff3a377d656525b46b5c78cb72852cbc7e075c601b5a100fe90",
-      "last_modified": "2026-04-20T19:27:01.369Z",
-      "size_bytes": 10942
+      "hash": "dfd91532ace30f91e3c4032c0f79b117b59a6a6e3950ab35ada9eb64742079ea",
+      "last_modified": "2026-05-16T21:14:46.352Z",
+      "size_bytes": 10963
     },
     {
       "path": "src/components/LiveTelemetry3DMap.tsx",

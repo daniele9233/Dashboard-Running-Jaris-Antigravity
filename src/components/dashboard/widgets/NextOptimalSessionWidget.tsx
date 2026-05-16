@@ -113,7 +113,7 @@ export function NextOptimalSessionWidget({
   const arcLen = Math.PI * 85;
 
   return (
-    <div className="rounded-3xl p-6 h-full flex flex-col backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+    <div className="rounded-[24px] p-6 h-full flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
       {/* Header */}
       <div className="flex items-center gap-2 mb-3">
         <Timer className="text-[#C0FF00]" size={14} />
@@ -169,7 +169,7 @@ export function NextOptimalSessionWidget({
 
         {/* Recommendation + date */}
         <div
-          className="flex flex-col items-center gap-1 px-4 py-2.5 rounded-2xl mt-5 w-full"
+          className="flex flex-col items-center gap-1 px-4 py-2.5 rounded-[16px] mt-5 w-full"
           style={{ background: `${recColor}14`, border: `1px solid ${recColor}44` }}
         >
           <div className="flex items-center gap-2">

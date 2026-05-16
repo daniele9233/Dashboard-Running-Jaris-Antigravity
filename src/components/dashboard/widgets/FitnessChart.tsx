@@ -99,7 +99,7 @@ export function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }
   const hov = hoverIdx !== null ? data[hoverIdx] : null;
 
   return (
-    <div className="h-full rounded-3xl p-6 flex flex-col backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+    <div className="h-full rounded-[24px] p-6 flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
       {/* Header */}
       <div className="flex items-start justify-between mb-4 flex-wrap gap-4">
         <div>
@@ -225,7 +225,7 @@ export function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }
               <div
                 style={{
                   background: '#F97316',
-                  borderRadius: 8,
+                  borderRadius: 12,
                   width: 44,
                   height: 28,
                   display: 'flex',
@@ -243,7 +243,7 @@ export function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }
 
         {/* Hover date overlay (HTML, not scaled) */}
         {hov && (
-          <div className="absolute top-0 right-0 bg-[#111] border border-white/[0.08] rounded-lg px-3 py-1.5 pointer-events-none">
+          <div className="absolute top-0 right-0 bg-[#111] border border-white/[0.08] rounded-[12px] px-3 py-1.5 pointer-events-none">
             <div className="text-[10px] tracking-widest uppercase text-[#A0A0A0] font-black">
               {new Date(hov.date).toLocaleDateString("it", { day: "numeric", month: "short", year: "numeric" })}
             </div>
