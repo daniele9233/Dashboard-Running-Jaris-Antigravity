@@ -197,10 +197,8 @@ function V2Card({
 }) {
   return (
     <div
-      className={`rounded-2xl p-4 md:p-7 relative group ${className}`}
+      className={`rounded-2xl p-4 md:p-7 relative group backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 ${className}`}
       style={{
-        backgroundColor: CARD_BG,
-        border: `1px solid ${CARD_BORDER}`,
         borderLeft: `3px solid ${accent}`,
       }}
     >
@@ -1898,13 +1896,10 @@ export function AnalyticsV2({
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
            {/* Anaerobic Threshold Trend — left column */}
            <div
-              className="xl:col-span-2 rounded-[3px] p-6 flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_246px] gap-6 relative group overflow-hidden"
+              className="xl:col-span-2 rounded-[3px] p-6 flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_246px] gap-6 relative group overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
               style={{
                 minHeight: 402,
-                background: 'radial-gradient(circle at top left, rgba(192,255,0,0.08), transparent 24%), radial-gradient(circle at bottom right, rgba(34,211,238,0.06), transparent 32%), #111111',
-                border: '1px solid #1F290E',
                 borderLeft: `3px solid ${NEON}`,
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02), 0 0 0 1px rgba(192,255,0,0.03)',
               }}
            >
                 <div className="min-w-0 flex flex-col">
