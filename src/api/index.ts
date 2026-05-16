@@ -300,6 +300,23 @@ export const getUserLayout = () =>
 export const putUserLayout = (payload: { layouts: GridLayouts; hidden_keys?: string[] }) =>
   api.put<{ ok: boolean }>('/api/user/layout', payload);
 
+// ─── SUPPLEMENTS ─────────────────────────────────────────────────────────────
+export type SupplementId = 'creatine' | 'beta-alanine';
+export interface SupplementConfig {
+  start_date: string;       // YYYY-MM-DD
+  enabled: boolean;
+}
+export interface SupplementsConfigResponse {
+  supplements: Record<SupplementId, SupplementConfig>;
+}
+export const getSupplementsConfig = () =>
+  api.get<SupplementsConfigResponse>('/api/supplements');
+
+export const updateSupplement = (
+  supId: SupplementId,
+  payload: { start_date?: string; enabled?: boolean },
+) => api.put<SupplementsConfigResponse>(`/api/supplements/${supId}`, payload);
+
 // ─── JARVIS ──────────────────────────────────────────────────────────────────
 import type { JarvisResponse } from '../types/jarvis';
 export const jarvisChat = (transcript: string) =>

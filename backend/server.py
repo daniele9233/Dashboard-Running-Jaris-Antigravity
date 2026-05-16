@@ -511,14 +511,17 @@ try:
     from routers import health as _health_router  # CWD=backend/ (Render prod)
     from routers import profile as _profile_router
     from routers import runs as _runs_router
+    from routers import supplements as _supplements_router
 except ImportError:  # pragma: no cover
     from backend.routers import health as _health_router  # type: ignore
     from backend.routers import profile as _profile_router  # type: ignore
     from backend.routers import runs as _runs_router  # type: ignore
+    from backend.routers import supplements as _supplements_router  # type: ignore
 
 app.include_router(_health_router.router)
 app.include_router(_profile_router.router)
 app.include_router(_runs_router.router)
+app.include_router(_supplements_router.router)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  STRAVA OAUTH

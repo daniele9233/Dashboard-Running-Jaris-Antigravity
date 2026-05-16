@@ -1,9 +1,14 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Legend } from "recharts";
-import { Beaker, CheckCircle2, Circle, Zap, AlertTriangle, FlaskConical, Trophy, Calendar as CalendarIcon } from "lucide-react";
+import { Beaker, Zap, AlertTriangle, FlaskConical, Trophy, Calendar as CalendarIcon, Check, Clock } from "lucide-react";
+import {
+  getSupplementsConfig,
+  updateSupplement,
+  type SupplementId,
+} from "../../api";
 
 /**
- * SupplementsView — Sezione integrazione: tracking manuale + chart saturazione
+ * SupplementsView — Sezione integrazione: tracking start date + chart saturazione
  * + protocollo PB scientificamente verificato.
  *
  * Modello scientifico:
@@ -13,61 +18,56 @@ import { Beaker, CheckCircle2, Circle, Zap, AlertTriangle, FlaskConical, Trophy,
  *    ~60% a 4 settimane, ~80-90% a 10 settimane (Harris 2006, Hill 2007).
  *    Modello: S(t) = 1 - exp(-t / 35)
  *
- * Persistenza checkbox: localStorage key `metic-lab:supplements:v1`.
+ * Persistenza: backend MongoDB (collection `supplements_config`) via /api/supplements.
+ * Fallback localStorage solo per ottimismo UI durante il PUT.
  */
-
-type SupplementId = "creatine" | "beta-alanine";
 
 interface SupplementDef {
   id: SupplementId;
   name: string;
+  shortName: string;
   dose: string;
   color: string;
-  startDate: string; // YYYY-MM-DD
-  tau: number;       // costante di tempo modello esponenziale (giorni)
-  fullDays: number;  // giorni a 99% saturazione (per UI)
-  source: string;    // citazione studi
+  defaultStartDate: string;
+  tau: number;
+  fullDays: number;
+  source: string;
+  description: string;
 }
 
 const SUPPLEMENTS: SupplementDef[] = [
   {
     id: "creatine",
     name: "Creatina monoidrato",
+    shortName: "CREATINA",
     dose: "5 g/die",
     color: "#C0FF00",
-    startDate: "2026-05-12",
+    defaultStartDate: "2026-05-12",
     tau: 9.5,
     fullDays: 28,
     source: "Hultman 1996",
+    description: "Saturazione fosfocreatina muscolare. Potenza neuromuscolare e recupero tra sforzi brevi-intensi.",
   },
   {
     id: "beta-alanine",
     name: "Beta-Alanina",
+    shortName: "BETA-ALANINA",
     dose: "4 g/die",
     color: "#3B82F6",
-    startDate: "2026-05-15",
+    defaultStartDate: "2026-05-15",
     tau: 35,
     fullDays: 70,
     source: "Harris 2006, Hill 2007",
+    description: "Accumulo carnosina muscolare. Tampone H⁺ negli sforzi 1-7 min ad alta intensità.",
   },
 ];
 
-const STORAGE_KEY = "metic-lab:supplements:v1";
 const TODAY = new Date("2026-05-15"); // currentDate from memory
 
 // ─── Profilo atleta + protocollo ──────────────────────────────────────────
-// Personalizzazione protocollo PB. Dosi calcolate da peso e distanza.
 const USER_WEIGHT_KG = 68;
 const TARGET_DISTANCE_KM = 5;
 
-/**
- * Conversione bicarbonato grammi → cucchiai/cucchiaini da cucina.
- * Densità apparente NaHCO₃ in polvere fine ≈ 1.0 g/ml.
- *  - cucchiaino raso ≈ 5 g
- *  - cucchiaino colmo ≈ 7 g
- *  - cucchiaio raso ≈ 15 g
- *  - cucchiaio colmo ≈ 20 g
- */
 function bicarbSpoons(grams: number): string {
   if (grams <= 0) return "0";
   if (grams <= 3.5) return "½ cucchiaino raso";
@@ -107,152 +107,180 @@ function saturation(daysSinceStart: number, tau: number): number {
 }
 
 function dateForSaturation(target: number, start: Date, tau: number): Date {
-  // Inverte: t = -tau * ln(1 - S)
   const t = -tau * Math.log(1 - target);
   const d = new Date(start);
   d.setDate(start.getDate() + Math.ceil(t));
   return d;
 }
 
-// ─── State persistence ────────────────────────────────────────────────────
-
-type ChecksMap = Record<string, Record<SupplementId, boolean>>;
-
-function loadChecks(): ChecksMap {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw) as ChecksMap;
-  } catch {
-    return {};
-  }
+function formatDateLong(d: Date): string {
+  return d.toLocaleDateString("it", { day: "2-digit", month: "long", year: "numeric" });
 }
 
-function saveChecks(checks: ChecksMap) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(checks));
-  } catch { /* quota or disabled */ }
-}
-
-// Auto-checks default: creatina dal 12 mag al 15 mag (oggi).
-function applyAutoChecks(stored: ChecksMap): ChecksMap {
-  const result = { ...stored };
-  for (const sup of SUPPLEMENTS) {
-    const start = parseDate(sup.startDate);
-    if (start > TODAY) continue;
-    const days = daysBetween(start, TODAY) + 1;
-    for (let i = 0; i < days; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      const key = fmtDate(d);
-      const dayChecks = result[key] ?? { creatine: false, "beta-alanine": false };
-      // applica autocheck SOLO se non esiste l'entry per quel giorno (rispetta user input)
-      if (!(key in result)) {
-        dayChecks[sup.id] = true;
-        result[key] = dayChecks;
-      }
-    }
-  }
-  return result;
+function formatDateShort(d: Date): string {
+  return d.toLocaleDateString("it", { day: "2-digit", month: "short" });
 }
 
 // ─── Component ────────────────────────────────────────────────────────────
 
+type StartDateMap = Record<SupplementId, string>;
+
+const STORAGE_KEY = "metic-lab:supplements-config:v2";
+
+function loadCachedConfig(): StartDateMap | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as StartDateMap;
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedConfig(cfg: StartDateMap) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg));
+  } catch { /* quota or disabled */ }
+}
+
 export function SupplementsView() {
-  const [checks, setChecks] = useState<ChecksMap>(() => applyAutoChecks(loadChecks()));
+  // Start dates per supplemento. Inizializza da cache localStorage,
+  // poi sincronizza con backend al mount.
+  const [startDates, setStartDates] = useState<StartDateMap>(() => {
+    const cached = loadCachedConfig();
+    if (cached) return cached;
+    return {
+      creatine:       SUPPLEMENTS[0].defaultStartDate,
+      "beta-alanine": SUPPLEMENTS[1].defaultStartDate,
+    };
+  });
+  const [saving, setSaving] = useState<Record<SupplementId, boolean>>({
+    creatine: false,
+    "beta-alanine": false,
+  });
+  const [savedFlash, setSavedFlash] = useState<Record<SupplementId, boolean>>({
+    creatine: false,
+    "beta-alanine": false,
+  });
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => { saveChecks(checks); }, [checks]);
-
-  const toggle = useCallback((dateKey: string, sup: SupplementId) => {
-    setChecks(prev => {
-      const day = prev[dateKey] ?? { creatine: false, "beta-alanine": false };
-      return { ...prev, [dateKey]: { ...day, [sup]: !day[sup] } };
-    });
+  // ── Carica config dal backend al mount ───────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    getSupplementsConfig()
+      .then((res) => {
+        if (cancelled) return;
+        const next: StartDateMap = {
+          creatine:       res.supplements?.creatine?.start_date       ?? SUPPLEMENTS[0].defaultStartDate,
+          "beta-alanine": res.supplements?.["beta-alanine"]?.start_date ?? SUPPLEMENTS[1].defaultStartDate,
+        };
+        setStartDates(next);
+        saveCachedConfig(next);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("Failed to load supplements config", err);
+        setLoadError("Backend non raggiungibile. Modifiche locali non sincronizzate.");
+      });
+    return () => { cancelled = true; };
   }, []);
 
-  // Curve saturazione: 120 giorni dal primo start
+  // ── Update start date con auto-save su DB ────────────────────────────────
+  const handleStartDateChange = useCallback(async (supId: SupplementId, newDate: string) => {
+    // Optimistic update + cache locale
+    setStartDates(prev => {
+      const next = { ...prev, [supId]: newDate };
+      saveCachedConfig(next);
+      return next;
+    });
+    setSaving(prev => ({ ...prev, [supId]: true }));
+    try {
+      const res = await updateSupplement(supId, { start_date: newDate });
+      // Sync con risposta backend (in caso di normalizzazione date)
+      const synced: StartDateMap = {
+        creatine:       res.supplements?.creatine?.start_date       ?? newDate,
+        "beta-alanine": res.supplements?.["beta-alanine"]?.start_date ?? newDate,
+      };
+      setStartDates(synced);
+      saveCachedConfig(synced);
+      // Flash conferma "salvato"
+      setSavedFlash(prev => ({ ...prev, [supId]: true }));
+      setTimeout(() => {
+        setSavedFlash(prev => ({ ...prev, [supId]: false }));
+      }, 1800);
+      setLoadError(null);
+    } catch (err) {
+      console.error("Failed to update supplement", err);
+      setLoadError("Errore salvataggio. Riprova.");
+    } finally {
+      setSaving(prev => ({ ...prev, [supId]: false }));
+    }
+  }, []);
+
+  // ── Status corrente per ogni supplemento ─────────────────────────────────
+  const currentStatus = useMemo(() => {
+    return SUPPLEMENTS.map(sup => {
+      const startStr = startDates[sup.id];
+      const start = parseDate(startStr);
+      const since = daysBetween(start, TODAY);
+      const sat = saturation(since, sup.tau);
+      const peak50 = dateForSaturation(0.5, start, sup.tau);
+      const peak90 = dateForSaturation(0.9, start, sup.tau);
+      const peakFull = new Date(start);
+      peakFull.setDate(start.getDate() + sup.fullDays);
+
+      const started = since >= 0;
+      // Stato categorico
+      let phaseLabel = "DA INIZIARE";
+      let phaseColor = "var(--app-text-muted)";
+      if (started) {
+        if (sat >= 0.9)       { phaseLabel = "SATURO";       phaseColor = sup.color; }
+        else if (sat >= 0.5)  { phaseLabel = "QUASI PIENO";  phaseColor = sup.color; }
+        else if (sat >= 0.2)  { phaseLabel = "LOADING";      phaseColor = sup.color; }
+        else                  { phaseLabel = "AVVIO";        phaseColor = sup.color; }
+      }
+
+      return {
+        ...sup,
+        startDate: startStr,
+        startDateObj: start,
+        daysSinceStart: since,
+        saturation: sat,
+        peak50Date: peak50,
+        peak90Date: peak90,
+        peakFullDate: peakFull,
+        started,
+        phaseLabel,
+        phaseColor,
+      };
+    });
+  }, [startDates]);
+
+  // ── Chart saturazione (dipende da start dates dinamiche) ─────────────────
   const chartData = useMemo(() => {
     const firstStart = SUPPLEMENTS.reduce((min, s) => {
-      const d = parseDate(s.startDate);
+      const d = parseDate(startDates[s.id]);
       return d < min ? d : min;
-    }, parseDate(SUPPLEMENTS[0].startDate));
+    }, parseDate(startDates[SUPPLEMENTS[0].id]));
     const days = 130;
     return Array.from({ length: days }, (_, i) => {
       const d = new Date(firstStart);
       d.setDate(firstStart.getDate() + i);
       const point: any = { date: fmtDate(d), day: i };
       for (const sup of SUPPLEMENTS) {
-        const start = parseDate(sup.startDate);
+        const start = parseDate(startDates[sup.id]);
         const since = daysBetween(start, d);
         point[sup.id] = +(saturation(since, sup.tau) * 100).toFixed(1);
       }
-      // PB-ready: minimo tra le due saturazioni — il limitante
       point.pbReady = Math.min(point.creatine, point["beta-alanine"]);
       return point;
     });
-  }, []);
+  }, [startDates]);
 
-  // PB window: data quando entrambi >90%
   const pbReadyDate = useMemo(() => {
     const found = chartData.find(p => p.pbReady >= 90);
     return found ? found.date : null;
   }, [chartData]);
-
-  // Stato corrente per cards — conta TUTTI i giorni spuntati per il supplemento.
-  // La saturazione riflette le dosi assunte (passate o pianificate).
-  // L'aderenza è calcolata sui giorni elapsed dal start fino a oggi (o ultima spunta, max).
-  const currentStatus = useMemo(() => {
-    return SUPPLEMENTS.map(sup => {
-      const start = parseDate(sup.startDate);
-      const sinceToday = daysBetween(start, TODAY);
-      let checkedDays = 0;
-      let latestChecked: Date | null = null;
-      for (const [dateKey, day] of Object.entries(checks)) {
-        if (day[sup.id]) {
-          checkedDays++;
-          const d = parseDate(dateKey);
-          if (d >= start && (!latestChecked || d > latestChecked)) {
-            latestChecked = d;
-          }
-        }
-      }
-      // Giorni elapsed: dal start a oggi o all'ultima spunta (il più tardo dei due)
-      const endRef = latestChecked && latestChecked > TODAY ? latestChecked : TODAY;
-      const elapsedDays = Math.max(0, daysBetween(start, endRef) + 1);
-      const adherence = elapsedDays > 0 ? Math.min(1, checkedDays / elapsedDays) : 0;
-      const sat = saturation(checkedDays, sup.tau);
-      // Peak 90% considerando aderenza attuale: se l'aderenza è X%, servono più giorni
-      const baseDays = -sup.tau * Math.log(0.1);
-      const adjustedDays = adherence > 0 ? Math.ceil(baseDays / adherence) : baseDays;
-      const peak90 = new Date(start);
-      peak90.setDate(start.getDate() + adjustedDays);
-      return {
-        ...sup,
-        daysActive: checkedDays,
-        calendarDays: elapsedDays,
-        adherence,
-        saturation: sat,
-        peak90Date: peak90,
-        started: sinceToday >= 0 || checkedDays > 0,
-      };
-    });
-  }, [checks]);
-
-  // Calendario: dal primo start supplemento + 90 giorni futuro
-  const calendarDays = useMemo(() => {
-    const firstStart = SUPPLEMENTS.reduce((min, s) => {
-      const d = parseDate(s.startDate);
-      return d < min ? d : min;
-    }, parseDate(SUPPLEMENTS[0].startDate));
-    const lastDate = new Date(TODAY);
-    lastDate.setDate(TODAY.getDate() + 90);
-    const totalDays = daysBetween(firstStart, lastDate) + 1;
-    return Array.from({ length: totalDays }, (_, i) => {
-      const d = new Date(firstStart);
-      d.setDate(firstStart.getDate() + i);
-      return d;
-    });
-  }, []);
 
   return (
     <main className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6" style={{ backgroundColor: "var(--app-bg)" }}>
@@ -271,78 +299,31 @@ export function SupplementsView() {
         </div>
       </div>
 
-      {/* ── Active Supplements Cards ── */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {loadError && (
+        <div className="rounded-xl px-4 py-3 text-sm border" style={{ color: "#F59E0B", borderColor: "#F59E0B40", backgroundColor: "#F59E0B10" }}>
+          {loadError}
+        </div>
+      )}
+
+      {/* ── Supplement Cards with Start Date Picker + Saturation Timeline ── */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {currentStatus.map(sup => (
-          <div
+          <SupplementCard
             key={sup.id}
-            className="rounded-2xl p-6 border"
-            style={{
-              backgroundColor: "var(--app-bg-alt)",
-              borderColor: "var(--app-border)",
-              borderLeft: `3px solid ${sup.color}`,
-            }}
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Beaker className="w-4 h-4" style={{ color: sup.color }} />
-                  <h3 className="text-lg font-black" style={{ color: "var(--app-text)" }}>{sup.name}</h3>
-                </div>
-                <p className="text-xs font-bold tracking-wider" style={{ color: "var(--app-text-muted)" }}>
-                  {sup.dose.toUpperCase()} · INIZIO {sup.startDate}
-                </p>
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                <div
-                  className="text-[10px] font-black px-2 py-1 rounded-full"
-                  style={{
-                    color: sup.started ? sup.color : "var(--app-text-muted)",
-                    backgroundColor: sup.started ? `${sup.color}1A` : "var(--app-input-bg)",
-                  }}
-                >
-                  {sup.started ? `${sup.daysActive}/${sup.calendarDays} GG` : "DA INIZIARE"}
-                </div>
-                {sup.started && sup.calendarDays > 0 && (
-                  <div className="text-[9px] font-bold tracking-widest" style={{ color: "var(--app-text-muted)" }}>
-                    ADERENZA {(sup.adherence * 100).toFixed(0)}%
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Saturation bar */}
-            <div className="mb-3">
-              <div className="flex items-baseline justify-between mb-2">
-                <span className="text-[10px] font-bold tracking-widest" style={{ color: "var(--app-text-muted)" }}>
-                  SATURAZIONE MUSCOLARE
-                </span>
-                <span className="text-2xl font-black" style={{ color: sup.color }}>
-                  {(sup.saturation * 100).toFixed(0)}%
-                </span>
-              </div>
-              <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: "var(--app-input-bg)" }}>
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{ width: `${sup.saturation * 100}%`, backgroundColor: sup.color }}
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-between text-[10px] font-bold tracking-wider pt-3 border-t" style={{ borderColor: "var(--app-border)", color: "var(--app-text-muted)" }}>
-              <span>PICCO 90%: {sup.peak90Date.toLocaleDateString("it", { day: "2-digit", month: "short" })}</span>
-              <span>{sup.source}</span>
-            </div>
-          </div>
+            sup={sup}
+            saving={saving[sup.id]}
+            savedFlash={savedFlash[sup.id]}
+            onDateChange={(d) => handleStartDateChange(sup.id, d)}
+          />
         ))}
       </section>
 
       {/* ── Saturation Chart ── */}
       <section
-        className="rounded-2xl p-6 border"
+        className="rounded-2xl p-4 md:p-6 border"
         style={{ backgroundColor: "var(--app-bg-alt)", borderColor: "var(--app-border)" }}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div>
             <h2 className="text-base font-black tracking-wide" style={{ color: "var(--app-text)" }}>
               CURVA SATURAZIONE MUSCOLARE
@@ -353,7 +334,7 @@ export function SupplementsView() {
           </div>
           {pbReadyDate && (
             <div
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border self-start"
               style={{ borderColor: "#C0FF00", backgroundColor: "#C0FF001A" }}
             >
               <Trophy className="w-4 h-4" style={{ color: "#C0FF00" }} />
@@ -362,14 +343,14 @@ export function SupplementsView() {
                   PB WINDOW DA
                 </div>
                 <div className="text-sm font-black" style={{ color: "#C0FF00" }}>
-                  {parseDate(pbReadyDate).toLocaleDateString("it", { day: "2-digit", month: "long", year: "numeric" })}
+                  {formatDateLong(parseDate(pbReadyDate))}
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        <div className="h-[320px]">
+        <div className="h-[260px] md:h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
@@ -393,7 +374,7 @@ export function SupplementsView() {
                   borderRadius: "8px",
                   fontSize: "12px",
                 }}
-                labelFormatter={(v) => parseDate(v as string).toLocaleDateString("it", { day: "2-digit", month: "long", year: "numeric" })}
+                labelFormatter={(v) => formatDateLong(parseDate(v as string))}
                 formatter={(value: number, name: string) => {
                   const label = name === "creatine" ? "Creatina"
                     : name === "beta-alanine" ? "Beta-Alanina"
@@ -425,98 +406,9 @@ export function SupplementsView() {
         </div>
       </section>
 
-      {/* ── Calendar ── */}
-      <section
-        className="rounded-2xl p-6 border"
-        style={{ backgroundColor: "var(--app-bg-alt)", borderColor: "var(--app-border)" }}
-      >
-        <div className="flex items-center gap-2 mb-4">
-          <CalendarIcon className="w-5 h-5" style={{ color: "#C0FF00" }} />
-          <h2 className="text-base font-black tracking-wide" style={{ color: "var(--app-text)" }}>
-            CALENDARIO ASSUNZIONI
-          </h2>
-        </div>
-        <p className="text-[11px] font-semibold mb-4" style={{ color: "var(--app-text-muted)" }}>
-          Spunta ogni giorno quando hai assunto il supplemento. I giorni passati su creatina sono già spuntati (12 mag → oggi).
-        </p>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr>
-                <th className="text-left p-2 font-bold tracking-wider sticky left-0 z-10" style={{ color: "var(--app-text-muted)", backgroundColor: "var(--app-bg-alt)" }}>
-                  GIORNO
-                </th>
-                {SUPPLEMENTS.map(sup => (
-                  <th key={sup.id} className="p-2 text-center font-bold tracking-wider" style={{ color: sup.color }}>
-                    {sup.name.split(" ")[0].toUpperCase()}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {calendarDays.map(d => {
-                const key = fmtDate(d);
-                const isToday = key === fmtDate(TODAY);
-                const isPast = d < TODAY;
-                const isFuture = d > TODAY;
-                const dayChecks = checks[key] ?? { creatine: false, "beta-alanine": false };
-                return (
-                  <tr
-                    key={key}
-                    className="border-t"
-                    style={{
-                      borderColor: "var(--app-border)",
-                      backgroundColor: isToday ? "#C0FF000A" : "transparent",
-                    }}
-                  >
-                    <td className="p-2 sticky left-0" style={{ backgroundColor: isToday ? "#1f2410" : "var(--app-bg-alt)" }}>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold" style={{ color: isToday ? "#C0FF00" : "var(--app-text)" }}>
-                          {d.toLocaleDateString("it", { day: "2-digit", month: "short", weekday: "short" })}
-                        </span>
-                        {isToday && <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ backgroundColor: "#C0FF00", color: "#000" }}>OGGI</span>}
-                      </div>
-                    </td>
-                    {SUPPLEMENTS.map(sup => {
-                      const start = parseDate(sup.startDate);
-                      const beforeStart = d < start;
-                      const checked = dayChecks[sup.id];
-                      return (
-                        <td key={sup.id} className="p-2 text-center">
-                          {beforeStart ? (
-                            <span className="text-[10px]" style={{ color: "var(--app-text-muted)" }}>—</span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => toggle(key, sup.id)}
-                              className="inline-flex items-center justify-center w-11 h-11 md:w-7 md:h-7 rounded-md transition-all hover:scale-110"
-                              aria-label={`Toggle ${sup.name} ${key}`}
-                              style={{
-                                backgroundColor: checked ? `${sup.color}26` : "transparent",
-                              }}
-                            >
-                              {checked ? (
-                                <CheckCircle2 className="w-5 h-5" style={{ color: sup.color }} />
-                              ) : (
-                                <Circle className="w-5 h-5" style={{ color: isFuture ? "var(--app-text-muted)" : "var(--app-text-dim)", opacity: isFuture ? 0.4 : 0.7 }} />
-                              )}
-                            </button>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
       {/* ── PB Protocol ── */}
       <section
-        className="rounded-2xl p-6 border"
+        className="rounded-2xl p-4 md:p-6 border"
         style={{
           backgroundColor: "var(--app-bg-alt)",
           borderColor: "#C0FF00",
@@ -530,7 +422,7 @@ export function SupplementsView() {
           </h2>
         </div>
         <p className="text-[11px] font-bold tracking-widest mb-6" style={{ color: "var(--app-text-muted)" }}>
-          ✓ VERIFICATO SCIENTIFICAMENTE · ATTIVAZIONE DA {pbReadyDate ? parseDate(pbReadyDate).toLocaleDateString("it", { day: "2-digit", month: "long", year: "numeric" }).toUpperCase() : "—"}
+          ✓ VERIFICATO SCIENTIFICAMENTE · ATTIVAZIONE DA {pbReadyDate ? formatDateLong(parseDate(pbReadyDate)).toUpperCase() : "—"}
         </p>
 
         {/* Phase 1: Beetroot loading */}
@@ -722,6 +614,259 @@ export function SupplementsView() {
   );
 }
 
+// ─── SupplementCard ─────────────────────────────────────────────────────────
+
+interface SupplementCardProps {
+  sup: {
+    id: SupplementId;
+    name: string;
+    shortName: string;
+    dose: string;
+    color: string;
+    tau: number;
+    fullDays: number;
+    source: string;
+    description: string;
+    startDate: string;
+    startDateObj: Date;
+    daysSinceStart: number;
+    saturation: number;
+    peak50Date: Date;
+    peak90Date: Date;
+    peakFullDate: Date;
+    started: boolean;
+    phaseLabel: string;
+    phaseColor: string;
+  };
+  saving: boolean;
+  savedFlash: boolean;
+  onDateChange: (newDate: string) => void;
+}
+
+function SupplementCard({ sup, saving, savedFlash, onDateChange }: SupplementCardProps) {
+  const satPct = Math.round(sup.saturation * 100);
+  const milestones = [
+    { label: "INIZIO",   date: sup.startDateObj,  pct: 0 },
+    { label: "50%",      date: sup.peak50Date,    pct: 50 },
+    { label: "90%",      date: sup.peak90Date,    pct: 90 },
+    { label: "SATURO",   date: sup.peakFullDate,  pct: 99 },
+  ];
+
+  // Posizione del cursore "OGGI" sulla timeline (in %)
+  const totalSpanDays = Math.max(1, daysBetween(sup.startDateObj, sup.peakFullDate));
+  const todayPct = sup.started
+    ? Math.min(100, Math.max(0, (sup.daysSinceStart / totalSpanDays) * 100))
+    : 0;
+
+  return (
+    <div
+      className="rounded-2xl p-5 md:p-6 border relative overflow-hidden"
+      style={{
+        backgroundColor: "var(--app-bg-alt)",
+        borderColor: "var(--app-border)",
+        borderLeft: `3px solid ${sup.color}`,
+      }}
+    >
+      {/* Background glow */}
+      <div
+        className="absolute -top-20 -right-20 w-48 h-48 rounded-full pointer-events-none"
+        style={{ background: `radial-gradient(circle, ${sup.color}12 0%, transparent 70%)` }}
+      />
+
+      {/* Header */}
+      <div className="relative flex items-start justify-between gap-3 mb-5">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Beaker className="w-4 h-4 shrink-0" style={{ color: sup.color }} />
+            <h3 className="text-base md:text-lg font-black tracking-tight" style={{ color: "var(--app-text)" }}>
+              {sup.name}
+            </h3>
+          </div>
+          <p className="text-[11px] font-bold tracking-wider" style={{ color: "var(--app-text-muted)" }}>
+            {sup.dose.toUpperCase()} · {sup.source.toUpperCase()}
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <span
+            className="text-[9px] font-black px-2.5 py-1 rounded-full tracking-widest"
+            style={{
+              color: sup.phaseColor,
+              backgroundColor: sup.started ? `${sup.color}1A` : "var(--app-input-bg)",
+              border: sup.started ? `1px solid ${sup.color}30` : "1px solid var(--app-border)",
+            }}
+          >
+            {sup.phaseLabel}
+          </span>
+          {sup.started && (
+            <span className="text-[9px] font-bold tracking-wider" style={{ color: "var(--app-text-muted)" }}>
+              GIORNO {sup.daysSinceStart + 1}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Description */}
+      <p className="relative text-[11px] leading-relaxed mb-5 italic" style={{ color: "var(--app-text-muted)" }}>
+        {sup.description}
+      </p>
+
+      {/* Saturation Big Number + Progress Ring */}
+      <div className="relative flex items-center gap-5 mb-6">
+        {/* Circular Progress */}
+        <SaturationRing pct={satPct} color={sup.color} size={88} />
+
+        <div className="flex-1 min-w-0">
+          <div className="text-[9px] font-black tracking-widest mb-1" style={{ color: "var(--app-text-muted)" }}>
+            SATURAZIONE MUSCOLARE
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl md:text-5xl font-black tabular-nums leading-none" style={{ color: sup.color, textShadow: `0 0 24px ${sup.color}40` }}>
+              {satPct}
+            </span>
+            <span className="text-lg font-black" style={{ color: sup.color }}>%</span>
+          </div>
+          <div className="mt-2 text-[10px] font-bold tracking-wider" style={{ color: "var(--app-text-muted)" }}>
+            PICCO 90% · <span style={{ color: sup.color }}>{formatDateShort(sup.peak90Date)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Timeline Milestones */}
+      <div className="relative mb-6">
+        <div className="text-[9px] font-black tracking-widest mb-3" style={{ color: "var(--app-text-muted)" }}>
+          MILESTONES
+        </div>
+        <div className="relative">
+          {/* Track */}
+          <div className="absolute left-0 right-0 top-3 h-0.5 rounded-full" style={{ backgroundColor: "var(--app-border)" }} />
+          {/* Filled portion */}
+          <div
+            className="absolute left-0 top-3 h-0.5 rounded-full transition-all duration-500"
+            style={{ width: `${todayPct}%`, backgroundColor: sup.color, boxShadow: `0 0 8px ${sup.color}80` }}
+          />
+          {/* TODAY marker */}
+          {sup.started && (
+            <div
+              className="absolute top-2 -translate-x-1/2 w-2 h-2 rounded-full ring-4 ring-[var(--app-bg-alt)]"
+              style={{ left: `${todayPct}%`, backgroundColor: sup.color, boxShadow: `0 0 12px ${sup.color}` }}
+              title="Oggi"
+            />
+          )}
+          {/* Milestones */}
+          <div className="grid grid-cols-4 gap-1 relative">
+            {milestones.map((m, i) => {
+              const reached = satPct >= m.pct;
+              return (
+                <div key={m.label} className="flex flex-col items-center text-center">
+                  <div
+                    className="w-1.5 h-1.5 rounded-full mb-2 mt-2.5 transition-colors"
+                    style={{
+                      backgroundColor: reached ? sup.color : "var(--app-border)",
+                      boxShadow: reached ? `0 0 6px ${sup.color}` : "none",
+                    }}
+                  />
+                  <div
+                    className="text-[8px] font-black tracking-wider mb-0.5"
+                    style={{ color: reached ? sup.color : "var(--app-text-muted)" }}
+                  >
+                    {m.label}
+                  </div>
+                  <div className="text-[9px] font-mono tabular-nums" style={{ color: "var(--app-text-muted)" }}>
+                    {formatDateShort(m.date)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Date Picker - DB synced */}
+      <div className="relative pt-4 border-t" style={{ borderColor: "var(--app-border)" }}>
+        <div className="flex items-center justify-between mb-2">
+          <label htmlFor={`start-${sup.id}`} className="flex items-center gap-1.5 text-[10px] font-black tracking-widest" style={{ color: "var(--app-text-muted)" }}>
+            <CalendarIcon className="w-3 h-3" style={{ color: sup.color }} />
+            DATA INIZIO ASSUNZIONE
+          </label>
+          <div className="flex items-center gap-1.5 min-h-[14px]">
+            {saving && (
+              <span className="flex items-center gap-1 text-[9px] font-bold tracking-widest" style={{ color: "var(--app-text-muted)" }}>
+                <Clock className="w-3 h-3 animate-spin" /> SALVATAGGIO…
+              </span>
+            )}
+            {savedFlash && !saving && (
+              <span className="flex items-center gap-1 text-[9px] font-black tracking-widest" style={{ color: sup.color }}>
+                <Check className="w-3 h-3" /> SALVATO SU DB
+              </span>
+            )}
+          </div>
+        </div>
+        <input
+          id={`start-${sup.id}`}
+          type="date"
+          value={sup.startDate}
+          onChange={(e) => onDateChange(e.target.value)}
+          className="w-full px-4 py-3 rounded-xl text-sm font-mono font-bold tabular-nums tracking-wide border-2 transition-all min-h-[48px] focus:outline-none"
+          style={{
+            backgroundColor: "var(--app-input-bg)",
+            borderColor: `${sup.color}40`,
+            color: "var(--app-text)",
+            colorScheme: "dark",
+          }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = sup.color; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = `${sup.color}40`; }}
+        />
+        <p className="text-[10px] mt-2" style={{ color: "var(--app-text-muted)" }}>
+          Modifica la data per ricalcolare la curva di saturazione. Salvataggio automatico.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── SaturationRing — SVG circular progress ─────────────────────────────────
+
+function SaturationRing({ pct, color, size }: { pct: number; color: string; size: number }) {
+  const stroke = 7;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (pct / 100) * circumference;
+  return (
+    <svg width={size} height={size} className="-rotate-90 shrink-0">
+      <defs>
+        <filter id={`ring-glow-${color.replace("#", "")}`} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke="rgba(255,255,255,0.06)"
+        strokeWidth={stroke}
+        fill="none"
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke={color}
+        strokeWidth={stroke}
+        fill="none"
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        filter={`url(#ring-glow-${color.replace("#", "")})`}
+        style={{ transition: "stroke-dashoffset 0.6s ease-out" }}
+      />
+    </svg>
+  );
+}
+
 // ─── Helper component ────────────────────────────────────────────────────
 
 function TimelineRow({ time, delta, color, title, detail }: {
@@ -733,7 +878,7 @@ function TimelineRow({ time, delta, color, title, detail }: {
 }) {
   return (
     <div className="flex gap-4">
-      <div className="shrink-0 w-24">
+      <div className="shrink-0 w-20 md:w-24">
         <div className="text-base font-black" style={{ color }}>{time}</div>
         <div className="text-[9px] font-bold tracking-widest" style={{ color: "var(--app-text-muted)" }}>{delta}</div>
       </div>
