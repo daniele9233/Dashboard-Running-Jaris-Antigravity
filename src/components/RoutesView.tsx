@@ -429,7 +429,7 @@ export function RoutesView({ runId }: { runId?: string | null }) {
           </div>
 
           {/* OVERLAY: LEFT PANEL (SESSION ANALYTICS) */}
-          <div className="absolute top-8 left-8 bottom-8 w-[340px] pointer-events-none flex flex-col gap-4">
+          <div className="hidden md:flex absolute top-8 left-8 bottom-8 w-[340px] pointer-events-none flex-col gap-4">
             <GlassPanel title="SESSION ANALYTICS" icon={Gauge} className="pointer-events-auto flex-1 flex flex-col">
               <div className="mb-6">
                 <h2 className="text-2xl font-black italic tracking-tighter text-white mb-1 uppercase">{runTitle}</h2>
@@ -514,8 +514,36 @@ export function RoutesView({ runId }: { runId?: string | null }) {
             </GlassPanel>
           </div>
 
+          {/* MOBILE ONLY: Compact bottom card with key stats */}
+          <div className="md:hidden absolute bottom-4 left-4 right-4 pointer-events-auto bg-[#0A0F1A]/90 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-2xl p-4">
+            <div className="mb-3">
+              <h2 className="text-base font-black italic tracking-tighter text-white uppercase truncate">{runTitle}</h2>
+              <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
+                {run.date ? formatDate(run.date) : '—'}{run.location ? ` · ${run.location}` : ''}
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              <div className="bg-white/5 rounded-lg p-2 text-center">
+                <div className="text-[7px] font-black text-gray-500 uppercase tracking-widest mb-0.5">KM</div>
+                <div className="text-sm font-black italic text-white tabular-nums">{run.distance_km?.toFixed(1)}</div>
+              </div>
+              <div className="bg-white/5 rounded-lg p-2 text-center">
+                <div className="text-[7px] font-black text-gray-500 uppercase tracking-widest mb-0.5">Time</div>
+                <div className="text-sm font-black italic text-white tabular-nums">{formatDuration(run.duration_minutes)}</div>
+              </div>
+              <div className="bg-white/5 rounded-lg p-2 text-center">
+                <div className="text-[7px] font-black text-gray-500 uppercase tracking-widest mb-0.5">Pace</div>
+                <div className="text-sm font-black italic text-emerald-400 tabular-nums">{run.avg_pace}</div>
+              </div>
+              <div className="bg-white/5 rounded-lg p-2 text-center">
+                <div className="text-[7px] font-black text-gray-500 uppercase tracking-widest mb-0.5">HR</div>
+                <div className="text-sm font-black italic text-rose-400 tabular-nums">{run.avg_hr ?? '—'}</div>
+              </div>
+            </div>
+          </div>
+
           {/* OVERLAY: RIGHT PANEL */}
-          <div className="absolute top-8 right-8 w-[240px] pointer-events-none flex flex-col gap-4">
+          <div className="hidden md:flex absolute top-8 right-8 w-[240px] pointer-events-none flex-col gap-4">
             {/* Map mode selector */}
             <GlassPanel title="ROUTE COLOR" icon={Layers} className="pointer-events-auto">
               <div className="space-y-3">
@@ -600,7 +628,7 @@ export function RoutesView({ runId }: { runId?: string | null }) {
 
           {/* OVERLAY: BOTTOM — Detailed chart with cursor sync to map */}
           {chartData.length > 0 && (
-            <div className="absolute bottom-6 left-[380px] right-8 pointer-events-none">
+            <div className="hidden md:block absolute bottom-6 left-[380px] right-8 pointer-events-none">
               <div className="bg-[#0A0F1A]/90 backdrop-blur-2xl border border-white/[0.06] rounded-2xl shadow-2xl pointer-events-auto">
                 {/* Chart header */}
                 <div className="px-6 pt-5 pb-3 flex items-center justify-between">

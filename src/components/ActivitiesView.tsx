@@ -446,15 +446,15 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
     <div className="flex-1 flex overflow-hidden bg-[#050505]" style={{ height: '100%' }}>
 
       {/* ── LEFT: List ───────────────────────────────────────────────────── */}
-      <div className="w-1/2 flex flex-col overflow-hidden border-r border-white/5">
+      <div className="w-full md:w-1/2 flex flex-col overflow-hidden md:border-r border-white/5">
 
         {/* Header */}
-        <header className="px-6 py-6 border-b border-white/5 flex-shrink-0">
-          <div className="flex items-center justify-between mb-1.5">
-            <h1 className="text-3xl font-black italic tracking-tighter text-white uppercase">{t("activities.title").toUpperCase()}</h1>
+        <header className="px-4 md:px-6 py-4 md:py-6 border-b border-white/5 flex-shrink-0">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-1.5">
+            <h1 className="text-2xl md:text-3xl font-black italic tracking-tighter text-white uppercase">{t("activities.title").toUpperCase()}</h1>
 
             {/* ── 3 view-mode buttons ── */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <ViewModeButton
                 active={mapViewMode === 'world'}
                 icon={<Globe className="w-3 h-3" />}
@@ -542,7 +542,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                 onMouseLeave={() => setHoveredRunId(null)}
                 onClick={() => hasCoords && handleRunClick(run)}
                 className={cn(
-                  'w-full bg-[#0F172A]/40 backdrop-blur-xl border p-4 rounded-2xl flex items-center gap-4 transition-all group relative',
+                  'w-full bg-[#0F172A]/40 backdrop-blur-xl border p-3 sm:p-4 rounded-2xl flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 transition-all group relative',
                   hasCoords ? 'cursor-pointer' : 'cursor-default',
                   isSelected
                     ? 'border-[#C0FF00]/50 bg-[#C0FF00]/[0.04] shadow-[0_0_24px_rgba(192,255,0,0.07)]'
@@ -597,7 +597,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                 </div>
 
                 {/* Stats */}
-                <div className="flex gap-4 border-x border-white/5 px-4 flex-shrink-0">
+                <div className="flex flex-wrap gap-2 sm:gap-4 md:border-x border-white/5 sm:px-4 flex-shrink-0">
                   <div className="flex flex-col items-center">
                     <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">km</span>
                     <span className="text-sm font-black italic text-white">{run.distance_km.toFixed(1)}</span>
@@ -652,7 +652,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
       </div>
 
       {/* ── RIGHT: Mapbox 3D ─────────────────────────────────────────────── */}
-      <div className="w-1/2 relative flex-shrink-0">
+      <div className="hidden md:block md:w-1/2 relative flex-shrink-0">
         <Map
           ref={mapRef}
           mapboxAccessToken={MAPBOX_TOKEN}

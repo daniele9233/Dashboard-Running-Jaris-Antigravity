@@ -141,7 +141,7 @@ function AppContent() {
                   <button
                     key={item.path}
                     onClick={() => navigate(item.path)}
-                    className="text-[10px] font-black tracking-[0.2em] transition-colors"
+                    className="text-[10px] font-black tracking-[0.2em] transition-colors py-3 px-1 min-h-[44px] flex items-center"
                     style={{ color: active ? "var(--app-accent)" : "var(--app-text-dim)" }}
                     onMouseEnter={(e) => { if (!active) e.currentTarget.style.color = "var(--app-text)"; }}
                     onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = "var(--app-text-dim)"; }}
@@ -153,7 +153,7 @@ function AppContent() {
             </nav>
           </div>
 
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-3 md:gap-5 shrink-0">
             {/* Language + Theme controls */}
             <SettingsControls />
 

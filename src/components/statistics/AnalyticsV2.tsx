@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 import { cadenceSpmFromRun } from '../../utils/cadence';
+import { AthletePotentialVector } from './AthletePotentialVector';
 
 // ─────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -196,7 +197,7 @@ function V2Card({
 }) {
   return (
     <div
-      className={`rounded-2xl p-7 relative group ${className}`}
+      className={`rounded-2xl p-4 md:p-7 relative group ${className}`}
       style={{
         backgroundColor: CARD_BG,
         border: `1px solid ${CARD_BORDER}`,
@@ -234,6 +235,173 @@ type RaceForecastRow = {
   color: string;
   note: string;
 };
+
+// ─────────────────────────────────────────────────────────────
+// RACE PREDICTIONS BOX — editorial side-panel
+// ─────────────────────────────────────────────────────────────
+function RacePredictionsBox({
+  cards,
+  forecastRows,
+  readiness,
+  bestDistance,
+  confidence,
+}: {
+  cards: RacePredictionCardData[];
+  forecastRows: RaceForecastRow[];
+  readiness: { axes: RaceReadinessAxis[]; overall: number; limiter: string; advice: string };
+  bestDistance: string;
+  confidence: number;
+}) {
+  const merged = cards.map((card) => {
+    const forecast = forecastRows.find((r) => r.distance === card.distance);
+    return { ...card, score: forecast?.score ?? 0, note: forecast?.note ?? '' };
+  });
+
+  return (
+    <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-3xl p-6 xl:p-8 flex flex-col gap-5 h-full">
+      {/* ── Header ─────────────────────────────────────────── */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="font-mono text-[10px] tracking-[0.25em] text-[#555] mb-1">PREVISIONI GARA</p>
+          <h2 className="text-white text-xl font-bold tracking-tight leading-tight">Tempi Stimati</h2>
+          <p className="text-[#444] text-[11px] mt-1 leading-relaxed">
+            Calcolati dal VDOT attuale · Daniels Running Formula
+          </p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="font-mono text-[9px] tracking-widest text-[#555] mb-1 uppercase">Prontezza</p>
+          <div className="flex items-end gap-0.5 justify-end">
+            <span className="text-[#C0FF00] font-light text-4xl tabular-nums leading-none">{confidence}</span>
+            <span className="text-[#555] text-sm mb-1">/100</span>
+          </div>
+          <div className="mt-1.5 h-1 w-16 ml-auto bg-[#1a1a1a] rounded-full overflow-hidden">
+            <div className="h-full rounded-full bg-[#C0FF00]" style={{ width: `${confidence}%` }} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── 4 Race Cards ────────────────────────────────────── */}
+      <div className="flex flex-col gap-2.5 flex-1">
+        {merged.map((m) => {
+          const isBest = m.distance === bestDistance;
+          const paceKm = m.distance === 'HALF' || m.distance === 'FULL'
+            ? `${m.pace}/km`
+            : `${m.pace}/km`;
+          return (
+            <div
+              key={m.distance}
+              className={`rounded-2xl p-4 flex items-center gap-4 relative overflow-hidden transition-colors ${
+                isBest
+                  ? 'border border-[#C0FF00]/25 bg-[#C0FF00]/[0.04]'
+                  : 'border border-[#1E1E1E] bg-[#111111]'
+              }`}
+            >
+              {/* Distance + note */}
+              <div className="min-w-[52px] shrink-0">
+                <div
+                  className="font-mono text-[11px] font-black tracking-widest"
+                  style={{ color: m.color }}
+                >
+                  {m.distance}
+                </div>
+                <div className="text-[#3a3a3a] text-[9px] mt-0.5 uppercase tracking-wider font-mono">
+                  {m.note}
+                </div>
+              </div>
+
+              {/* Big predicted time */}
+              <div className="flex-1 min-w-0">
+                <div className="font-mono text-[22px] font-light tabular-nums text-white leading-none">
+                  {m.time}
+                </div>
+                <div className="text-[#444] text-[10px] mt-1 font-mono tabular-nums">{paceKm}</div>
+              </div>
+
+              {/* Score bar + trend */}
+              <div className="text-right shrink-0 min-w-[64px]">
+                <div
+                  className="font-mono text-[11px] font-black leading-none"
+                  style={{ color: m.trendColor }}
+                >
+                  {m.trend}
+                </div>
+                <div className="mt-2 h-1 bg-[#1a1a1a] rounded-full overflow-hidden w-16 ml-auto">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${m.score}%`,
+                      backgroundColor: m.color,
+                      opacity: 0.6,
+                    }}
+                  />
+                </div>
+                <div className="font-mono text-[9px] mt-1 text-[#444] tabular-nums">
+                  {m.score}% pronto
+                </div>
+              </div>
+
+              {/* BEST badge */}
+              {isBest && (
+                <span className="absolute top-2 right-2 bg-[#C0FF00] text-black font-mono text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest">
+                  BEST
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Readiness Axes ─────────────────────────────────── */}
+      <div>
+        <p className="font-mono text-[9px] tracking-[0.22em] text-[#444] mb-3 uppercase">
+          Fattori di Prontezza
+        </p>
+        <div className="flex flex-col gap-2">
+          {readiness.axes.map((axis) => {
+            const barColor =
+              axis.value >= 75 ? '#C0FF00'
+              : axis.value >= 55 ? '#38BDF8'
+              : axis.value >= 40 ? '#F59E0B'
+              : '#F43F5E';
+            return (
+              <div key={axis.label} className="flex items-center gap-3">
+                <div className="w-[80px] text-[#555] text-[10px] font-mono uppercase tracking-wide shrink-0 truncate">
+                  {axis.label}
+                </div>
+                <div className="flex-1 h-1 bg-[#1a1a1a] rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${axis.value}%`, backgroundColor: barColor }}
+                  />
+                </div>
+                <div
+                  className="font-mono text-[10px] w-7 text-right tabular-nums shrink-0"
+                  style={{ color: barColor }}
+                >
+                  {axis.value}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Limiter + Advice ───────────────────────────────── */}
+      <div className="rounded-xl border border-[#1E1E1E] bg-[#111111] p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] shrink-0" />
+          <span className="font-mono text-[9px] text-[#555] uppercase tracking-widest">
+            Fattore Limitante
+          </span>
+          <span className="ml-auto font-mono text-[11px] text-[#F59E0B] font-black uppercase">
+            {readiness.limiter}
+          </span>
+        </div>
+        <p className="text-[#666] text-[12px] leading-relaxed">{readiness.advice}</p>
+      </div>
+    </div>
+  );
+}
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -1163,6 +1331,10 @@ export function AnalyticsV2({
   const atTrendData = React.useMemo(() => {
     const backend = toThresholdTrendData(proCharts.threshold_progression?.series_card);
     if (backend.length) return backend;
+
+    // HR plausibility bounds: 80–210 bpm hard floor/ceiling, plus soft cap at maxHr*1.05
+    const hrMax = Math.min(210, (maxHr ?? 200) * 1.05);
+
     const now = new Date();
     const monthly = Array.from({ length: 12 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
@@ -1170,29 +1342,44 @@ export function AnalyticsV2({
         if (r.is_treadmill || !r.avg_pace || !r.avg_hr) return false;
         const rd = new Date(r.date);
         const sameMonth = rd.getFullYear() === d.getFullYear() && rd.getMonth() === d.getMonth();
-        return sameMonth && (r.distance_km ?? 0) >= 3 && r.avg_hr > 80;
+        // exclude treadmill, <3km, HR outliers (sweat/sensor artifacts)
+        return sameMonth
+          && (r.distance_km ?? 0) >= 3
+          && r.avg_hr >= 80
+          && r.avg_hr <= hrMax;
       });
       if (monthRuns.length === 0) return null;
-      // Pick the run with the highest avg_hr that month
-      const best = monthRuns.reduce((prev, cur) => (cur.avg_hr ?? 0) > (prev.avg_hr ?? 0) ? cur : prev);
-      const paceSecs = Math.round(parsePaceDecimal(best.avg_pace) * 60);
+
+      // Distance-weighted average pace (longer runs contribute more)
+      const totalKm = monthRuns.reduce((s, r) => s + r.distance_km, 0);
+      const weightedPaceSecs = monthRuns.reduce(
+        (s, r) => s + parsePaceDecimal(r.avg_pace) * 60 * r.distance_km, 0
+      ) / totalKm;
+
+      // Simple average HR (already filtered outliers above)
+      const avgHr = Math.round(
+        monthRuns.reduce((s, r) => s + (r.avg_hr ?? 0), 0) / monthRuns.length
+      );
+
       const isCurrentYear = d.getFullYear() === now.getFullYear();
       const monthLabel = MONTH_SHORT[d.getMonth()] + (isCurrentYear ? '' : ` ${String(d.getFullYear()).slice(2)}`);
       return {
         month: monthLabel,
-        pace: paceSecs,
-        hr: best.avg_hr ?? 0,
+        pace: Math.round(weightedPaceSecs),
+        hr: avgHr,
+        samples: monthRuns.length,
       };
-    }).filter((d): d is { month: string; pace: number; hr: number } => d !== null);
+    }).filter((d): d is { month: string; pace: number; hr: number; samples: number } => d !== null);
 
     return monthly;
   }, [runs, maxHr, proCharts, toThresholdTrendData]);
 
   const weeklyAtFallbackData = React.useMemo(() => {
+    const hrMax = Math.min(210, (maxHr ?? 200) * 1.05);
     const buckets = new Map<string, Run[]>();
     for (const run of runs) {
       if (run.is_treadmill || !run.avg_pace || !run.avg_hr) continue;
-      if ((run.distance_km ?? 0) < 3 || run.avg_hr <= 80) continue;
+      if ((run.distance_km ?? 0) < 3 || run.avg_hr < 80 || run.avg_hr > hrMax) continue;
       const month = weekStartKey(run.date);
       if (!month) continue;
       const bucket = buckets.get(month) ?? [];
@@ -1203,16 +1390,20 @@ export function AnalyticsV2({
     return Array.from(buckets.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([month, group]) => {
-        const best = group.reduce((prev, cur) => (cur.avg_hr ?? 0) > (prev.avg_hr ?? 0) ? cur : prev);
+        const totalKm = group.reduce((s, r) => s + r.distance_km, 0);
+        const weightedPaceSecs = group.reduce(
+          (s, r) => s + parsePaceDecimal(r.avg_pace) * 60 * r.distance_km, 0
+        ) / totalKm;
+        const avgHr = Math.round(group.reduce((s, r) => s + (r.avg_hr ?? 0), 0) / group.length);
         return {
           month,
-          pace: Math.round(parsePaceDecimal(best.avg_pace) * 60),
-          hr: best.avg_hr ?? 0,
+          pace: Math.round(weightedPaceSecs),
+          hr: avgHr,
           samples: group.length,
         };
       })
       .filter((row) => row.pace > 0 && row.hr > 0);
-  }, [runs, weekStartKey]);
+  }, [runs, maxHr, weekStartKey]);
 
   const atTrendDetailData = React.useMemo(() => {
     const backend = toThresholdTrendData(proCharts.threshold_progression?.series_detail);
@@ -1594,18 +1785,6 @@ export function AnalyticsV2({
       </V2Card>
       )}
 
-       {/* Race Predictions — right column */}
-       {showCore && <RacePredictionsGrid cards={racePredictionCards} />}
-       {showCore && <FitnessEvolutionGrid cards={fitnessEvolutionCards} />}
-       {showCore && (
-         <RaceForecastLab
-           rows={raceForecastRows}
-           bestDistance={raceBestDistance}
-           confidence={raceConfidence}
-           limiter={raceReadiness.limiter}
-           advice={raceReadiness.advice}
-         />
-       )}
        {false && showCore && (
        <V2Card>
          <V2Header
@@ -1697,6 +1876,19 @@ export function AnalyticsV2({
        </V2Card>
        )}
       </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════
+          ATHLETE POTENTIAL VECTOR — full width (zip design)
+      ════════════════════════════════════════════════════ */}
+      {showCore && (
+        <AthletePotentialVector
+          vdot={vdot}
+          runs={runs}
+          ffHistory={ffHistory}
+          thresholdPace={thresholdPace}
+          maxHr={maxHr}
+        />
       )}
 
        {/* ════════════════════════════════════════════════════
@@ -1980,75 +2172,6 @@ export function AnalyticsV2({
           </div>
         </V2Card>
 
-        {/* Pace Trend */}
-        <V2Card className="col-span-6">
-          <V2Header
-            icon={TrendingUp}
-            title={t("statistics.paceTrend")}
-            subtitle="Passo medio mensile — Y invertita (più basso = più veloce)"
-            onExpand={() => openExpandedChart('trend_passo', setPaceExpanded)}
-            tooltip={{
-              title: 'ANDAMENTO PACE',
-              lines: [
-                'Asse Y invertito: valori bassi sono in alto (= più veloce).',
-                'Trend discendente = miglioramento fitness aerobica.',
-                'Il gradiente neon evidenzia la zona di performance.',
-                'Ideale: calo costante 0.05–0.10 min/km al mese.',
-              ],
-            }}
-          />
-          <div className="h-[240px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={paceChartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="v2-pace-grad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={NEON} stopOpacity={0.4} />
-                    <stop offset="100%" stopColor={NEON} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} vertical={false} />
-                <XAxis dataKey="month" stroke="#333" fontSize={9} tickLine={false} axisLine={false} />
-                <YAxis
-                  stroke="#333"
-                  fontSize={9}
-                  tickLine={false}
-                  axisLine={false}
-                  reversed
-                  domain={['dataMin - 0.2', 'dataMax + 0.2']}
-                  tickFormatter={(v) => {
-                    const m = Math.floor(v);
-                    const s = Math.round((v - m) * 60);
-                    return `${m}:${s.toString().padStart(2, '0')}`;
-                  }}
-                />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null;
-                    const { month, pace } = payload[0].payload;
-                    const m = Math.floor(pace);
-                    const s = Math.round((pace - m) * 60);
-                    return (
-                      <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
-                        <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: NEON }}>{month}</p>
-                        <p className="text-white font-black text-sm">{m}:{s.toString().padStart(2, '0')} /km</p>
-                      </div>
-                    );
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="pace"
-                  stroke={NEON}
-                  strokeWidth={3}
-                  fillOpacity={1}
-                  fill="url(#v2-pace-grad)"
-                  dot={{ r: 4, fill: NEON, strokeWidth: 0 }}
-                  activeDot={{ r: 6, fill: NEON, stroke: '#000', strokeWidth: 2 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </V2Card>
       </div>
       )}
 
@@ -2367,7 +2490,7 @@ export function AnalyticsV2({
         const improvement = first && last ? first.pace - last.pace : 0;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-[92vw] max-w-[1500px] shadow-2xl flex flex-col" style={{ height: '68vh', borderLeft: `3px solid ${NEON}` }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
 
               {/* Modal header */}
               <div className="flex justify-between items-center mb-6">
@@ -2426,7 +2549,7 @@ export function AnalyticsV2({
 
               {/* Info panels */}
               <div className="space-y-4 mt-6 shrink-0">
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
                   <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
                     <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo Iniziale</div>
                     <div className="text-xl font-mono font-black text-white">{first ? formatPaceSecs(first.pace) : '--'}</div>
@@ -2462,7 +2585,7 @@ export function AnalyticsV2({
         const lastPmc = pmcChartData[pmcChartData.length - 1];
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-[92vw] max-w-[1500px] shadow-2xl flex flex-col" style={{ height: '68vh', borderLeft: `3px solid ${NEON}` }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -2500,7 +2623,7 @@ export function AnalyticsV2({
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
-              <div className="grid grid-cols-3 gap-4 mt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
                 <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
                   <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">CTL Attuale</div>
                   <div className="text-xl font-mono font-black" style={{ color: '#6366F1' }}>{lastPmc?.ctl ?? '--'}</div>
@@ -2530,7 +2653,7 @@ export function AnalyticsV2({
         const trendSecs = paces.length >= 2 ? Math.round((paces[0] - paces[paces.length - 1]) * 60) : null;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-[92vw] max-w-[1500px] shadow-2xl flex flex-col" style={{ height: '68vh', borderLeft: `3px solid ${NEON}` }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -2575,7 +2698,7 @@ export function AnalyticsV2({
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-              <div className="grid grid-cols-3 gap-4 mt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
                 <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
                   <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo Più Veloce</div>
                   <div className="text-xl font-mono font-black" style={{ color: NEON }}>{fastestPace ? formatPaceStr(fastestPace) : '--'} /km</div>
@@ -2616,7 +2739,7 @@ export function AnalyticsV2({
         const driftPct = first3Hr > 0 ? ((last3Hr - first3Hr) / first3Hr * 100) : 0;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-[92vw] max-w-[1500px] shadow-2xl flex flex-col" style={{ height: '68vh', borderLeft: `3px solid ${NEON}` }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -2670,7 +2793,7 @@ export function AnalyticsV2({
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
-              <div className="grid grid-cols-3 gap-4 mt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
                 <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
                   <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo Medio</div>
                   <div className="text-xl font-mono font-black text-white">{formatPaceStr(avgPace)} /km</div>
@@ -2698,7 +2821,7 @@ export function AnalyticsV2({
         const z2 = zonesChartData.find(z => z.zone === 'Z2');
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-[92vw] max-w-[1500px] shadow-2xl flex flex-col" style={{ height: '68vh', borderLeft: `3px solid ${NEON}` }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -2736,7 +2859,7 @@ export function AnalyticsV2({
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <div className="grid grid-cols-3 gap-4 mt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
                 <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
                   <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Minuti Totali</div>
                   <div className="text-xl font-mono font-black text-white">{totalZoneMin}</div>
@@ -2768,7 +2891,7 @@ export function AnalyticsV2({
           ? Math.round(scatterData.reduce((s, d) => s + d.gct, 0) / scatterData.length) : 0;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-[92vw] max-w-[1500px] shadow-2xl flex flex-col" style={{ height: '68vh', borderLeft: `3px solid ${NEON}` }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -2817,7 +2940,7 @@ export function AnalyticsV2({
                   </ScatterChart>
                 </ResponsiveContainer>
               </div>
-              <div className="grid grid-cols-3 gap-4 mt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
                 <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
                   <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Zona Ottimale</div>
                   <div className="text-xl font-mono font-black" style={{ color: NEON }}>{optimalCount} / {scatterData.length}</div>
@@ -2846,7 +2969,7 @@ export function AnalyticsV2({
         const tPace = getThresholdDisplay(currentVdot);
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-[92vw] max-w-[1500px] shadow-2xl flex flex-col" style={{ height: '68vh', borderLeft: `3px solid ${NEON}` }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -2892,7 +3015,7 @@ export function AnalyticsV2({
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-              <div className="grid grid-cols-3 gap-4 mt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
                 <div className="bg-[#111] p-4 rounded-xl border border-[#2A2A2A]">
                   <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">VDOT Attuale</div>
                   <div className="text-xl font-mono font-black" style={{ color: NEON }}>{currentVdot ?? '—'}</div>

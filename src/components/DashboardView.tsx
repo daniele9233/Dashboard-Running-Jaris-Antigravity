@@ -292,7 +292,7 @@ export function DashboardView() {
 
   return (
     <main className="flex-1 overflow-y-auto custom-scrollbar">
-      <div className="px-14 py-6 max-w-[2200px] mx-auto space-y-6">
+      <div className="px-4 sm:px-6 md:px-8 lg:px-14 py-4 md:py-6 max-w-[2200px] mx-auto space-y-4 md:space-y-6">
 
         {/* Header */}
         {dashLoading && <div className="h-10 bg-white/5 rounded-xl animate-pulse" />}
@@ -427,9 +427,9 @@ export function DashboardView() {
               </div>
             </div>
 
-            <div className="flex items-center justify-center gap-12 flex-1">
+            <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12 flex-1">
               {/* Gauge */}
-              <div className="relative w-56 h-56 flex-shrink-0">
+              <div className="relative w-40 h-40 md:w-56 md:h-56 flex-shrink-0">
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100" overflow="visible">
                   <defs>
                     <filter id="gauge-glow" x="-50%" y="-50%" width="200%" height="200%">
@@ -450,15 +450,15 @@ export function DashboardView() {
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-5xl font-black" style={{ color: faticaColor }}>
+                  <span className="text-4xl md:text-5xl font-black" style={{ color: faticaColor }}>
                     {readiness !== null ? readiness.toFixed(0) : "—"}
                   </span>
-                  <span className="text-[#A0A0A0] text-xs font-black tracking-widest mt-1">{t("dashboard.peakScore").toUpperCase()}</span>
+                  <span className="text-[#A0A0A0] text-[10px] md:text-xs font-black tracking-widest mt-1">{t("dashboard.peakScore").toUpperCase()}</span>
                 </div>
               </div>
 
               {/* Metaphor stats col 1: Serbatoio (TSB) + Potenza (Efficiency) */}
-              <div className="flex flex-col gap-4 min-w-[180px]">
+              <div className="flex flex-col gap-4 w-full md:min-w-[180px] md:w-auto">
                 <div>
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">Il tuo serbatoio</span>
@@ -484,7 +484,7 @@ export function DashboardView() {
               </div>
 
               {/* Metaphor stats col 2: Motore (CTL) + Lavoro svolto (ATL) */}
-              <div className="flex flex-col gap-4 min-w-[180px]">
+              <div className="flex flex-col gap-4 w-full md:min-w-[180px] md:w-auto">
                 <div>
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">Il tuo motore</span>
@@ -966,14 +966,15 @@ export function DashboardView() {
           <div key="session-logs">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("session-logs")}>
           {recentRuns.length > 0 ? (
-            <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 w-full overflow-auto">
-            <div className="mb-8">
-              <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-2">{t("dashboard.sessionLogs").toUpperCase()}</div>
-              <h2 className="text-white text-2xl font-black tracking-tighter italic">{t("dashboard.performanceHistory")}</h2>
+            <div className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-4 md:p-6 lg:p-8 w-full overflow-auto">
+            <div className="mb-6 md:mb-8">
+              <div className="text-[#A0A0A0] text-[10px] md:text-xs font-black tracking-widest mb-2">{t("dashboard.sessionLogs").toUpperCase()}</div>
+              <h2 className="text-white text-xl md:text-2xl font-black tracking-tighter italic">{t("dashboard.performanceHistory")}</h2>
             </div>
 
             <div className="w-full">
-              <div className="grid grid-cols-7 text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4 px-4">
+              {/* Desktop header — hidden on mobile */}
+              <div className="hidden md:grid md:grid-cols-7 text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4 px-4">
                 <div className="col-span-2">{t("dashboard.type")}</div>
                 <div>{t("dashboard.date")}</div>
                 <div>{t("dashboard.duration")}</div>
@@ -1002,21 +1003,32 @@ export function DashboardView() {
                     <div
                       key={run.id}
                       onClick={() => navigate(`/activities/${run.id}`)}
-                      className="grid grid-cols-7 items-center bg-[#111] rounded-2xl p-4 cursor-pointer hover:bg-[#1a1a1a] hover:border hover:border-white/10 transition-all"
+                      className="flex flex-col gap-3 md:grid md:grid-cols-7 md:gap-0 md:items-center bg-[#111] rounded-2xl p-4 cursor-pointer hover:bg-[#1a1a1a] hover:border hover:border-white/10 transition-all"
                     >
-                      <div className="col-span-2 flex items-center gap-3">
-                        <Activity className="text-[#C0FF00]" size={18} />
-                        <span className="text-white font-black text-sm">{run.name || run.run_type || "Run"}</span>
+                      <div className="md:col-span-2 flex items-center gap-3">
+                        <Activity className="text-[#C0FF00] shrink-0" size={18} />
+                        <span className="text-white font-black text-sm truncate">{run.name || run.run_type || "Run"}</span>
+                        <span className="md:hidden text-[#C0FF00] font-black text-[10px] ml-auto shrink-0">● {t("dashboard.verified").toUpperCase()}</span>
                       </div>
-                      <div className="text-[#A0A0A0] text-sm">
-                        {new Date(run.date).toLocaleDateString("en", { day: "numeric", month: "short" })}
+                      <div className="grid grid-cols-2 gap-2 md:contents text-xs">
+                        <div className="text-[#A0A0A0] text-xs md:text-sm">
+                          <span className="md:hidden text-[#666] text-[9px] font-black tracking-widest uppercase block">Data</span>
+                          {new Date(run.date).toLocaleDateString("en", { day: "numeric", month: "short" })}
+                        </div>
+                        <div className="text-white font-black text-xs md:text-sm">
+                          <span className="md:hidden text-[#666] text-[9px] font-black tracking-widest uppercase block">Durata</span>
+                          {formatDuration(run.duration_minutes)}
+                        </div>
+                        <div className="text-[#A0A0A0] text-xs md:text-sm">
+                          <span className="md:hidden text-[#666] text-[9px] font-black tracking-widest uppercase block">Passo</span>
+                          {run.avg_pace}/km
+                        </div>
+                        <div className="text-xs font-black md:text-xs" style={{ color: teColor }}>
+                          <span className="md:hidden text-[#666] text-[9px] font-black tracking-widest uppercase block">TE</span>
+                          {teRaw !== null ? teRaw.toFixed(1) + " · " : ""}{teLabel}
+                        </div>
                       </div>
-                      <div className="text-white font-black text-sm">{formatDuration(run.duration_minutes)}</div>
-                      <div className="text-[#A0A0A0] text-sm">{run.avg_pace}/km</div>
-                      <div className="text-xs font-black" style={{ color: teColor }}>
-                        {teRaw !== null ? teRaw.toFixed(1) + " · " : ""}{teLabel}
-                      </div>
-                      <div className="text-right text-[#C0FF00] font-black text-xs">
+                      <div className="hidden md:block text-right text-[#C0FF00] font-black text-xs">
                         ● {t("dashboard.verified").toUpperCase()}
                       </div>
                     </div>

@@ -105,7 +105,7 @@ export function Sidebar() {
             type="button"
             onClick={() => setOpen(true)}
             aria-label="Apri menu"
-            className="fixed top-3 left-3 z-50 p-2 rounded-lg backdrop-blur"
+            className="fixed top-3 left-3 z-50 p-3 rounded-lg backdrop-blur min-w-[44px] min-h-[44px] flex items-center justify-center"
             style={{
               backgroundColor: "var(--app-bg-alt)",
               border: "1px solid var(--app-border)",

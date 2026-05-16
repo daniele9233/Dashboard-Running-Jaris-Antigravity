@@ -5,11 +5,7 @@ import type { Run } from "../../../types/api";
 
 /**
  * WeeklyKmChart — bar chart KM per giorno/mese, con range tabs 7d/month/year.
- *
- * Estratto da DashboardView.tsx (round 8 — #14 god component split continuation).
- * Self-contained: state interno (chartPeriod) + memos derivati (chartData, weeklyKmTotal).
- *
- * Riceve solo `runs` come prop. Tutta la logica di aggregazione è interna.
+ * Dashboard widget — stile originale dark card.
  */
 export function WeeklyKmChart({ runs }: { runs: Run[] }) {
   const { t } = useTranslation();
@@ -20,7 +16,7 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     if (chartPeriod === '7d') {
       const now = new Date();
-      const dow = now.getDay(); // 0=Sun
+      const dow = now.getDay();
       const daysFromMon = dow === 0 ? 6 : dow - 1;
       const monday = new Date(now);
       monday.setDate(now.getDate() - daysFromMon);

@@ -490,7 +490,7 @@ export function SupplementsView() {
                             <button
                               type="button"
                               onClick={() => toggle(key, sup.id)}
-                              className="inline-flex items-center justify-center w-7 h-7 rounded-md transition-all hover:scale-110"
+                              className="inline-flex items-center justify-center w-11 h-11 md:w-7 md:h-7 rounded-md transition-all hover:scale-110"
                               aria-label={`Toggle ${sup.name} ${key}`}
                               style={{
                                 backgroundColor: checked ? `${sup.color}26` : "transparent",

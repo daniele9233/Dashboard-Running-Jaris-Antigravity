@@ -745,7 +745,7 @@ function buildClientAnalyticsFallbacks(runs: Run[]) {
 
 export function StatisticsView() {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState('analytics');
+  const [activeTab, setActiveTab] = useState('analytics-cf-v2');
   const [expandedChart, setExpandedChart] = useState<null | 'paces' | 'cadence' | 'gctMonthly'>(null);
   const [proSections, setProSections] = useState<ProAnalyticsResponse['sections']>({});
   const [proError, setProError] = useState<string | null>(null);
@@ -776,7 +776,7 @@ export function StatisticsView() {
 
   type ProTab = 'load_form' | 'potential_progress' | 'biomechanics';
   const activeProTab = React.useMemo<ProTab | null>(() => {
-    if (activeTab === 'analytics') return 'load_form';
+    if (activeTab === 'analytics-cf-v2') return 'load_form';
     if (activeTab === 'analyticsv2') return 'potential_progress';
     if (activeTab === 'analyticsv3') return 'biomechanics';
     return null;
@@ -915,8 +915,7 @@ export function StatisticsView() {
 
 
   const tabs = [
-    { id: 'analytics',      label: 'Carico & Forma',           icon: LayoutGrid },
-    { id: 'analytics-cf-v2', label: 'Carico & Forma v2',       icon: BarChart3  },
+    { id: 'analytics-cf-v2', label: 'Carico & Forma',          icon: BarChart3  },
     { id: 'analyticsv2',    label: 'Potenziale & Progressi',   icon: Radar },
     { id: 'analyticsv3', label: 'Biomeccanica & Efficienza',   icon: Activity },
     { id: 'biology',     label: 'Biologia & Futuro',           icon: FlaskConical },
@@ -1050,13 +1049,13 @@ export function StatisticsView() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#0A0A0A] text-white p-6 lg:p-10">
-      <div className="max-w-[1800px] mx-auto space-y-8">
+    <div className="flex-1 overflow-y-auto bg-[#0A0A0A] text-white p-4 md:p-6 lg:p-10">
+      <div className="max-w-[1800px] mx-auto space-y-6 md:space-y-8">
 
         {/* ── HEADER ── */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 md:gap-8">
           <div>
-            <h1 className="text-5xl font-black tracking-tighter text-white uppercase italic">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter text-white uppercase italic">
               Elite <span className="text-[#C0FF00]">Analytics</span>
             </h1>
             <p className="text-gray-600 text-[10px] font-black tracking-[0.3em] uppercase mt-2">
@@ -1064,12 +1063,12 @@ export function StatisticsView() {
             </p>
           </div>
 
-          <div className="flex items-center bg-[#0D0D0D] p-1.5 rounded-2xl border border-[#1E1E1E] shadow-2xl">
+          <div className="flex items-center bg-[#0D0D0D] p-1.5 rounded-2xl border border-[#1E1E1E] shadow-2xl overflow-x-auto whitespace-nowrap scrollbar-hide -mx-4 md:mx-0 px-1.5">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black transition-all tracking-widest ${
+                className={`flex items-center gap-2 px-4 md:px-6 py-3 rounded-xl text-[10px] font-black transition-all tracking-widest shrink-0 min-h-[44px] ${
                   activeTab === tab.id
                     ? 'bg-[#1A1A1A] text-white shadow-lg border border-[#2A2A2A]'
                     : 'text-gray-600 hover:text-gray-300'
@@ -1090,10 +1089,8 @@ export function StatisticsView() {
           </div>
         )}
 
-        {/* ════════════════════════════════════════════════════
-            ANALYTICS PRO TAB
-        ════════════════════════════════════════════════════ */}
-        {activeTab === 'analytics' && (
+        {/* ANALYTICS PRO TAB — RIMOSSO (sostituito da CaricoFormaV2) */}
+        {false && activeTab === '__removed_analytics__' && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
             <SectionLabel>CARICO — FITNESS · FATICA · FORMA</SectionLabel>
@@ -1889,10 +1886,6 @@ export function StatisticsView() {
               )}
             </Card>
             )}
-            <AnalyticsV5BestEffortsProgression
-              chart={potentialCharts.best_efforts_progression}
-              onRequestDetail={() => requestProChartDetail('potential_progress', 'best_efforts_progression')}
-            />
           </div>
         )}
 

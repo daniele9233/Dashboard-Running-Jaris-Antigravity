@@ -105,7 +105,7 @@ function VdotGauge({ current, ceiling }: { current: number; ceiling: number }) {
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-[11px] font-black tracking-[0.25em] text-gray-600 mb-1">VDOT</span>
-        <span className="text-6xl font-black text-white leading-none">{current}</span>
+        <span className="text-5xl md:text-6xl font-black text-white leading-none">{current}</span>
         <span className="text-[10px] text-gray-600 mt-1.5 tracking-widest">/ {ceiling} ceiling</span>
       </div>
     </div>
@@ -663,7 +663,7 @@ function PotentialBiologySection({
   const primaryFocusArea = focusAreas[0] ?? null;
 
   return (
-    <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-8">
+    <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-4 md:p-6 lg:p-8">
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-[28px] border border-white/[0.06] bg-[radial-gradient(circle_at_top_left,rgba(192,255,0,0.14),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(34,211,238,0.1),transparent_38%),#05070A] p-6 h-full flex flex-col">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -672,7 +672,7 @@ function PotentialBiologySection({
                 Potenziale Biologico Assoluto
               </div>
               <div className="flex items-baseline gap-3 flex-wrap">
-                <span className="text-6xl font-black text-[#C0FF00] leading-none">
+                <span className="text-4xl md:text-5xl lg:text-6xl font-black text-[#C0FF00] leading-none">
                   {ceilingVdotValue.toFixed(1)}
                 </span>
                 <span className="text-gray-500 font-black text-lg">VDOT CEILING</span>
@@ -1055,24 +1055,24 @@ export function RunnerDnaView() {
           <div className="absolute bottom-0 right-1/4 w-80 h-80 rounded-full bg-blue-500/[0.04] blur-3xl translate-y-1/2" />
         </div>
 
-        <div className="relative z-10 max-w-[1400px] mx-auto px-8 lg:px-12 py-12">
-          <div className="flex flex-col lg:flex-row items-center gap-10">
+        <div className="relative z-10 max-w-[1400px] mx-auto px-4 md:px-8 lg:px-12 py-6 md:py-12">
+          <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-10">
 
             {/* Left: helix + VDOT */}
-            <div className="flex items-center gap-6 shrink-0">
+            <div className="flex items-center gap-4 md:gap-6 shrink-0">
               <DnaHelixDecor />
               <VdotGauge current={profile.vdot_current} ceiling={potential.vdot_ceiling} />
             </div>
 
             {/* Center: identity */}
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 w-full">
               <div className="text-[9px] font-black tracking-[0.4em] text-gray-600 mb-3 uppercase">
                 Metic Lab · Identità Atletica
               </div>
-              <h1 className="text-7xl font-black italic tracking-tighter text-white leading-none mb-1">
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-black italic tracking-tighter text-white leading-none mb-1">
                 RUNNER
               </h1>
-              <h1 className="text-7xl font-black italic tracking-tighter text-[#C0FF00] leading-none mb-6">
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-black italic tracking-tighter text-[#C0FF00] leading-none mb-6">
                 DNA
               </h1>
 
@@ -1124,9 +1124,9 @@ export function RunnerDnaView() {
         </div>
       </div>
 
-      <div className="max-w-[1400px] mx-auto px-8 lg:px-12 py-10 space-y-10">
+      <div className="max-w-[1400px] mx-auto px-4 md:px-8 lg:px-12 py-6 md:py-10 space-y-6 md:space-y-10">
         <section className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
-          <div className="rounded-3xl border border-white/[0.05] bg-[#080808] p-8 flex h-full flex-col">
+          <div className="rounded-3xl border border-white/[0.05] bg-[#080808] p-4 md:p-6 lg:p-8 flex h-full flex-col">
             <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.35em] text-[#C0FF00]">
               <Trophy className="w-4 h-4 text-[#C0FF00]" />
               Voto runner contestualizzato
@@ -1134,8 +1134,8 @@ export function RunnerDnaView() {
             <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
               <div>
                 <div className="flex items-end gap-3">
-                  <span className="text-7xl font-black leading-none text-white">{contextualRating.score}</span>
-                  <span className="pb-2 text-2xl font-black text-slate-500">/100</span>
+                  <span className="text-5xl md:text-6xl lg:text-7xl font-black leading-none text-white">{contextualRating.score}</span>
+                  <span className="pb-2 text-xl md:text-2xl font-black text-slate-500">/100</span>
                 </div>
                 <div
                   className="mt-4 inline-flex rounded-full border px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em]"
@@ -1248,7 +1248,7 @@ export function RunnerDnaView() {
           <div className="text-[9px] font-black tracking-[0.35em] text-gray-600 mb-6 uppercase">
             Sequenza Biomolecolare — 4 Dimensioni Atletiche
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-8 bg-[#080808] border border-white/[0.05] rounded-3xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 md:p-6 lg:p-8 bg-[#080808] border border-white/[0.05] rounded-3xl">
             <DnaStrand
               label="Motore Aerobico"
               sublabel="VDOT — capacità ossidativa massimale"
@@ -1282,7 +1282,7 @@ export function RunnerDnaView() {
 
         {/* ══ PROFILE VISUAL ═══════════════════════════════════════════════ */}
         {profileVisualScores.length > 0 && (
-          <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-8">
+          <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-4 md:p-6 lg:p-8">
             <div className="flex flex-col gap-3 mb-8 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <div className="flex items-center gap-2 text-[9px] font-black tracking-[0.35em] text-[#C0FF00] uppercase">
@@ -1359,7 +1359,7 @@ export function RunnerDnaView() {
         )}
 
         {false && (
-        <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-8">
+        <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-4 md:p-6 lg:p-8">
           <div className="text-[9px] font-black tracking-[0.35em] text-gray-600 mb-6 uppercase">
             Distribuzione Energetica — Zone Fisiologiche
           </div>
@@ -1434,7 +1434,7 @@ export function RunnerDnaView() {
           running_dynamics.ground_contact_ms != null ||
           running_dynamics.stride_length_m != null
         )) ? (
-          <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-8">
+          <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-4 md:p-6 lg:p-8">
             <div className="flex items-center gap-2 mb-6">
               <Footprints className="w-4 h-4 text-indigo-400" />
               <span className="text-[9px] font-black tracking-[0.35em] text-gray-500 uppercase">
@@ -1484,7 +1484,7 @@ export function RunnerDnaView() {
         )}
 
         {/* ══ BIOMECHANICS BENCHMARK ═══════════════════════════════════════ */}
-        <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-8">
+        <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-4 md:p-6 lg:p-8">
           <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">
@@ -1640,7 +1640,7 @@ export function RunnerDnaView() {
             </div>
           </div>
         </section>
-        <section className="bg-[#05070A] border border-white/[0.05] rounded-3xl p-8">
+        <section className="bg-[#05070A] border border-white/[0.05] rounded-3xl p-4 md:p-6 lg:p-8">
           <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.35em] text-[#C0FF00]">
@@ -1675,7 +1675,7 @@ export function RunnerDnaView() {
           </div>
         </section>
         {hasBiomechanicsBenchmark && (
-          <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-8">
+          <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-4 md:p-6 lg:p-8">
             <div className="flex flex-col gap-3 mb-8 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <div className="flex items-center gap-2 text-[9px] font-black tracking-[0.35em] text-[#C0FF00] uppercase">
@@ -1794,7 +1794,7 @@ export function RunnerDnaView() {
         </div>
         <section className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           {/* Strengths */}
-          <div className="bg-[#080808] border border-[#C0FF00]/15 rounded-3xl p-8">
+          <div className="bg-[#080808] border border-[#C0FF00]/15 rounded-3xl p-4 md:p-6 lg:p-8">
             <div className="flex items-center gap-2 mb-6">
               <Trophy className="w-4 h-4 text-[#C0FF00]" />
               <span className="text-[9px] font-black tracking-[0.35em] text-[#C0FF00] uppercase">
@@ -1814,7 +1814,7 @@ export function RunnerDnaView() {
           </div>
 
           {/* Gaps */}
-          <div className="bg-[#080808] border border-rose-500/15 rounded-3xl p-8">
+          <div className="bg-[#080808] border border-rose-500/15 rounded-3xl p-4 md:p-6 lg:p-8">
             <div className="flex items-center gap-2 mb-6">
               <Zap className="w-4 h-4 text-rose-500" />
               <span className="text-[9px] font-black tracking-[0.35em] text-rose-500 uppercase">
@@ -1833,7 +1833,7 @@ export function RunnerDnaView() {
             </ul>
           </div>
 
-          <div className="bg-[#080808] border border-cyan-300/20 rounded-3xl p-8">
+          <div className="bg-[#080808] border border-cyan-300/20 rounded-3xl p-4 md:p-6 lg:p-8">
             <div className="flex items-center gap-2 mb-6">
               <Dumbbell className="w-4 h-4 text-cyan-200" />
               <span className="text-[9px] font-black tracking-[0.35em] text-cyan-200 uppercase">
@@ -1852,7 +1852,7 @@ export function RunnerDnaView() {
         </section>
 
         {/* ══ POTENTIAL ════════════════════════════════════════════════════ */}
-        <section className="hidden bg-[#080808] border border-white/[0.05] rounded-3xl p-8">
+        <section className="hidden bg-[#080808] border border-white/[0.05] rounded-3xl p-4 md:p-6 lg:p-8">
           <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <div className="rounded-[28px] border border-white/[0.06] bg-[radial-gradient(circle_at_top_left,rgba(192,255,0,0.14),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(34,211,238,0.1),transparent_38%),#05070A] p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -2020,7 +2020,7 @@ export function RunnerDnaView() {
 
         {/* ══ CONFRONTO ════════════════════════════════════════════════════ */}
         {comparison && (
-          <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-8">
+          <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-4 md:p-6 lg:p-8">
             <div className="flex items-center gap-2 mb-8">
               <BarChart2 className="w-4 h-4 text-indigo-400" />
               <span className="text-[9px] font-black tracking-[0.35em] text-gray-500 uppercase">
@@ -2154,7 +2154,7 @@ export function RunnerDnaView() {
         )}
 
         {/* ══ UNLOCK + REGENERATE ══════════════════════════════════════════ */}
-        <section className="relative bg-gradient-to-r from-[#C0FF00]/[0.04] via-transparent to-transparent border border-[#C0FF00]/15 rounded-3xl p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <section className="relative bg-gradient-to-r from-[#C0FF00]/[0.04] via-transparent to-transparent border border-[#C0FF00]/15 rounded-3xl p-4 md:p-6 lg:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-3">
               <Target className="w-4 h-4 text-[#C0FF00]" />

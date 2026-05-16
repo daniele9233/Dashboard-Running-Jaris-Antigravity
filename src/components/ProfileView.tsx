@@ -808,46 +808,46 @@ export function ProfileView() {
 
       <div className="relative h-72">
         <HeroMap lastRun={lastRun} />
-        <div className="absolute bottom-0 left-0 w-full px-8 translate-y-1/3 flex items-end justify-between">
-          <div className="flex items-end gap-6">
+        <div className="absolute bottom-0 left-0 w-full px-4 md:px-8 translate-y-1/3 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-4 md:gap-6">
             <div className="relative">
-              <div className="w-32 h-32 rounded-full border-4 border-[#121212] overflow-hidden bg-[#1E1E1E] shadow-2xl">
+              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-[#121212] overflow-hidden bg-[#1E1E1E] shadow-2xl">
                 {profilePic ? (
                   <img src={profilePic} alt={displayName} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-4xl font-bold text-gray-600">
+                  <div className="w-full h-full flex items-center justify-center text-3xl md:text-4xl font-bold text-gray-600">
                     {displayName.charAt(0).toUpperCase()}
                   </div>
                 )}
               </div>
-              <div className="absolute bottom-1 right-1 w-8 h-8 bg-[#3B82F6] rounded-full border-4 border-[#121212] flex items-center justify-center">
-                <Award className="w-4 h-4 text-white" />
+              <div className="absolute bottom-1 right-1 w-7 h-7 md:w-8 md:h-8 bg-[#3B82F6] rounded-full border-4 border-[#121212] flex items-center justify-center">
+                <Award className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" />
               </div>
             </div>
             <div className="mb-2">
-              <h1 className="text-4xl font-bold text-white mb-1 tracking-tight">
+              <h1 className="text-2xl md:text-4xl font-bold text-white mb-1 tracking-tight">
                 {loading ? <span className="animate-pulse bg-white/10 rounded w-40 h-9 inline-block" /> : displayName}
               </h1>
-              <div className="flex items-center gap-4 text-gray-400 font-medium">
+              <div className="flex flex-wrap items-center gap-2 md:gap-4 text-gray-400 font-medium text-sm">
                 {raceGoal && raceGoal !== "—" && <span className="flex items-center gap-1"><Activity className="w-4 h-4" /> {raceGoal}</span>}
                 {level && level !== "—" && <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {level}</span>}
                 {activeProfile?.sex && <span>{activeProfile.sex === "M" ? "♂" : "♀"}</span>}
               </div>
             </div>
           </div>
-          <div className="flex gap-3 mb-2">
-            <button className="flex items-center gap-2 px-4 py-2 bg-[#1E1E1E] hover:bg-[#2A2A2A] border border-[#2A2A2A] rounded-lg text-sm font-medium transition-colors">
+          <div className="flex gap-2 md:gap-3 mb-2">
+            <button className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-3 md:px-4 py-2 bg-[#1E1E1E] hover:bg-[#2A2A2A] border border-[#2A2A2A] rounded-lg text-xs md:text-sm font-medium transition-colors min-h-[44px]">
               <Share2 className="w-4 h-4" /> Share
             </button>
-            <button onClick={() => setEditOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-[#3B82F6] hover:bg-[#2563EB] rounded-lg text-sm font-medium transition-colors">
-              <Edit3 className="w-4 h-4" /> Edit Profile
+            <button onClick={() => setEditOpen(true)} className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-3 md:px-4 py-2 bg-[#3B82F6] hover:bg-[#2563EB] rounded-lg text-xs md:text-sm font-medium transition-colors min-h-[44px]">
+              <Edit3 className="w-4 h-4" /> <span className="md:inline">Edit</span><span className="hidden md:inline"> Profile</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="px-8 mt-24 grid grid-cols-1 xl:grid-cols-3 gap-8">
+      <div className="px-4 md:px-8 mt-32 md:mt-24 grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-8">
         {/* Left Column */}
         <div className="xl:col-span-2 space-y-8">
           {/* Quick Stats */}

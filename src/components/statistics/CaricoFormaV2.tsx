@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ScatterChart, Scatter, ZAxis, ReferenceLine } from "recharts";
 import type { FitnessFreshnessPoint, Run, ProAnalyticsChart } from "../../types/api";
-import { WeeklyKmChart } from "../dashboard/widgets/WeeklyKmChart";
+// WeeklyKmChart non più usato qui — sostituito da CaricoKmChart inline
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
@@ -18,9 +18,9 @@ export interface CaricoFormaV2Props {
 // ─── MAIN MULTI-LINE SVG CHART ────────────────────────────────────────────────
 
 const CHART_LINES = [
-  { key: "ctl" as const, label: "CTL",  color: "#F97316", gradId: "v2CtlGrad" },
-  { key: "atl" as const, label: "ATL",  color: "#F43F5E", gradId: "v2AtlGrad" },
-  { key: "tsb" as const, label: "TSB",  color: "#C0FF00", gradId: "v2TsbGrad" },
+  { key: "ctl" as const, label: "Condizione fisica", short: "Condizione", color: "#F97316", gradId: "v2CtlGrad" },
+  { key: "atl" as const, label: "Affaticamento",     short: "Affatica.",  color: "#F43F5E", gradId: "v2AtlGrad" },
+  { key: "tsb" as const, label: "Forma",             short: "Forma",      color: "#C0FF00", gradId: "v2TsbGrad" },
 ] as const;
 
 function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
@@ -93,20 +93,34 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
 
   const hov = hoverIdx !== null ? data[hoverIdx] ?? null : null;
 
+  // KPI: ultimo valore + delta rispetto a 7 punti fa
+  const kpi = useMemo(() => {
+    if (!data.length) return null;
+    const last = data[data.length - 1];
+    const prev = data[Math.max(0, data.length - 8)];
+    return CHART_LINES.map(l => ({
+      ...l,
+      current: last[l.key],
+      delta: last[l.key] - prev[l.key],
+    }));
+  }, [data]);
+
   return (
-    <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col gap-4">
+    <div
+      className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col gap-4"
+    >
       {/* Header row */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h3 className="text-white text-lg font-black tracking-tight">Fitness · Fatica · Forma</h3>
-          <p className="text-[#A0A0A0] text-[11px] tracking-wide mt-0.5">CTL · ATL · TSB nel tempo</p>
+          <h3 className="text-white text-lg font-black tracking-tight">Condizione · Affaticamento · Forma</h3>
+          <p className="text-[#555] text-[11px] tracking-wide mt-0.5">Andamento nel tempo</p>
         </div>
-        <div className="flex gap-1 bg-[#111] border border-white/[0.06] rounded-full p-1">
+        <div className="flex gap-1 bg-white/5 rounded-lg p-1">
           {(["1m", "3m", "6m", "1y", "2y"] as FFRange[]).map(k => (
             <button
               key={k}
               onClick={() => { setRange(k); setHoverIdx(null); }}
-              className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase transition-colors ${range === k ? "bg-[#C0FF00] text-black" : "text-[#A0A0A0] hover:text-white"}`}
+              className={`px-3 py-1 rounded-md text-[10px] font-black tracking-widest uppercase transition-colors ${range === k ? "bg-[#C0FF00] text-black" : "text-[#666] hover:text-white"}`}
             >
               {k}
             </button>
@@ -114,27 +128,37 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
         </div>
       </div>
 
-      {/* Legend / focus toggles */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {CHART_LINES.map(l => {
-          const active = focus === "all" || focus === l.key;
-          return (
-            <button
-              key={l.key}
-              onClick={() => setFocus(focus === l.key ? "all" : l.key)}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase transition-all"
+      {/* KPI strip */}
+      {kpi && (
+        <div className="grid grid-cols-3 gap-3">
+          {kpi.map(k => (
+            <div
+              key={k.key}
+              className="rounded-2xl px-4 py-3 flex flex-col gap-0.5 cursor-pointer transition-all"
               style={{
-                background: active ? `${l.color}18` : "transparent",
-                color: active ? l.color : "#555",
-                border: `1px solid ${active ? `${l.color}30` : "transparent"}`,
+                background: (focus === "all" || focus === k.key) ? `${k.color}10` : "rgba(255,255,255,0.03)",
+                border: `1px solid ${(focus === "all" || focus === k.key) ? `${k.color}25` : "rgba(255,255,255,0.05)"}`,
               }}
+              onClick={() => setFocus(focus === k.key ? "all" : k.key)}
             >
-              <div className="w-2 h-2 rounded-full" style={{ background: active ? l.color : "#555" }} />
-              {l.label}
-            </button>
-          );
-        })}
-      </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black tabular-nums" style={{ color: k.color, fontFamily: "JetBrains Mono, monospace" }}>
+                  {k.current >= 0 ? "" : ""}{k.current.toFixed(1)}
+                </span>
+                <span
+                  className="text-[10px] font-black tabular-nums"
+                  style={{ color: k.delta >= 0 ? "#34D399" : "#F43F5E" }}
+                >
+                  {k.delta >= 0 ? "+" : ""}{k.delta.toFixed(1)}
+                </span>
+              </div>
+              <span className="text-[10px] font-black tracking-widest uppercase" style={{ color: `${k.color}99` }}>
+                {k.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* SVG Chart */}
       <div className="relative min-h-[260px]">
@@ -231,7 +255,7 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
               <div key={l.key} className="flex items-center justify-between py-0.5">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full" style={{ background: l.color }} />
-                  <span className="text-[11px] font-black" style={{ color: l.color }}>{l.label}</span>
+                  <span className="text-[11px] font-black" style={{ color: l.color }}>{l.short}</span>
                 </div>
                 <span className="text-white text-sm font-black tabular-nums" style={{ fontFamily: "JetBrains Mono, monospace" }}>
                   {hov[l.key] >= 0 ? "+" : ""}{hov[l.key].toFixed(1)}
@@ -293,7 +317,9 @@ function PaceZonesCard({ runs }: { runs: Run[] }) {
   const maxPct = Math.max(...zones.map(z => z.pct), 1);
 
   return (
-    <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6">
+    <div
+      className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6"
+    >
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-white text-base font-black tracking-tight">Zone di Passo</h3>
@@ -303,7 +329,7 @@ function PaceZonesCard({ runs }: { runs: Run[] }) {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-[#A0A0A0] text-sm font-black">{totalKm} <span className="text-[10px] font-bold">km</span></span>
-          <div className="flex bg-[#111] rounded-lg border border-white/[0.06] p-0.5">
+          <div className="flex bg-white/5 rounded-lg p-1">
             {(["7d", "30d", "90d", "all"] as ZoneRange[]).map(r => (
               <button
                 key={r}
@@ -383,7 +409,9 @@ function PaceDistributionCard({ chart }: { chart?: ProAnalyticsChart }) {
   const maxRuns = Math.max(...data.map(d => Number(d.runs ?? 0)), 1);
 
   return (
-    <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 flex flex-col gap-6">
+    <div
+      className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 flex flex-col gap-6"
+    >
       <div className="flex items-start justify-between">
         <div>
           <h3 className="text-white text-base font-black tracking-tight">Distribuzione del Passo</h3>
@@ -503,7 +531,9 @@ function EffortMatrixCard({ chart }: { chart?: ProAnalyticsChart }) {
   const xMax = Math.max(10, Math.ceil(stats.maxDist / 5) * 5);
 
   return (
-    <div className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 flex flex-col gap-6">
+    <div
+      className="bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-8 flex flex-col gap-6"
+    >
       <div className="flex items-start justify-between">
         <div>
           <h3 className="text-white text-base font-black tracking-tight">Matrice degli Sforzi</h3>
@@ -598,6 +628,221 @@ function EffortMatrixCard({ chart }: { chart?: ProAnalyticsChart }) {
   );
 }
 
+// ─── CARICO KM CHART (stacked, solo CaricoFormaV2) ───────────────────────────
+
+function getRunCategory(runType: string): "easy" | "tempo" | "intervals" | "long" | "race" {
+  const t = (runType || "").toLowerCase();
+  if (t.includes("race") || t.includes("gara") || t.includes("compet")) return "race";
+  if (t.includes("long") || t.includes("lun") || t.includes("fondo lungo")) return "long";
+  if (t.includes("interval") || t.includes("speed") || t.includes("fartlek") || t.includes("ripetute")) return "intervals";
+  if (t.includes("tempo") || t.includes("threshold") || t.includes("soglia")) return "tempo";
+  return "easy";
+}
+
+const CAT_DEFS = [
+  { key: "easy",      label: "Easy Run",  color: "#34D399" },
+  { key: "tempo",     label: "Tempo",     color: "#60A5FA" },
+  { key: "intervals", label: "Intervals", color: "#F59E0B" },
+  { key: "long",      label: "Long Run",  color: "#C0FF00" },
+  { key: "race",      label: "Race",      color: "#F43F5E" },
+] as const;
+
+function buildKmEntry(label: string, dayRuns: Run[]): Record<string, number | string> {
+  const e: Record<string, number | string> = { day: label, easy: 0, tempo: 0, intervals: 0, long: 0, race: 0 };
+  for (const r of dayRuns) {
+    const cat = getRunCategory(r.run_type ?? "");
+    (e[cat] as number) += r.distance_km;
+  }
+  for (const c of CAT_DEFS) e[c.key] = Math.round((e[c.key] as number) * 10) / 10;
+  return e;
+}
+
+type KmPeriod = "7d" | "30d" | "90d" | "all";
+const KM_RANGE_DAYS: Record<KmPeriod, number | null> = { "7d": 7, "30d": 30, "90d": 90, "all": null };
+const KM_RANGE_LABELS: Record<KmPeriod, string> = { "7d": "7D", "30d": "30D", "90d": "90D", "all": "ALL" };
+
+function CaricoKmChart({ runs }: { runs: Run[] }) {
+  const [period, setPeriod] = useState<KmPeriod>("90d");
+
+  const chartData = useMemo(() => {
+    const toLocal = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const now = new Date();
+    const days = KM_RANGE_DAYS[period];
+    const cutoffMs = days ? Date.now() - days * 86400000 : null;
+
+    if (period === "7d") {
+      // Per 7d: 7 barre giornaliere
+      return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(now);
+        d.setDate(now.getDate() - (6 - i));
+        const label = d.toLocaleDateString("it", { weekday: "short" }).slice(0, 3).toUpperCase();
+        return buildKmEntry(label, runs.filter(r => r.date.slice(0, 10) === toLocal(d)));
+      });
+    } else if (period === "30d") {
+      // Per 30d: barre settimanali (ultimi 30 giorni → ~4-5 settimane)
+      const weeks = 5;
+      return Array.from({ length: weeks }, (_, i) => {
+        const weekEnd = new Date(now);
+        weekEnd.setDate(now.getDate() - (weeks - 1 - i) * 7);
+        weekEnd.setHours(23, 59, 59, 999);
+        const weekStart = new Date(weekEnd);
+        weekStart.setDate(weekEnd.getDate() - 6);
+        weekStart.setHours(0, 0, 0, 0);
+        const label = weekStart.toLocaleDateString("it", { day: "numeric", month: "short" }).toUpperCase();
+        return buildKmEntry(label, runs.filter(r => {
+          const t = new Date(r.date).getTime();
+          return t >= weekStart.getTime() && t <= weekEnd.getTime();
+        }));
+      });
+    } else if (period === "90d") {
+      // Per 90d: barre settimanali (13 settimane)
+      const weeks = 13;
+      return Array.from({ length: weeks }, (_, i) => {
+        const weekEnd = new Date(now);
+        weekEnd.setDate(now.getDate() - (weeks - 1 - i) * 7);
+        weekEnd.setHours(23, 59, 59, 999);
+        const weekStart = new Date(weekEnd);
+        weekStart.setDate(weekEnd.getDate() - 6);
+        weekStart.setHours(0, 0, 0, 0);
+        const label = weekStart.toLocaleDateString("it", { day: "numeric", month: "short" }).toUpperCase();
+        return buildKmEntry(label, runs.filter(r => {
+          const t = new Date(r.date).getTime();
+          return t >= weekStart.getTime() && t <= weekEnd.getTime();
+        }));
+      });
+    } else {
+      // ALL: barre mensili da prima corsa a oggi
+      const sorted = [...runs].sort((a, b) => a.date.localeCompare(b.date));
+      if (!sorted.length) return [];
+      const first = new Date(sorted[0].date);
+      const months: Array<{ year: number; month: number }> = [];
+      const cur = new Date(first.getFullYear(), first.getMonth(), 1);
+      const endMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      while (cur <= endMonth) {
+        months.push({ year: cur.getFullYear(), month: cur.getMonth() });
+        cur.setMonth(cur.getMonth() + 1);
+      }
+      return months.map(({ year, month }) => {
+        const label = new Date(year, month, 1).toLocaleDateString("it", { month: "short", year: "2-digit" }).toUpperCase();
+        return buildKmEntry(label, runs.filter(r => {
+          const rd = new Date(r.date);
+          return rd.getFullYear() === year && rd.getMonth() === month;
+        }));
+      });
+    }
+  }, [runs, period]);
+
+  const stats = useMemo(() => {
+    const days = KM_RANGE_DAYS[period];
+    const cutoffMs = days ? Date.now() - days * 86400000 : null;
+    const pr = runs.filter(r => cutoffMs ? new Date(r.date).getTime() >= cutoffMs : true);
+    const totalKm = pr.reduce((s, r) => s + r.distance_km, 0);
+    const weeks = days ? days / 7 : (pr.length ? (new Date().getTime() - new Date(pr[0].date).getTime()) / (7 * 86400000) : 1);
+    const nonZero = chartData.filter(d => CAT_DEFS.some(c => (d[c.key] as number) > 0));
+    const avgKmBar = nonZero.length
+      ? nonZero.reduce((s, d) => s + CAT_DEFS.reduce((a, c) => a + (d[c.key] as number), 0), 0) / nonZero.length
+      : 0;
+    return {
+      totalKm,
+      count: pr.length,
+      avgKmPerWeek: weeks > 0 ? totalKm / weeks : 0,
+      maxKm: pr.reduce((m, r) => Math.max(m, r.distance_km), 0),
+      avgKmBar,
+    };
+  }, [runs, period, chartData]);
+
+  const periodLabel =
+    period === "7d" ? "ultimi 7 giorni"
+    : period === "30d" ? "ultimi 30 giorni"
+    : period === "90d" ? "ultimi 90 giorni"
+    : "tutto";
+
+  return (
+    <div
+      className="h-full bg-[#1a1a1a] border border-white/[0.06] rounded-3xl p-6 flex flex-col"
+    >
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <div className="text-xl font-bold text-white">
+            {stats.totalKm.toLocaleString("it", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km
+            <span className="text-sm text-[#666] font-normal ml-2">{periodLabel}</span>
+          </div>
+          <div className="flex gap-3 mt-1 text-[10px] text-[#555] font-semibold tracking-wider">
+            <span className="text-[#888]">{stats.count} uscite</span>
+            <span>·</span>
+            <span>avg {stats.avgKmPerWeek.toFixed(1)} km/sett.</span>
+            <span>·</span>
+            <span>max {stats.maxKm.toFixed(1)} km</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+          {(["7d", "30d", "90d", "all"] as KmPeriod[]).map(p => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPeriod(p)}
+              className={`text-[10px] font-bold px-2.5 py-1.5 rounded-md transition-all ${
+                period === p ? "bg-[#C0FF00] text-black" : "text-[#666] hover:text-white hover:bg-white/5"
+              }`}
+            >
+              {KM_RANGE_LABELS[p]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex-1 min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} barCategoryGap="30%">
+            <defs>
+              {CAT_DEFS.map(c => (
+                <linearGradient key={c.key} id={`ckc-${c.key}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"   stopColor={c.color} stopOpacity={0.9} />
+                  <stop offset="100%" stopColor={c.color} stopOpacity={0.55} />
+                </linearGradient>
+              ))}
+            </defs>
+            <XAxis dataKey="day" stroke="#333" fontSize={10} tickLine={false} axisLine={false} tick={{ fill: "#555", fontWeight: 700 }} />
+            <YAxis stroke="#333" fontSize={10} tickLine={false} axisLine={false} tick={{ fill: "#444" }} width={32} />
+            {stats.avgKmBar > 0 && (
+              <ReferenceLine
+                y={stats.avgKmBar}
+                stroke="#C0FF00"
+                strokeOpacity={0.3}
+                strokeDasharray="4 4"
+                strokeWidth={1}
+                label={{ value: `AVG ${stats.avgKmBar.toFixed(1)} km`, position: "insideTopLeft", fontSize: 9, fontWeight: 700, fill: "#C0FF00", opacity: 0.55 }}
+              />
+            )}
+            <Tooltip
+              cursor={{ fill: "rgba(255,255,255,0.03)" }}
+              contentStyle={{ backgroundColor: "#0f0f0f", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px", color: "#fff", fontSize: 11, fontWeight: 700 }}
+              formatter={(v: number, name: string) => {
+                const cat = CAT_DEFS.find(c => c.key === name);
+                if (!v) return null;
+                return [`${v} km`, cat?.label ?? name];
+              }}
+            />
+            {CAT_DEFS.map((cat, i) => (
+              <Bar key={cat.key} dataKey={cat.key} stackId="s" fill={`url(#ckc-${cat.key})`} radius={i === CAT_DEFS.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]} />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="flex items-center gap-4 flex-wrap pt-3 mt-2 border-t border-white/[0.05]">
+        {CAT_DEFS.map(cat => (
+          <div key={cat.key} className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: cat.color }} />
+            <span className="text-[9px] font-black tracking-widest" style={{ color: cat.color }}>{cat.label.toUpperCase()}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
 
 export function CaricoFormaV2({ ffHistory, kmRuns, paceDistributionChart, effortMatrixChart }: CaricoFormaV2Props) {
@@ -606,13 +851,13 @@ export function CaricoFormaV2({ ffHistory, kmRuns, paceDistributionChart, effort
       {/* ── Main fitness/fatigue/form chart ── */}
       <FitnessMultiChart ff={ffHistory} />
 
-      {/* ── Weekly km chart ── */}
-      <div className="h-[280px]">
-        <WeeklyKmChart runs={kmRuns} />
+      {/* ── Km stacked + Pace zones — same row ── */}
+      <div className="grid grid-cols-2 gap-5 items-stretch">
+        <div className="min-h-[280px]">
+          <CaricoKmChart runs={kmRuns} />
+        </div>
+        <PaceZonesCard runs={kmRuns} />
       </div>
-
-      {/* ── Pace zones ── */}
-      <PaceZonesCard runs={kmRuns} />
 
       {/* ── Distribuzione Passo + Matrice Sforzi ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

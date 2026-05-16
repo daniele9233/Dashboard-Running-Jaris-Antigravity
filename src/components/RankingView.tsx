@@ -648,7 +648,7 @@ function HeroPercentile({ pct, tier, nextTier, gapSec, fidalCat }: {
         </div>
         <div className="space-y-1">
           <div className="flex items-end gap-2">
-            <span className="text-6xl font-black leading-none"
+            <span className="text-5xl md:text-6xl font-black leading-none"
               style={{ color: tier.color, textShadow: `0 0 30px ${tier.color}60` }}>
               {Math.round(pct)}
             </span>
@@ -1503,7 +1503,7 @@ export function RankingView() {
 
   return (
     <main className="flex-1 overflow-y-auto" style={{ background: "var(--app-bg)" }}>
-      <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-4 md:py-8 space-y-4 md:space-y-6">
 
         {/* ── HEADER */}
         <div className="space-y-3">
