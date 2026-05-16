@@ -305,6 +305,7 @@ export type SupplementId = 'creatine' | 'beta-alanine';
 export interface SupplementConfig {
   start_date: string;       // YYYY-MM-DD
   enabled: boolean;
+  checked_days?: string[];  // date strings YYYY-MM-DD — giorni di assunzione confermati
 }
 export interface SupplementsConfigResponse {
   supplements: Record<SupplementId, SupplementConfig>;
@@ -314,7 +315,12 @@ export const getSupplementsConfig = () =>
 
 export const updateSupplement = (
   supId: SupplementId,
-  payload: { start_date?: string; enabled?: boolean },
+  payload: {
+    start_date?: string;
+    enabled?: boolean;
+    check_date?: string;  // YYYY-MM-DD — giorno da spuntare/deselezionare
+    checked?: boolean;    // true = aggiungi, false = rimuovi
+  },
 ) => api.put<SupplementsConfigResponse>(`/api/supplements/${supId}`, payload);
 
 // ─── JARVIS ──────────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-16T08:19:23.764Z",
+  "generated_at": "2026-05-16T11:36:28.835Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -423,6 +423,7 @@
       ],
       "exports": [
         "_athlete_query",
+        "_build_merged",
         "_valid_date",
         "get_supplements",
         "update_supplement"
@@ -435,9 +436,9 @@
         "fastapi.responses",
         "typing"
       ],
-      "hash": "cb474818f4da7ec7bde733b74e8a5434c51cf3e02f489c9da9f76f2e17849c84",
-      "last_modified": "2026-05-16T08:15:58.468Z",
-      "size_bytes": 4928
+      "hash": "db2e3569ecea754c8556c43d06e5ce5ad2684aae36959a9bf774083251247df6",
+      "last_modified": "2026-05-16T11:32:49.055Z",
+      "size_bytes": 6133
     },
     {
       "path": "backend/server.py",
@@ -1506,9 +1507,9 @@
         "../types/jarvis",
         "./client"
       ],
-      "hash": "7c34ae0d23af625a6d0daf6a5235279adfadf64da441cab5386a96f7da2614da",
-      "last_modified": "2026-05-16T08:16:30.976Z",
-      "size_bytes": 16561
+      "hash": "f7c7da3767d88da51ddf74aaf5ea39efcb4f37bc4558e0ffba4bd7eb2633464d",
+      "last_modified": "2026-05-16T11:32:59.430Z",
+      "size_bytes": 16808
     },
     {
       "path": "src/App.tsx",
@@ -2923,7 +2924,6 @@
       "purpose": "Page/view component for Supplements.",
       "touch_when": [
         "ai",
-        "api",
         "layout",
         "profile",
         "statistics",
@@ -2940,9 +2940,9 @@
         "react",
         "recharts"
       ],
-      "hash": "31bf1f1167aa38a29572ec5435504feabf25f4f2872d355f417258d98eae6088",
-      "last_modified": "2026-05-16T08:19:23.765Z",
-      "size_bytes": 39558
+      "hash": "4b4194579d8c629c7e0393ba272f7a9f83548ecc7ebe963c82a1d9417da5654b",
+      "last_modified": "2026-05-16T11:36:28.836Z",
+      "size_bytes": 47401
     },
     {
       "path": "src/components/TopStats.tsx",

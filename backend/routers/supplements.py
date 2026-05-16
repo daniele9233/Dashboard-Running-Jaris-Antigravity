@@ -58,6 +58,22 @@ def _athlete_query(athlete_id: Optional[int]) -> dict:
     return {"athlete_id": athlete_id} if athlete_id else {"athlete_id": None}
 
 
+def _build_merged(sup: dict) -> dict:
+    """Merge sup dict con default, include checked_days."""
+    merged: dict = {}
+    for key in SUPPORTED_SUPPLEMENTS:
+        entry = sup.get(key) or {}
+        raw_days = entry.get("checked_days") or []
+        # Deduplica e ordina
+        checked_days = sorted(list(set(d for d in raw_days if isinstance(d, str))))
+        merged[key] = {
+            "start_date":   entry.get("start_date") or DEFAULT_CONFIG[key]["start_date"],
+            "enabled":      entry.get("enabled") if isinstance(entry.get("enabled"), bool) else DEFAULT_CONFIG[key]["enabled"],
+            "checked_days": checked_days,
+        }
+    return merged
+
+
 @router.get("/api/supplements")
 async def get_supplements(
     db=Depends(get_db),
@@ -67,20 +83,11 @@ async def get_supplements(
     q = _athlete_query(athlete_id)
     doc = await db.supplements_config.find_one(q)
     if not doc:
-        # Primo accesso → ritorna default senza salvare. Il salvataggio avviene
-        # al primo update esplicito dell'utente.
-        return {"supplements": DEFAULT_CONFIG}
+        default_with_checks = {k: {**v, "checked_days": []} for k, v in DEFAULT_CONFIG.items()}
+        return {"supplements": default_with_checks}
 
     sup = doc.get("supplements") or {}
-    # Merge con default per garantire che ogni supplemento esista sempre
-    merged: dict = {}
-    for key in SUPPORTED_SUPPLEMENTS:
-        entry = sup.get(key) or {}
-        merged[key] = {
-            "start_date": entry.get("start_date") or DEFAULT_CONFIG[key]["start_date"],
-            "enabled":    entry.get("enabled") if isinstance(entry.get("enabled"), bool) else DEFAULT_CONFIG[key]["enabled"],
-        }
-    return {"supplements": merged}
+    return {"supplements": _build_merged(sup)}
 
 
 @router.put("/api/supplements/{sup_id}")
@@ -91,48 +98,75 @@ async def update_supplement(
     athlete_id: Optional[int] = Depends(get_athlete_id),
 ):
     """
-    Aggiorna start_date e/o enabled di un singolo supplemento.
-    Body: { "start_date": "YYYY-MM-DD"?, "enabled": bool? }
+    Aggiorna start_date, enabled e/o singolo check giornaliero di un supplemento.
+    Body: {
+      "start_date": "YYYY-MM-DD"?,
+      "enabled": bool?,
+      "check_date": "YYYY-MM-DD"?,   # giorno da spuntare/deselezionare
+      "checked": bool?,               # true=aggiungi, false=rimuovi
+    }
     """
     if sup_id not in SUPPORTED_SUPPLEMENTS:
         return JSONResponse({"error": f"unknown_supplement: {sup_id}"}, status_code=400)
 
     body = await request.json()
-    update_entry: dict = {}
+    set_payload: dict = {}
 
     if "start_date" in body:
         sd = body["start_date"]
         if not _valid_date(sd):
             return JSONResponse({"error": "invalid_start_date_format (expected YYYY-MM-DD)"}, status_code=400)
-        update_entry["start_date"] = sd
+        set_payload[f"supplements.{sup_id}.start_date"] = sd
+        set_payload[f"supplements.{sup_id}.updated_at"] = dt.datetime.utcnow()
 
     if "enabled" in body:
         enabled = body["enabled"]
         if not isinstance(enabled, bool):
             return JSONResponse({"error": "invalid_enabled_value (expected bool)"}, status_code=400)
-        update_entry["enabled"] = enabled
+        set_payload[f"supplements.{sup_id}.enabled"] = enabled
+        set_payload[f"supplements.{sup_id}.updated_at"] = dt.datetime.utcnow()
 
-    if not update_entry:
+    # Day-check toggle
+    check_date = body.get("check_date")
+    checked    = body.get("checked")
+    has_toggle = check_date is not None and checked is not None
+
+    if has_toggle:
+        if not _valid_date(str(check_date)):
+            return JSONResponse({"error": "invalid_check_date (expected YYYY-MM-DD)"}, status_code=400)
+        if not isinstance(checked, bool):
+            return JSONResponse({"error": "invalid_checked_value (expected bool)"}, status_code=400)
+
+    if not set_payload and not has_toggle:
         return JSONResponse({"error": "no_valid_fields_to_update"}, status_code=400)
 
-    update_entry["updated_at"] = dt.datetime.utcnow()
-
     q = _athlete_query(athlete_id)
-    # Upsert: aggiorna solo i campi del singolo supplemento usando $set con path nested
-    set_payload = {
-        f"supplements.{sup_id}.{k}": v for k, v in update_entry.items()
-    }
-    set_payload["updated_at"] = dt.datetime.utcnow()
-    await db.supplements_config.update_one(q, {"$set": set_payload, "$setOnInsert": {"athlete_id": athlete_id}}, upsert=True)
+
+    # Apply $set for field updates
+    if set_payload:
+        set_payload["updated_at"] = dt.datetime.utcnow()
+        await db.supplements_config.update_one(
+            q,
+            {"$set": set_payload, "$setOnInsert": {"athlete_id": athlete_id}},
+            upsert=True,
+        )
+
+    # Apply check toggle via $addToSet / $pull
+    if has_toggle:
+        # Ensure doc exists
+        await db.supplements_config.update_one(
+            q, {"$setOnInsert": {"athlete_id": athlete_id}}, upsert=True
+        )
+        if checked:
+            await db.supplements_config.update_one(
+                q, {"$addToSet": {f"supplements.{sup_id}.checked_days": check_date}}
+            )
+        else:
+            await db.supplements_config.update_one(
+                q, {"$pull": {f"supplements.{sup_id}.checked_days": check_date}}
+            )
 
     # Ritorna config aggiornata completa
     doc = await db.supplements_config.find_one(q)
     sup = (doc or {}).get("supplements") or {}
-    merged: dict = {}
-    for key in SUPPORTED_SUPPLEMENTS:
-        entry = sup.get(key) or {}
-        merged[key] = {
-            "start_date": entry.get("start_date") or DEFAULT_CONFIG[key]["start_date"],
-            "enabled":    entry.get("enabled") if isinstance(entry.get("enabled"), bool) else DEFAULT_CONFIG[key]["enabled"],
-        }
-    return {"supplements": merged}
+    return {"supplements": _build_merged(sup)}
