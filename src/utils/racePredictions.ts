@@ -64,6 +64,9 @@ function normaliseKey(s: string): string {
 }
 
 function findPredictionKey(keys: string[], patterns: string[]): string | null {
+  // Exact match first: prevents "halfmarathon" from matching the "marathon" pattern
+  const exact = keys.find((k) => patterns.some((p) => normaliseKey(k) === p));
+  if (exact) return exact;
   return keys.find((k) => patterns.some((p) => normaliseKey(k).includes(p))) ?? null;
 }
 

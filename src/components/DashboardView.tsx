@@ -240,8 +240,11 @@ export function DashboardView() {
   // Backend ora calcola SIA Daniels formula SIA empirical override (mediana
   // tempo runs 86-91% HR) e li espone in `paces.threshold_empirical` /
   // `paces.threshold`. Client = sola visualizzazione: prefer empirical, fallback formula.
-  const thresholdPace = vdotPacesData?.paces?.threshold_empirical
-    ?? vdotPacesData?.paces?.threshold
+  // Prefer Daniels formula threshold (86% VO2max) — reliable from VDOT.
+  // threshold_empirical (median of 86-91% HR runs) catches marathon-pace runs too
+  // and skews high; use only as last-resort fallback.
+  const thresholdPace = vdotPacesData?.paces?.threshold
+    ?? vdotPacesData?.paces?.threshold_empirical
     ?? null;
 
   const gpsRuns = runs.filter(r => !r.is_treadmill);

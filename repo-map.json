@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-16T12:23:08.761Z",
+  "generated_at": "2026-05-16T16:24:31.967Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -594,9 +594,9 @@
         "typing",
         "urllib.parse"
       ],
-      "hash": "78590254285880f7800b850d392f93a8f3a01c983476c6cc3f1601450d6b8c49",
-      "last_modified": "2026-05-16T08:16:06.687Z",
-      "size_bytes": 370707
+      "hash": "9bdfbaed5f3d20b74dfffe35bde8c59b892cc7b1bb2f51ce71f74ca779edeb8b",
+      "last_modified": "2026-05-16T16:24:19.547Z",
+      "size_bytes": 370740
     },
     {
       "path": "backend/test_models.py",
@@ -1642,9 +1642,9 @@
         "react",
         "recharts"
       ],
-      "hash": "940d33e1c6b42b87f4a05b64c4605213e2b142005ae3b005198063309ccb3562",
-      "last_modified": "2026-04-28T04:53:29.945Z",
-      "size_bytes": 15196
+      "hash": "2778a7ae826ae69c13e6d85ddad4de0c8a98b64a2db658dc50e989e49ea1f242",
+      "last_modified": "2026-05-16T16:24:11.825Z",
+      "size_bytes": 15369
     },
     {
       "path": "src/components/BadgesGrid.tsx",
@@ -1884,9 +1884,9 @@
         "react-router-dom",
         "recharts"
       ],
-      "hash": "d0d4fe0623af9189e8590ae2736c7a0a4d23aaf7bf0ccf6b9acb0e35f4a60465",
-      "last_modified": "2026-05-16T07:35:53.319Z",
-      "size_bytes": 56122
+      "hash": "791276fd86c50cbf0a182877fb2436e9401f8fa798ee426020d06c6cdd041653",
+      "last_modified": "2026-05-16T16:24:15.234Z",
+      "size_bytes": 56338
     },
     {
       "path": "src/components/DetrainingWidget.tsx",
@@ -2473,9 +2473,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "bc5dcd40ca2da991b5dacbee9077f8827ffc81f4e2d3783036cb4632e749aeb9",
-      "last_modified": "2026-05-16T07:34:41.067Z",
-      "size_bytes": 158314
+      "hash": "e08b42a424edba3764c97342a177d53710e7d4a2f6473b4398d4594931c9cf78",
+      "last_modified": "2026-05-16T16:24:31.967Z",
+      "size_bytes": 158291
     },
     {
       "path": "src/components/statistics/AnalyticsV3.tsx",
@@ -3674,9 +3674,9 @@
         "../types/api",
         "./paceFormat"
       ],
-      "hash": "09c8f0860e6254f4796aea68453a333143e8353924874a781a68cf250fcdf083",
-      "last_modified": "2026-04-28T09:32:30.020Z",
-      "size_bytes": 5894
+      "hash": "d2b47254b519eaf44711c3f505c06816dd61eb6c3719ffdf368d456a3175aaa0",
+      "last_modified": "2026-05-16T16:24:06.239Z",
+      "size_bytes": 6085
     },
     {
       "path": "src/utils/runnerDnaModel.ts",

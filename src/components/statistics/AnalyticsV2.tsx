@@ -1422,11 +1422,11 @@ export function AnalyticsV2({
   }
 
   // Daniels threshold / T pace from VDOT.
-  // We solve the VO2 demand curve at ~88% of VDOT, which matches threshold pace
-  // much better than the previous approximation and keeps the card aligned with the backend pace table.
+  // 86% VO2max gives a conservative estimate matching observed 20-30 min threshold runs.
+  // 88% tends to be ~5-10 sec/km too fast vs. real training experience.
   function calcTPaceV2(v: number): string {
     if (!Number.isFinite(v) || v <= 0) return '—';
-    const targetVo2 = v * 0.88;
+    const targetVo2 = v * 0.86;
     const discriminant = (0.182258 ** 2) + 4 * 0.000104 * (targetVo2 + 4.60);
     const velocityMetersPerMinute = (-0.182258 + Math.sqrt(discriminant)) / (2 * 0.000104);
     if (!Number.isFinite(velocityMetersPerMinute) || velocityMetersPerMinute <= 0) return '—';

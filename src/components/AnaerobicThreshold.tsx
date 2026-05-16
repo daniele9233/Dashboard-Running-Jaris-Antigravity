@@ -27,11 +27,14 @@ function fmtPace(sec: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-// ─── T-pace from VDOT ───────────────────────────────────────────────
+// ─── T-pace from VDOT (Daniels quadratic inversion at 86% VO2max) ───────────
+// 86% gives a conservative threshold estimate matching typical 20-30 min run pace.
+// Previous code incorrectly reduced speed by 12% (not VO2 by 12%) → wrong result.
 function calcTPace(vdot: number): string {
-  const a = 0.000104, b = 0.182258, c = -(vdot + 4.60);
-  const vMax = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
-  const p = 1000 / (vMax * 0.88);
+  const targetVo2 = vdot * 0.86;
+  const discriminant = 0.182258 ** 2 + 4 * 0.000104 * (targetVo2 + 4.60);
+  const velocityMpm = (-0.182258 + Math.sqrt(discriminant)) / (2 * 0.000104);
+  const p = 1000 / velocityMpm;
   return `${Math.floor(p)}:${String(Math.round((p % 1) * 60)).padStart(2, "0")}`;
 }
 

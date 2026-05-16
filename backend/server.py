@@ -4998,7 +4998,7 @@ async def get_vdot_paces():
         "paces": {
             "easy":       pace_at_vo2_pct(0.65),  # E: 59–74% VO2max
             "marathon":   pace_at_vo2_pct(0.80),  # M: 75–84% VO2max
-            "threshold":  pace_at_vo2_pct(0.88),  # T: 83–88% VO2max (Daniels VDOT formula)
+            "threshold":  pace_at_vo2_pct(0.86),  # T: ~86% VO2max — conservative, matches observed 20-30 min threshold runs
             "threshold_empirical": threshold_empirical,  # mediana paces tempo runs reali (86-91% HR)
             "interval":   pace_at_vo2_pct(0.98),  # I: 95–100% VO2max
             "repetition": pace_at_vo2_pct(1.10),  # R: 105–120% VO2max
