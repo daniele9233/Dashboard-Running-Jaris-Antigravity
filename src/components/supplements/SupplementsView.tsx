@@ -281,9 +281,13 @@ export function SupplementsView() {
         else                 { phaseLabel = "AVVIO";        phaseColor = sup.color; }
       }
 
-      const checkedCount      = checks[sup.id].size;
-      const totalDays         = Math.max(0, since + 1);
-      const adherencePct      = totalDays > 0 ? Math.min(100, Math.round((checkedCount / totalDays) * 100)) : 0;
+      // Only count dates within [start, TODAY] — guards against stale dates if start_date changes
+      const checkedCount = Array.from(checks[sup.id]).filter(ds => {
+        const d = parseDate(ds);
+        return d >= start && d <= TODAY;
+      }).length;
+      const totalDays    = Math.max(0, since + 1);
+      const adherencePct = totalDays > 0 ? Math.round((checkedCount / totalDays) * 100) : 0;
 
       return {
         ...sup,
@@ -969,36 +973,6 @@ function WeeklyGrid({ startDate, checks, weekOffset, color, totalDays, adherence
         })}
       </div>
 
-      {/* Adherence summary */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-[10px]">
-          <span style={{ color: "var(--app-text-muted)" }}>
-            Aderenza:{" "}
-            <span className="font-black" style={{ color: "var(--app-text)" }}>{checkedCount}</span>
-            /{totalDays} giorni
-          </span>
-          <span
-            className="font-black"
-            style={{
-              color: adherencePct >= 80 ? color
-                : adherencePct >= 60 ? "#F59E0B"
-                : "#F43F5E",
-            }}
-          >
-            {adherencePct}%
-          </span>
-        </div>
-        <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: "rgba(255,255,255,0.07)" }}>
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{
-              width: `${adherencePct}%`,
-              backgroundColor: adherencePct >= 80 ? color : adherencePct >= 60 ? "#F59E0B" : "#F43F5E",
-              boxShadow: adherencePct > 0 ? `0 0 6px ${color}50` : undefined,
-            }}
-          />
-        </div>
-      </div>
     </div>
   );
 }

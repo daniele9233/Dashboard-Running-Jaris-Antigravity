@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-16T11:36:28.835Z",
+  "generated_at": "2026-05-16T12:23:08.761Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2940,9 +2940,9 @@
         "react",
         "recharts"
       ],
-      "hash": "4b4194579d8c629c7e0393ba272f7a9f83548ecc7ebe963c82a1d9417da5654b",
-      "last_modified": "2026-05-16T11:36:28.836Z",
-      "size_bytes": 47401
+      "hash": "14052907df9a2dcce3c089f193b39e64b143b3ae8faebee218475d19d7a23806",
+      "last_modified": "2026-05-16T12:23:08.761Z",
+      "size_bytes": 46421
     },
     {
       "path": "src/components/TopStats.tsx",
