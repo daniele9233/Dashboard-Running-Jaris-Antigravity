@@ -471,8 +471,11 @@ export interface VdotPacesResponse {
   paces: {
     easy: string | null;
     marathon: string | null;
+    /** T sostenibile (82% VO2max ≈ HM pace, ~1h effort) — primary display. */
     threshold: string | null;
-    /** Empirical override da tempo runs reali (86-91% HR). Round 5. */
+    /** T peak Daniels classico (86% VO2max), raggiungibile con tenuta piena. */
+    threshold_peak?: string | null;
+    /** Empirical override da tempo runs ≥20 min, ≥5 km, HR 87-90%, flat. */
     threshold_empirical?: string | null;
     interval: string | null;
     repetition: string | null;

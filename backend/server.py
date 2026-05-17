@@ -4948,10 +4948,15 @@ async def get_vdot_paces():
         v = (-0.182258 + math.sqrt(disc)) / (2 * 0.000104)  # m/min
         return _format_pace(v / 60) if v > 0 else None  # convert m/min → m/s for _format_pace
 
-    # ── EMPIRICAL THRESHOLD PACE (round 5 — #3 math heavy → backend) ──────────
-    # Override Daniels formula con mediana paces di tempo runs reali a 86-91% HR.
-    # Replica logica client DashboardView.thresholdPace useMemo (ora deprecato).
-    # Fallback a formula VDOT se < 3 tempo runs qualificate.
+    # ── EMPIRICAL THRESHOLD PACE (rev. 2026-05 — feedback utente) ─────────────
+    # Soglia anaerobica sostenibile = pace tenibile ~1h (lattato stabile).
+    # Daniels "T-pace" tradizionale (86% VO2max) sovrastima per runner non
+    # full-trained: assume tenuta completa. Realtà: VDOT calcolato su 5K
+    # max effort, ma tenuta su 60min richiede endurance ancora da costruire.
+    # → Theoretical T = pace_at_vo2_pct(0.81) ≈ HM pace, più conservativo.
+    # → Empirical override solo con tempo runs lunghi (≥20 min), distanza
+    #   ≥5km, HR stretta 87-90%, terreno piatto (|net elev|/km ≤ 6m), che
+    #   esclude corse brevi downhill-favored e ripetute.
     def _parse_pace_to_secs(pace_str: str) -> int:
         """'5:42' → 342. Returns 0 on bad input."""
         try:
@@ -4969,6 +4974,15 @@ async def get_vdot_paces():
         s = secs % 60
         return f"{m}:{s:02d}"
 
+    def _net_elev_per_km(run: dict) -> float:
+        """|net elevation change| / distance_km in m/km. 0 if no splits."""
+        splits = run.get("splits") or []
+        dist = run.get("distance_km", 0) or 0
+        if not splits or dist <= 0:
+            return 0
+        net = sum((s.get("elevation_difference") or 0) for s in splits)
+        return abs(net) / dist
+
     threshold_empirical = None
     tempo_runs = []
     for r in runs:
@@ -4979,29 +4993,55 @@ async def get_vdot_paces():
             continue
         # avg_hr_pct may come as fraction (0.87) or percent (87)
         pct = hr_pct / 100.0 if hr_pct > 1 else hr_pct
-        if r.get("distance_km", 0) < 3:
+        # Filtri stringenti per sustainable threshold:
+        #   - ≥5km e ≥20 min (Daniels T-block sustained, esclude tempo brevi)
+        #   - HR 87-90% (banda T stretta, evita bleed M-pace e VO2max)
+        #   - terreno ~piatto (|net elev|/km ≤ 6m, esclude downhill-favored)
+        if r.get("distance_km", 0) < 5:
             continue
-        if 0.86 <= pct <= 0.91:
-            tempo_runs.append(r)
+        if (r.get("duration_minutes", 0) or 0) < 20:
+            continue
+        if not (0.87 <= pct <= 0.90):
+            continue
+        if _net_elev_per_km(r) > 6:
+            continue
+        tempo_runs.append(r)
         if len(tempo_runs) >= 8:
             break
+
+    # Daniels formula sustainable: 81% VO2max (≈ HM pace +, ~1h effort).
+    # Più conservativo del classico 86% (= T peak con tenuta piena allenata).
+    # Per VDOT 52-54 dà ~4:20-4:25/km, coerente con HM pace predicted.
+    threshold_sustainable_secs = None
+    threshold_sustainable = pace_at_vo2_pct(0.81)
+    if threshold_sustainable:
+        threshold_sustainable_secs = _parse_pace_to_secs(threshold_sustainable)
 
     if len(tempo_runs) >= 3:
         paces = sorted(filter(None, [_parse_pace_to_secs(r.get("avg_pace", "")) for r in tempo_runs]))
         paces = [p for p in paces if p > 0]
         if paces:
             median = paces[len(paces) // 2]
-            threshold_empirical = _secs_to_pace_str(max(150, min(500, median)))
+            # Sanity clamp: empirico tra (sustainable - 8s) e (sustainable + 25s).
+            # Outliers (corse aided/test-effort) scartati a favore formula.
+            if threshold_sustainable_secs:
+                lo = threshold_sustainable_secs - 8
+                hi = threshold_sustainable_secs + 25
+                if lo <= median <= hi:
+                    threshold_empirical = _secs_to_pace_str(median)
+            else:
+                threshold_empirical = _secs_to_pace_str(max(150, min(500, median)))
 
     return {
         "vdot": vdot,
         "paces": {
-            "easy":       pace_at_vo2_pct(0.65),  # E: 59–74% VO2max
-            "marathon":   pace_at_vo2_pct(0.80),  # M: 75–84% VO2max
-            "threshold":  pace_at_vo2_pct(0.86),  # T: ~86% VO2max — conservative, matches observed 20-30 min threshold runs
-            "threshold_empirical": threshold_empirical,  # mediana paces tempo runs reali (86-91% HR)
-            "interval":   pace_at_vo2_pct(0.98),  # I: 95–100% VO2max
-            "repetition": pace_at_vo2_pct(1.10),  # R: 105–120% VO2max
+            "easy":       pace_at_vo2_pct(0.65),       # E: 59–74% VO2max
+            "marathon":   pace_at_vo2_pct(0.80),       # M: 75–84% VO2max
+            "threshold":  threshold_sustainable,        # T sostenibile: 82% VO2max ≈ HM pace, ~1h effort
+            "threshold_peak": pace_at_vo2_pct(0.86),   # T peak (Daniels classico): 86% VO2max, raggiungibile con tenuta piena
+            "threshold_empirical": threshold_empirical, # mediana tempo runs reali (≥20min, ≥5km, HR 87-90%, flat)
+            "interval":   pace_at_vo2_pct(0.98),       # I: 95–100% VO2max
+            "repetition": pace_at_vo2_pct(1.10),       # R: 105–120% VO2max
         },
         "race_predictions": _predict_race(vdot),
     }
