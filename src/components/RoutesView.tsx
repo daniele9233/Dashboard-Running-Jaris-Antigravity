@@ -16,71 +16,9 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useApi } from '../hooks/useApi';
-import { getRun, getRunSplits, setRunEffort } from '../api';
+import { getRun, getRunSplits } from '../api';
 import type { Run, Split } from '../types/api';
 import { cadenceSpmFromRun } from '../utils/cadence';
-
-// ── Effort selector (1-10 RPE) ───────────────────────────────────────────────
-function EffortSelector({ runId, initial, paceSecPerKm }: { runId: string; initial: number | null | undefined; paceSecPerKm: number | null }) {
-  const [val, setVal] = useState<number | null>(initial ?? null);
-  const [saving, setSaving] = useState(false);
-  // Mostra solo per corse veloci (<5:00/km = <300 sec/km)
-  if (!paceSecPerKm || paceSecPerKm >= 300) return null;
-  const save = async (v: number | null) => {
-    setSaving(true);
-    try {
-      await setRunEffort(runId, v);
-      setVal(v);
-    } catch (e) {
-      console.error('effort save failed', e);
-    } finally {
-      setSaving(false);
-    }
-  };
-  const colorFor = (n: number) =>
-    n <= 3 ? '#34D399'
-    : n <= 5 ? '#60A5FA'
-    : n <= 7 ? '#F59E0B'
-    : n <= 8 ? '#F97316'
-    : '#F43F5E';
-  return (
-    <>
-      <div className="flex justify-between items-center border-b border-white/5 pb-2 mt-3">
-        <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">Perceived Effort (RPE)</span>
-        <Target className="w-3 h-3 text-[#C0FF00]" />
-      </div>
-      <div className="space-y-2">
-        <div className="grid grid-cols-10 gap-1">
-          {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-            <button
-              key={n}
-              type="button"
-              disabled={saving}
-              onClick={() => save(val === n ? null : n)}
-              className={cn(
-                "h-6 rounded-[6px] text-[9px] font-black tracking-wider transition-all",
-                val === n
-                  ? "text-black border-2"
-                  : "text-gray-500 border border-white/10 hover:border-white/30"
-              )}
-              style={val === n ? { backgroundColor: colorFor(n), borderColor: colorFor(n) } : undefined}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-        {val != null && (
-          <div className="text-[8px] text-gray-500 leading-tight">
-            {val <= 3 && "Easy / recovery"}
-            {val >= 4 && val <= 5 && "Aerobico moderato"}
-            {val >= 6 && val <= 8 && "Tempo / threshold sostenibile"}
-            {val >= 9 && "Race max effort"}
-          </div>
-        )}
-      </div>
-    </>
-  );
-}
 
 // ── Polyline decoder (Google algorithm) ──────────────────────────────────────
 function decodePolyline(encoded: string): [number, number][] {
@@ -649,17 +587,6 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                   </div>
                 )}
               </div>
-
-              {/* ── Perceived Effort (RPE 1-10) ─────────────────────────── */}
-              <EffortSelector
-                runId={run.id}
-                initial={run.perceived_effort ?? null}
-                paceSecPerKm={(() => {
-                  if (!run.avg_pace || !run.avg_pace.includes(':')) return null;
-                  const [m, s] = run.avg_pace.split(':').map(Number);
-                  return m * 60 + s;
-                })()}
-              />
 
               {/* ── Garmin Running Dynamics ─────────────────────────────── */}
               {(run.avg_vertical_oscillation || run.avg_vertical_ratio || run.avg_ground_contact_time || run.avg_stride_length) && (

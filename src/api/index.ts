@@ -17,6 +17,9 @@ import type {
   ProAnalyticsResponse,
   GarminCsvLinkResult,
   RunnerDnaResponse,
+  FieldTest,
+  FieldTestLatestResponse,
+  FieldTestListResponse,
 } from '../types/api';
 
 // ─── PROFILE ────────────────────────────────────────────────────────────────
@@ -35,12 +38,18 @@ export const getRun = (id: string) => api.get<RunsResponse['runs'][0]>(`/api/run
 
 export const getRunSplits = (id: string) => api.get<unknown>(`/api/runs/${id}/splits`);
 
-/** Set perceived effort (RPE 1-10) per la corsa. Usato per calibrare zone/VDOT. */
-export const setRunEffort = (id: string, effort: number | null) =>
-  api.patch<{ ok: boolean; perceived_effort: number | null }>(
-    `/api/runs/${id}/effort`,
-    { perceived_effort: effort }
-  );
+// ─── FIELD TEST (pace-only VDOT benchmark) ───────────────────────────────────
+export const postFieldTest = (data: { distance_km: 3 | 5 | 6; time_seconds: number; date?: string }) =>
+  api.post<FieldTest>('/api/field-test', data);
+
+export const getFieldTestLatest = () =>
+  api.get<FieldTestLatestResponse>('/api/field-test/latest');
+
+export const getFieldTestList = () =>
+  api.get<FieldTestListResponse>('/api/field-test/list');
+
+export const deleteFieldTest = (id: string) =>
+  api.delete<{ ok: boolean }>(`/api/field-test/${id}`);
 
 // ─── TRAINING PLAN ───────────────────────────────────────────────────────────
 export const getTrainingPlan = () => api.get<TrainingPlanResponse>('/api/training-plan');

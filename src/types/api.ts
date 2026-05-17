@@ -101,10 +101,6 @@ export interface Run {
   surface?: string | null;
   terrain?: string | null;
   event?: string | null;
-  /** Perceived effort 1-10 (RPE). Manualmente impostato dall'utente sulle
-   *  corse veloci (<5:00/km) per calibrare VDOT/zone Daniels. Null se non
-   *  inserito. 6-8 = vero T sustainable, 9-10 = race max effort. */
-  perceived_effort?: number | null;
 }
 
 export interface RunsResponse {
@@ -472,12 +468,15 @@ export interface AdaptResponse {
 
 export interface VdotPacesResponse {
   vdot: number | null;
+  /** True se VDOT da field test recente (<90gg). Sovrascrive _calc_vdot. */
+  from_field_test?: boolean;
   paces: {
     easy: string | null;
     marathon: string | null;
-    /** T sostenibile (82% VO2max ≈ HM pace, ~1h effort) — primary display. */
+    /** T-pace: 88% VO2max se field test attivo (Daniels classico), else
+     *  sub-Daniels (fraction model) per tenuta scarsa. */
     threshold: string | null;
-    /** T peak Daniels classico (86% VO2max), raggiungibile con tenuta piena. */
+    /** T peak Daniels classico (86-88% VO2max). */
     threshold_peak?: string | null;
     /** Empirical override da tempo runs ≥20 min, ≥5 km, HR 87-90%, flat. */
     threshold_empirical?: string | null;
@@ -485,4 +484,28 @@ export interface VdotPacesResponse {
     repetition: string | null;
   };
   race_predictions: Record<string, string>;
+}
+
+// ─── FIELD TEST (pace-only VDOT benchmark) ───────────────────────────────────
+export interface FieldTest {
+  _id?: string;
+  athlete_id?: number | null;
+  /** 3.0, 5.0, o 6.0 */
+  distance_km: number;
+  /** Tempo finale in secondi */
+  time_seconds: number;
+  /** ISO date string */
+  date: string;
+  /** VDOT calcolato via Daniels reverse formula (pace-only) */
+  vdot: number;
+  /** Passo medio (sec/km) */
+  pace_sec_per_km: number;
+}
+
+export interface FieldTestLatestResponse {
+  test: FieldTest | null;
+}
+
+export interface FieldTestListResponse {
+  tests: FieldTest[];
 }

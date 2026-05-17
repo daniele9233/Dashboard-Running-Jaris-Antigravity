@@ -37,6 +37,7 @@ import { LastRunMap } from "./LastRunMap";
 import { FitnessChart } from "./dashboard/widgets/FitnessChart";
 import { HRZones } from "./dashboard/widgets/HRZones";
 import { NextOptimalSessionWidget } from "./dashboard/widgets/NextOptimalSessionWidget";
+import { FieldTestWidget } from "./dashboard/widgets/FieldTestWidget";
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Line, CartesianGrid, Area, ComposedChart } from "recharts";
 import { useApi } from "../hooks/useApi";
@@ -960,6 +961,15 @@ export function DashboardView() {
                 </div>
               );
             })()}
+           </GridCard>
+          </div>
+          )}
+
+          {/* ── Field Test (pace-only VDOT benchmark) ── */}
+          {!hiddenKeys.includes("field-test") && (
+          <div key="field-test">
+           <GridCard disabled={isMobile} onRemove={() => hideWidget("field-test")}>
+            <FieldTestWidget />
            </GridCard>
           </div>
           )}

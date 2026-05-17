@@ -17,5 +17,6 @@ export const WIDGET_REGISTRY: WidgetMeta[] = [
   { key: "hr-zones",        label: "Zone Cardiache" },
   { key: "fitness-chart",   label: "Condizione Fisica" },
   { key: "training-paces",  label: "Training Paces" },
+  { key: "field-test",      label: "Field Test (VDOT Pace-Only)" },
   { key: "session-logs",    label: "Session Logs" },
 ];

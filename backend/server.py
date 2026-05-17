@@ -8,7 +8,7 @@ from typing import Optional
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, Query, Request, Body, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, JSONResponse, StreamingResponse
 
@@ -3831,6 +3831,22 @@ def _vdot_to_race_seconds(vdot: float, dist_km: float) -> Optional[float]:
     return t * 60
 
 
+def _vdot_from_race(dist_km: float, time_seconds: float) -> Optional[float]:
+    """Compute VDOT da race time + distance (Daniels reverse formula).
+
+    Pace-only, NO heart rate. Usato per field test (3K/5K/6K max effort).
+    Inverte _vdot_to_race_seconds via bisection.
+    """
+    if dist_km <= 0 or time_seconds <= 0:
+        return None
+    t_min = time_seconds / 60.0
+    pct = 0.8 + 0.1894393 * math.exp(-0.012778 * t_min) + 0.2989558 * math.exp(-0.1932605 * t_min)
+    v = (dist_km * 1000) / t_min  # m/min
+    vo2 = -4.60 + 0.182258 * v + 0.000104 * v * v
+    vdot = vo2 / pct
+    return round(vdot, 1) if vdot > 0 else None
+
+
 def _seconds_to_time_str(total_s: float) -> str:
     total_s = round(total_s)
     h = total_s // 3600
@@ -4994,7 +5010,8 @@ async def get_analytics():
     max_hr = int(profile.get("max_hr", 190)) if profile else 190
     resting_hr = int(profile.get("resting_hr", 50)) if profile else 50
 
-    vdot = _calc_vdot(runs, max_hr, resting_hr=resting_hr)
+    # Field test override: VDOT autoritativo se test recente
+    vdot, from_field_test = await _get_active_vdot(athlete_id, runs, max_hr, resting_hr)
 
     # CTL latest per endurance-aware race predictions
     ff_latest = await db.fitness_freshness.find_one(q, sort=[("date", -1)])
@@ -5054,6 +5071,94 @@ async def get_prediction_history():
     return {"predictions": oids(docs)}
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+#  FIELD TEST (pace-only VDOT benchmark)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Test sul campo a max intensità: distanza fissa (3K/5K/6K) + tempo cronometrato.
+# Usato come benchmark VDOT ufficiale, sovrascrive _calc_vdot da runs history.
+# Solo pace, NO heart rate (utente: HR polso inaffidabile per artefatti).
+
+async def _get_active_vdot(athlete_id, runs, max_hr, resting_hr):
+    """Restituisce VDOT attivo: field test recente (<90gg) se presente, else _calc_vdot.
+
+    Field test = benchmark autoritativo, sovrascrive calcoli da runs history.
+    """
+    q = {"athlete_id": athlete_id} if athlete_id else {}
+    cutoff = (dt.datetime.utcnow() - dt.timedelta(days=90)).isoformat()
+    test = await db.field_tests.find_one(
+        {**q, "date": {"$gte": cutoff}},
+        sort=[("date", -1)],
+    )
+    if test and test.get("vdot"):
+        return float(test["vdot"]), True  # (vdot, from_field_test)
+    fallback = _calc_vdot(runs, max_hr, resting_hr=resting_hr)
+    return fallback, False
+
+
+@app.post("/api/field-test")
+async def post_field_test(payload: dict = Body(...)):
+    """Registra field test pace-only.
+
+    Body: {distance_km: 3|5|6, time_seconds: int, date?: ISO}
+    Calcola VDOT via Daniels reverse formula. NO heart rate.
+    """
+    dist_km = payload.get("distance_km")
+    time_sec = payload.get("time_seconds")
+    date = payload.get("date") or dt.datetime.utcnow().isoformat()
+    if dist_km not in (3, 5, 6, 3.0, 5.0, 6.0):
+        raise HTTPException(status_code=400, detail="distance_km must be 3, 5, or 6")
+    if not time_sec or time_sec <= 0:
+        raise HTTPException(status_code=400, detail="time_seconds must be > 0")
+    vdot = _vdot_from_race(float(dist_km), float(time_sec))
+    if not vdot:
+        raise HTTPException(status_code=400, detail="invalid race data")
+    athlete_id = await _get_athlete_id()
+    doc = {
+        "athlete_id": athlete_id,
+        "distance_km": float(dist_km),
+        "time_seconds": int(time_sec),
+        "date": date,
+        "vdot": vdot,
+        "pace_sec_per_km": int(round(time_sec / dist_km)),
+    }
+    result = await db.field_tests.insert_one(doc)
+    doc["_id"] = str(result.inserted_id)
+    return doc
+
+
+@app.get("/api/field-test/latest")
+async def get_field_test_latest():
+    """Ultimo field test (qualsiasi data)."""
+    athlete_id = await _get_athlete_id()
+    q = {"athlete_id": athlete_id} if athlete_id else {}
+    test = await db.field_tests.find_one(q, sort=[("date", -1)])
+    if not test:
+        return {"test": None}
+    return {"test": oid(test)}
+
+
+@app.get("/api/field-test/list")
+async def get_field_test_list():
+    """Cronologia field test."""
+    athlete_id = await _get_athlete_id()
+    q = {"athlete_id": athlete_id} if athlete_id else {}
+    tests = await db.field_tests.find(q).sort("date", -1).to_list(50)
+    return {"tests": oids(tests)}
+
+
+@app.delete("/api/field-test/{test_id}")
+async def delete_field_test(test_id: str):
+    from bson import ObjectId
+    try:
+        result = await db.field_tests.delete_one({"_id": ObjectId(test_id)})
+    except Exception:
+        raise HTTPException(status_code=400, detail="invalid test_id")
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="test not found")
+    return {"ok": True}
+
+
 @app.get("/api/vdot/paces")
 async def get_vdot_paces():
     athlete_id = await _get_athlete_id()
@@ -5064,9 +5169,10 @@ async def get_vdot_paces():
     profile = await db.profile.find_one(q)
     max_hr = int(profile.get("max_hr", 190)) if profile else 190
     resting_hr = int(profile.get("resting_hr", 50)) if profile else 50
-    vdot = _calc_vdot(runs, max_hr, resting_hr=resting_hr)
+    # Field test override: se presente <90gg, sovrascrive VDOT calcolato
+    vdot, from_field_test = await _get_active_vdot(athlete_id, runs, max_hr, resting_hr)
     if not vdot:
-        return {"vdot": None, "paces": {}, "race_predictions": {}}
+        return {"vdot": None, "paces": {}, "race_predictions": {}, "from_field_test": False}
 
     def pace_at_vo2_pct(pct: float) -> Optional[str]:
         """Calculate training pace (sec/km) at a given % of VO2max."""
@@ -5126,7 +5232,6 @@ async def get_vdot_paces():
         #   - ≥5km e ≥20 min (Daniels T-block sustained, esclude tempo brevi)
         #   - HR 87-90% (banda T stretta, evita bleed M-pace e VO2max)
         #   - terreno ~piatto (|net elev|/km ≤ 6m, esclude downhill-favored)
-        #   - perceived_effort 6-8 se presente (vero T, non race max 9-10)
         if r.get("distance_km", 0) < 5:
             continue
         if (r.get("duration_minutes", 0) or 0) < 20:
@@ -5134,12 +5239,6 @@ async def get_vdot_paces():
         if not (0.87 <= pct <= 0.90):
             continue
         if _net_elev_per_km(r) > 6:
-            continue
-        # Effort gating: se utente ha taggato la corsa, accetta solo 6-8
-        # (vero T sustainable). 9-10 = race max, sovrastima T-pace.
-        # <6 = easy/recovery, non rappresenta T. null = pass-through (legacy).
-        eff = r.get("perceived_effort")
-        if eff is not None and not (6 <= eff <= 8):
             continue
         tempo_runs.append(r)
         if len(tempo_runs) >= 8:
@@ -5168,60 +5267,81 @@ async def get_vdot_paces():
     ff_latest = await db.fitness_freshness.find_one(q, sort=[("date", -1)])
     ctl_now = (ff_latest or {}).get("ctl") if ff_latest else None
 
-    # ── Training Paces da effective race paces (coerenti con predictions) ──
-    # Daniels classico assume tutte le pace derivabili da peak VDOT con
-    # tenuta piena allenata. Per runner non race-specific, M/T paces vanno
-    # derivate dalle race times realistiche, non dal VDOT teorico.
+    # ── Training Paces (pace-only, no HR) ──────────────────────────────────
+    # Se field test attivo: VDOT autoritativo, applica Daniels classico
+    # standard (nessuna fraction penalty: utente ha già dimostrato VDOT reale).
+    # Se nessun field test: fraction model basato su runs history.
     end_ctx = _compute_endurance_context(runs)
-    fractions = _compute_race_fractions(end_ctx["longest_km"], end_ctx["drift_pct"], ctl_now or 0)
 
-    def _race_pace_secs(dist_km: float) -> Optional[int]:
-        """Race pace (sec/km) at effective VDOT for that distance."""
-        eff_vdot = vdot * fractions[dist_km]
-        t_sec = _vdot_to_race_seconds(eff_vdot, dist_km)
-        if not t_sec:
-            return None
-        return int(round(t_sec / dist_km))
+    if from_field_test:
+        # VDOT da field test = potenziale attuale realmente espresso.
+        # Daniels classico applicabile direttamente.
+        # E 65%, M 80% (tenuta-adjusted), T 88%, I 98%, R 110%
+        # M-pace ridotto se manca endurance per long runs
+        longest = end_ctx["longest_km"]
+        if longest >= 25:
+            m_pct = 0.80
+        elif longest >= 18:
+            m_pct = 0.78
+        elif longest >= 12:
+            m_pct = 0.76
+        else:
+            m_pct = 0.74
 
-    pace_5k_sec  = _race_pace_secs(5.0)
-    pace_10k_sec = _race_pace_secs(10.0)
-    pace_hm_sec  = _race_pace_secs(21.0975)
-    pace_mar_sec = _race_pace_secs(42.195)
+        paces_out = {
+            "easy":       pace_at_vo2_pct(0.65),
+            "marathon":   pace_at_vo2_pct(m_pct),
+            "threshold":  pace_at_vo2_pct(0.88),   # T Daniels classico: VDOT è reale
+            "threshold_peak": pace_at_vo2_pct(0.88),
+            "threshold_empirical": threshold_empirical,
+            "interval":   pace_at_vo2_pct(0.98),
+            "repetition": pace_at_vo2_pct(1.10),
+        }
+    else:
+        # Nessun field test → fraction model (T sub-Daniels per tenuta scarsa)
+        fractions = _compute_race_fractions(end_ctx["longest_km"], end_ctx["drift_pct"], ctl_now or 0)
 
-    # Training paces:
-    #   M-pace  = marathon race pace (race-specific)
-    #   T-pace  = ~media(10K, HM) — tra race pace 10K e HM, sostenibile ~1h
-    #   E-pace  = M-pace + 60-75s (corsa facile, recupero)
-    #   I-pace  = 5K race pace (lavoro VO2max)
-    #   R-pace  = I-pace - 15s (sprint/repetition, più veloce di 5K race pace)
-    e_pace_sec = (pace_mar_sec + 65) if pace_mar_sec else None
-    m_pace_sec = pace_mar_sec
-    t_pace_sec = None
-    if pace_10k_sec and pace_hm_sec:
-        t_pace_sec = (pace_10k_sec + pace_hm_sec) // 2
-    elif pace_hm_sec:
-        t_pace_sec = pace_hm_sec - 5
-    i_pace_sec = pace_5k_sec
-    r_pace_sec = (pace_5k_sec - 15) if pace_5k_sec else None
+        def _race_pace_secs(dist_km: float) -> Optional[int]:
+            eff_vdot = vdot * fractions[dist_km]
+            t_sec = _vdot_to_race_seconds(eff_vdot, dist_km)
+            if not t_sec:
+                return None
+            return int(round(t_sec / dist_km))
 
-    def _sec_to_pace(s: Optional[int]) -> Optional[str]:
-        if not s or s <= 0:
-            return None
-        return _secs_to_pace_str(s)
+        pace_5k_sec  = _race_pace_secs(5.0)
+        pace_10k_sec = _race_pace_secs(10.0)
+        pace_hm_sec  = _race_pace_secs(21.0975)
+        pace_mar_sec = _race_pace_secs(42.195)
+
+        e_pace_sec = (pace_mar_sec + 65) if pace_mar_sec else None
+        m_pace_sec = pace_mar_sec
+        t_pace_sec = None
+        if pace_10k_sec and pace_hm_sec:
+            t_pace_sec = (pace_10k_sec + pace_hm_sec) // 2
+        elif pace_hm_sec:
+            t_pace_sec = pace_hm_sec - 5
+        i_pace_sec = pace_5k_sec
+        r_pace_sec = (pace_5k_sec - 15) if pace_5k_sec else None
+
+        def _sec_to_pace(s: Optional[int]) -> Optional[str]:
+            if not s or s <= 0:
+                return None
+            return _secs_to_pace_str(s)
+
+        paces_out = {
+            "easy":       _sec_to_pace(e_pace_sec),
+            "marathon":   _sec_to_pace(m_pace_sec),
+            "threshold":  _sec_to_pace(t_pace_sec),
+            "threshold_peak": pace_at_vo2_pct(0.86),
+            "threshold_empirical": threshold_empirical,
+            "interval":   _sec_to_pace(i_pace_sec) or pace_at_vo2_pct(0.98),
+            "repetition": _sec_to_pace(r_pace_sec) or pace_at_vo2_pct(1.10),
+        }
 
     return {
         "vdot": vdot,
-        "paces": {
-            # E/M/T derivate da race-specific paces (realistiche per livello attuale)
-            "easy":       _sec_to_pace(e_pace_sec),    # E: M-pace + 65s, conversazionale
-            "marathon":   _sec_to_pace(m_pace_sec),    # M: marathon race pace
-            "threshold":  _sec_to_pace(t_pace_sec),    # T: ~media(10K, HM) race paces
-            "threshold_peak": pace_at_vo2_pct(0.86),   # T peak Daniels classico (potenziale con tenuta piena)
-            "threshold_empirical": threshold_empirical, # mediana tempo runs reali
-            # I/R restano legate a peak VDOT (VO2max-dominate, meno endurance-sensitive)
-            "interval":   _sec_to_pace(i_pace_sec) or pace_at_vo2_pct(0.98),  # I: 5K race pace
-            "repetition": _sec_to_pace(r_pace_sec) or pace_at_vo2_pct(1.10),  # R: I-pace - 15s
-        },
+        "from_field_test": from_field_test,
+        "paces": paces_out,
         "race_predictions": _predict_race(vdot, runs=runs, ctl=ctl_now),
     }
 
