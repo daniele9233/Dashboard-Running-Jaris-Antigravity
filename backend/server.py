@@ -3907,9 +3907,9 @@ def _compute_race_fractions(longest: float, drift: float, ctl_val: float) -> dic
     Penalità per cardiac drift alto (efficienza scarsa peggiora lunghe).
     """
     fractions = {
-        5.0:     0.91,
-        10.0:    0.87,
-        21.0975: 0.84,
+        5.0:     0.92,
+        10.0:    0.88,
+        21.0975: 0.85,
         42.195:  0.77,
     }
     if longest >= 15:
@@ -5126,6 +5126,7 @@ async def get_vdot_paces():
         #   - ≥5km e ≥20 min (Daniels T-block sustained, esclude tempo brevi)
         #   - HR 87-90% (banda T stretta, evita bleed M-pace e VO2max)
         #   - terreno ~piatto (|net elev|/km ≤ 6m, esclude downhill-favored)
+        #   - perceived_effort 6-8 se presente (vero T, non race max 9-10)
         if r.get("distance_km", 0) < 5:
             continue
         if (r.get("duration_minutes", 0) or 0) < 20:
@@ -5133,6 +5134,12 @@ async def get_vdot_paces():
         if not (0.87 <= pct <= 0.90):
             continue
         if _net_elev_per_km(r) > 6:
+            continue
+        # Effort gating: se utente ha taggato la corsa, accetta solo 6-8
+        # (vero T sustainable). 9-10 = race max, sovrastima T-pace.
+        # <6 = easy/recovery, non rappresenta T. null = pass-through (legacy).
+        eff = r.get("perceived_effort")
+        if eff is not None and not (6 <= eff <= 8):
             continue
         tempo_runs.append(r)
         if len(tempo_runs) >= 8:

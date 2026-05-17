@@ -101,6 +101,10 @@ export interface Run {
   surface?: string | null;
   terrain?: string | null;
   event?: string | null;
+  /** Perceived effort 1-10 (RPE). Manualmente impostato dall'utente sulle
+   *  corse veloci (<5:00/km) per calibrare VDOT/zone Daniels. Null se non
+   *  inserito. 6-8 = vero T sustainable, 9-10 = race max effort. */
+  perceived_effort?: number | null;
 }
 
 export interface RunsResponse {
