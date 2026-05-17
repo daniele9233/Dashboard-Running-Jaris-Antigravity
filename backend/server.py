@@ -3891,71 +3891,85 @@ def _compute_endurance_context(runs: Optional[list]) -> dict:
     return {"longest_km": longest, "drift_pct": drift_avg}
 
 
+def _compute_race_fractions(longest: float, drift: float, ctl_val: float) -> dict:
+    """Fraction-of-peak VDOT per distanza (race-specific endurance model).
+
+    Base calibrato vs Garmin race calculator (runner senza race-specific):
+      5K  → 0.91  (VO2max-dominato, ma serve tolleranza lattica + lavoro brevi)
+      10K → 0.87  (serve specifica race-pace endurance ~45min)
+      HM  → 0.84  (serve long run base + threshold work)
+      Mar → 0.77  (serve grosso volume + long runs 30K+)
+
+    Esempio VDOT 52.3 base: 5K 20:48, 10K 44:48, HM 1:41, Mar 3:48
+    (matcha Garmin 20:53 / 44:55 / 1:42:54 / 3:49:18 ±1 min).
+
+    Bonus per training match (longest_recent, CTL ≥50).
+    Penalità per cardiac drift alto (efficienza scarsa peggiora lunghe).
+    """
+    fractions = {
+        5.0:     0.91,
+        10.0:    0.87,
+        21.0975: 0.84,
+        42.195:  0.77,
+    }
+    if longest >= 15:
+        fractions[5.0] += min(0.03, (longest - 15) * 0.003)
+    if longest >= 12:
+        fractions[10.0] += min(0.04, (longest - 12) * 0.004)
+    if longest >= 15:
+        fractions[21.0975] += min(0.08, (longest - 15) * 0.008)
+    if longest >= 25:
+        fractions[42.195] += min(0.12, (longest - 25) * 0.01)
+
+    # CTL bonus parte da 50 (atleta trained). CTL 50 = 0 bonus, baseline Garmin.
+    # CTL 70 = +0.04 (max). Per atleta well-trained predictions si avvicinano
+    # al teorico Daniels (peak VDOT esprimibile).
+    if ctl_val >= 50:
+        ctl_bonus = min(0.04, (ctl_val - 50) / 500)
+        fractions[5.0]     += ctl_bonus
+        fractions[10.0]    += ctl_bonus * 1.2
+        fractions[21.0975] += ctl_bonus * 1.5
+        fractions[42.195]  += ctl_bonus * 2.0
+
+    if drift > 5:
+        drift_pen = min(0.04, (drift - 5) * 0.01)
+        fractions[5.0]     -= drift_pen * 0.4
+        fractions[10.0]    -= drift_pen * 0.6
+        fractions[21.0975] -= drift_pen * 1.0
+        fractions[42.195]  -= drift_pen * 1.5
+
+    for k in list(fractions.keys()):
+        fractions[k] = max(0.55, min(1.00, fractions[k]))
+    return fractions
+
+
 def _predict_race(vdot: float, runs: Optional[list] = None, ctl: Optional[float] = None) -> dict:
-    """Race time predictions from VDOT.
+    """Race time predictions con fraction-of-peak VDOT model.
 
-    5K/10K: pure Daniels (dominato da VO2max, no endurance penalty).
-    HM/Marathon: Daniels base + endurance penalty via Riegel exponent
-    personalizzato basato su longest_recent + CTL + cardiac drift.
+    VDOT peak (5K max effort) NON esprimibile in race performance senza
+    training specifico per distanza. Anche 5K richiede 6-8 settimane di
+    lavoro race-pace per esprimere peak. Per HM/Mar servono long runs.
 
-    Riegel formula: T2 = T1 * (D2/D1)^k
-    - k=1.06 default (runner allenato)
-    - k aumenta con scarsa endurance/drift alto
+    effective_vdot[dist] = peak_vdot × fraction[dist] (vedi _compute_race_fractions)
 
-    User feedback: per HM/Mar deve considerare tenuta + drift, non solo VDOT.
+    Esempio VDOT 52, untrained:
+      5K ~20:55 (vs Daniels puro 19:11 — irrealistico per non race-trained)
+      10K ~44:35 (vs 40:00)
+      HM ~1:43 (vs 1:38)
+      Mar ~3:49 (vs 3:24)
     """
     if not vdot:
         return {}
-    result = {}
-
-    # 5K e 10K: pure Daniels
-    t_5k = _vdot_to_race_seconds(vdot, 5.0)
-    t_10k = _vdot_to_race_seconds(vdot, 10.0)
-    if t_5k:
-        result["5K"] = _seconds_to_time_str(t_5k)
-    if t_10k:
-        result["10K"] = _seconds_to_time_str(t_10k)
-
-    # HM/Mar: Riegel con esponente personalizzato
-    if not t_10k:
-        return result
 
     ctx = _compute_endurance_context(runs)
-    longest = ctx["longest_km"]
-    drift = ctx["drift_pct"]
-    ctl_val = ctl if ctl else 0
+    fractions = _compute_race_fractions(ctx["longest_km"], ctx["drift_pct"], ctl or 0)
 
-    # Riegel k base = 1.06 (standard). Penalità cumulate per scarsa tenuta:
-    k_hm = 1.06
-    k_mar = 1.06
-    # Longest recent run < soglia → penalità
-    if longest < 18:
-        k_hm += 0.04
-    if longest < 12:
-        k_hm += 0.03  # very short longest = grave deficit endurance
-    if longest < 30:
-        k_mar += 0.06
-    if longest < 20:
-        k_mar += 0.04
-    # CTL basso = base aerobica scarsa
-    if ctl_val and ctl_val < 50:
-        k_hm += 0.02
-        k_mar += 0.04
-    if ctl_val and ctl_val < 35:
-        k_hm += 0.02
-        k_mar += 0.04
-    # Cardiac drift alto = efficienza scarsa, peggiora su lunghe
-    if drift > 5:
-        k_hm += 0.02
-        k_mar += 0.03
-    if drift > 8:
-        k_hm += 0.02
-        k_mar += 0.04
-
-    t_hm = t_10k * (21.0975 / 10.0) ** k_hm
-    t_mar = t_10k * (42.195 / 10.0) ** k_mar
-    result["Half Marathon"] = _seconds_to_time_str(t_hm)
-    result["Marathon"] = _seconds_to_time_str(t_mar)
+    result = {}
+    for label, dist in [("5K", 5.0), ("10K", 10.0), ("Half Marathon", 21.0975), ("Marathon", 42.195)]:
+        effective_vdot = vdot * fractions[dist]
+        t = _vdot_to_race_seconds(effective_vdot, dist)
+        if t:
+            result[label] = _seconds_to_time_str(t)
     return result
 
 
@@ -5124,24 +5138,20 @@ async def get_vdot_paces():
         if len(tempo_runs) >= 8:
             break
 
-    # Daniels formula sustainable: 81% VO2max (≈ HM pace +, ~1h effort).
-    # Più conservativo del classico 86% (= T peak con tenuta piena allenata).
-    # Per VDOT 52-54 dà ~4:20-4:25/km, coerente con HM pace predicted.
-    threshold_sustainable_secs = None
-    threshold_sustainable = pace_at_vo2_pct(0.81)
-    if threshold_sustainable:
-        threshold_sustainable_secs = _parse_pace_to_secs(threshold_sustainable)
-
+    # Empirical override: solo se mediana tempo runs cade vicino al T-pace
+    # race-derived (computed below). Sanity-clamp dopo aver calcolato T.
     if len(tempo_runs) >= 3:
         paces = sorted(filter(None, [_parse_pace_to_secs(r.get("avg_pace", "")) for r in tempo_runs]))
         paces = [p for p in paces if p > 0]
         if paces:
             median = paces[len(paces) // 2]
-            # Sanity clamp: empirico tra (sustainable - 8s) e (sustainable + 25s).
-            # Outliers (corse aided/test-effort) scartati a favore formula.
-            if threshold_sustainable_secs:
-                lo = threshold_sustainable_secs - 8
-                hi = threshold_sustainable_secs + 25
+            # Senza anchor T-pace ancora computato: usa clamp largo basato
+            # su pace_at_vo2_pct(0.81) come reference legacy
+            ref = pace_at_vo2_pct(0.81)
+            ref_sec = _parse_pace_to_secs(ref) if ref else 0
+            if ref_sec:
+                lo = ref_sec - 10
+                hi = ref_sec + 40
                 if lo <= median <= hi:
                     threshold_empirical = _secs_to_pace_str(median)
             else:
@@ -5151,30 +5161,59 @@ async def get_vdot_paces():
     ff_latest = await db.fitness_freshness.find_one(q, sort=[("date", -1)])
     ctl_now = (ff_latest or {}).get("ctl") if ff_latest else None
 
-    # Endurance context per scalare M/T-pace per runner non full-trained
+    # ── Training Paces da effective race paces (coerenti con predictions) ──
+    # Daniels classico assume tutte le pace derivabili da peak VDOT con
+    # tenuta piena allenata. Per runner non race-specific, M/T paces vanno
+    # derivate dalle race times realistiche, non dal VDOT teorico.
     end_ctx = _compute_endurance_context(runs)
-    longest = end_ctx["longest_km"]
-    # Tenuta factor: 1.0 = full endurance, <1.0 = scarsa tenuta long
-    # Più la longest_recent è bassa, più M-pace si abbassa (più lento)
-    if longest >= 25:
-        m_pct = 0.80   # M-pace classico Daniels
-    elif longest >= 18:
-        m_pct = 0.78   # M-pace conservativo
-    elif longest >= 12:
-        m_pct = 0.76   # ridotto per scarsa endurance
-    else:
-        m_pct = 0.74   # molto conservativo (no long runs)
+    fractions = _compute_race_fractions(end_ctx["longest_km"], end_ctx["drift_pct"], ctl_now or 0)
+
+    def _race_pace_secs(dist_km: float) -> Optional[int]:
+        """Race pace (sec/km) at effective VDOT for that distance."""
+        eff_vdot = vdot * fractions[dist_km]
+        t_sec = _vdot_to_race_seconds(eff_vdot, dist_km)
+        if not t_sec:
+            return None
+        return int(round(t_sec / dist_km))
+
+    pace_5k_sec  = _race_pace_secs(5.0)
+    pace_10k_sec = _race_pace_secs(10.0)
+    pace_hm_sec  = _race_pace_secs(21.0975)
+    pace_mar_sec = _race_pace_secs(42.195)
+
+    # Training paces:
+    #   M-pace  = marathon race pace (race-specific)
+    #   T-pace  = ~media(10K, HM) — tra race pace 10K e HM, sostenibile ~1h
+    #   E-pace  = M-pace + 60-75s (corsa facile, recupero)
+    #   I-pace  = 5K race pace (lavoro VO2max)
+    #   R-pace  = I-pace - 15s (sprint/repetition, più veloce di 5K race pace)
+    e_pace_sec = (pace_mar_sec + 65) if pace_mar_sec else None
+    m_pace_sec = pace_mar_sec
+    t_pace_sec = None
+    if pace_10k_sec and pace_hm_sec:
+        t_pace_sec = (pace_10k_sec + pace_hm_sec) // 2
+    elif pace_hm_sec:
+        t_pace_sec = pace_hm_sec - 5
+    i_pace_sec = pace_5k_sec
+    r_pace_sec = (pace_5k_sec - 15) if pace_5k_sec else None
+
+    def _sec_to_pace(s: Optional[int]) -> Optional[str]:
+        if not s or s <= 0:
+            return None
+        return _secs_to_pace_str(s)
 
     return {
         "vdot": vdot,
         "paces": {
-            "easy":       pace_at_vo2_pct(0.65),       # E: 59–74% VO2max
-            "marathon":   pace_at_vo2_pct(m_pct),      # M: scalato per tenuta (74–80% VO2max)
-            "threshold":  threshold_sustainable,        # T sostenibile: 81% VO2max ≈ HM pace, ~1h effort
-            "threshold_peak": pace_at_vo2_pct(0.86),   # T peak (Daniels classico): 86% VO2max, raggiungibile con tenuta piena
-            "threshold_empirical": threshold_empirical, # mediana tempo runs reali (≥20min, ≥5km, HR 87-90%, flat)
-            "interval":   pace_at_vo2_pct(0.98),       # I: 95–100% VO2max
-            "repetition": pace_at_vo2_pct(1.10),       # R: 105–120% VO2max
+            # E/M/T derivate da race-specific paces (realistiche per livello attuale)
+            "easy":       _sec_to_pace(e_pace_sec),    # E: M-pace + 65s, conversazionale
+            "marathon":   _sec_to_pace(m_pace_sec),    # M: marathon race pace
+            "threshold":  _sec_to_pace(t_pace_sec),    # T: ~media(10K, HM) race paces
+            "threshold_peak": pace_at_vo2_pct(0.86),   # T peak Daniels classico (potenziale con tenuta piena)
+            "threshold_empirical": threshold_empirical, # mediana tempo runs reali
+            # I/R restano legate a peak VDOT (VO2max-dominate, meno endurance-sensitive)
+            "interval":   _sec_to_pace(i_pace_sec) or pace_at_vo2_pct(0.98),  # I: 5K race pace
+            "repetition": _sec_to_pace(r_pace_sec) or pace_at_vo2_pct(1.10),  # R: I-pace - 15s
         },
         "race_predictions": _predict_race(vdot, runs=runs, ctl=ctl_now),
     }
