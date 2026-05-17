@@ -3810,8 +3810,8 @@ def _apply_stop_adjustment_to_vdot(current_vdot: float, history_context: dict) -
     return round(max(25.0, current_vdot - penalty), 1)
 
 
-def _vdot_to_race_time(vdot: float, dist_km: float) -> Optional[str]:
-    """Predict race finish time for a given distance using iterative Daniels inversion."""
+def _vdot_to_race_seconds(vdot: float, dist_km: float) -> Optional[float]:
+    """Predict race finish in seconds (Daniels iterative). None on bad input."""
     if not vdot or vdot <= 0 or dist_km <= 0:
         return None
     t = dist_km * 1000 / ((vdot / 22) * 60)  # initial estimate (minutes)
@@ -3828,7 +3828,11 @@ def _vdot_to_race_time(vdot: float, dist_km: float) -> Optional[str]:
         if abs(t_new - t) < 0.001:
             break
         t = t_new
-    total_s = round(t * 60)
+    return t * 60
+
+
+def _seconds_to_time_str(total_s: float) -> str:
+    total_s = round(total_s)
     h = total_s // 3600
     m = (total_s % 3600) // 60
     s = total_s % 60
@@ -3837,15 +3841,121 @@ def _vdot_to_race_time(vdot: float, dist_km: float) -> Optional[str]:
     return f"{m}:{s:02d}"
 
 
-def _predict_race(vdot: float) -> dict:
-    """Race time predictions from VDOT using accurate Daniels iterative formula."""
+def _vdot_to_race_time(vdot: float, dist_km: float) -> Optional[str]:
+    """Predict race finish time for a given distance using iterative Daniels inversion."""
+    sec = _vdot_to_race_seconds(vdot, dist_km)
+    if sec is None:
+        return None
+    return _seconds_to_time_str(sec)
+
+
+def _compute_endurance_context(runs: Optional[list]) -> dict:
+    """Compute longest recent run + avg cardiac drift % from last 90 days.
+
+    Returns {longest_km, drift_pct} where drift_pct is mean |drift| over runs
+    with ≥4 splits, distance ≥4km. Used by _predict_race for HM/Marathon penalty.
+    """
+    if not runs:
+        return {"longest_km": 0.0, "drift_pct": 0.0}
+    cutoff_ts = (dt.datetime.utcnow() - dt.timedelta(days=90)).isoformat()
+    longest = 0.0
+    drifts = []
+    for r in runs:
+        if r.get("is_treadmill"):
+            continue
+        date = r.get("date") or ""
+        if date < cutoff_ts:
+            continue
+        d = r.get("distance_km", 0) or 0
+        if d > longest:
+            longest = d
+        splits = r.get("splits") or []
+        if d < 4 or len(splits) < 4:
+            continue
+        half = len(splits) // 2
+        try:
+            first_paces = [s.get("pace") for s in splits[:half]]
+            second_paces = [s.get("pace") for s in splits[half:]]
+            def _ppts(p):
+                if not p or ":" not in p:
+                    return 0
+                m, s = p.split(":")
+                return int(m) * 60 + int(s)
+            p1 = sum(_ppts(p) for p in first_paces) / max(1, len(first_paces))
+            p2 = sum(_ppts(p) for p in second_paces) / max(1, len(second_paces))
+            if p1 > 0:
+                drifts.append(abs((p2 - p1) / p1 * 100))
+        except Exception:
+            continue
+    drift_avg = (sum(drifts) / len(drifts)) if drifts else 0.0
+    return {"longest_km": longest, "drift_pct": drift_avg}
+
+
+def _predict_race(vdot: float, runs: Optional[list] = None, ctl: Optional[float] = None) -> dict:
+    """Race time predictions from VDOT.
+
+    5K/10K: pure Daniels (dominato da VO2max, no endurance penalty).
+    HM/Marathon: Daniels base + endurance penalty via Riegel exponent
+    personalizzato basato su longest_recent + CTL + cardiac drift.
+
+    Riegel formula: T2 = T1 * (D2/D1)^k
+    - k=1.06 default (runner allenato)
+    - k aumenta con scarsa endurance/drift alto
+
+    User feedback: per HM/Mar deve considerare tenuta + drift, non solo VDOT.
+    """
     if not vdot:
         return {}
     result = {}
-    for label, dist in [("5K", 5.0), ("10K", 10.0), ("Half Marathon", 21.0975), ("Marathon", 42.195)]:
-        t = _vdot_to_race_time(vdot, dist)
-        if t:
-            result[label] = t
+
+    # 5K e 10K: pure Daniels
+    t_5k = _vdot_to_race_seconds(vdot, 5.0)
+    t_10k = _vdot_to_race_seconds(vdot, 10.0)
+    if t_5k:
+        result["5K"] = _seconds_to_time_str(t_5k)
+    if t_10k:
+        result["10K"] = _seconds_to_time_str(t_10k)
+
+    # HM/Mar: Riegel con esponente personalizzato
+    if not t_10k:
+        return result
+
+    ctx = _compute_endurance_context(runs)
+    longest = ctx["longest_km"]
+    drift = ctx["drift_pct"]
+    ctl_val = ctl if ctl else 0
+
+    # Riegel k base = 1.06 (standard). Penalità cumulate per scarsa tenuta:
+    k_hm = 1.06
+    k_mar = 1.06
+    # Longest recent run < soglia → penalità
+    if longest < 18:
+        k_hm += 0.04
+    if longest < 12:
+        k_hm += 0.03  # very short longest = grave deficit endurance
+    if longest < 30:
+        k_mar += 0.06
+    if longest < 20:
+        k_mar += 0.04
+    # CTL basso = base aerobica scarsa
+    if ctl_val and ctl_val < 50:
+        k_hm += 0.02
+        k_mar += 0.04
+    if ctl_val and ctl_val < 35:
+        k_hm += 0.02
+        k_mar += 0.04
+    # Cardiac drift alto = efficienza scarsa, peggiora su lunghe
+    if drift > 5:
+        k_hm += 0.02
+        k_mar += 0.03
+    if drift > 8:
+        k_hm += 0.02
+        k_mar += 0.04
+
+    t_hm = t_10k * (21.0975 / 10.0) ** k_hm
+    t_mar = t_10k * (42.195 / 10.0) ** k_mar
+    result["Half Marathon"] = _seconds_to_time_str(t_hm)
+    result["Marathon"] = _seconds_to_time_str(t_mar)
     return result
 
 
@@ -4872,6 +4982,10 @@ async def get_analytics():
 
     vdot = _calc_vdot(runs, max_hr, resting_hr=resting_hr)
 
+    # CTL latest per endurance-aware race predictions
+    ff_latest = await db.fitness_freshness.find_one(q, sort=[("date", -1)])
+    ctl_now = (ff_latest or {}).get("ctl") if ff_latest else None
+
     # Pace trend (last 20 runs)
     pace_trend = []
     for r in reversed(runs[:20]):
@@ -4900,18 +5014,19 @@ async def get_analytics():
         for k in ["Z1", "Z2", "Z3", "Z4", "Z5"]
     ]
 
-    # Goal gap
+    # Goal gap (race predictions endurance-aware)
+    preds_full = _predict_race(vdot, runs=runs, ctl=ctl_now) if vdot else {}
     goal_gap = None
     if profile and profile.get("target_time") and vdot:
         goal_gap = {
             "target": profile.get("target_time"),
             "race": profile.get("race_goal"),
-            "predicted": _predict_race(vdot).get(profile.get("race_goal")),
+            "predicted": preds_full.get(profile.get("race_goal")),
         }
 
     return {
         "vdot": vdot,
-        "race_predictions": _predict_race(vdot) if vdot else {},
+        "race_predictions": preds_full,
         "pace_trend": pace_trend,
         "zone_distribution": zone_dist,
         "goal_gap": goal_gap,
@@ -5032,18 +5147,36 @@ async def get_vdot_paces():
             else:
                 threshold_empirical = _secs_to_pace_str(max(150, min(500, median)))
 
+    # CTL latest per endurance-aware race predictions
+    ff_latest = await db.fitness_freshness.find_one(q, sort=[("date", -1)])
+    ctl_now = (ff_latest or {}).get("ctl") if ff_latest else None
+
+    # Endurance context per scalare M/T-pace per runner non full-trained
+    end_ctx = _compute_endurance_context(runs)
+    longest = end_ctx["longest_km"]
+    # Tenuta factor: 1.0 = full endurance, <1.0 = scarsa tenuta long
+    # Più la longest_recent è bassa, più M-pace si abbassa (più lento)
+    if longest >= 25:
+        m_pct = 0.80   # M-pace classico Daniels
+    elif longest >= 18:
+        m_pct = 0.78   # M-pace conservativo
+    elif longest >= 12:
+        m_pct = 0.76   # ridotto per scarsa endurance
+    else:
+        m_pct = 0.74   # molto conservativo (no long runs)
+
     return {
         "vdot": vdot,
         "paces": {
             "easy":       pace_at_vo2_pct(0.65),       # E: 59–74% VO2max
-            "marathon":   pace_at_vo2_pct(0.80),       # M: 75–84% VO2max
-            "threshold":  threshold_sustainable,        # T sostenibile: 82% VO2max ≈ HM pace, ~1h effort
+            "marathon":   pace_at_vo2_pct(m_pct),      # M: scalato per tenuta (74–80% VO2max)
+            "threshold":  threshold_sustainable,        # T sostenibile: 81% VO2max ≈ HM pace, ~1h effort
             "threshold_peak": pace_at_vo2_pct(0.86),   # T peak (Daniels classico): 86% VO2max, raggiungibile con tenuta piena
             "threshold_empirical": threshold_empirical, # mediana tempo runs reali (≥20min, ≥5km, HR 87-90%, flat)
             "interval":   pace_at_vo2_pct(0.98),       # I: 95–100% VO2max
             "repetition": pace_at_vo2_pct(1.10),       # R: 105–120% VO2max
         },
-        "race_predictions": _predict_race(vdot),
+        "race_predictions": _predict_race(vdot, runs=runs, ctl=ctl_now),
     }
 
 
