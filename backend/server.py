@@ -5287,11 +5287,28 @@ def _best_interval_pace_sec(streams: list, target_m: float) -> Optional[int]:
 
 
 def _compute_best_intervals(streams: list) -> dict:
-    """Calcola best pace per ripetute standard. Pre-compute al sync."""
+    """Calcola best pace per ripetute standard. Pre-compute al sync.
+
+    Range completo 400m → 3000m per coprire tutti i tipi di workout:
+      400/600/800m  → speed/R-pace (sprint, neuromuscular)
+      1000/1200m    → VO2max/I-pace (Veronique Billat, Daniels I)
+      1500/2000m    → cruise interval (tra I e T)
+      3000m         → T-pace sustained / 3K race
+    """
     if not streams:
         return {}
+    targets = [
+        ("400m", 400),
+        ("600m", 600),
+        ("800m", 800),
+        ("1000m", 1000),
+        ("1200m", 1200),
+        ("1500m", 1500),
+        ("2000m", 2000),
+        ("3000m", 3000),
+    ]
     out = {}
-    for label, target_m in [("400m", 400), ("600m", 600), ("800m", 800), ("1000m", 1000)]:
+    for label, target_m in targets:
         p = _best_interval_pace_sec(streams, target_m)
         if p:
             out[f"best_{label}_sec"] = p
@@ -5359,9 +5376,25 @@ async def get_field_test_divergence():
             return None
         return int(round(1000 / (v / 60)))
 
-    i_sec = _pace_at(0.98)
-    t_sec = _pace_at(0.88)
-    r_sec = _pace_at(1.10)  # R-pace per detection ripetute
+    i_sec = _pace_at(0.98)   # I-pace (5K race pace, VO2max work)
+    t_sec = _pace_at(0.88)   # T-pace (sustainable ~1h)
+    r_sec = _pace_at(1.10)   # R-pace (sprint, neuromuscular)
+
+    # Pace di riferimento per ogni distanza ripetuta:
+    #   400/600/800m   → R-pace (sprint/speed)
+    #   1000/1200m     → I-pace (VO2max)
+    #   1500/2000m     → tra I e T (cruise interval)
+    #   3000m          → T-pace (extended threshold)
+    interval_specs = [
+        ("400m",  "best_400m_sec",  r_sec, 5,  "R"),
+        ("600m",  "best_600m_sec",  r_sec, 3,  "R"),
+        ("800m",  "best_800m_sec",  i_sec, 5,  "I"),
+        ("1000m", "best_1000m_sec", i_sec, 3,  "I"),
+        ("1200m", "best_1200m_sec", i_sec, 2,  "I"),
+        ("1500m", "best_1500m_sec", (i_sec + t_sec) // 2 if i_sec and t_sec else None, 3, "I/T"),
+        ("2000m", "best_2000m_sec", (i_sec + t_sec) // 2 if i_sec and t_sec else None, 5, "I/T"),
+        ("3000m", "best_3000m_sec", t_sec, 5, "T"),
+    ]
 
     evidence = []
     for r in runs:
@@ -5369,45 +5402,25 @@ async def get_field_test_divergence():
         duration = r.get("duration_minutes", 0) or 0
         dist = r.get("distance_km", 0) or 0
         matched = False
-        # Priority 1: ripetute brevi (400m/600m/800m). Anche dentro run lungo.
-        # Se best_400m o best_600m sotto R-pace - 5s = miglioramento VO2max/speed.
-        # Usa anche best_800m vs I-pace come segnale aggiuntivo.
-        best_400 = r.get("best_400m_sec")
-        best_600 = r.get("best_600m_sec")
-        best_800 = r.get("best_800m_sec")
-        if r_sec and best_400 and best_400 < (r_sec - 5):
-            evidence.append({
-                "date": r.get("date"),
-                "distance_km": round(dist, 1),
-                "duration_min": round(duration, 1),
-                "gap_pace": _format_secs(best_400),
-                "expected_i_pace": _format_secs(r_sec),
-                "type": "interval_improvement",
-                "interval_detail": f"best 400m {_format_secs(best_400)} vs R {_format_secs(r_sec)}",
-            })
-            matched = True
-        elif r_sec and best_600 and best_600 < (r_sec - 3):
-            evidence.append({
-                "date": r.get("date"),
-                "distance_km": round(dist, 1),
-                "duration_min": round(duration, 1),
-                "gap_pace": _format_secs(best_600),
-                "expected_i_pace": _format_secs(r_sec),
-                "type": "interval_improvement",
-                "interval_detail": f"best 600m {_format_secs(best_600)} vs R {_format_secs(r_sec)}",
-            })
-            matched = True
-        elif i_sec and best_800 and best_800 < (i_sec - 5):
-            evidence.append({
-                "date": r.get("date"),
-                "distance_km": round(dist, 1),
-                "duration_min": round(duration, 1),
-                "gap_pace": _format_secs(best_800),
-                "expected_i_pace": _format_secs(i_sec),
-                "type": "interval_improvement",
-                "interval_detail": f"best 800m {_format_secs(best_800)} vs I {_format_secs(i_sec)}",
-            })
-            matched = True
+        # Priority 1: best interval over any distance 400m-3000m.
+        # Iterate dalle ripetute brevi (più stringenti) verso le lunghe.
+        # Se MATCH su una, skip resto (no double-count, segnale già preso).
+        for label, field, ref_pace, delta, label_ref in interval_specs:
+            best = r.get(field)
+            if not best or not ref_pace:
+                continue
+            if best < (ref_pace - delta):
+                evidence.append({
+                    "date": r.get("date"),
+                    "distance_km": round(dist, 1),
+                    "duration_min": round(duration, 1),
+                    "gap_pace": _format_secs(best),
+                    "expected_i_pace": _format_secs(ref_pace),
+                    "type": "interval_improvement",
+                    "interval_detail": f"best {label} {_format_secs(best)} vs {label_ref} {_format_secs(ref_pace)}",
+                })
+                matched = True
+                break
 
         if matched or not gap:
             continue
