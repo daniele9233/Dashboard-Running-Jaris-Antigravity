@@ -81,18 +81,27 @@ export function FieldTestRecalibrationBanner() {
                 {new Date(ev.date).toLocaleDateString("it", { day: "2-digit", month: "short" })}
                 {" · "}
                 <span className="text-white">{ev.distance_km}km</span>
-                {" GAP "}
-                <span style={{ color: palette.color }}>{ev.gap_pace}</span>
-                {ev.expected_t_pace && (
+                {ev.interval_detail ? (
                   <>
-                    {" vs T "}
-                    <span className="text-[#666]">{ev.expected_t_pace}</span>
+                    {" · "}
+                    <span style={{ color: palette.color }}>{ev.interval_detail}</span>
                   </>
-                )}
-                {ev.expected_i_pace && (
+                ) : (
                   <>
-                    {" vs I "}
-                    <span className="text-[#666]">{ev.expected_i_pace}</span>
+                    {" GAP "}
+                    <span style={{ color: palette.color }}>{ev.gap_pace}</span>
+                    {ev.expected_t_pace && (
+                      <>
+                        {" vs T "}
+                        <span className="text-[#666]">{ev.expected_t_pace}</span>
+                      </>
+                    )}
+                    {ev.expected_i_pace && !ev.interval_detail && (
+                      <>
+                        {" vs I "}
+                        <span className="text-[#666]">{ev.expected_i_pace}</span>
+                      </>
+                    )}
                   </>
                 )}
               </div>

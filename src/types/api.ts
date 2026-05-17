@@ -514,10 +514,13 @@ export interface FieldTestDivergenceEvidence {
   date: string;
   distance_km: number;
   duration_min: number;
+  /** Per interval_improvement: best 400/600/800m pace; else GAP run-level */
   gap_pace: string;
   expected_t_pace?: string;
   expected_i_pace?: string;
-  type: "threshold_improvement" | "vo2max_improvement";
+  /** Solo per interval_improvement: descrizione "best 400m X:XX vs R Y:YY" */
+  interval_detail?: string;
+  type: "threshold_improvement" | "vo2max_improvement" | "interval_improvement";
 }
 
 export interface FieldTestDivergenceResponse {
