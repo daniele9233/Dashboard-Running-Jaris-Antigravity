@@ -38,6 +38,7 @@ import { FitnessChart } from "./dashboard/widgets/FitnessChart";
 import { HRZones } from "./dashboard/widgets/HRZones";
 import { NextOptimalSessionWidget } from "./dashboard/widgets/NextOptimalSessionWidget";
 import { FieldTestWidget } from "./dashboard/widgets/FieldTestWidget";
+import { FieldTestRecalibrationBanner } from "./dashboard/widgets/FieldTestRecalibrationBanner";
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Line, CartesianGrid, Area, ComposedChart } from "recharts";
 import { useApi } from "../hooks/useApi";
@@ -373,6 +374,9 @@ export function DashboardView() {
             )}
           </div>
         )}
+
+        {/* Smart recalibration banner — appare se zone obsolete */}
+        <FieldTestRecalibrationBanner />
 
         <ResponsiveGrid
           className="layout"
@@ -967,7 +971,7 @@ export function DashboardView() {
 
           {/* ── Field Test (pace-only VDOT benchmark) ── */}
           {!hiddenKeys.includes("field-test") && (
-          <div key="field-test">
+          <div key="field-test" data-grid-key="field-test">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("field-test")}>
             <FieldTestWidget />
            </GridCard>

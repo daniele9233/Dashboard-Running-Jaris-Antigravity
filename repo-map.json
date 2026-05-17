@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-17T18:05:54.851Z",
+  "generated_at": "2026-05-17T18:42:46.706Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,10 +14,10 @@
     ]
   },
   "counts": {
-    "files": 141,
-    "backend_routes": 55,
+    "files": 142,
+    "backend_routes": 56,
     "frontend_routes": 14,
-    "api_clients": 58
+    "api_clients": 59
   },
   "files": [
     {
@@ -506,6 +506,8 @@
         "_filter_runs_for_range",
         "_find_matching_run_for_garmin_csv",
         "_format_pace",
+        "_format_secs",
+        "_gap_pace_seconds",
         "_garmin_biomechanics_from_doc",
         "_garmin_csv_active_query",
         "_garmin_csv_doc_to_run_like",
@@ -516,9 +518,7 @@
         "_get_active_strava_token",
         "_get_active_vdot",
         "_get_athlete_id",
-        "_group_runs_by_bucket",
-        "_interval_vdot_from_splits",
-        "_invalidate_analytics_cache"
+        "_group_runs_by_bucket"
       ],
       "routes": [
         "DELETE /api/field-test/{test_id}",
@@ -532,6 +532,7 @@
         "GET /api/best-efforts",
         "GET /api/dashboard",
         "GET /api/events/stream",
+        "GET /api/field-test/divergence",
         "GET /api/field-test/latest",
         "GET /api/field-test/list",
         "GET /api/fitness-freshness",
@@ -598,9 +599,9 @@
         "typing",
         "urllib.parse"
       ],
-      "hash": "997182e3329fe8fd2da5969374ddd173aff282de211d16195379ab497abaa071",
-      "last_modified": "2026-05-17T18:03:06.388Z",
-      "size_bytes": 385252
+      "hash": "7bf35ee5f74a857ca5161165762c04ba6823b2be7bef60d9d1026876869fc6d9",
+      "last_modified": "2026-05-17T18:41:28.690Z",
+      "size_bytes": 391908
     },
     {
       "path": "backend/test_models.py",
@@ -1409,6 +1410,7 @@
         "getCurrentWeek",
         "getDashboard",
         "getDashboardInsight",
+        "getFieldTestDivergence",
         "getFieldTestLatest",
         "getFieldTestList",
         "getFitnessFreshness",
@@ -1447,8 +1449,7 @@
         "recalculateFitnessFreshness",
         "saveGarminToken",
         "setActiveStravaAthlete",
-        "StravaConnection",
-        "StravaConnectionsResponse"
+        "StravaConnection"
       ],
       "routes": [
         "DELETE /api/field-test/${id}",
@@ -1461,6 +1462,7 @@
         "GET /api/badges",
         "GET /api/best-efforts",
         "GET /api/dashboard",
+        "GET /api/field-test/divergence",
         "GET /api/field-test/latest",
         "GET /api/field-test/list",
         "GET /api/fitness-freshness",
@@ -1515,9 +1517,9 @@
         "../types/jarvis",
         "./client"
       ],
-      "hash": "a0ad5c7588bc4db763baaf317df3e040063f0700f9292b087a6b129366924a4b",
-      "last_modified": "2026-05-17T18:04:05.800Z",
-      "size_bytes": 17503
+      "hash": "fd91472ad5d3889a4d7995a5ff622007a010f7c29839d37aab6fe7215f887ec8",
+      "last_modified": "2026-05-17T18:41:58.726Z",
+      "size_bytes": 17737
     },
     {
       "path": "src/App.tsx",
@@ -1727,6 +1729,30 @@
       "size_bytes": 1001
     },
     {
+      "path": "src/components/dashboard/widgets/FieldTestRecalibrationBanner.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component FieldTestRecalibrationBanner.",
+      "touch_when": [
+        "dashboard",
+        "layout",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "FieldTestRecalibrationBanner"
+      ],
+      "routes": [],
+      "imports": [
+        "../../../api",
+        "../../../types/api",
+        "lucide-react",
+        "react"
+      ],
+      "hash": "49f97bb96748735d1de90526b1ae23bfcc52a0579a477f30971b9dcb46c5286c",
+      "last_modified": "2026-05-17T18:42:23.344Z",
+      "size_bytes": 4522
+    },
+    {
       "path": "src/components/dashboard/widgets/FieldTestWidget.tsx",
       "kind": "frontend-component",
       "purpose": "React component FieldTestWidget.",
@@ -1900,6 +1926,7 @@
         "../utils/paceFormat",
         "../utils/racePredictions",
         "./dashboard/widgetRegistry",
+        "./dashboard/widgets/FieldTestRecalibrationBanner",
         "./dashboard/widgets/FieldTestWidget",
         "./dashboard/widgets/FitnessChart",
         "./dashboard/widgets/HRZones",
@@ -1918,9 +1945,9 @@
         "react-router-dom",
         "recharts"
       ],
-      "hash": "93a0f803cd51040d36e5af949df2f2570db7a1105273d636a475b8522ea64f3f",
-      "last_modified": "2026-05-17T18:05:54.852Z",
-      "size_bytes": 57917
+      "hash": "fca0e5d6074072d2c6a8b7d09ac8b0c85fee4a5628a775c273fade9aa1d6964f",
+      "last_modified": "2026-05-17T18:42:46.706Z",
+      "size_bytes": 58158
     },
     {
       "path": "src/components/DetrainingWidget.tsx",
@@ -3491,6 +3518,8 @@
         "CurrentFF",
         "DashboardResponse",
         "FieldTest",
+        "FieldTestDivergenceEvidence",
+        "FieldTestDivergenceResponse",
         "FieldTestLatestResponse",
         "FieldTestListResponse",
         "FitnessFreshnessPoint",
@@ -3527,9 +3556,9 @@
       ],
       "routes": [],
       "imports": [],
-      "hash": "4009878ada449a58022268f9af22cd6a7e4ed58f7af51d944fb432203c151518",
-      "last_modified": "2026-05-17T18:03:46.860Z",
-      "size_bytes": 14517
+      "hash": "c6c3a7a3e41875d04296f21f2a88836c4e691384e14bfe734aafc55fb5b675b3",
+      "last_modified": "2026-05-17T18:41:46.550Z",
+      "size_bytes": 15059
     },
     {
       "path": "src/types/jarvis.ts",
@@ -3820,56 +3849,56 @@
       "path": "/api/admin/backfill-dynamics",
       "handler": "backfill_dynamics",
       "file": "backend/server.py",
-      "line": 7095
+      "line": 7271
     },
     {
       "method": "POST",
       "path": "/api/ai/analyze-run",
       "handler": "analyze_run",
       "file": "backend/server.py",
-      "line": 5904
+      "line": 6080
     },
     {
       "method": "GET",
       "path": "/api/ai/dashboard-insight",
       "handler": "get_dashboard_insight",
       "file": "backend/server.py",
-      "line": 6012
+      "line": 6188
     },
     {
       "method": "GET",
       "path": "/api/analytics",
       "handler": "get_analytics",
       "file": "backend/server.py",
-      "line": 5002
+      "line": 5013
     },
     {
       "method": "GET",
       "path": "/api/analytics/pro",
       "handler": "get_pro_analytics",
       "file": "backend/server.py",
-      "line": 4843
+      "line": 4854
     },
     {
       "method": "GET",
       "path": "/api/badges",
       "handler": "get_badges",
       "file": "backend/server.py",
-      "line": 5649
+      "line": 5825
     },
     {
       "method": "GET",
       "path": "/api/best-efforts",
       "handler": "get_best_efforts",
       "file": "backend/server.py",
-      "line": 5817
+      "line": 5993
     },
     {
       "method": "GET",
       "path": "/api/dashboard",
       "handler": "get_dashboard",
       "file": "backend/server.py",
-      "line": 1200
+      "line": 1211
     },
     {
       "method": "GET",
@@ -3883,189 +3912,196 @@
       "path": "/api/field-test",
       "handler": "post_field_test",
       "file": "backend/server.py",
-      "line": 5099
+      "line": 5110
     },
     {
       "method": "DELETE",
       "path": "/api/field-test/{test_id}",
       "handler": "delete_field_test",
       "file": "backend/server.py",
-      "line": 5150
+      "line": 5161
+    },
+    {
+      "method": "GET",
+      "path": "/api/field-test/divergence",
+      "handler": "get_field_test_divergence",
+      "file": "backend/server.py",
+      "line": 5228
     },
     {
       "method": "GET",
       "path": "/api/field-test/latest",
       "handler": "get_field_test_latest",
       "file": "backend/server.py",
-      "line": 5130
+      "line": 5141
     },
     {
       "method": "GET",
       "path": "/api/field-test/list",
       "handler": "get_field_test_list",
       "file": "backend/server.py",
-      "line": 5141
+      "line": 5152
     },
     {
       "method": "GET",
       "path": "/api/fitness-freshness",
       "handler": "get_fitness_freshness",
       "file": "backend/server.py",
-      "line": 3234
+      "line": 3245
     },
     {
       "method": "POST",
       "path": "/api/fitness-freshness/recalculate",
       "handler": "recalculate_fitness_freshness",
       "file": "backend/server.py",
-      "line": 3279
+      "line": 3290
     },
     {
       "method": "GET",
       "path": "/api/garmin/auth-start",
       "handler": "garmin_auth_start",
       "file": "backend/server.py",
-      "line": 7326
+      "line": 7502
     },
     {
       "method": "GET",
       "path": "/api/garmin/csv-data",
       "handler": "get_garmin_csv_data",
       "file": "backend/server.py",
-      "line": 8524
+      "line": 8700
     },
     {
       "method": "DELETE",
       "path": "/api/garmin/csv-data/{doc_id}",
       "handler": "delete_garmin_csv_data",
       "file": "backend/server.py",
-      "line": 8543
+      "line": 8719
     },
     {
       "method": "POST",
       "path": "/api/garmin/csv-import",
       "handler": "garmin_csv_import",
       "file": "backend/server.py",
-      "line": 8342
+      "line": 8518
     },
     {
       "method": "POST",
       "path": "/api/garmin/csv-link",
       "handler": "garmin_csv_link",
       "file": "backend/server.py",
-      "line": 8515
+      "line": 8691
     },
     {
       "method": "POST",
       "path": "/api/garmin/exchange-ticket",
       "handler": "garmin_exchange_ticket",
       "file": "backend/server.py",
-      "line": 7349
+      "line": 7525
     },
     {
       "method": "GET",
       "path": "/api/garmin/gct-analysis",
       "handler": "get_gct_analysis",
       "file": "backend/server.py",
-      "line": 8566
+      "line": 8742
     },
     {
       "method": "POST",
       "path": "/api/garmin/login",
       "handler": "garmin_login_direct",
       "file": "backend/server.py",
-      "line": 7302
+      "line": 7478
     },
     {
       "method": "POST",
       "path": "/api/garmin/save-token",
       "handler": "garmin_save_token",
       "file": "backend/server.py",
-      "line": 7270
+      "line": 7446
     },
     {
       "method": "GET",
       "path": "/api/garmin/status",
       "handler": "garmin_status",
       "file": "backend/server.py",
-      "line": 7259
+      "line": 7435
     },
     {
       "method": "POST",
       "path": "/api/garmin/sync-all",
       "handler": "garmin_sync_all",
       "file": "backend/server.py",
-      "line": 7586
+      "line": 7762
     },
     {
       "method": "POST",
       "path": "/api/garmin/sync",
       "handler": "garmin_sync",
       "file": "backend/server.py",
-      "line": 7434
+      "line": 7610
     },
     {
       "method": "GET",
       "path": "/api/heatmap",
       "handler": "get_heatmap",
       "file": "backend/server.py",
-      "line": 5887
+      "line": 6063
     },
     {
       "method": "GET",
       "path": "/api/injury-risk",
       "handler": "get_injury_risk",
       "file": "backend/server.py",
-      "line": 5370
+      "line": 5546
     },
     {
       "method": "POST",
       "path": "/api/jarvis/chat",
       "handler": "jarvis_chat",
       "file": "backend/server.py",
-      "line": 7644
+      "line": 7820
     },
     {
       "method": "GET",
       "path": "/api/prediction-history",
       "handler": "get_prediction_history",
       "file": "backend/server.py",
-      "line": 5067
+      "line": 5078
     },
     {
       "method": "POST",
       "path": "/api/recovery-checkin",
       "handler": "post_recovery_checkin",
       "file": "backend/server.py",
-      "line": 5416
+      "line": 5592
     },
     {
       "method": "GET",
       "path": "/api/recovery-score",
       "handler": "get_recovery_score",
       "file": "backend/server.py",
-      "line": 5353
+      "line": 5529
     },
     {
       "method": "GET",
       "path": "/api/runner-dna-legacy",
       "handler": "get_runner_dna_legacy",
       "file": "backend/server.py",
-      "line": 6721
+      "line": 6897
     },
     {
       "method": "GET",
       "path": "/api/runner-dna",
       "handler": "get_runner_dna",
       "file": "backend/server.py",
-      "line": 6439
+      "line": 6615
     },
     {
       "method": "DELETE",
       "path": "/api/runner-dna/cache",
       "handler": "clear_runner_dna_cache",
       "file": "backend/server.py",
-      "line": 7050
+      "line": 7226
     },
     {
       "method": "PATCH",
@@ -4128,77 +4164,77 @@
       "path": "/api/supercompensation",
       "handler": "get_supercompensation",
       "file": "backend/server.py",
-      "line": 5428
+      "line": 5604
     },
     {
       "method": "GET",
       "path": "/api/test-ai",
       "handler": "test_ai_connection",
       "file": "backend/server.py",
-      "line": 7059
+      "line": 7235
     },
     {
       "method": "GET",
       "path": "/api/training-plan",
       "handler": "get_training_plan",
       "file": "backend/server.py",
-      "line": 1269
+      "line": 1280
     },
     {
       "method": "POST",
       "path": "/api/training-plan/adapt",
       "handler": "adapt_training_plan",
       "file": "backend/server.py",
-      "line": 2576
+      "line": 2587
     },
     {
       "method": "GET",
       "path": "/api/training-plan/current",
       "handler": "get_current_week",
       "file": "backend/server.py",
-      "line": 1278
+      "line": 1289
     },
     {
       "method": "POST",
       "path": "/api/training-plan/evaluate-test",
       "handler": "evaluate_test",
       "file": "backend/server.py",
-      "line": 2451
+      "line": 2462
     },
     {
       "method": "POST",
       "path": "/api/training-plan/generate",
       "handler": "generate_training_plan",
       "file": "backend/server.py",
-      "line": 2232
+      "line": 2243
     },
     {
       "method": "PATCH",
       "path": "/api/training-plan/session/complete",
       "handler": "toggle_session_complete",
       "file": "backend/server.py",
-      "line": 1294
+      "line": 1305
     },
     {
       "method": "GET",
       "path": "/api/vdot/paces",
       "handler": "get_vdot_paces",
       "file": "backend/server.py",
-      "line": 5162
+      "line": 5338
     },
     {
       "method": "GET",
       "path": "/api/weekly-history",
       "handler": "get_weekly_history",
       "file": "backend/server.py",
-      "line": 5711
+      "line": 5887
     },
     {
       "method": "GET",
       "path": "/api/weekly-report",
       "handler": "get_weekly_report",
       "file": "backend/server.py",
-      "line": 5686
+      "line": 5862
     }
   ],
   "frontend_routes": [
@@ -4382,6 +4418,12 @@
       "name": "getDashboardInsight",
       "method": "GET",
       "path": "/api/ai/dashboard-insight",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getFieldTestDivergence",
+      "method": "GET",
+      "path": "/api/field-test/divergence",
       "file": "src/api/index.ts"
     },
     {

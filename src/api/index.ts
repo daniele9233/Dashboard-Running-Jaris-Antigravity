@@ -20,6 +20,7 @@ import type {
   FieldTest,
   FieldTestLatestResponse,
   FieldTestListResponse,
+  FieldTestDivergenceResponse,
 } from '../types/api';
 
 // ─── PROFILE ────────────────────────────────────────────────────────────────
@@ -50,6 +51,10 @@ export const getFieldTestList = () =>
 
 export const deleteFieldTest = (id: string) =>
   api.delete<{ ok: boolean }>(`/api/field-test/${id}`);
+
+/** Divergence detection: zone obsolete vs reality? Smart suggestion ricalibra. */
+export const getFieldTestDivergence = () =>
+  api.get<FieldTestDivergenceResponse>('/api/field-test/divergence');
 
 // ─── TRAINING PLAN ───────────────────────────────────────────────────────────
 export const getTrainingPlan = () => api.get<TrainingPlanResponse>('/api/training-plan');

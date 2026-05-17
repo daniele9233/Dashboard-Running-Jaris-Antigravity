@@ -509,3 +509,22 @@ export interface FieldTestLatestResponse {
 export interface FieldTestListResponse {
   tests: FieldTest[];
 }
+
+export interface FieldTestDivergenceEvidence {
+  date: string;
+  distance_km: number;
+  duration_min: number;
+  gap_pace: string;
+  expected_t_pace?: string;
+  expected_i_pace?: string;
+  type: "threshold_improvement" | "vo2max_improvement";
+}
+
+export interface FieldTestDivergenceResponse {
+  needs_recalibration: boolean;
+  /** Why: no_test | stale | divergence | fresh */
+  reason: "no_test" | "stale" | "divergence" | "fresh";
+  age_days: number | null;
+  message: string;
+  evidence: FieldTestDivergenceEvidence[];
+}

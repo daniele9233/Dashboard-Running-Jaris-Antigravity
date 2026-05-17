@@ -1136,6 +1136,17 @@ async def strava_sync():
                 "avg_ground_contact_time":  fit_dynamics.get("avg_ground_contact_time") or detail.get("average_ground_contact_time"),
                 "avg_stride_length":        fit_dynamics.get("avg_stride_length") or detail.get("average_stride_length"),
             }
+            # GAP (grade-adjusted pace) sec/km — pace-only effort normalizer.
+            # Strava linear approx ~15s/km per 1% grade. Saved per-run so future
+            # analytics (divergence detection, classify) usano effort vero.
+            gap_sec = _gap_pace_seconds({
+                "splits": splits,
+                "distance_km": distance_km,
+                "avg_pace": avg_pace,
+            })
+            if gap_sec:
+                run_doc["gap_pace_sec"] = gap_sec
+                run_doc["gap_pace"] = _format_secs(gap_sec)
             run_doc = _normalise_run_quality_fields(run_doc)
 
             await db.runs.update_one(
@@ -5157,6 +5168,171 @@ async def delete_field_test(test_id: str):
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="test not found")
     return {"ok": True}
+
+
+# ─── GAP (Grade Adjusted Pace) helpers ───────────────────────────────────────
+def _gap_pace_seconds(run: dict) -> Optional[int]:
+    """Grade-adjusted pace (sec/km) per-split, weighted by distance.
+
+    Strava linear approx: ~15s/km adjustment per 1% grade.
+    - Uphill (positive grade): GAP faster than raw (less effort on flat)
+    - Downhill (negative grade): GAP slower than raw (would be slower on flat)
+
+    Returns None se splits insufficienti o data invalida.
+    """
+    splits = run.get("splits") or []
+    dist_km = run.get("distance_km", 0) or 0
+    if splits and len(splits) >= 1:
+        total_gap_time = 0.0
+        total_dist = 0.0
+        for sp in splits:
+            sp_pace_str = sp.get("pace", "")
+            sp_dist_m = sp.get("distance", 1000) or 1000
+            sp_elev = sp.get("elevation_difference") or 0
+            if not sp_pace_str or ":" not in sp_pace_str:
+                continue
+            try:
+                m, s = sp_pace_str.split(":")
+                sp_pace = int(m) * 60 + int(s)
+            except Exception:
+                continue
+            if sp_dist_m <= 0:
+                continue
+            sp_grade_pct = (sp_elev / sp_dist_m) * 100
+            sp_gap = sp_pace - sp_grade_pct * 15  # Strava linear approx
+            sp_km = sp_dist_m / 1000.0
+            total_gap_time += sp_gap * sp_km
+            total_dist += sp_km
+        if total_dist > 0:
+            return int(round(total_gap_time / total_dist))
+    # Fallback: avg_pace + net elevation
+    avg_pace = run.get("avg_pace", "")
+    if not avg_pace or ":" not in avg_pace or dist_km < 1:
+        return None
+    try:
+        m, s = avg_pace.split(":")
+        raw_sec = int(m) * 60 + int(s)
+    except Exception:
+        return None
+    net_elev = sum((sp.get("elevation_difference") or 0) for sp in (splits or []))
+    grade_pct = (net_elev / (dist_km * 1000)) * 100 if dist_km > 0 else 0
+    return int(round(raw_sec - grade_pct * 15))
+
+
+def _format_secs(sec: int) -> str:
+    if not sec or sec <= 0:
+        return ""
+    return f"{sec // 60}:{sec % 60:02d}"
+
+
+@app.get("/api/field-test/divergence")
+async def get_field_test_divergence():
+    """Smart detection: zone obsolete vs reality based on recent runs (GAP).
+
+    Returns needs_recalibration=True when:
+      - no_test: nessun field test
+      - stale: ultimo test >60gg
+      - divergence: ≥3 corse recenti con GAP più veloce del previsto
+        (rispetto a T-pace/I-pace correnti)
+
+    User decide se eseguire nuovo test. NO auto-recalc VDOT.
+    """
+    athlete_id = await _get_athlete_id()
+    q = {"athlete_id": athlete_id} if athlete_id else {}
+
+    latest_test = await db.field_tests.find_one(q, sort=[("date", -1)])
+
+    if not latest_test:
+        return {
+            "needs_recalibration": True,
+            "reason": "no_test",
+            "age_days": None,
+            "message": "Nessun field test. Registra benchmark pace-only.",
+            "evidence": [],
+        }
+
+    # Age check
+    try:
+        test_date = dt.datetime.fromisoformat(latest_test["date"].replace("Z", "+00:00")).replace(tzinfo=None)
+    except Exception:
+        test_date = dt.datetime.utcnow()
+    age_days = (dt.datetime.utcnow() - test_date).days
+
+    if age_days > 60:
+        return {
+            "needs_recalibration": True,
+            "reason": "stale",
+            "age_days": age_days,
+            "message": f"Field test di {age_days} giorni fa. Considera ricalibrare.",
+            "evidence": [],
+        }
+
+    # Divergence check: corse dopo il test
+    runs = await db.runs.find({
+        **q,
+        "is_treadmill": {"$ne": True},
+        "date": {"$gte": latest_test["date"]},
+    }).sort("date", -1).to_list(30)
+
+    vdot = float(latest_test["vdot"])
+    # Compute current I-pace e T-pace (Daniels classic da field test VDOT)
+    def _pace_at(pct):
+        vo2 = vdot * pct
+        disc = 0.182258 ** 2 + 4 * 0.000104 * (vo2 + 4.60)
+        if disc < 0:
+            return None
+        v = (-0.182258 + math.sqrt(disc)) / (2 * 0.000104)
+        if v <= 0:
+            return None
+        return int(round(1000 / (v / 60)))
+
+    i_sec = _pace_at(0.98)
+    t_sec = _pace_at(0.88)
+
+    evidence = []
+    for r in runs:
+        gap = _gap_pace_seconds(r)
+        if not gap:
+            continue
+        duration = r.get("duration_minutes", 0) or 0
+        dist = r.get("distance_km", 0) or 0
+        # Long sustained > T-pace - 10s: fitness migliorata sul threshold
+        if duration >= 25 and dist >= 5 and t_sec and gap < (t_sec - 10):
+            evidence.append({
+                "date": r.get("date"),
+                "distance_km": round(dist, 1),
+                "duration_min": round(duration, 1),
+                "gap_pace": _format_secs(gap),
+                "expected_t_pace": _format_secs(t_sec),
+                "type": "threshold_improvement",
+            })
+        # Short/intense < I-pace - 5s: VO2max migliorato
+        elif 3 <= dist <= 8 and i_sec and gap < (i_sec - 5):
+            evidence.append({
+                "date": r.get("date"),
+                "distance_km": round(dist, 1),
+                "duration_min": round(duration, 1),
+                "gap_pace": _format_secs(gap),
+                "expected_i_pace": _format_secs(i_sec),
+                "type": "vo2max_improvement",
+            })
+
+    if len(evidence) >= 3:
+        return {
+            "needs_recalibration": True,
+            "reason": "divergence",
+            "age_days": age_days,
+            "message": f"{len(evidence)} corse recenti più veloci del previsto. Zone potrebbero essere obsolete.",
+            "evidence": evidence[:5],
+        }
+
+    return {
+        "needs_recalibration": False,
+        "reason": "fresh",
+        "age_days": age_days,
+        "message": f"Field test di {age_days} giorni fa, zone affidabili.",
+        "evidence": [],
+    }
 
 
 @app.get("/api/vdot/paces")
