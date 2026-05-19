@@ -139,7 +139,7 @@ export function AthletePotentialVector({
   thresholdPace,
   maxHr,
 }: AthletePotentialVectorProps) {
-  const [activeDistance, setActiveDistance] = useState<DistanceId>("hm");
+  const [activeDistance, setActiveDistance] = useState<DistanceId>("5k");
   const [timeRange, setTimeRange] = useState<RangeId>("30d");
 
   // ── Resolve current + previous VDOT ──────────────────────────────────────
@@ -710,7 +710,7 @@ export function AthletePotentialVector({
                     return (
                       <div
                         key={i}
-                        className={`bg-[#111] border rounded-2xl p-5 flex flex-col justify-between transition-colors group cursor-pointer ${
+                        className={`rounded-2xl backdrop-blur-2xl border shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex flex-col justify-between transition-colors group cursor-pointer ${
                           isActive ? "border-[#C0FF00]/50" : "border-white/[0.05] hover:border-[#C0FF00]/25"
                         }`}
                         onClick={() => setActiveDistance(DISTANCES[i].id)}

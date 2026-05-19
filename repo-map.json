@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-17T18:53:01.034Z",
+  "generated_at": "2026-05-19T04:35:34.636Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2659,8 +2659,8 @@
         "react",
         "recharts"
       ],
-      "hash": "163404ca0d46efd97754ca275150696f6fe294e6340307497679e6cc71f1d7d4",
-      "last_modified": "2026-05-16T19:24:21.435Z",
+      "hash": "203a937e11027b0fd1d7e13d091f823cb5129260bebcf369e3876d17004c3cd1",
+      "last_modified": "2026-05-19T04:35:34.637Z",
       "size_bytes": 38770
     },
     {
