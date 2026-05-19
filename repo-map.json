@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-19T04:41:53.742Z",
+  "generated_at": "2026-05-19T04:56:14.199Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2528,6 +2528,7 @@
         "../../api",
         "../../types/api",
         "../../utils/cadence",
+        "../../utils/cardiacDrift",
         "./AthletePotentialVector",
         "./ChartFullscreenModal",
         "lucide-react",
@@ -2535,9 +2536,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "1f5124b1883df4c9b897f7178b7a9666c523f8bc39c131c62b504480d961deef",
-      "last_modified": "2026-05-19T04:39:17.265Z",
-      "size_bytes": 163382
+      "hash": "0383b91f89779395952043773f29037867fd7c8ea4538f94d54ced79acab1148",
+      "last_modified": "2026-05-19T04:56:14.199Z",
+      "size_bytes": 164866
     },
     {
       "path": "src/components/statistics/AnalyticsV3.tsx",

@@ -17,7 +17,12 @@ import {
 } from 'lucide-react';
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 import { cadenceSpmFromRun } from '../../utils/cadence';
+import { computeDrift } from '../../utils/cardiacDrift';
 import { AthletePotentialVector } from './AthletePotentialVector';
+
+/** Soglia anaerobica HR utente — hardcoded reference (richiesta utente).
+ *  In futuro: profile.threshold_hr field configurabile. */
+const USER_THRESHOLD_HR = 160;
 
 // ─────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -1362,15 +1367,26 @@ export function AnalyticsV2({
         monthRuns.reduce((s, r) => s + (r.avg_hr ?? 0), 0) / monthRuns.length
       );
 
+      // Cardiac drift mensile: media |drift|% su corse con splits sufficienti.
+      // Drift = ΔFC seconda metà vs prima metà — segnale efficienza aerobica
+      // (più affidabile di HR assoluto che soffre artifacts polso/sudore).
+      const driftValues = monthRuns
+        .map(r => computeDrift(r)?.drift)
+        .filter((v): v is number => typeof v === 'number');
+      const avgDrift = driftValues.length
+        ? driftValues.reduce((s, v) => s + v, 0) / driftValues.length
+        : null;
+
       const isCurrentYear = d.getFullYear() === now.getFullYear();
       const monthLabel = MONTH_SHORT[d.getMonth()] + (isCurrentYear ? '' : ` ${String(d.getFullYear()).slice(2)}`);
       return {
         month: monthLabel,
         pace: Math.round(weightedPaceSecs),
         hr: avgHr,
+        drift: avgDrift !== null ? Math.round(avgDrift * 10) / 10 : null,
         samples: monthRuns.length,
       };
-    }).filter((d): d is { month: string; pace: number; hr: number; samples: number } => d !== null);
+    }).filter((d): d is { month: string; pace: number; hr: number; drift: number | null; samples: number } => d !== null);
 
     return monthly;
   }, [runs, maxHr, proCharts, toThresholdTrendData]);
@@ -1539,39 +1555,48 @@ export function AnalyticsV2({
     const avgPace = atTrendData.length
       ? atTrendData.reduce((sum, p) => sum + p.pace, 0) / atTrendData.length
       : 0;
-    const avgHr = atTrendData.length
-      ? atTrendData.reduce((sum, p) => sum + p.hr, 0) / atTrendData.length
+
+    // Drift mensile media (escludendo null)
+    const driftSamples = atTrendData
+      .map(p => p.drift)
+      .filter((v): v is number => typeof v === 'number');
+    const avgDrift = driftSamples.length
+      ? driftSamples.reduce((s, v) => s + v, 0) / driftSamples.length
       : 0;
 
     const paceValues = atTrendData.map(p => p.pace);
-    const hrValues = atTrendData.map(p => p.hr);
     const paceMin = paceValues.length ? Math.min(...paceValues) : 240;
     const paceMax = paceValues.length ? Math.max(...paceValues) : 330;
-    const hrMinRaw = hrValues.length ? Math.min(...hrValues) : 150;
-    const hrMaxRaw = hrValues.length ? Math.max(...hrValues) : 180;
 
     const paceDomainMin = Math.min(240, Math.floor((paceMin - 8) / 30) * 30);
     const paceDomainMax = Math.max(330, Math.ceil((paceMax + 8) / 30) * 30);
-    const hrDomainMin = Math.min(150, Math.floor((hrMinRaw - 4) / 10) * 10);
-    const hrDomainMax = Math.max(180, Math.ceil((hrMaxRaw + 4) / 10) * 10);
+
+    // Drift % axis: domain dinamico 0-15% tipico, ticks ogni 3%
+    const driftMin = driftSamples.length ? Math.min(...driftSamples) : 0;
+    const driftMax = driftSamples.length ? Math.max(...driftSamples) : 10;
+    const driftDomainMin = Math.min(0, Math.floor(driftMin / 3) * 3);
+    const driftDomainMax = Math.max(10, Math.ceil((driftMax + 1) / 3) * 3);
 
     const paceTicks: number[] = [];
     for (let v = paceDomainMin; v <= paceDomainMax; v += 30) paceTicks.push(v);
 
-    const hrTicks: number[] = [];
-    for (let v = hrDomainMin; v <= hrDomainMax; v += 10) hrTicks.push(v);
+    const driftTicks: number[] = [];
+    for (let v = driftDomainMin; v <= driftDomainMax; v += 3) driftTicks.push(v);
 
     const paceDelta = latest ? Math.round(latest.pace - avgPace) : 0;
-    const hrDelta = latest ? Math.round(latest.hr - avgHr) : 0;
+    const driftDelta = latest && latest.drift !== null
+      ? Math.round((latest.drift - avgDrift) * 10) / 10
+      : 0;
 
     return {
       latest,
       paceDomain: [paceDomainMin, paceDomainMax] as [number, number],
       paceTicks,
-      hrDomain: [hrDomainMin, hrDomainMax] as [number, number],
-      hrTicks,
+      driftDomain: [driftDomainMin, driftDomainMax] as [number, number],
+      driftTicks,
       paceDelta,
-      hrDelta,
+      driftDelta,
+      avgDrift,
     };
   }, [atTrendData]);
 
@@ -1921,7 +1946,7 @@ export function AnalyticsV2({
                     </span>
                     <span className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-[#FF4B93]" />
-                      Frequenza C.
+                      Drift %
                     </span>
                     <button
                       onClick={() => openExpandedChart('threshold_progression', setAtExpanded)}
@@ -1945,23 +1970,27 @@ export function AnalyticsV2({
                     <XAxis dataKey="month" stroke="#2F2F2F" fontSize={10} fontWeight={900} tickLine={false} axisLine={false} interval={2} dy={5} />
                     <YAxis yAxisId="pace" reversed stroke="#525252" fontSize={10} fontWeight={900} tickLine={false} axisLine={false}
                       tickFormatter={formatPaceSecs} domain={atPanel.paceDomain} ticks={atPanel.paceTicks} width={42} />
-                    <YAxis yAxisId="hr" orientation="right" stroke="#525252" fontSize={10} fontWeight={900} tickLine={false} axisLine={false}
-                      domain={atPanel.hrDomain} ticks={atPanel.hrTicks} width={34} />
+                    <YAxis yAxisId="drift" orientation="right" stroke="#525252" fontSize={10} fontWeight={900} tickLine={false} axisLine={false}
+                      domain={atPanel.driftDomain} ticks={atPanel.driftTicks}
+                      tickFormatter={(v) => `${v}%`}
+                      width={36} />
                    <Tooltip
                       contentStyle={{ backgroundColor: '#151515', borderColor: '#2A2A2A', borderRadius: '4px' }}
                       itemStyle={{ color: '#fff' }}
                       labelStyle={{ color: NEON, fontWeight: 900, textTransform: 'uppercase' }}
                      formatter={(val: number, name: string) =>
-                       name === 'Threshold Pace' ? [formatPaceSecs(val) + ' /km', name] : [`${val} bpm`, name]
+                       name === 'Threshold Pace' ? [formatPaceSecs(val) + ' /km', name]
+                       : name === 'Cardiac Drift' ? [`${val.toFixed(1)}%`, name]
+                       : [`${val} bpm`, name]
                      }
                    />
                     <Area yAxisId="pace" type="monotone" dataKey="pace" name="Threshold Pace"
                       stroke={NEON} strokeWidth={2} fill="url(#v2-at-panel-area)" fillOpacity={1}
                       dot={{ r: 3.5, fill: '#111111', stroke: NEON, strokeWidth: 2 }}
                       activeDot={{ r: 5, fill: NEON, stroke: '#111111', strokeWidth: 2 }} />
-                    <Line yAxisId="hr" type="monotone" dataKey="hr" name="Threshold HR"
+                    <Line yAxisId="drift" type="monotone" dataKey="drift" name="Cardiac Drift"
                       stroke="#FF4B93" strokeWidth={2} strokeDasharray="4 5"
-                      dot={false}
+                      dot={false} connectNulls
                       activeDot={{ r: 5, fill: '#FF4B93', stroke: '#111111', strokeWidth: 2 }} />
                     {atPanel.latest && (
                       <ReferenceLine
@@ -2001,17 +2030,21 @@ export function AnalyticsV2({
                     <Heart className="w-4 h-4 fill-[#FF4B93]" style={{ color: '#FF4B93' }} />
                   </div>
                   <div className="text-[10px] uppercase tracking-widest font-black text-[#A6A6A6]">
-                    FC Soglia <span className="ml-2 text-[#FF4B93]">Latest</span>
+                    FC Soglia <span className="ml-2 text-[#FF4B93]">Riferimento</span>
                   </div>
                   <div className="flex items-baseline mt-3">
                     <span className="text-[52px] leading-none italic font-black text-[#FF4B93]">
-                      {atPanel.latest ? atPanel.latest.hr : '--'}
+                      {USER_THRESHOLD_HR}
                     </span>
                     <span className="text-[18px] italic font-black text-[#DADADA] ml-2">bpm</span>
                   </div>
                   <div className="text-[10px] uppercase tracking-widest font-black mt-4 text-[#A6A6A6]">
-                    <span className="text-[#FF4B93]">{atPanel.hrDelta >= 0 ? '+' : '-'} {Math.abs(atPanel.hrDelta)} BPM</span>
-                    <span className="ml-2">vs avg</span>
+                    <span className="text-[#FF4B93]">
+                      DRIFT {atPanel.latest?.drift !== null && atPanel.latest?.drift !== undefined
+                        ? `${atPanel.latest.drift.toFixed(1)}%`
+                        : '—'}
+                    </span>
+                    <span className="ml-2">latest</span>
                   </div>
                 </div>
               </div>
