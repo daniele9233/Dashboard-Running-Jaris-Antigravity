@@ -1179,7 +1179,7 @@ export function AnalyticsV2({
       month: String(d.date),
       pace: Math.round(Number(d.threshold_pace)),
       hr: Math.round((maxHr ?? 190) * 0.88),
-      vdot: d.vdot != null ? Number(d.vdot) : null,
+      drift: null as number | null,
       samples: Number(d.sample_size ?? d.samples ?? 0),
     })), [maxHr]);
 
@@ -1418,6 +1418,7 @@ export function AnalyticsV2({
           month,
           pace: Math.round(weightedPaceSecs),
           hr: avgHr,
+          drift: null as number | null,
           samples: group.length,
         };
       })
