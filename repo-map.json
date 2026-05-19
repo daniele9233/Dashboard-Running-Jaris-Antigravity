@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-19T04:35:34.636Z",
+  "generated_at": "2026-05-19T04:41:53.742Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2535,9 +2535,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "e8c0c2b5d1abaf930099003ffa8fcd78048393a093900a06bfd1d4894152e90d",
-      "last_modified": "2026-05-16T19:59:43.427Z",
-      "size_bytes": 163179
+      "hash": "1f5124b1883df4c9b897f7178b7a9666c523f8bc39c131c62b504480d961deef",
+      "last_modified": "2026-05-19T04:39:17.265Z",
+      "size_bytes": 163382
     },
     {
       "path": "src/components/statistics/AnalyticsV3.tsx",
@@ -2641,6 +2641,7 @@
         "activities",
         "ai",
         "cadence",
+        "dashboard",
         "garmin",
         "layout",
         "profile",
@@ -2659,9 +2660,9 @@
         "react",
         "recharts"
       ],
-      "hash": "203a937e11027b0fd1d7e13d091f823cb5129260bebcf369e3876d17004c3cd1",
-      "last_modified": "2026-05-19T04:35:34.637Z",
-      "size_bytes": 38770
+      "hash": "b568cb33e93cb3ad95f043d7efa9aa842aec5faeb7c781b4babb4ba76127ea8d",
+      "last_modified": "2026-05-19T04:41:53.743Z",
+      "size_bytes": 40718
     },
     {
       "path": "src/components/statistics/BiologyFutureLab.tsx",
@@ -2877,9 +2878,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "9c83f205f6812387935f7b42c67a27533a1d3abaa9297d5835b94e738be11776",
-      "last_modified": "2026-05-16T19:56:03.714Z",
-      "size_bytes": 124927
+      "hash": "8d351a24b5b920a5a422aeeaaa92d07413279b6a9e9b55e2e28d186be102b41d",
+      "last_modified": "2026-05-19T04:39:48.248Z",
+      "size_bytes": 124976
     },
     {
       "path": "src/components/statistics/StatsCalc.tsx",

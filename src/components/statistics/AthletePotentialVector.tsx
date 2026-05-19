@@ -103,6 +103,28 @@ export interface AthletePotentialVectorProps {
   maxHr?: number;
   /** Optional: VDOT history monthly. If not provided, derived from runs. */
   vdotHistory?: { date: string; vdot: number }[];
+  /** Backend race_predictions endurance-aware (single source of truth).
+   *  Quando presente sovrascrive predictRaceSec pure Daniels per coerenza
+   *  con dashboard PREVISIONE GARA card. */
+  racePredictions?: Record<string, string>;
+}
+
+// Map distance id → backend race_predictions key
+const DIST_TO_PREDICTION_KEY: Record<DistanceId, string> = {
+  "5k":  "5K",
+  "10k": "10K",
+  "hm":  "Half Marathon",
+  "fm":  "Marathon",
+};
+
+// Parse "h:mm:ss" or "mm:ss" → seconds
+function parseTimeStr(s: string | undefined): number | null {
+  if (!s) return null;
+  const parts = s.split(":").map(Number);
+  if (parts.some(isNaN)) return null;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return null;
 }
 
 // ─── CUSTOM TOOLTIP ──────────────────────────────────────────────────────────
@@ -138,9 +160,16 @@ export function AthletePotentialVector({
   ffHistory = [],
   thresholdPace,
   maxHr,
+  racePredictions,
 }: AthletePotentialVectorProps) {
   const [activeDistance, setActiveDistance] = useState<DistanceId>("5k");
   const [timeRange, setTimeRange] = useState<RangeId>("30d");
+
+  // Backend prediction lookup helper. Returns null se prediction non disponibile.
+  const backendPredictSec = (distId: DistanceId): number | null => {
+    if (!racePredictions) return null;
+    return parseTimeStr(racePredictions[DIST_TO_PREDICTION_KEY[distId]]);
+  };
 
   // ── Resolve current + previous VDOT ──────────────────────────────────────
   const currentVdot = vdot ?? 45;
@@ -207,11 +236,23 @@ export function AthletePotentialVector({
   const activeDistMeta = DISTANCES.find(d => d.id === activeDistance)!;
 
   // ── Predicted time + pace + delta ────────────────────────────────────────
+  // Prefer backend race_predictions (endurance-aware fraction model, coerente
+  // con dashboard PREVISIONE GARA). Fallback a Daniels puro se non disponibile.
   const predictionData = useMemo(() => {
-    const secs = predictRaceSec(currentVdot, activeDistMeta.km);
+    const backendSecs = backendPredictSec(activeDistance);
+    const secs = backendSecs ?? predictRaceSec(currentVdot, activeDistMeta.km);
     const pace = fmtPaceFromSec(secs, activeDistMeta.km);
-    const prevSecs = vdot90DaysAgo ? predictRaceSec(vdot90DaysAgo, activeDistMeta.km) : null;
-    const deltaSec = prevSecs !== null ? secs - prevSecs : null;
+    // Delta: confronta con stesso modello — se backend non ha 90d storia,
+    // proporzionale Daniels (current vs vdot90).
+    let deltaSec: number | null = null;
+    if (vdot90DaysAgo) {
+      const prevPureSecs = predictRaceSec(vdot90DaysAgo, activeDistMeta.km);
+      const currentPureSecs = predictRaceSec(currentVdot, activeDistMeta.km);
+      const pureDelta = currentPureSecs - prevPureSecs;
+      // Scale by ratio backend/pure per restare coerente con la nuova baseline
+      const scaleFactor = secs / currentPureSecs;
+      deltaSec = Math.round(pureDelta * scaleFactor);
+    }
     return {
       time: fmtTime(secs),
       pace: `${pace}/km`,
@@ -219,7 +260,7 @@ export function AthletePotentialVector({
       deltaIsFaster: deltaSec !== null && deltaSec < 0,
       secs,
     };
-  }, [currentVdot, vdot90DaysAgo, activeDistMeta]);
+  }, [currentVdot, vdot90DaysAgo, activeDistMeta, activeDistance, racePredictions]);
 
   // ── Real factors from data ───────────────────────────────────────────────
   const factors = useMemo(() => {
@@ -394,7 +435,9 @@ export function AthletePotentialVector({
   // ── Scaled equivalents (4 distances) ─────────────────────────────────────
   const equivalents = useMemo(() => {
     return DISTANCES.map(d => {
-      const secs = predictRaceSec(currentVdot, d.km);
+      // Prefer backend predictions (endurance-aware) per coerenza con dashboard
+      const backendSecs = backendPredictSec(d.id);
+      const secs = backendSecs ?? predictRaceSec(currentVdot, d.km);
       return {
         distance: d.label,
         title: d.title,
@@ -402,7 +445,7 @@ export function AthletePotentialVector({
         pace: `${fmtPaceFromSec(secs, d.km)}/km`,
       };
     });
-  }, [currentVdot]);
+  }, [currentVdot, racePredictions]);
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (

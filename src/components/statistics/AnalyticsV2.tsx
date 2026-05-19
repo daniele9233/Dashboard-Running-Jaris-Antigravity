@@ -1092,6 +1092,8 @@ interface AnalyticsV2Props {
   onRequestChartDetail?: (chartId: string) => void;
   onlySections?: AnalyticsV2Section[];
   hideSections?: AnalyticsV2Section[];
+  /** Backend race_predictions endurance-aware (fraction model). Single source of truth. */
+  racePredictions?: Record<string, string>;
 }
 
 type AnalyticsV2Section = 'pmc' | 'drift' | 'zones' | 'gct';
@@ -1114,6 +1116,7 @@ function formatPaceStr(dec: number): string {
 export function AnalyticsV2({
   vdot, zoneDistribution, gctData, runs = [],
   ffHistory = [], maxHr, thresholdPace, proCharts = {}, onRequestChartDetail, onlySections, hideSections = [],
+  racePredictions,
 }: AnalyticsV2Props) {
   const { t } = useTranslation();
   const hasOnlySections = (onlySections?.length ?? 0) > 0;
@@ -1886,6 +1889,7 @@ export function AnalyticsV2({
           ffHistory={ffHistory}
           thresholdPace={thresholdPace}
           maxHr={maxHr}
+          racePredictions={racePredictions}
         />
       )}
 

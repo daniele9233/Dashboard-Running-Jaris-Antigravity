@@ -1773,6 +1773,7 @@ export function StatisticsView() {
               proCharts={potentialCharts}
               onRequestChartDetail={(chartId) => requestProChartDetail('potential_progress', chartId)}
               hideSections={['pmc', 'drift', 'zones', 'gct']}
+              racePredictions={racePredictions}
             />
             {false && (
             <Card accent={PRO_ACCENT} variant="pro">
