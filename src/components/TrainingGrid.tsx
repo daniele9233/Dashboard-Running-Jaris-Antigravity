@@ -1257,7 +1257,7 @@ export function TrainingGrid() {
             return (
               <div
                 key={date.toISOString()}
-                className="bg-[#181818] border border-[#2A2A2A] rounded-xl p-4 flex flex-col cursor-pointer hover:border-gray-500 transition-colors"
+                className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 flex flex-col cursor-pointer hover:border-white/[0.2] transition-colors"
                 onClick={() => goToDay(date, 'Week')}
               >
                 <div className="text-center mb-6 pb-4 border-b border-[#2A2A2A]">
@@ -1297,7 +1297,7 @@ export function TrainingGrid() {
 
     return (
       <div className="h-full flex items-start justify-center pt-10">
-        <div className="w-full max-w-2xl bg-[#181818] border border-[#2A2A2A] rounded-2xl p-8 shadow-2xl">
+        <div className="w-full max-w-2xl rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-8">
           {/* Back button */}
           {previousView && (
             <button
@@ -1430,7 +1430,7 @@ export function TrainingGrid() {
           return (
             <div
               key={month}
-              className="bg-[#181818] border border-[#2A2A2A] rounded-xl p-5 cursor-pointer hover:border-gray-500 transition-colors"
+              className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 cursor-pointer hover:border-white/[0.2] transition-colors"
               onClick={() => { const d = new Date(currentDate); d.setMonth(month); setCurrentDate(d); setView('Month'); }}
             >
               <h3 className="text-sm font-bold text-gray-200 mb-4 uppercase tracking-wider">{monthNames[month]} {year}</h3>

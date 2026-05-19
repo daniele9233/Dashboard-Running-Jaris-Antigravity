@@ -366,7 +366,7 @@ export function MainChart({ runs }: MainChartProps) {
           <div className="flex-1 overflow-y-auto max-h-[300px] space-y-3">
             {recentRuns.length > 0 ? (
               recentRuns.map((run, i) => (
-                <div key={i} className="bg-[#111] border border-[#2A2A2A] rounded-xl p-3">
+                <div key={i} className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor:
                       run.run_type?.toLowerCase().includes('race') || run.run_type?.toLowerCase().includes('gara') ? '#8B5CF6' :
