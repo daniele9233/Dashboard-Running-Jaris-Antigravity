@@ -5603,44 +5603,18 @@ async def get_vdot_paces():
             "repetition": pace_at_vo2_pct(1.10),
         }
     else:
-        # Nessun field test → fraction model (T sub-Daniels per tenuta scarsa)
-        fractions = _compute_race_fractions(end_ctx["longest_km"], end_ctx["drift_pct"], ctl_now or 0)
-
-        def _race_pace_secs(dist_km: float) -> Optional[int]:
-            eff_vdot = vdot * fractions[dist_km]
-            t_sec = _vdot_to_race_seconds(eff_vdot, dist_km)
-            if not t_sec:
-                return None
-            return int(round(t_sec / dist_km))
-
-        pace_5k_sec  = _race_pace_secs(5.0)
-        pace_10k_sec = _race_pace_secs(10.0)
-        pace_hm_sec  = _race_pace_secs(21.0975)
-        pace_mar_sec = _race_pace_secs(42.195)
-
-        e_pace_sec = (pace_mar_sec + 65) if pace_mar_sec else None
-        m_pace_sec = pace_mar_sec
-        t_pace_sec = None
-        if pace_10k_sec and pace_hm_sec:
-            t_pace_sec = (pace_10k_sec + pace_hm_sec) // 2
-        elif pace_hm_sec:
-            t_pace_sec = pace_hm_sec - 5
-        i_pace_sec = pace_5k_sec
-        r_pace_sec = (pace_5k_sec - 15) if pace_5k_sec else None
-
-        def _sec_to_pace(s: Optional[int]) -> Optional[str]:
-            if not s or s <= 0:
-                return None
-            return _secs_to_pace_str(s)
-
+        # Nessun field test → USER BASELINE ZONES (verdict utente 2026-05).
+        # Analisi corsa 4km PBP rivelato: 4:20 GAP = I-pace, 4:30-4:35 = T-pace.
+        # Race predictions restano da fraction model (separate concern).
+        # Quando utente esegue field test, override via from_field_test=True.
         paces_out = {
-            "easy":       _sec_to_pace(e_pace_sec),
-            "marathon":   _sec_to_pace(m_pace_sec),
-            "threshold":  _sec_to_pace(t_pace_sec),
-            "threshold_peak": pace_at_vo2_pct(0.86),
+            "easy":       "5:30",        # E: recovery/long run pace conversazionale
+            "marathon":   "5:00",        # M: tra T e M race pace, scalato tenuta
+            "threshold":  "4:32",        # T: sustainable ~1h (mid range 4:30-4:35)
+            "threshold_peak": "4:30",    # T peak: estremo inferiore range utente
             "threshold_empirical": threshold_empirical,
-            "interval":   _sec_to_pace(i_pace_sec) or pace_at_vo2_pct(0.98),
-            "repetition": _sec_to_pace(r_pace_sec) or pace_at_vo2_pct(1.10),
+            "interval":   "4:20",        # I: 5K race / VO2max work (user verdict)
+            "repetition": "4:05",        # R: I - 15s (sprint/neuromuscular)
         }
 
     return {

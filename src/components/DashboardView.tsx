@@ -143,9 +143,10 @@ export function DashboardView() {
 
   const profile = dashData?.profile;
   const maxHr = profile?.max_hr ?? 180;
-  // Anaerobic threshold HR — Daniels: T-pace ~88% VO2max ≈ 88-90% HRmax
-  // (not 92% → that's already VO2max / I-pace territory)
-  const atHr = Math.round(maxHr * 0.88);
+  // Anaerobic threshold HR — verdict utente 2026-05 da analisi 4km:
+  // ultimo km @ 162 bpm (89% maxHr 182), ultimi 200m @ 164 bpm.
+  // LTHR plausibile 162-164 → hardcoded mid-range 163. Futuro: profile.threshold_hr.
+  const atHr = 163;
   const ltHr = Math.round(maxHr * 0.85);
 
   const raceDate = profile?.race_date;

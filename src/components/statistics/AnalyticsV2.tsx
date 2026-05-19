@@ -20,9 +20,11 @@ import { cadenceSpmFromRun } from '../../utils/cadence';
 import { computeDrift } from '../../utils/cardiacDrift';
 import { AthletePotentialVector } from './AthletePotentialVector';
 
-/** Soglia anaerobica HR utente — hardcoded reference (richiesta utente).
- *  In futuro: profile.threshold_hr field configurabile. */
-const USER_THRESHOLD_HR = 160;
+/** Soglia anaerobica HR utente — verdict 2026-05 da analisi corsa 4km
+ *  (FC ultimo km 162 bpm = 89% maxHr 182, stabilizzata 164 bpm ultimi 200m).
+ *  Range LTHR plausibile 162-164. Hardcoded mid-range = 163.
+ *  Futuro: profile.threshold_hr configurabile via UI settings. */
+const USER_THRESHOLD_HR = 163;
 
 // ─────────────────────────────────────────────────────────────
 // CONSTANTS
