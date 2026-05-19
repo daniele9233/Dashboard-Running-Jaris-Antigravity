@@ -1310,9 +1310,10 @@ export function AnalyticsV2({
   }, [proCharts, zoneDistribution]);
   const totalZoneMin = zonesChartData.reduce((s, z) => s + z.min, 0);
 
-  // ── AT Gauge: use maxHr + thresholdPace when available ───────────────
-  const atHr = maxHr ? Math.round(maxHr * 0.88) : 165;
-  const atPace = thresholdPace ?? '5:05';
+  // ── AT Gauge: user verdict baseline (163 bpm / 4:32 /km)
+  // USER_THRESHOLD_HR già definito in cima al file = 163
+  const atHr = USER_THRESHOLD_HR;
+  const atPace = thresholdPace ?? '4:32';
 
   // ── Expand states ─────────────────────────────────────────────────────
   const [atExpanded, setAtExpanded] = useState(false);

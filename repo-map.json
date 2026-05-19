@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-19T06:33:47.081Z",
+  "generated_at": "2026-05-19T06:59:05.283Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2536,9 +2536,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "ce3fd8530e8b24b16b8afbe3bd838944e4978e07020f82727a5eaf9a519a0e53",
-      "last_modified": "2026-05-19T06:33:47.082Z",
-      "size_bytes": 165037
+      "hash": "2f2d37784237ca7385c24fb087a9407143c70d56b51bdeea977111d02a84690d",
+      "last_modified": "2026-05-19T06:58:59.718Z",
+      "size_bytes": 165032
     },
     {
       "path": "src/components/statistics/AnalyticsV3.tsx",
@@ -2661,9 +2661,9 @@
         "react",
         "recharts"
       ],
-      "hash": "b568cb33e93cb3ad95f043d7efa9aa842aec5faeb7c781b4babb4ba76127ea8d",
-      "last_modified": "2026-05-19T04:41:53.743Z",
-      "size_bytes": 40718
+      "hash": "c9db90a0ba94d286035d694f7c9cf036a810d6fb39502200db4dc9a276d3cd03",
+      "last_modified": "2026-05-19T06:59:05.284Z",
+      "size_bytes": 40642
     },
     {
       "path": "src/components/statistics/BiologyFutureLab.tsx",

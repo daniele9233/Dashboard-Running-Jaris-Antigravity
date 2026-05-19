@@ -585,11 +585,9 @@ export function AthletePotentialVector({
                   <span className="text-3xl font-light tabular-nums text-[#C0FF00]">{thresholdPace}</span>
                   <span className="font-mono text-[10px] text-[#666] tracking-wider">/km</span>
                 </div>
-                {maxHr && (
-                  <div className="font-mono text-[10px] text-[#555] tracking-wider mt-1">
-                    HR target ~{Math.round(maxHr * 0.88)} bpm
-                  </div>
-                )}
+                <div className="font-mono text-[10px] text-[#555] tracking-wider mt-1">
+                  HR soglia ~163 bpm
+                </div>
               </div>
             )}
 
