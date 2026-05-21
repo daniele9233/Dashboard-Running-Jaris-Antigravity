@@ -26,6 +26,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { useRunnerDnaUiModel } from "../hooks/useRunnerDnaUiModel";
+import { RunnerDnaLoading } from "./runner-dna/RunnerDnaLoading";
 
 // ─── DNA HELIX SVG ────────────────────────────────────────────────────────────
 function DnaHelixDecor({ className = "" }: { className?: string }) {
@@ -167,29 +168,10 @@ function TrendBadge({ status }: { status: string }) {
 }
 
 // ─── LOADING ──────────────────────────────────────────────────────────────────
+// Initial animation: usa RunnerDnaLoading da ./runner-dna/RunnerDnaLoading.tsx
+// (animazione DNA helix + step list — preservata come da requirement utente)
 function LoadingView() {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center min-h-0 bg-[#030303] gap-8 p-8">
-      <DnaHelixDecor className="w-20 animate-pulse" />
-      <div className="text-center space-y-2">
-        <h2 className="text-[#C0FF00] font-black text-3xl tracking-[0.2em] animate-pulse uppercase">
-          Sequenziamento DNA in corso...
-        </h2>
-        <p className="text-gray-600 text-sm tracking-widest uppercase">
-          Il coach olimpico sta analizzando il tuo profilo fisiologico
-        </p>
-      </div>
-      <div className="flex gap-2">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className="w-2 h-2 rounded-full bg-[#C0FF00]"
-            style={{ animation: `bounce 1.2s ease-in-out ${i * 0.15}s infinite` }}
-          />
-        ))}
-      </div>
-    </div>
-  );
+  return <RunnerDnaLoading />;
 }
 
 // ─── TIME DELTA ───────────────────────────────────────────────────────────────
@@ -663,7 +645,7 @@ function PotentialBiologySection({
   const primaryFocusArea = focusAreas[0] ?? null;
 
   return (
-    <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-4 md:p-6 lg:p-8">
+    <section className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-[28px] border border-white/[0.06] bg-[radial-gradient(circle_at_top_left,rgba(192,255,0,0.14),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(34,211,238,0.1),transparent_38%),#05070A] p-6 h-full flex flex-col">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -1055,8 +1037,8 @@ export function RunnerDnaView() {
           <div className="absolute bottom-0 right-1/4 w-80 h-80 rounded-full bg-blue-500/[0.04] blur-3xl translate-y-1/2" />
         </div>
 
-        <div className="relative z-10 max-w-[1400px] mx-auto px-4 md:px-8 lg:px-12 py-6 md:py-12">
-          <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-10">
+        <div className="relative z-10 max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8 py-5 md:py-7">
+          <div className="flex flex-col lg:flex-row items-center gap-5 lg:gap-7">
 
             {/* Left: helix + VDOT */}
             <div className="flex items-center gap-4 md:gap-6 shrink-0">
@@ -1111,7 +1093,7 @@ export function RunnerDnaView() {
                 { label: "DIST. IDEALE",value: potential.ideal_distance, unit: "" },
                 { label: "SETTIMANE",   value: stats.weeks_active,  unit: "att." },
               ].map(({ label, value, unit }) => (
-                <div key={label} className="text-center p-3 bg-white/[0.025] border border-white/[0.05] rounded-2xl">
+                <div key={label} className="text-center p-3 rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_16px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
                   <div className="text-[8px] font-black tracking-[0.2em] text-gray-600 mb-1">{label}</div>
                   <div className="text-xl font-black text-white leading-tight">
                     {value}<span className="text-xs text-gray-500 ml-0.5">{unit}</span>
@@ -1124,9 +1106,9 @@ export function RunnerDnaView() {
         </div>
       </div>
 
-      <div className="max-w-[1400px] mx-auto px-4 md:px-8 lg:px-12 py-6 md:py-10 space-y-6 md:space-y-10">
-        <section className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
-          <div className="rounded-3xl border border-white/[0.05] bg-[#080808] p-4 md:p-6 lg:p-8 flex h-full flex-col">
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8 py-5 md:py-6 space-y-4 md:space-y-5">
+        <section className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
+          <div className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6 flex h-full flex-col">
             <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.35em] text-[#C0FF00]">
               <Trophy className="w-4 h-4 text-[#C0FF00]" />
               Voto runner contestualizzato
@@ -1193,7 +1175,7 @@ export function RunnerDnaView() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-white/[0.05] bg-[#080808] p-8">
+          <div className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
             <div className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Livelli runner</div>
             <div className="mt-6 space-y-4">
               {contextualRating.thresholds.map((category) => {
@@ -1245,10 +1227,10 @@ export function RunnerDnaView() {
         />
 
         <section>
-          <div className="text-[9px] font-black tracking-[0.35em] text-gray-600 mb-6 uppercase">
+          <div className="text-[9px] font-black tracking-[0.35em] text-gray-600 mb-3 uppercase">
             Sequenza Biomolecolare — 4 Dimensioni Atletiche
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 md:p-6 lg:p-8 bg-[#080808] border border-white/[0.05] rounded-3xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-4 md:p-5 lg:p-6 rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
             <DnaStrand
               label="Motore Aerobico"
               sublabel="VDOT — capacità ossidativa massimale"
@@ -1282,8 +1264,8 @@ export function RunnerDnaView() {
 
         {/* ══ PROFILE VISUAL ═══════════════════════════════════════════════ */}
         {profileVisualScores.length > 0 && (
-          <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-4 md:p-6 lg:p-8">
-            <div className="flex flex-col gap-3 mb-8 lg:flex-row lg:items-end lg:justify-between">
+          <section className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
+            <div className="flex flex-col gap-2 mb-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <div className="flex items-center gap-2 text-[9px] font-black tracking-[0.35em] text-[#C0FF00] uppercase">
                   <BarChart2 className="w-4 h-4 text-[#C0FF00]" />
@@ -1346,7 +1328,7 @@ export function RunnerDnaView() {
               ? tsb > 5 ? "#C0FF00" : tsb > -10 ? "#FCD34D" : "#EF4444"
               : "white";
             return (
-              <div key={label} className="bg-[#080808] border border-white/[0.05] rounded-2xl p-4 text-center flex flex-col items-center gap-2 hover:border-white/10 transition-colors">
+              <div key={label} className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_16px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center flex flex-col items-center gap-2 hover:border-white/[0.18] transition-colors">
                 <Icon className="w-4 h-4 text-gray-600" />
                 <div className="text-[8px] font-black tracking-[0.2em] text-gray-600">{label}</div>
                 <div className="text-2xl font-black leading-none" style={{ color: tsbColor }}>
@@ -1359,8 +1341,8 @@ export function RunnerDnaView() {
         )}
 
         {false && (
-        <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-4 md:p-6 lg:p-8">
-          <div className="text-[9px] font-black tracking-[0.35em] text-gray-600 mb-6 uppercase">
+        <section className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
+          <div className="text-[9px] font-black tracking-[0.35em] text-gray-600 mb-3 uppercase">
             Distribuzione Energetica — Zone Fisiologiche
           </div>
 
@@ -1434,8 +1416,8 @@ export function RunnerDnaView() {
           running_dynamics.ground_contact_ms != null ||
           running_dynamics.stride_length_m != null
         )) ? (
-          <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-4 md:p-6 lg:p-8">
-            <div className="flex items-center gap-2 mb-6">
+          <section className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
+            <div className="flex items-center gap-2 mb-4">
               <Footprints className="w-4 h-4 text-indigo-400" />
               <span className="text-[9px] font-black tracking-[0.35em] text-gray-500 uppercase">
                 Running Dynamics — Biomeccanica Avanzata
@@ -1472,7 +1454,7 @@ export function RunnerDnaView() {
             </p>
           </section>
         ) : (
-          <section className="bg-[#080808] border border-white/[0.05] border-dashed rounded-3xl p-6 flex items-center gap-4">
+          <section className="rounded-[24px] backdrop-blur-2xl border border-dashed border-white/[0.10] bg-gradient-to-br from-white/[0.03] to-black/40 p-5 flex items-center gap-4">
             <Footprints className="w-8 h-8 text-gray-700 shrink-0" />
             <div>
               <div className="text-[9px] font-black tracking-[0.25em] text-gray-600 uppercase mb-1">Running Dynamics Non Ancora Sincronizzate</div>
@@ -1484,8 +1466,8 @@ export function RunnerDnaView() {
         )}
 
         {/* ══ BIOMECHANICS BENCHMARK ═══════════════════════════════════════ */}
-        <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-4 md:p-6 lg:p-8">
-          <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <section className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
+          <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">
                 <LineChartIcon className="w-4 h-4 text-[#C0FF00]" />
@@ -1640,8 +1622,8 @@ export function RunnerDnaView() {
             </div>
           </div>
         </section>
-        <section className="bg-[#05070A] border border-white/[0.05] rounded-3xl p-4 md:p-6 lg:p-8">
-          <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <section className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
+          <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.35em] text-[#C0FF00]">
                 <Footprints className="w-4 h-4 text-[#C0FF00]" />
@@ -1675,8 +1657,8 @@ export function RunnerDnaView() {
           </div>
         </section>
         {hasBiomechanicsBenchmark && (
-          <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-4 md:p-6 lg:p-8">
-            <div className="flex flex-col gap-3 mb-8 lg:flex-row lg:items-end lg:justify-between">
+          <section className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
+            <div className="flex flex-col gap-2 mb-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <div className="flex items-center gap-2 text-[9px] font-black tracking-[0.35em] text-[#C0FF00] uppercase">
                   <Footprints className="w-4 h-4 text-[#C0FF00]" />
@@ -1743,7 +1725,7 @@ export function RunnerDnaView() {
         )}
 
         {/* ══ COACH VERDICT ════════════════════════════════════════════════ */}
-        <section className="relative bg-gradient-to-br from-[#0C0C0C] to-[#060606] border border-[#C0FF00]/15 rounded-3xl p-10 overflow-hidden">
+        <section className="relative rounded-[24px] backdrop-blur-2xl border border-[#C0FF00]/25 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-[#C0FF00]/[0.04] via-white/[0.04] to-black/50 p-6 md:p-8 overflow-hidden">
           <div
             className="absolute top-4 left-6 select-none pointer-events-none font-black leading-none"
             style={{ fontSize: 160, color: "#C0FF00", opacity: 0.04 }}
@@ -1780,7 +1762,7 @@ export function RunnerDnaView() {
         </section>
 
         {/* ══ STRENGTHS & GAPS ══════════════════════════════════════════════ */}
-        <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.35em] text-[#C0FF00]">
               <ShieldCheck className="w-4 h-4 text-[#C0FF00]" />
@@ -1794,8 +1776,8 @@ export function RunnerDnaView() {
         </div>
         <section className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           {/* Strengths */}
-          <div className="bg-[#080808] border border-[#C0FF00]/15 rounded-3xl p-4 md:p-6 lg:p-8">
-            <div className="flex items-center gap-2 mb-6">
+          <div className="rounded-[24px] backdrop-blur-2xl border border-[#C0FF00]/25 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-[#C0FF00]/[0.04] to-black/50 p-4 md:p-5 lg:p-6">
+            <div className="flex items-center gap-2 mb-4">
               <Trophy className="w-4 h-4 text-[#C0FF00]" />
               <span className="text-[9px] font-black tracking-[0.35em] text-[#C0FF00] uppercase">
                 Punti di Forza
@@ -1814,8 +1796,8 @@ export function RunnerDnaView() {
           </div>
 
           {/* Gaps */}
-          <div className="bg-[#080808] border border-rose-500/15 rounded-3xl p-4 md:p-6 lg:p-8">
-            <div className="flex items-center gap-2 mb-6">
+          <div className="rounded-[24px] backdrop-blur-2xl border border-rose-500/25 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-rose-500/[0.04] to-black/50 p-4 md:p-5 lg:p-6">
+            <div className="flex items-center gap-2 mb-4">
               <Zap className="w-4 h-4 text-rose-500" />
               <span className="text-[9px] font-black tracking-[0.35em] text-rose-500 uppercase">
                 Punti deboli
@@ -1833,8 +1815,8 @@ export function RunnerDnaView() {
             </ul>
           </div>
 
-          <div className="bg-[#080808] border border-cyan-300/20 rounded-3xl p-4 md:p-6 lg:p-8">
-            <div className="flex items-center gap-2 mb-6">
+          <div className="rounded-[24px] backdrop-blur-2xl border border-cyan-300/30 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-cyan-300/[0.04] to-black/50 p-4 md:p-5 lg:p-6">
+            <div className="flex items-center gap-2 mb-4">
               <Dumbbell className="w-4 h-4 text-cyan-200" />
               <span className="text-[9px] font-black tracking-[0.35em] text-cyan-200 uppercase">
                 Aree da migliorare
@@ -1852,7 +1834,7 @@ export function RunnerDnaView() {
         </section>
 
         {/* ══ POTENTIAL ════════════════════════════════════════════════════ */}
-        <section className="hidden bg-[#080808] border border-white/[0.05] rounded-3xl p-4 md:p-6 lg:p-8">
+        <section className="hidden rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
           <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <div className="rounded-[28px] border border-white/[0.06] bg-[radial-gradient(circle_at_top_left,rgba(192,255,0,0.14),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(34,211,238,0.1),transparent_38%),#05070A] p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -2020,8 +2002,8 @@ export function RunnerDnaView() {
 
         {/* ══ CONFRONTO ════════════════════════════════════════════════════ */}
         {comparison && (
-          <section className="bg-[#080808] border border-white/[0.05] rounded-3xl p-4 md:p-6 lg:p-8">
-            <div className="flex items-center gap-2 mb-8">
+          <section className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
+            <div className="flex items-center gap-2 mb-4">
               <BarChart2 className="w-4 h-4 text-indigo-400" />
               <span className="text-[9px] font-black tracking-[0.35em] text-gray-500 uppercase">
                 Confronto — Te Stesso · Media Runner · Target
@@ -2042,7 +2024,7 @@ export function RunnerDnaView() {
               ))}
             </div>
 
-            <div className="space-y-8">
+            <div className="space-y-5">
               {/* VDOT */}
               <ComparisonRow
                 label="VDOT — Capacità Aerobica"
@@ -2154,7 +2136,7 @@ export function RunnerDnaView() {
         )}
 
         {/* ══ UNLOCK + REGENERATE ══════════════════════════════════════════ */}
-        <section className="relative bg-gradient-to-r from-[#C0FF00]/[0.04] via-transparent to-transparent border border-[#C0FF00]/15 rounded-3xl p-4 md:p-6 lg:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <section className="relative rounded-[24px] backdrop-blur-2xl border border-[#C0FF00]/25 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-[#C0FF00]/[0.06] to-black/50 p-4 md:p-5 lg:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-3">
               <Target className="w-4 h-4 text-[#C0FF00]" />
