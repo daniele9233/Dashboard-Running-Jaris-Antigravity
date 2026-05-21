@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-21T13:32:44.719Z",
+  "generated_at": "2026-05-21T13:40:27.353Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2788,9 +2788,9 @@
         "react",
         "recharts"
       ],
-      "hash": "6920cb10eeeb35f4559b495052934f83e495a7795ec6af05b4632441ce4d9ecd",
-      "last_modified": "2026-05-21T13:32:44.720Z",
-      "size_bytes": 37827
+      "hash": "2521464aecec72f77bcb986d426cf9df95ea8dd61d8294447c387f81850155f2",
+      "last_modified": "2026-05-21T13:40:27.354Z",
+      "size_bytes": 37826
     },
     {
       "path": "src/components/statistics/CaricoFormaV2.tsx",

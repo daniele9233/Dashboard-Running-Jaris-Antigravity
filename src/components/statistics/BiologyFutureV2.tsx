@@ -729,6 +729,53 @@ function DetrainingPredictor({
       </Panel>
       </div>
 
+      {/* Ritorno al Futuro + Tachimetri Sistemici side-by-side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Panel accent={ACCENT}>
+          <div className="flex items-center gap-3 mb-5">
+            <Rewind className="w-4 h-4" style={{ color: ACCENT }} />
+            <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Ritorno al Futuro</h2>
+          </div>
+          <p className="text-sm font-semibold text-gray-500 leading-relaxed">
+            Ti sei fermato <span className="text-white font-black">{day} giorni</span>?
+            {isTaper && <span className="text-[#22C55E] font-black"> (taper window — quasi nessun debito)</span>}
+          </p>
+          <div className="mt-4 flex items-baseline gap-2">
+            <span className="text-5xl font-black text-white">{recoveryDays}</span>
+            <span className="text-sm font-bold text-gray-500">giorni di richiamo progressivo</span>
+          </div>
+          <div className="mt-3 text-[11px] font-bold uppercase tracking-widest" style={{ color: ACCENT }}>
+            Ratio personale ×{ratio.toFixed(1)} {isTaper && '· taper esente'}
+          </div>
+          <ol className="mt-5 space-y-3 text-sm font-semibold text-gray-400">
+            <li className="flex gap-3">
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 mt-0.5 shrink-0 w-12">Fase 1</span>
+              <span>Corsa lenta, FC sotto 70% max. Ricarico plasmatico in 4-7 giorni.</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 mt-0.5 shrink-0 w-12">Fase 2</span>
+              <span>Soglia leggera + lunghi controllati. Risveglio enzimi ossidativi.</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 mt-0.5 shrink-0 w-12">Fase 3</span>
+              <span>Ripetute brevi sopra soglia. VO2max torna al valore pre-stop.</span>
+            </li>
+          </ol>
+        </Panel>
+
+        <Panel accent={CYAN}>
+          <div className="flex items-center gap-3 mb-5">
+            <Gauge className="w-4 h-4" style={{ color: CYAN }} />
+            <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Tachimetri Sistemici</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 place-items-center">
+            <GaugeChart value={point.vo2Pct * 100} label="VO2MAX" sublabel="% mantenuta" color={ORANGE} size={170} />
+            <GaugeChart value={point.ltPct * 100} label="SOGLIA" sublabel="% mantenuta" color={CYAN} size={170} />
+            <GaugeChart value={point.performancePct * 100} label="PERFORMANCE" sublabel="indice clinico" color={point.performancePct >= 1 ? PRED_GREEN : ACCENT} size={170} />
+          </div>
+        </Panel>
+      </div>
+
       {/* What-if 10K */}
       <Panel accent={ORANGE}>
         <div className="flex items-center gap-3 mb-5">
@@ -801,70 +848,23 @@ function DetrainingPredictor({
         </div>
       </Panel>
 
-      {/* Memory cell + Ritorno al futuro */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Panel accent={PURPLE}>
-          <div className="flex items-center gap-3 mb-5">
-            <Dna className="w-4 h-4" style={{ color: PURPLE }} />
-            <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Memory Cell — Memoria Muscolare</h2>
-          </div>
-          <p className="text-sm font-semibold text-gray-400 leading-relaxed">
-            I nuclei mionucleari acquisiti negli anni di allenamento <span className="text-white font-black">non muoiono</span>:
-            restano dormienti nelle fibre. Quando riprendi, accelerano la sintesi proteica.
-            Murach 2020 e Seaborne 2018 (memoria epigenetica) confermano: chi ha corso anni recupera in modo non-lineare e piu rapido.
-          </p>
-          <div className="mt-5 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Bonus muscle memory</div>
-            <div className="mt-2 text-3xl font-black" style={{ color: PURPLE }}>+{memoryBonusCapped}%</div>
-            <p className="mt-1 text-[11px] font-semibold text-gray-600 leading-relaxed">
-              Con <span className="text-white font-black">{ageActiveYears.toFixed(1)} anni</span> di corsa, recuperi piu in fretta rispetto a un principiante.
-            </p>
-          </div>
-        </Panel>
-
-        <Panel accent={ACCENT}>
-          <div className="flex items-center gap-3 mb-5">
-            <Rewind className="w-4 h-4" style={{ color: ACCENT }} />
-            <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Ritorno al Futuro</h2>
-          </div>
-          <p className="text-sm font-semibold text-gray-500 leading-relaxed">
-            Ti sei fermato <span className="text-white font-black">{day} giorni</span>?
-            {isTaper && <span className="text-[#22C55E] font-black"> (taper window — quasi nessun debito)</span>}
-          </p>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-5xl font-black text-white">{recoveryDays}</span>
-            <span className="text-sm font-bold text-gray-500">giorni di richiamo progressivo</span>
-          </div>
-          <div className="mt-3 text-[11px] font-bold uppercase tracking-widest" style={{ color: ACCENT }}>
-            Ratio personale ×{ratio.toFixed(1)} {isTaper && '· taper esente'}
-          </div>
-          <ol className="mt-5 space-y-3 text-sm font-semibold text-gray-400">
-            <li className="flex gap-3">
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 mt-0.5 shrink-0 w-12">Fase 1</span>
-              <span>Corsa lenta, FC sotto 70% max. Ricarico plasmatico in 4-7 giorni.</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 mt-0.5 shrink-0 w-12">Fase 2</span>
-              <span>Soglia leggera + lunghi controllati. Risveglio enzimi ossidativi.</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 mt-0.5 shrink-0 w-12">Fase 3</span>
-              <span>Ripetute brevi sopra soglia. VO2max torna al valore pre-stop.</span>
-            </li>
-          </ol>
-        </Panel>
-      </div>
-
-      {/* Tachimetri sistemici */}
-      <Panel accent={CYAN}>
+      {/* Memory Cell */}
+      <Panel accent={PURPLE}>
         <div className="flex items-center gap-3 mb-5">
-          <Gauge className="w-4 h-4" style={{ color: CYAN }} />
-          <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Tachimetri Sistemici</h2>
+          <Dna className="w-4 h-4" style={{ color: PURPLE }} />
+          <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Memory Cell — Memoria Muscolare</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 place-items-center">
-          <GaugeChart value={point.vo2Pct * 100} label="VO2MAX" sublabel="% mantenuta" color={ORANGE} size={200} />
-          <GaugeChart value={point.ltPct * 100} label="SOGLIA" sublabel="% mantenuta" color={CYAN} size={200} />
-          <GaugeChart value={point.performancePct * 100} label="PERFORMANCE" sublabel="indice clinico" color={point.performancePct >= 1 ? PRED_GREEN : ACCENT} size={200} />
+        <p className="text-sm font-semibold text-gray-400 leading-relaxed">
+          I nuclei mionucleari acquisiti negli anni di allenamento <span className="text-white font-black">non muoiono</span>:
+          restano dormienti nelle fibre. Quando riprendi, accelerano la sintesi proteica.
+          Murach 2020 e Seaborne 2018 (memoria epigenetica) confermano: chi ha corso anni recupera in modo non-lineare e piu rapido.
+        </p>
+        <div className="mt-5 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Bonus muscle memory</div>
+          <div className="mt-2 text-3xl font-black" style={{ color: PURPLE }}>+{memoryBonusCapped}%</div>
+          <p className="mt-1 text-[11px] font-semibold text-gray-600 leading-relaxed">
+            Con <span className="text-white font-black">{ageActiveYears.toFixed(1)} anni</span> di corsa, recuperi piu in fretta rispetto a un principiante.
+          </p>
         </div>
       </Panel>
     </div>
