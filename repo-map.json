@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-21T13:51:56.507Z",
+  "generated_at": "2026-05-21T13:59:54.839Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2504,14 +2504,13 @@
       "routes": [],
       "imports": [
         "../hooks/useRunnerDnaUiModel",
-        "./runner-dna/RunnerDnaLoading",
         "lucide-react",
         "react",
         "recharts"
       ],
-      "hash": "12ec62861ddb97e22030781474703678d2e84c14420ed92bb3ae44f3d41f043b",
-      "last_modified": "2026-05-21T13:51:56.508Z",
-      "size_bytes": 119492
+      "hash": "3a7ea871ab4c4db0f2d26e3c4ed4d5e4d377e46b38a6e80a2e6fe58e00774a42",
+      "last_modified": "2026-05-21T13:59:54.839Z",
+      "size_bytes": 120095
     },
     {
       "path": "src/components/SettingsControls.tsx",

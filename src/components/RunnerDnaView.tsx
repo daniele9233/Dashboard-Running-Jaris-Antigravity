@@ -26,7 +26,6 @@ import {
   ReferenceLine,
 } from "recharts";
 import { useRunnerDnaUiModel } from "../hooks/useRunnerDnaUiModel";
-import { RunnerDnaLoading } from "./runner-dna/RunnerDnaLoading";
 
 // ─── DNA HELIX SVG ────────────────────────────────────────────────────────────
 function DnaHelixDecor({ className = "" }: { className?: string }) {
@@ -168,10 +167,29 @@ function TrendBadge({ status }: { status: string }) {
 }
 
 // ─── LOADING ──────────────────────────────────────────────────────────────────
-// Initial animation: usa RunnerDnaLoading da ./runner-dna/RunnerDnaLoading.tsx
-// (animazione DNA helix + step list — preservata come da requirement utente)
 function LoadingView() {
-  return <RunnerDnaLoading />;
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center min-h-0 bg-[#030303] gap-8 p-8">
+      <DnaHelixDecor className="w-20 animate-pulse" />
+      <div className="text-center space-y-2">
+        <h2 className="text-[#C0FF00] font-black text-3xl tracking-[0.2em] animate-pulse uppercase">
+          Sequenziamento DNA in corso...
+        </h2>
+        <p className="text-gray-600 text-sm tracking-widest uppercase">
+          Il coach olimpico sta analizzando il tuo profilo fisiologico
+        </p>
+      </div>
+      <div className="flex gap-2">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="w-2 h-2 rounded-full bg-[#C0FF00]"
+            style={{ animation: `bounce 1.2s ease-in-out ${i * 0.15}s infinite` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // ─── TIME DELTA ───────────────────────────────────────────────────────────────
