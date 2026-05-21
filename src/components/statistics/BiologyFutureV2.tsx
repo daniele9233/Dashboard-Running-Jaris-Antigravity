@@ -592,6 +592,8 @@ function DetrainingPredictor({
 
   return (
     <div className="space-y-6 mt-2">
+      {/* Hero + Confronto side-by-side (xl: 2 col, mobile: stack) */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
       {/* Hero + Timeline merged */}
       <Panel accent={ACCENT}>
         <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6">
@@ -725,6 +727,7 @@ function DetrainingPredictor({
           </div>
         </div>
       </Panel>
+      </div>
 
       {/* What-if 10K */}
       <Panel accent={ORANGE}>
