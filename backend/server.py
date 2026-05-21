@@ -883,6 +883,56 @@ def _is_strava_run_activity(activity: dict) -> bool:
     return activity_type in {"Run", "VirtualRun"} or sport_type in {"Run", "TrailRun", "VirtualRun"}
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# MANUAL RUN OVERRIDES
+# ─────────────────────────────────────────────────────────────────────────────
+# Strava treadmill data unreliable (no GPS, belt-distance miscalibration).
+# Override fixes DISPLAY values only; is_treadmill=True mantenuto so analytics
+# (VDOT, zone, race predictions) continue to exclude treadmill runs.
+# Key: (name, date) tuple — exact match.
+_MANUAL_RUN_OVERRIDES: dict[tuple[str, str], dict] = {
+    ("Soglia Intensa Tapis Roulant", "2026-05-20"): {
+        "distance_km": 5.3,
+        "duration_minutes": 22.1,  # 22:06
+        "avg_pace": "4:10",
+        "is_treadmill": True,  # treadmill resta True → escluso da analytics
+        "treadmill_grade_pct": 2.6,  # info: TRX Marathon livello 3/15
+        "manual_override": True,
+        "run_type": "threshold",
+        "splits": [
+            {"km": 1, "pace": "4:27", "distance": 1000, "elapsed_time": 267,
+             "hr": None, "cadence": None, "elevation_difference": 0},
+            {"km": 2, "pace": "4:27", "distance": 1000, "elapsed_time": 267,
+             "hr": None, "cadence": None, "elevation_difference": 0},
+            {"km": 3, "pace": "4:08", "distance": 1000, "elapsed_time": 248,
+             "hr": None, "cadence": None, "elevation_difference": 0},
+            {"km": 4, "pace": "4:08", "distance": 1000, "elapsed_time": 248,
+             "hr": None, "cadence": None, "elevation_difference": 0},
+            {"km": 5, "pace": "3:52", "distance": 1000, "elapsed_time": 232,
+             "hr": None, "cadence": None, "elevation_difference": 0},
+            {"km": 6, "pace": "3:38", "distance": 300, "elapsed_time": 65,
+             "hr": None, "cadence": None, "elevation_difference": 0},
+        ],
+        "notes": (
+            "Soglia Intensa Tapis Roulant (TRX Marathon, livello 3/15 = 2.6% "
+            "pendenza reale). Override manuale: distanza/durata/pace corretti. "
+            "Struttura: 2km@13.5kmh + 2km@14.5kmh + 1km@15.5kmh + 300m@16.5kmh. "
+            "Treadmill flag mantenuto → escluso da VDOT/zone/predictions."
+        ),
+    },
+}
+
+
+def _apply_manual_override(run_doc: dict) -> dict:
+    """Apply manual override if (name, date) matches a configured entry."""
+    key = (run_doc.get("name", ""), run_doc.get("date", ""))
+    override = _MANUAL_RUN_OVERRIDES.get(key)
+    if not override:
+        return run_doc
+    run_doc.update(override)
+    return run_doc
+
+
 def _strava_error_response(resp: httpx.Response, fallback_status: int = 502) -> JSONResponse:
     retry_after = resp.headers.get("retry-after")
     read_limit = resp.headers.get("x-readratelimit-limit")
@@ -1136,13 +1186,16 @@ async def strava_sync():
                 "avg_ground_contact_time":  fit_dynamics.get("avg_ground_contact_time") or detail.get("average_ground_contact_time"),
                 "avg_stride_length":        fit_dynamics.get("avg_stride_length") or detail.get("average_stride_length"),
             }
+            # Manual override per casi specifici (es. treadmill TRX).
+            # Solo display values; is_treadmill resta True → analytics escludono.
+            run_doc = _apply_manual_override(run_doc)
             # GAP (grade-adjusted pace) sec/km — pace-only effort normalizer.
             # Strava linear approx ~15s/km per 1% grade. Saved per-run so future
             # analytics (divergence detection, classify) usano effort vero.
             gap_sec = _gap_pace_seconds({
-                "splits": splits,
-                "distance_km": distance_km,
-                "avg_pace": avg_pace,
+                "splits": run_doc.get("splits", splits),
+                "distance_km": run_doc.get("distance_km", distance_km),
+                "avg_pace": run_doc.get("avg_pace", avg_pace),
             })
             if gap_sec:
                 run_doc["gap_pace_sec"] = gap_sec
@@ -1205,6 +1258,36 @@ async def strava_sync():
         "scanned": scanned,
         "auto_adapt": adapt_result,
     }
+
+
+@app.post("/api/runs/reapply-overrides")
+async def reapply_manual_overrides():
+    """Riapplica _MANUAL_RUN_OVERRIDES su run già presenti in DB.
+
+    Utile quando override è stato aggiunto/modificato DOPO che il run è stato
+    già sincronizzato (sync normale ha skip-existing).
+    """
+    tokens = await _get_active_strava_token()
+    athlete_id = tokens.get("athlete_id") if tokens else None
+    updated = []
+    for (name, date), override in _MANUAL_RUN_OVERRIDES.items():
+        q: dict = {"name": name, "date": date}
+        if athlete_id:
+            q["athlete_id"] = athlete_id
+        existing = await db.runs.find_one(q)
+        if not existing:
+            continue
+        run_doc = dict(existing)
+        run_doc.update(override)
+        gap_sec = _gap_pace_seconds(run_doc)
+        if gap_sec:
+            run_doc["gap_pace_sec"] = gap_sec
+            run_doc["gap_pace"] = _format_secs(gap_sec)
+        run_doc = _normalise_run_quality_fields(run_doc)
+        await db.runs.update_one({"_id": existing["_id"]}, {"$set": run_doc})
+        updated.append({"name": name, "date": date})
+
+    return {"ok": True, "updated": updated, "count": len(updated)}
 
 
 # Endpoints PROFILE / USER LAYOUT / RUNS estratti in routers/ (round 8 — #15).
