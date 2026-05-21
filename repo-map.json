@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-21T05:04:44.721Z",
+  "generated_at": "2026-05-21T05:13:52.955Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2216,9 +2216,9 @@
         "react",
         "react-map-gl/mapbox"
       ],
-      "hash": "dfd91532ace30f91e3c4032c0f79b117b59a6a6e3950ab35ada9eb64742079ea",
-      "last_modified": "2026-05-16T21:14:46.352Z",
-      "size_bytes": 10963
+      "hash": "a22c933d943fa730492672bb57f0e8dcbd4712fd6cf9f8ed15817358cabf0336",
+      "last_modified": "2026-05-21T05:13:52.956Z",
+      "size_bytes": 11357
     },
     {
       "path": "src/components/LiveTelemetry3DMap.tsx",

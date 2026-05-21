@@ -55,13 +55,21 @@ export function LastRunMap({ run }: LastRunMapProps) {
     }
 
     let coordinates: [number, number][] = [];
+    const isFiniteCoord = (lng: unknown, lat: unknown): boolean =>
+      typeof lng === 'number' && typeof lat === 'number' &&
+      Number.isFinite(lng) && Number.isFinite(lat) &&
+      lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90;
 
     if (run.polyline) {
       const decoded = polylineDecode.decode(run.polyline);
-      coordinates = decoded.map(([lat, lng]) => [lng, lat] as [number, number]);
-    } else if (run.start_latlng) {
+      coordinates = decoded
+        .map(([lat, lng]) => [lng, lat] as [number, number])
+        .filter(([lng, lat]) => isFiniteCoord(lng, lat));
+    } else if (run.start_latlng && run.start_latlng.length >= 2) {
       const [lat, lng] = run.start_latlng;
-      coordinates = [[lng, lat]];
+      if (isFiniteCoord(lng, lat)) {
+        coordinates = [[lng, lat]];
+      }
     }
 
     if (coordinates.length === 0) return { routeGeoJson: null, bounds: null, startCoord: null };
