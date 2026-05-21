@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-21T05:13:52.955Z",
+  "generated_at": "2026-05-21T05:27:04.602Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -1963,6 +1963,7 @@
         "dashboard",
         "garmin",
         "layout",
+        "map",
         "profile",
         "statistics",
         "strava",
@@ -2002,9 +2003,9 @@
         "react-router-dom",
         "recharts"
       ],
-      "hash": "228617c55130cb87256b02685604c9d3499fd4618292a619b818d476d9b6555f",
-      "last_modified": "2026-05-19T06:10:49.436Z",
-      "size_bytes": 58225
+      "hash": "35fc83d2a51282a4e74dae3cd711f0ead5b138893e63a1904f73e318275ec143",
+      "last_modified": "2026-05-21T05:27:04.602Z",
+      "size_bytes": 58948
     },
     {
       "path": "src/components/DetrainingWidget.tsx",

@@ -250,9 +250,23 @@ export function DashboardView() {
     ?? vdotPacesData?.paces?.threshold_empirical
     ?? null;
 
-  const gpsRuns = runs.filter(r => !r.is_treadmill);
+  // Last run for HRZones: skip treadmill (HR splits più affidabili outdoor).
+  // Last run for Map: skip treadmill AND require valid GPS (polyline o
+  // finite start_latlng) — fallback al precedente con tracciato valido.
+  const hasValidGps = (r: Run): boolean => {
+    if (r.is_treadmill) return false;
+    if (r.polyline && r.polyline.length > 10) return true;
+    if (r.start_latlng && r.start_latlng.length >= 2) {
+      const [lat, lng] = r.start_latlng;
+      return typeof lat === 'number' && typeof lng === 'number'
+        && Number.isFinite(lat) && Number.isFinite(lng)
+        && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+    }
+    return false;
+  };
   const recentRuns = runs.slice(0, 7);
-  const lastRun = gpsRuns[0] ?? null;
+  const lastRun = runs.find(r => !r.is_treadmill) ?? null;
+  const lastRunForMap = runs.find(hasValidGps) ?? null;
 
   // ── Sparkline: km settimanali ultimi 10 settimane (Status of Form nel tempo)
   const sparklinePoints = useMemo(() => {
@@ -817,7 +831,7 @@ export function DashboardView() {
            <GridCard disabled={isMobile} onRemove={() => hideWidget("last-run-map")}>
             <div className="h-full rounded-[24px] overflow-hidden relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
               <div className="absolute inset-0">
-                <LastRunMap run={lastRun} />
+                <LastRunMap run={lastRunForMap} />
               </div>
             </div>
            </GridCard>
