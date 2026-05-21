@@ -678,27 +678,6 @@ function DetrainingPredictor({
           );
         })()}
 
-        <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
-          <SnapshotStat
-            label="VO2max"
-            value={vo2Loss < 0.05 ? '~0%' : `-${vo2Loss.toFixed(1)}%`}
-            color={vo2Loss < 0.05 ? PRED_GREEN : ORANGE}
-            hint={`${(point.vo2Pct * 100).toFixed(1)}% mantenuto`}
-          />
-          <SnapshotStat
-            label="Soglia"
-            value={ltLoss < 0.05 ? '~0%' : `-${ltLoss.toFixed(1)}%`}
-            color={ltLoss < 0.05 ? PRED_GREEN : CYAN}
-            hint="enzimi ossidativi"
-          />
-          <SnapshotStat label="Plasma" value={`-${plasmaLoss.toFixed(1)}%`} color={PURPLE} hint="compensato hematocrit" />
-          <SnapshotStat
-            label="Performance"
-            value={`${perfDelta >= 0 ? '+' : ''}${perfDelta.toFixed(1)}%`}
-            color={perfDelta >= 0 ? PRED_GREEN : ORANGE}
-            hint="indice clinico"
-          />
-        </div>
       </Panel>
 
       {/* COMPARISON: Taper vs Fermo Totale al giorno selezionato */}
