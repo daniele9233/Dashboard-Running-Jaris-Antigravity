@@ -2464,6 +2464,7 @@ export function StatisticsView() {
         ════════════════════════════════════════════════════ */}
         {activeTab === 'biologyv2' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <BiologyFutureV2 data={biologyData} profile={profileData ?? null} runs={runs} vdot={vdot} />
             <BiologyFutureLab profile={profileData ?? null} runs={runs} vdot={vdot} />
           </div>
         )}
