@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-21T05:27:04.602Z",
+  "generated_at": "2026-05-21T12:49:06.726Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2758,11 +2758,9 @@
       "touch_when": [
         "activities",
         "ai",
-        "garmin",
         "layout",
         "profile",
         "statistics",
-        "strava",
         "training",
         "types"
       ],
@@ -2778,9 +2776,9 @@
         "react",
         "recharts"
       ],
-      "hash": "583012e0bc5c8af3073ab85a94f0f7c27172360813d456ce27bea9f83eac36f6",
-      "last_modified": "2026-05-16T19:22:54.213Z",
-      "size_bytes": 59746
+      "hash": "19a35913b4c61d43c3dc27aedc5cbe278de217628b1f470c29fabdd7b3be0633",
+      "last_modified": "2026-05-21T12:48:42.678Z",
+      "size_bytes": 38403
     },
     {
       "path": "src/components/statistics/CaricoFormaV2.tsx",
@@ -2936,8 +2934,8 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "8d351a24b5b920a5a422aeeaaa92d07413279b6a9e9b55e2e28d186be102b41d",
-      "last_modified": "2026-05-19T04:39:48.248Z",
+      "hash": "6bc8eb91317b60e67dd1d47ab81d4eea01941b66cd1041b23d13df1137d577ad",
+      "last_modified": "2026-05-21T12:49:06.727Z",
       "size_bytes": 124976
     },
     {

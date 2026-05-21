@@ -918,7 +918,7 @@ export function StatisticsView() {
     { id: 'analyticsv3', label: 'Biomeccanica & Efficienza',   icon: Activity },
     { id: 'biology',     label: 'Biologia & Futuro',           icon: FlaskConical },
     { id: 'environment', label: 'Clima & Ritmo',               icon: CloudSun },
-    { id: 'biologyv2',   label: 'Biologia & Futurov2',         icon: Dna },
+    { id: 'biologyv2',   label: 'Detraining',                  icon: Dna },
     { id: 'badges',      label: 'Badge',                       icon: Star },
   ];
 
