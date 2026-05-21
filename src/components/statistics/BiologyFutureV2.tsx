@@ -592,7 +592,7 @@ function DetrainingPredictor({
 
   return (
     <div className="space-y-6 mt-2">
-      {/* Hero */}
+      {/* Hero + Timeline merged */}
       <Panel accent={ACCENT}>
         <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6">
           <div>
@@ -625,59 +625,58 @@ function DetrainingPredictor({
             />
           </div>
         </div>
-      </Panel>
 
-      {/* Timeline */}
-      <Panel accent={CYAN}>
-        <div className="flex items-center gap-3 mb-5">
-          <Calendar className="w-4 h-4" style={{ color: CYAN }} />
-          <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Timeline Personale del Detraining</h2>
-        </div>
-
-        <div className="mb-6">
-          <input
-            type="range"
-            min={0}
-            max={60}
-            value={day}
-            onChange={(e) => setDay(Number(e.target.value))}
-            className="w-full accent-[#C0FF00]"
-          />
-          <div className="flex justify-between gap-2 mt-3">
-            {TIMELINE_EVENTS.map((ev) => (
-              <TimelineEvent
-                key={ev.day}
-                day={ev.day}
-                label={ev.title.length > 14 ? `${ev.title.slice(0, 12)}…` : ev.title}
-                active={Math.abs(day - ev.day) <= 1}
-                onClick={() => setDay(ev.day)}
-                color={ev.color}
-              />
-            ))}
+        {/* Timeline interattiva (slider + eventi) — mergiata dentro hero */}
+        <div className="mt-8 pt-6 border-t border-white/[0.06]">
+          <div className="flex items-center gap-3 mb-5">
+            <Calendar className="w-4 h-4" style={{ color: CYAN }} />
+            <h3 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Timeline Personale del Detraining</h3>
           </div>
+
+          <div className="mb-6">
+            <input
+              type="range"
+              min={0}
+              max={60}
+              value={day}
+              onChange={(e) => setDay(Number(e.target.value))}
+              className="w-full accent-[#C0FF00]"
+            />
+            <div className="flex justify-between gap-2 mt-3">
+              {TIMELINE_EVENTS.map((ev) => (
+                <TimelineEvent
+                  key={ev.day}
+                  day={ev.day}
+                  label={ev.title.length > 14 ? `${ev.title.slice(0, 12)}…` : ev.title}
+                  active={Math.abs(day - ev.day) <= 1}
+                  onClick={() => setDay(ev.day)}
+                  color={ev.color}
+                />
+              ))}
+            </div>
+          </div>
+
+          {(() => {
+            const ev = [...TIMELINE_EVENTS].reverse().find((e) => e.day <= day) ?? TIMELINE_EVENTS[0];
+            return (
+              <motion.div
+                key={ev.day}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="rounded-xl border p-5"
+                style={{ borderColor: `${ev.color}33`, background: `${ev.color}10` }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <ev.icon className="w-4 h-4" style={{ color: ev.color }} />
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: ev.color }}>D{ev.day}</div>
+                </div>
+                <h3 className="text-2xl sm:text-3xl font-black text-white leading-tight">{ev.title}</h3>
+                <p className="mt-3 text-sm font-semibold leading-relaxed text-gray-400">{ev.body}</p>
+              </motion.div>
+            );
+          })()}
         </div>
-
-        {(() => {
-          const ev = [...TIMELINE_EVENTS].reverse().find((e) => e.day <= day) ?? TIMELINE_EVENTS[0];
-          return (
-            <motion.div
-              key={ev.day}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="rounded-xl border p-5"
-              style={{ borderColor: `${ev.color}33`, background: `${ev.color}10` }}
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <ev.icon className="w-4 h-4" style={{ color: ev.color }} />
-                <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: ev.color }}>D{ev.day}</div>
-              </div>
-              <h3 className="text-2xl sm:text-3xl font-black text-white leading-tight">{ev.title}</h3>
-              <p className="mt-3 text-sm font-semibold leading-relaxed text-gray-400">{ev.body}</p>
-            </motion.div>
-          );
-        })()}
-
       </Panel>
 
       {/* COMPARISON: Taper vs Fermo Totale al giorno selezionato */}
