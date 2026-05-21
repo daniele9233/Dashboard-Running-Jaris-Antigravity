@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-21T13:06:52.277Z",
+  "generated_at": "2026-05-21T13:23:56.572Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 146,
+    "files": 147,
     "backend_routes": 57,
     "frontend_routes": 14,
     "api_clients": 59
@@ -1157,6 +1157,18 @@
       "hash": "1e6a767f2dc9fe1df0a37a9ea3bc2fd08984f8578661b02522ee40cdea644c41",
       "last_modified": "2026-05-04T10:22:27.899Z",
       "size_bytes": 21965
+    },
+    {
+      "path": "public/_redirects",
+      "kind": "public-asset",
+      "purpose": "public-asset _redirects.",
+      "touch_when": [],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "66584af744075248a042165adbdbd6a0551fa708a85650ea1e3e777eee17080c",
+      "last_modified": "2026-05-21T13:23:56.573Z",
+      "size_bytes": 24
     },
     {
       "path": "public/garmin-auth.html",
