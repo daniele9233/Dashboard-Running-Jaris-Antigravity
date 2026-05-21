@@ -2220,8 +2220,6 @@ export function StatisticsView() {
               )}
             </Card>
 
-            {/* DETRAINING LAB — Coyle 1984 / Mujika 2000 / Bosquet 2007-2013 */}
-            <BiologyFutureLab profile={profileData ?? null} runs={runs} vdot={vdot} />
           </div>
         )}
 
@@ -2465,7 +2463,9 @@ export function StatisticsView() {
             BADGES TAB
         ════════════════════════════════════════════════════ */}
         {activeTab === 'biologyv2' && (
-          <BiologyFutureV2 data={biologyData} profile={profileData ?? null} runs={runs} vdot={vdot} />
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <BiologyFutureLab profile={profileData ?? null} runs={runs} vdot={vdot} />
+          </div>
         )}
 
         {activeTab === 'badges' && (
