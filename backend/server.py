@@ -3554,11 +3554,13 @@ def _vdot_from_effort(
     pct_max_duration = (0.8 + 0.1894393 * math.exp(-0.012778 * duration_min)
                         + 0.2989558 * math.exp(-0.1932605 * duration_min))
 
-    # Pace-only race-equivalent VDOT — the physiological ceiling implied by this
-    # pace if it were an all-out effort. Used to bound HR-derived inflation.
-    vdot_pace_only = vo2 / pct_max_duration if pct_max_duration > 0 else None
-
     # ── Layer 3: HR as validator, not blind driver ───────────────────────────
+    # A sub-maximal tempo run legitimately implies a HIGHER VDOT than its pace
+    # alone (run easy, high engine). HR scaling unlocks that. We deliberately do
+    # NOT clamp the HR-scaled value to the pace-only ceiling — that would strip
+    # the real signal out of every tempo/threshold run and understate VDOT.
+    # Unreliable HR (sensor dropout) is handled downstream by per-run confidence
+    # weighting and the confidence-gated recency anchor, not by clipping here.
     if avg_hr and max_hr > 0:
         hr_pct = avg_hr / max_hr
         if hr_pct < 0.75:
@@ -3574,16 +3576,7 @@ def _vdot_from_effort(
 
     if pct_max <= 0:
         return None
-    vdot = vo2 / pct_max
-
-    # ── Layer 4: cap HR-driven inflation/deflation ───────────────────────────
-    # A glitchy sensor that under-reads HR (sweat/rain dropout) produces a low
-    # hr_pct → small pct_max → inflated VDOT. Bound the single-run estimate to
-    # ±8% of the pace-only ceiling so one corrupted HR trace can't spike VDOT.
-    if vdot_pace_only and vdot_pace_only > 0:
-        vdot = min(vdot, vdot_pace_only * 1.08)
-        vdot = max(vdot, vdot_pace_only * 0.92)
-    return vdot
+    return vo2 / pct_max
 
 
 def _interval_vdot_from_splits(run: dict, max_hr: int) -> Optional[float]:
@@ -5380,12 +5373,31 @@ async def delete_field_test(test_id: str):
 
 
 # ─── GAP (Grade Adjusted Pace) helpers ───────────────────────────────────────
+def _grade_adjustment_sec(grade_pct: float) -> float:
+    """Seconds/km to subtract from raw pace to get the flat-equivalent pace.
+
+    Asymmetric, Minetti-style. A naive symmetric ~15s/%/km (Strava) badly
+    overstates the benefit of running downhill: the metabolic saving going down
+    is much smaller than the cost going up, and very steep descents add braking
+    cost back. So:
+      - Uphill   (grade > 0): ~12.5 s/km per 1%  (flat would be that much faster)
+      - Downhill (grade < 0): ~7 s/km per 1% benefit, fading past -8% where
+                              braking starts to cost, capped so a steep descent
+                              never looks like a huge flat-pace gift.
+    """
+    if grade_pct >= 0:
+        return grade_pct * 12.5
+    g = abs(grade_pct)
+    benefit_per_pct = 7.0 if g <= 8.0 else max(2.0, 7.0 - (g - 8.0) * 1.2)
+    return -min(g * benefit_per_pct, 55.0)
+
+
 def _gap_pace_seconds(run: dict) -> Optional[int]:
     """Grade-adjusted pace (sec/km) per-split, weighted by distance.
 
-    Strava linear approx: ~15s/km adjustment per 1% grade.
-    - Uphill (positive grade): GAP faster than raw (less effort on flat)
-    - Downhill (negative grade): GAP slower than raw (would be slower on flat)
+    Uses _grade_adjustment_sec (asymmetric uphill/downhill). Positive grade →
+    GAP faster than raw; negative grade → GAP slower than raw, but with a much
+    gentler downhill credit than a symmetric model.
 
     Returns None se splits insufficienti o data invalida.
     """
@@ -5408,7 +5420,7 @@ def _gap_pace_seconds(run: dict) -> Optional[int]:
             if sp_dist_m <= 0:
                 continue
             sp_grade_pct = (sp_elev / sp_dist_m) * 100
-            sp_gap = sp_pace - sp_grade_pct * 15  # Strava linear approx
+            sp_gap = sp_pace - _grade_adjustment_sec(sp_grade_pct)
             sp_km = sp_dist_m / 1000.0
             total_gap_time += sp_gap * sp_km
             total_dist += sp_km
@@ -5425,7 +5437,7 @@ def _gap_pace_seconds(run: dict) -> Optional[int]:
         return None
     net_elev = sum((sp.get("elevation_difference") or 0) for sp in (splits or []))
     grade_pct = (net_elev / (dist_km * 1000)) * 100 if dist_km > 0 else 0
-    return int(round(raw_sec - grade_pct * 15))
+    return int(round(raw_sec - _grade_adjustment_sec(grade_pct)))
 
 
 def _format_secs(sec: int) -> str:
