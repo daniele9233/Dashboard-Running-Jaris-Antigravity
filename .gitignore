@@ -39,3 +39,6 @@ Thumbs.db
 # Claude harness state (locale)
 .claude/
 
+
+# graphify regeneration cache (derived, not tracked)
+graphify-out/cache/
