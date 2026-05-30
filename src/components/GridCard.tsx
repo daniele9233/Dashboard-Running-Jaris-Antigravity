@@ -34,7 +34,10 @@ export function GridCard({
     <div className="relative h-full group">
       {!disabled && (
         <div
-          className="drag-handle absolute top-2 left-2 z-30 p-1 rounded-md opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-white/10 transition-all cursor-move"
+          role="button"
+          tabIndex={0}
+          aria-label="Trascina per spostare widget"
+          className="drag-handle absolute top-2 left-2 z-30 p-2 rounded-xl opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-white/10 focus-visible:opacity-100 focus-visible:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C0FF00]/60 transition-opacity cursor-move"
           title="Trascina per spostare"
         >
           <GripVertical size={14} className="text-white" />
@@ -50,9 +53,9 @@ export function GridCard({
           }}
           title="Rimuovi widget"
           aria-label="Rimuovi widget"
-          className="absolute top-2 right-2 z-30 w-6 h-6 rounded-full bg-black/40 hover:bg-[#F43F5E]/80 flex items-center justify-center opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+          className="absolute top-2 right-2 z-30 w-11 h-11 rounded-xl bg-black/40 hover:bg-[#F43F5E]/80 flex items-center justify-center opacity-0 group-hover:opacity-60 hover:!opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F43F5E]/60 transition-opacity"
         >
-          <X size={12} className="text-white" />
+          <X size={14} className="text-white" />
         </button>
       )}
       <div className="h-full">

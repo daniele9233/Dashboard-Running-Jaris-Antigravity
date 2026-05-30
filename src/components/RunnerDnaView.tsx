@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dna, BrainCircuit, Trophy, Zap, Target, TrendingUp,
   RefreshCcw, Activity, Heart, Timer, Gauge, Flame,
@@ -25,7 +25,121 @@ import {
   Line,
   ReferenceLine,
 } from "recharts";
+import { Responsive, WidthProvider } from "react-grid-layout/legacy";
 import { useRunnerDnaUiModel } from "../hooks/useRunnerDnaUiModel";
+import { GridCard } from "./GridCard";
+
+const RdResponsiveGrid = WidthProvider(Responsive);
+
+// ─── BENTO LAYOUT ─────────────────────────────────────────────────────────────
+// 14 widgets, 12-col grid, rowHeight 60px, gap 16px.
+// Variable cell sizes (no two identical) — Apple Vision / Linear bento.
+type RdLayoutItem = {
+  i: string; x: number; y: number; w: number; h: number;
+  minW?: number; minH?: number;
+};
+type RdLayouts = { lg?: RdLayoutItem[]; md?: RdLayoutItem[]; sm?: RdLayoutItem[] };
+
+const RD_DEFAULT_LAYOUTS: RdLayouts = {
+  lg: [
+    { i: "rd-rating",     x: 0, y:  0, w: 8, h: 6, minW: 5, minH: 5 },
+    { i: "rd-livelli",    x: 8, y:  0, w: 4, h: 6, minW: 3, minH: 4 },
+    { i: "rd-potential",  x: 0, y:  6, w: 12, h: 8, minW: 8, minH: 6 },
+    { i: "rd-strands",    x: 0, y: 14, w: 7, h: 7, minW: 4, minH: 5 },
+    { i: "rd-radar",      x: 7, y: 14, w: 5, h: 7, minW: 4, minH: 5 },
+    { i: "rd-evolution",  x: 0, y: 21, w: 12, h: 12, minW: 8, minH: 8 },
+    { i: "rd-biolab",     x: 0, y: 33, w: 6, h: 8, minW: 4, minH: 6 },
+    { i: "rd-benchmark",  x: 6, y: 33, w: 6, h: 8, minW: 4, minH: 6 },
+    { i: "rd-strengths",  x: 0, y: 41, w: 4, h: 6, minW: 3, minH: 4 },
+    { i: "rd-weaknesses", x: 4, y: 41, w: 4, h: 6, minW: 3, minH: 4 },
+    { i: "rd-priorities", x: 8, y: 41, w: 4, h: 6, minW: 3, minH: 4 },
+    { i: "rd-confronto",  x: 0, y: 47, w: 12, h: 9, minW: 8, minH: 6 },
+    { i: "rd-verdict",    x: 0, y: 56, w: 8, h: 4, minW: 5, minH: 3 },
+    { i: "rd-cta",        x: 8, y: 56, w: 4, h: 4, minW: 3, minH: 3 },
+  ],
+  md: [
+    { i: "rd-rating",     x: 0, y:  0, w: 4, h: 6 },
+    { i: "rd-livelli",    x: 4, y:  0, w: 2, h: 6 },
+    { i: "rd-potential",  x: 0, y:  6, w: 6, h: 8 },
+    { i: "rd-strands",    x: 0, y: 14, w: 3, h: 7 },
+    { i: "rd-radar",      x: 3, y: 14, w: 3, h: 7 },
+    { i: "rd-evolution",  x: 0, y: 21, w: 6, h: 12 },
+    { i: "rd-biolab",     x: 0, y: 33, w: 6, h: 8 },
+    { i: "rd-benchmark",  x: 0, y: 41, w: 6, h: 8 },
+    { i: "rd-strengths",  x: 0, y: 49, w: 2, h: 6 },
+    { i: "rd-weaknesses", x: 2, y: 49, w: 2, h: 6 },
+    { i: "rd-priorities", x: 4, y: 49, w: 2, h: 6 },
+    { i: "rd-confronto",  x: 0, y: 55, w: 6, h: 9 },
+    { i: "rd-verdict",    x: 0, y: 64, w: 4, h: 4 },
+    { i: "rd-cta",        x: 4, y: 64, w: 2, h: 4 },
+  ],
+  sm: [
+    { i: "rd-rating",     x: 0, y:  0, w: 1, h: 7 },
+    { i: "rd-livelli",    x: 0, y:  7, w: 1, h: 8 },
+    { i: "rd-potential",  x: 0, y: 15, w: 1, h: 10 },
+    { i: "rd-strands",    x: 0, y: 25, w: 1, h: 7 },
+    { i: "rd-radar",      x: 0, y: 32, w: 1, h: 8 },
+    { i: "rd-evolution",  x: 0, y: 40, w: 1, h: 14 },
+    { i: "rd-biolab",     x: 0, y: 54, w: 1, h: 8 },
+    { i: "rd-benchmark",  x: 0, y: 62, w: 1, h: 8 },
+    { i: "rd-strengths",  x: 0, y: 70, w: 1, h: 5 },
+    { i: "rd-weaknesses", x: 0, y: 75, w: 1, h: 5 },
+    { i: "rd-priorities", x: 0, y: 80, w: 1, h: 5 },
+    { i: "rd-confronto",  x: 0, y: 85, w: 1, h: 10 },
+    { i: "rd-verdict",    x: 0, y: 95, w: 1, h: 5 },
+    { i: "rd-cta",        x: 0, y: 100, w: 1, h: 4 },
+  ],
+};
+
+const RD_LAYOUT_STORAGE_KEY = "metic:runner-dna-layout-v1";
+
+function useMediaQuery(query: string): boolean {
+  const [match, setMatch] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia(query).matches : false,
+  );
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia(query);
+    const onChange = () => setMatch(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [query]);
+  return match;
+}
+
+function readRdLayouts(): RdLayouts {
+  if (typeof window === "undefined") return RD_DEFAULT_LAYOUTS;
+  try {
+    const raw = window.localStorage.getItem(RD_LAYOUT_STORAGE_KEY);
+    if (!raw) return RD_DEFAULT_LAYOUTS;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return RD_DEFAULT_LAYOUTS;
+    const merged: RdLayouts = {};
+    (["lg", "md", "sm"] as const).forEach((bp) => {
+      const def = RD_DEFAULT_LAYOUTS[bp] ?? [];
+      const stored = (parsed as any)[bp];
+      if (!Array.isArray(stored)) {
+        merged[bp] = def;
+        return;
+      }
+      const known = new Set(stored.map((it: any) => it?.i).filter(Boolean));
+      const missing = def.filter((it) => !known.has(it.i));
+      merged[bp] = [...stored.filter((it: any) => it && typeof it.i === "string"), ...missing];
+    });
+    return merged;
+  } catch {
+    return RD_DEFAULT_LAYOUTS;
+  }
+}
+
+function writeRdLayouts(layouts: RdLayouts): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(RD_LAYOUT_STORAGE_KEY, JSON.stringify(layouts));
+  } catch {
+    /* quota or serialization error — ignore */
+  }
+}
 
 // ─── DNA HELIX SVG ────────────────────────────────────────────────────────────
 function DnaHelixDecor({ className = "" }: { className?: string }) {
@@ -75,7 +189,19 @@ function DnaHelixDecor({ className = "" }: { className?: string }) {
 }
 
 // ─── VDOT CIRCULAR GAUGE ─────────────────────────────────────────────────────
-function VdotGauge({ current, ceiling }: { current: number; ceiling: number }) {
+const VDOT_CONF_STYLE: Record<string, { color: string; label: string }> = {
+  alta:  { color: "#C0FF00", label: "ALTA" },
+  media: { color: "#FCD34D", label: "MEDIA" },
+  bassa: { color: "#F43F5E", label: "BASSA" },
+};
+
+function VdotGauge({
+  current, ceiling, band, confidenceLabel,
+}: {
+  current: number; ceiling: number;
+  band?: number | null;
+  confidenceLabel?: string | null;
+}) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { const t = setTimeout(() => setMounted(true), 200); return () => clearTimeout(t); }, []);
 
@@ -83,6 +209,7 @@ function VdotGauge({ current, ceiling }: { current: number; ceiling: number }) {
   const circ = 2 * Math.PI * r;
   const pct = Math.min(1, current / Math.max(ceiling, current + 0.1));
   const offset = circ * (1 - pct);
+  const conf = confidenceLabel ? VDOT_CONF_STYLE[confidenceLabel] : null;
 
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
@@ -105,8 +232,23 @@ function VdotGauge({ current, ceiling }: { current: number; ceiling: number }) {
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-[11px] font-black tracking-[0.25em] text-gray-600 mb-1">VDOT</span>
-        <span className="text-5xl md:text-6xl font-black text-white leading-none">{current}</span>
-        <span className="text-[10px] text-gray-600 mt-1.5 tracking-widest">/ {ceiling} ceiling</span>
+        <div className="flex items-baseline gap-1">
+          <span className="text-5xl md:text-6xl font-black text-white leading-none">{current}</span>
+          {band != null && band > 0 && (
+            <span className="text-sm font-black text-gray-500 leading-none">±{band}</span>
+          )}
+        </div>
+        {conf ? (
+          <span
+            className="mt-2 px-2 py-0.5 rounded-full text-[8px] font-black tracking-[0.18em]"
+            style={{ color: conf.color, backgroundColor: `${conf.color}14`, border: `1px solid ${conf.color}40` }}
+            title="Affidabilita della stima: tiene conto di pendenza, clima, deriva cardiaca e qualita del sensore"
+          >
+            {conf.label}
+          </span>
+        ) : (
+          <span className="text-[10px] text-gray-600 mt-1.5 tracking-widest">/ {ceiling} ceiling</span>
+        )}
       </div>
     </div>
   );
@@ -505,7 +647,7 @@ function BenchmarkBar({
   };
 
   return (
-    <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
+    <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{label}</div>
@@ -606,7 +748,7 @@ function DynMetric({
   const label2    = isOptimal ? "Elite"   : isGood ? "Buono"   : "Da migliorare";
 
   return (
-    <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex flex-col gap-3 hover:border-white/[0.2] transition-colors">
+    <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex flex-col gap-3 hover:border-white/[0.2] transition-colors">
       <div className="text-[9px] font-black tracking-[0.2em] text-gray-600 uppercase">{label}</div>
       <div className="flex items-end gap-1.5">
         <span className="text-3xl font-black leading-none" style={{ color }}>{value}</span>
@@ -663,9 +805,9 @@ function PotentialBiologySection({
   const primaryFocusArea = focusAreas[0] ?? null;
 
   return (
-    <section className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
+    <section className="h-full overflow-auto custom-scrollbar rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-[28px] border border-white/[0.06] bg-[radial-gradient(circle_at_top_left,rgba(192,255,0,0.14),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(34,211,238,0.1),transparent_38%),#05070A] p-6 h-full flex flex-col">
+        <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.04] to-black/40 p-6 h-full flex flex-col">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div className="text-[9px] font-black tracking-[0.35em] text-gray-500 mb-2 uppercase">
@@ -800,14 +942,14 @@ function PotentialBiologySection({
         </div>
 
         <div className="grid gap-4">
-          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
             <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Cos'e davvero</div>
             <p className="mt-3 text-sm leading-7 text-slate-300">
               Il potenziale biologico assoluto non dice solo quanto puoi valere, ma quanto del tuo motore stai lasciando sul tavolo. Quando la forbice e ampia, il corpo puo ancora correre meglio di quanto sta correndo oggi.
             </p>
           </div>
 
-          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Se continui cosi</div>
@@ -857,7 +999,7 @@ function PotentialBiologySection({
             </div>
           </div>
 
-          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
             <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Come ci arrivo</div>
             <div className="mt-4 space-y-3">
               {focusAreas.map((item, index) => (
@@ -929,6 +1071,21 @@ function PotentialBiologySection({
 
 export function RunnerDnaView() {
   const { model, loading, refreshing, error, reload, regenerate } = useRunnerDnaUiModel();
+
+  // ─── Bento layout state (must run before early returns) ────────────────────
+  const isMobile = useMediaQuery("(max-width: 767px)");
+  const [rdLayouts, setRdLayouts] = useState<RdLayouts>(() => readRdLayouts());
+  const saveTimer = useRef<number | null>(null);
+
+  const onRdLayoutChange = useCallback((_current: RdLayoutItem[], all: RdLayouts) => {
+    setRdLayouts(all);
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => writeRdLayouts(all), 400);
+  }, []);
+
+  useEffect(() => () => {
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+  }, []);
 
   if (loading || refreshing) return <LoadingView />;
 
@@ -1061,7 +1218,12 @@ export function RunnerDnaView() {
             {/* Left: helix + VDOT */}
             <div className="flex items-center gap-4 md:gap-6 shrink-0">
               <DnaHelixDecor />
-              <VdotGauge current={profile.vdot_current} ceiling={potential.vdot_ceiling} />
+              <VdotGauge
+                current={profile.vdot_current}
+                ceiling={potential.vdot_ceiling}
+                band={profile.vdot_band}
+                confidenceLabel={profile.vdot_confidence_label}
+              />
             </div>
 
             {/* Center: identity */}
@@ -1124,9 +1286,25 @@ export function RunnerDnaView() {
         </div>
       </div>
 
-      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8 py-5 md:py-6 space-y-4 md:space-y-5">
-        <section className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
-          <div className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6 flex h-full flex-col">
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8 py-5 md:py-6">
+        <RdResponsiveGrid
+          className="layout"
+          layouts={rdLayouts as any}
+          breakpoints={{ lg: 1024, md: 640, sm: 0 }}
+          cols={{ lg: 12, md: 6, sm: 1 }}
+          rowHeight={60}
+          margin={[16, 16]}
+          containerPadding={[0, 0]}
+          isDraggable={!isMobile}
+          isResizable={!isMobile}
+          draggableHandle=".drag-handle"
+          resizeHandles={["se"]}
+          onLayoutChange={onRdLayoutChange as any}
+          useCSSTransforms={true}
+        >
+        <div key="rd-rating">
+          <GridCard scope="rd-rating" disabled={isMobile}>
+          <section className="h-full overflow-auto custom-scrollbar rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6 flex flex-col">
             <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.35em] text-[#C0FF00]">
               <Trophy className="w-4 h-4 text-[#C0FF00]" />
               Voto runner contestualizzato
@@ -1191,9 +1369,13 @@ export function RunnerDnaView() {
                 </p>
               </div>
             </div>
-          </div>
+          </section>
+          </GridCard>
+        </div>
 
-          <div className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
+        <div key="rd-livelli">
+          <GridCard scope="rd-livelli" disabled={isMobile}>
+          <section className="h-full overflow-auto custom-scrollbar rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
             <div className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Livelli runner</div>
             <div className="mt-6 space-y-4">
               {contextualRating.thresholds.map((category) => {
@@ -1229,26 +1411,34 @@ export function RunnerDnaView() {
                 );
               })}
             </div>
-          </div>
-        </section>
+          </section>
+          </GridCard>
+        </div>
+
+        {/* ══ POTENTIAL BIOLOGY ════════════════════════════════════════════ */}
+        <div key="rd-potential">
+          <GridCard scope="rd-potential" disabled={isMobile}>
+            <PotentialBiologySection
+              potential={potential}
+              currentVdotValue={currentVdotValue}
+              ceilingVdotValue={ceilingVdotValue}
+              activatedPotentialPct={activatedPotentialPct}
+              vdotGain={vdotGain}
+              focusAreas={focusAreas}
+              weeksToCeilingEstimate={weeksToCeilingEstimate}
+              trainingFrequencyLabel={trainingFrequencyLabel}
+            />
+          </GridCard>
+        </div>
 
         {/* ══ DNA STRANDS ══════════════════════════════════════════════════ */}
-        <PotentialBiologySection
-          potential={potential}
-          currentVdotValue={currentVdotValue}
-          ceilingVdotValue={ceilingVdotValue}
-          activatedPotentialPct={activatedPotentialPct}
-          vdotGain={vdotGain}
-          focusAreas={focusAreas}
-          weeksToCeilingEstimate={weeksToCeilingEstimate}
-          trainingFrequencyLabel={trainingFrequencyLabel}
-        />
-
-        <section>
+        <div key="rd-strands">
+          <GridCard scope="rd-strands" disabled={isMobile}>
+          <section className="h-full overflow-auto custom-scrollbar rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
           <div className="text-[9px] font-black tracking-[0.35em] text-gray-600 mb-3 uppercase">
             Sequenza Biomolecolare — 4 Dimensioni Atletiche
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-4 md:p-5 lg:p-6 rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <DnaStrand
               label="Motore Aerobico"
               sublabel="VDOT — capacità ossidativa massimale"
@@ -1278,11 +1468,15 @@ export function RunnerDnaView() {
               delay={750}
             />
           </div>
-        </section>
+          </section>
+          </GridCard>
+        </div>
 
         {/* ══ PROFILE VISUAL ═══════════════════════════════════════════════ */}
-        {profileVisualScores.length > 0 && (
-          <section className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
+        <div key="rd-radar">
+          <GridCard scope="rd-radar" disabled={isMobile}>
+          {profileVisualScores.length > 0 ? (
+          <section className="h-full overflow-auto custom-scrollbar rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
             <div className="flex flex-col gap-2 mb-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <div className="flex items-center gap-2 text-[9px] font-black tracking-[0.35em] text-[#C0FF00] uppercase">
@@ -1327,164 +1521,18 @@ export function RunnerDnaView() {
               </div>
             </div>
           </section>
-        )}
+          ) : (
+            <section className="h-full flex items-center justify-center rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
+              <p className="text-[10px] font-black tracking-[0.25em] text-slate-500 uppercase">Profilo visivo non disponibile</p>
+            </section>
+          )}
+          </GridCard>
+        </div>
 
-        {/* ══ CORE METRICS ═════════════════════════════════════════════════ */}
-        {false && (
-        <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[
-            { label: "PASSO MEDIO",  value: stats.avg_pace,          unit: "/km",  icon: Timer },
-            { label: "FC MEDIA",     value: stats.avg_hr || "—",     unit: "bpm",  icon: Heart },
-            { label: "CADENZA",      value: stats.avg_cadence || "—",unit: "spm",  icon: Activity },
-            { label: "CTL",          value: current_state.fitness_ctl,unit: "",    icon: Gauge },
-            { label: "ATL",          value: current_state.atl,       unit: "",     icon: Flame },
-            { label: "TSB",          value: current_state.tsb,       unit: "",     icon: TrendingUp },
-          ].map(({ label, value, unit, icon: Icon }) => {
-            const isTsb = label === "TSB";
-            const tsb = Number(value);
-            const tsbColor = isTsb
-              ? tsb > 5 ? "#C0FF00" : tsb > -10 ? "#FCD34D" : "#EF4444"
-              : "white";
-            return (
-              <div key={label} className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_16px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center flex flex-col items-center gap-2 hover:border-white/[0.18] transition-colors">
-                <Icon className="w-4 h-4 text-gray-600" />
-                <div className="text-[8px] font-black tracking-[0.2em] text-gray-600">{label}</div>
-                <div className="text-2xl font-black leading-none" style={{ color: tsbColor }}>
-                  {value}<span className="text-xs text-gray-500 ml-0.5">{unit}</span>
-                </div>
-              </div>
-            );
-          })}
-        </section>
-        )}
-
-        {false && (
-        <section className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
-          <div className="text-[9px] font-black tracking-[0.35em] text-gray-600 mb-3 uppercase">
-            Distribuzione Energetica — Zone Fisiologiche
-          </div>
-
-          {/* Stacked bar */}
-          <div className="flex h-4 rounded-full overflow-hidden mb-6 gap-px">
-            {([
-              { key: "z1", color: "#4B5563" },
-              { key: "z2", color: "#3B82F6" },
-              { key: "z3", color: "#10B981" },
-              { key: "z4", color: "#F59E0B" },
-              { key: "z5", color: "#EF4444" },
-            ] as { key: string; color: string }[]).map(({ key, color }) => (
-              <div
-                key={key}
-                style={{ width: `${stats.zone_distribution[key] ?? 0}%`, backgroundColor: color }}
-                title={`${key.toUpperCase()}: ${stats.zone_distribution[key] ?? 0}%`}
-              />
-            ))}
-          </div>
-
-          <div className="space-y-3">
-            {([
-              { key: "z1", label: "Z1 · Recovery",  color: "#4B5563" },
-              { key: "z2", label: "Z2 · Aerobico",  color: "#3B82F6" },
-              { key: "z3", label: "Z3 · Tempo",     color: "#10B981" },
-              { key: "z4", label: "Z4 · Threshold", color: "#F59E0B" },
-              { key: "z5", label: "Z5 · VO₂max",    color: "#EF4444" },
-            ] as { key: string; label: string; color: string }[]).map(({ key, label, color }) => {
-              const pct = stats.zone_distribution[key] ?? 0;
-              return (
-                <div key={key} className="flex items-center gap-4">
-                  <div className="w-28 text-[10px] font-black text-gray-500 tracking-wide shrink-0">{label}</div>
-                  <div className="flex-1 h-1.5 bg-[#111] rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${pct}%`, backgroundColor: color, boxShadow: `0 0 8px ${color}50` }}
-                    />
-                  </div>
-                  <div className="w-9 text-right text-sm font-black text-white shrink-0">{pct}%</div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* 80/20 insight */}
-          {(() => {
-            const easy = (stats.zone_distribution.z1 ?? 0) + (stats.zone_distribution.z2 ?? 0);
-            const ok = easy >= 75;
-            return (
-              <div
-                className="mt-6 px-4 py-3 rounded-xl text-xs font-black tracking-wide border"
-                style={
-                  ok
-                    ? { color: "#C0FF00", borderColor: "#C0FF0025", backgroundColor: "#C0FF0008" }
-                    : { color: "#F59E0B", borderColor: "#F59E0B25", backgroundColor: "#F59E0B08" }
-                }
-              >
-                {ok
-                  ? `✓ Polarizzazione 80/20 rispettata — ${easy}% del tempo in Z1/Z2`
-                  : `⚠ Polarizzazione 80/20 non rispettata — solo ${easy}% in Z1/Z2. Troppo lavoro in zona medio-alta.`}
-              </div>
-            );
-          })()}
-        </section>
-        )}
-
-        {/* ══ RUNNING DYNAMICS ═════════════════════════════════════════════ */}
-        {false && (running_dynamics && (
-          running_dynamics.vertical_oscillation_cm != null ||
-          running_dynamics.vertical_ratio_pct != null ||
-          running_dynamics.ground_contact_ms != null ||
-          running_dynamics.stride_length_m != null
-        )) ? (
-          <section className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Footprints className="w-4 h-4 text-indigo-400" />
-              <span className="text-[9px] font-black tracking-[0.35em] text-gray-500 uppercase">
-                Running Dynamics — Biomeccanica Avanzata
-              </span>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <DynMetric
-                label="Oscillazione Verticale"
-                value={running_dynamics.vertical_oscillation_cm}
-                unit="cm"
-                optimal={6} good={9} lowerBetter={true}
-              />
-              <DynMetric
-                label="Rapporto Verticale"
-                value={running_dynamics.vertical_ratio_pct}
-                unit="%"
-                optimal={6} good={9} lowerBetter={true}
-              />
-              <DynMetric
-                label="Contatto Suolo"
-                value={running_dynamics.ground_contact_ms}
-                unit="ms"
-                optimal={200} good={250} lowerBetter={true}
-              />
-              <DynMetric
-                label="Lunghezza Falcata"
-                value={running_dynamics.stride_length_m}
-                unit="m"
-                optimal={1.2} good={1.0} lowerBetter={false}
-              />
-            </div>
-            <p className="mt-4 text-[10px] text-gray-700 leading-relaxed">
-              Oscillazione verticale: target &lt;6cm (elite) · Rapporto verticale: target &lt;6% · Contatto suolo: target &lt;200ms · Richiede orologio con Running Dynamics (Garmin HRM-Pro, Coros, Polar Vantage)
-            </p>
-          </section>
-        ) : (
-          <section className="rounded-[24px] backdrop-blur-2xl border border-dashed border-white/[0.10] bg-gradient-to-br from-white/[0.03] to-black/40 p-5 flex items-center gap-4">
-            <Footprints className="w-8 h-8 text-gray-700 shrink-0" />
-            <div>
-              <div className="text-[9px] font-black tracking-[0.25em] text-gray-600 uppercase mb-1">Running Dynamics Non Ancora Sincronizzate</div>
-              <p className="text-xs text-gray-600">
-                Il tuo Garmin Forerunner 265 registra oscillazione verticale, rapporto verticale e contatto suolo nei file FIT. Premi <strong className="text-gray-400">Garmin Sync</strong> in Attività per importarle.
-              </p>
-            </div>
-          </section>
-        )}
-
-        {/* ══ BIOMECHANICS BENCHMARK ═══════════════════════════════════════ */}
-        <section className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
+        {/* ══ EVOLUTION (traiettoria + chart) ═════════════════════════════ */}
+        <div key="rd-evolution">
+          <GridCard scope="rd-evolution" disabled={isMobile}>
+          <section className="h-full overflow-auto custom-scrollbar rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
           <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">
@@ -1522,7 +1570,7 @@ export function RunnerDnaView() {
               </div>
             </div>
 
-            <div className="rounded-[28px] border border-white/[0.06] bg-[radial-gradient(circle_at_top_left,rgba(192,255,0,0.14),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(34,211,238,0.12),transparent_36%),#05070A] p-5">
+            <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.04] to-black/40 p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="flex flex-wrap gap-2">
@@ -1639,8 +1687,14 @@ export function RunnerDnaView() {
               </div>
             </div>
           </div>
-        </section>
-        <section className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
+          </section>
+          </GridCard>
+        </div>
+
+        {/* ══ BIOMECHANICS LAB ════════════════════════════════════════════ */}
+        <div key="rd-biolab">
+          <GridCard scope="rd-biolab" disabled={isMobile}>
+          <section className="h-full overflow-auto custom-scrollbar rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
           <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.35em] text-[#C0FF00]">
@@ -1673,9 +1727,15 @@ export function RunnerDnaView() {
               />
             ))}
           </div>
-        </section>
-        {hasBiomechanicsBenchmark && (
-          <section className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
+          </section>
+          </GridCard>
+        </div>
+
+        {/* ══ BENCHMARK BIOMECCANICO ══════════════════════════════════════ */}
+        <div key="rd-benchmark">
+          <GridCard scope="rd-benchmark" disabled={isMobile}>
+          {hasBiomechanicsBenchmark ? (
+          <section className="h-full overflow-auto custom-scrollbar rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
             <div className="flex flex-col gap-2 mb-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <div className="flex items-center gap-2 text-[9px] font-black tracking-[0.35em] text-[#C0FF00] uppercase">
@@ -1740,11 +1800,20 @@ export function RunnerDnaView() {
               </div>
             </div>
           </section>
-        )}
+          ) : (
+            <section className="h-full flex items-center justify-center rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
+              <p className="text-[10px] font-black tracking-[0.25em] text-slate-500 uppercase">Benchmark non disponibile</p>
+            </section>
+          )}
+          </GridCard>
+        </div>
 
         {/* ══ COACH VERDICT ════════════════════════════════════════════════ */}
-        <section className="relative rounded-[24px] backdrop-blur-2xl border border-[#C0FF00]/25 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-[#C0FF00]/[0.04] via-white/[0.04] to-black/50 p-6 md:p-8 overflow-hidden">
+        <div key="rd-verdict">
+          <GridCard scope="rd-verdict" disabled={isMobile}>
+          <section className="relative h-full overflow-auto custom-scrollbar rounded-[24px] backdrop-blur-2xl border border-[#C0FF00]/25 shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 md:p-8">
           <div
+            aria-hidden="true"
             className="absolute top-4 left-6 select-none pointer-events-none font-black leading-none"
             style={{ fontSize: 160, color: "#C0FF00", opacity: 0.04 }}
           >"</div>
@@ -1777,24 +1846,14 @@ export function RunnerDnaView() {
               </div>
             </div>
           </div>
-        </section>
-
-        {/* ══ STRENGTHS & GAPS ══════════════════════════════════════════════ */}
-        <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.35em] text-[#C0FF00]">
-              <ShieldCheck className="w-4 h-4 text-[#C0FF00]" />
-              Strengths / weaknesses / priorities
-            </div>
-            <h2 className="mt-3 text-3xl font-black tracking-tight text-white">Cosi mi rende forte e cosa mi limita</h2>
-          </div>
-          <p className="max-w-2xl text-sm leading-7 text-gray-400">
-            Insight generati dal backend Runner DNA e rinfrescati con sync e import Garmin.
-          </p>
+          </section>
+          </GridCard>
         </div>
-        <section className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-          {/* Strengths */}
-          <div className="rounded-[24px] backdrop-blur-2xl border border-[#C0FF00]/25 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-[#C0FF00]/[0.04] to-black/50 p-4 md:p-5 lg:p-6">
+
+        {/* ══ STRENGTHS ══════════════════════════════════════════════════════ */}
+        <div key="rd-strengths">
+          <GridCard scope="rd-strengths" disabled={isMobile}>
+          <section className="h-full overflow-auto custom-scrollbar rounded-[24px] backdrop-blur-2xl border border-[#C0FF00]/25 shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
             <div className="flex items-center gap-2 mb-4">
               <Trophy className="w-4 h-4 text-[#C0FF00]" />
               <span className="text-[9px] font-black tracking-[0.35em] text-[#C0FF00] uppercase">
@@ -1811,10 +1870,14 @@ export function RunnerDnaView() {
                 </li>
               ))}
             </ul>
-          </div>
+          </section>
+          </GridCard>
+        </div>
 
-          {/* Gaps */}
-          <div className="rounded-[24px] backdrop-blur-2xl border border-rose-500/25 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-rose-500/[0.04] to-black/50 p-4 md:p-5 lg:p-6">
+        {/* ══ WEAKNESSES ════════════════════════════════════════════════════ */}
+        <div key="rd-weaknesses">
+          <GridCard scope="rd-weaknesses" disabled={isMobile}>
+          <section className="h-full overflow-auto custom-scrollbar rounded-[24px] backdrop-blur-2xl border border-rose-500/25 shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
             <div className="flex items-center gap-2 mb-4">
               <Zap className="w-4 h-4 text-rose-500" />
               <span className="text-[9px] font-black tracking-[0.35em] text-rose-500 uppercase">
@@ -1831,9 +1894,14 @@ export function RunnerDnaView() {
                 </li>
               ))}
             </ul>
-          </div>
+          </section>
+          </GridCard>
+        </div>
 
-          <div className="rounded-[24px] backdrop-blur-2xl border border-cyan-300/30 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-cyan-300/[0.04] to-black/50 p-4 md:p-5 lg:p-6">
+        {/* ══ PRIORITIES ════════════════════════════════════════════════════ */}
+        <div key="rd-priorities">
+          <GridCard scope="rd-priorities" disabled={isMobile}>
+          <section className="h-full overflow-auto custom-scrollbar rounded-[24px] backdrop-blur-2xl border border-cyan-300/30 shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
             <div className="flex items-center gap-2 mb-4">
               <Dumbbell className="w-4 h-4 text-cyan-200" />
               <span className="text-[9px] font-black tracking-[0.35em] text-cyan-200 uppercase">
@@ -1842,185 +1910,21 @@ export function RunnerDnaView() {
             </div>
             <ul className="space-y-4">
                 {model.diagnostics.priorities.slice(0, 3).map((item, index) => (
-                <li key={item} className="rounded-md border border-white/10 bg-white/[0.035] p-4 text-sm leading-6 text-slate-300">
+                <li key={item} className="rounded-xl border border-white/10 bg-white/[0.035] p-4 text-sm leading-6 text-slate-300">
                   <span className="mr-2 font-black text-cyan-200">0{index + 1}</span>
                   {humanizeCoachText(item)}
                 </li>
               ))}
             </ul>
-          </div>
-        </section>
-
-        {/* ══ POTENTIAL ════════════════════════════════════════════════════ */}
-        <section className="hidden rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
-          <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-[28px] border border-white/[0.06] bg-[radial-gradient(circle_at_top_left,rgba(192,255,0,0.14),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(34,211,238,0.1),transparent_38%),#05070A] p-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <div className="text-[9px] font-black tracking-[0.35em] text-gray-500 mb-2 uppercase">
-                    Potenziale Biologico Assoluto
-                  </div>
-                  <div className="flex items-baseline gap-3 flex-wrap">
-                    <span className="text-6xl font-black text-[#C0FF00] leading-none">
-                      {potential.vdot_ceiling}
-                    </span>
-                    <span className="text-gray-500 font-black text-lg">VDOT CEILING</span>
-                    <span className="text-sm text-gray-400">
-                      +{potentialGap} punti da sbloccare
-                    </span>
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-right">
-                  <div className="text-[9px] font-black tracking-[0.25em] text-gray-500 mb-1 uppercase">
-                    Potenziale attivato
-                  </div>
-                  <div className="text-4xl font-black text-white">{potential.potential_pct}%</div>
-                </div>
-              </div>
-
-              <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300">
-                E il punto piu alto che il tuo motore puo toccare se trasformi in prestazione tutto quello che oggi si disperde tra efficienza, carico e recupero. Non e fantasia: e il tetto credibile del tuo profilo.
-              </p>
-
-              <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Ceiling</div>
-                  <div className="mt-2 text-3xl font-black text-[#C0FF00]">{ceilingVdotValue.toFixed(1)}</div>
-                  <p className="mt-2 text-xs leading-5 text-slate-400">Il tetto fisiologico che oggi il modello considera raggiungibile.</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Gia attivato</div>
-                  <div className="mt-2 text-3xl font-black text-white">{activatedPotentialPct}%</div>
-                  <p className="mt-2 text-xs leading-5 text-slate-400">La quota di potenziale che stai gia convertendo in prestazione reale.</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Margine</div>
-                  <div className="mt-2 text-3xl font-black text-cyan-200">+{vdotGain}</div>
-                  <p className="mt-2 text-xs leading-5 text-slate-400">Il salto ancora disponibile tra il tuo VDOT di oggi e il ceiling stimato.</p>
-                </div>
-              </div>
-
-          {/* Potential % bar */}
-          <div className="mt-6 rounded-2xl border border-white/[0.08] bg-black/30 p-5">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Mappa di sblocco</div>
-              <div className="text-xs text-slate-400">Oggi {currentVdotValue.toFixed(1)} fino a ceiling {ceilingVdotValue.toFixed(1)}</div>
-            </div>
-
-            <div className="relative mt-5 h-4 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="absolute inset-y-0 left-0 rounded-full"
-                style={{
-                  width: `${activatedPotentialPct}%`,
-                  background: "linear-gradient(90deg, #22D3EE, #C0FF00)",
-                  boxShadow: "0 0 24px rgba(192,255,0,0.35)",
-                }}
-              />
-              <div className="absolute inset-y-0 right-0 w-[32%] bg-[linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,0.08))]" />
-              <div
-                className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-2 border-[#05070A] bg-white shadow-[0_0_0_4px_rgba(34,211,238,0.18)]"
-                style={{ left: `calc(${activatedMarkerLeft} - 10px)` }}
-              />
-              <div className="absolute top-1/2 right-0 h-5 w-5 -translate-y-1/2 translate-x-[-50%] rounded-full border-2 border-[#05070A] bg-[#C0FF00] shadow-[0_0_0_4px_rgba(192,255,0,0.16)]" />
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-                <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Cos'e</div>
-                <p className="mt-2 text-xs leading-5 text-slate-400">La barra mostra quanto del ceiling e gia diventato performance concreta.</p>
-              </div>
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-                <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Parte accesa</div>
-                <p className="mt-2 text-xs leading-5 text-slate-400">Il tratto colorato e la quota di potenziale che stai gia usando adesso.</p>
-              </div>
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-                <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Parte da sbloccare</div>
-                <p className="mt-2 text-xs leading-5 text-slate-400">La parte finale e il margine che dipende da tecnica, carico e recupero.</p>
-              </div>
-            </div>
-          </div>
-
-            </div>
-
-            <div className="grid gap-4">
-              <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Cos'e davvero</div>
-                <p className="mt-3 text-sm leading-7 text-slate-300">
-                  Il potenziale biologico assoluto non dice solo quanto puoi valere, ma quanto del tuo motore stai lasciando sul tavolo. Quando la forbice e ampia, il corpo puo ancora correre meglio di quanto sta correndo oggi.
-                </p>
-              </div>
-
-              <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Come ci arrivo</div>
-                <div className="mt-4 space-y-3">
-                  {focusAreas.map((item, index) => (
-                    <div key={item.key} className="rounded-2xl border border-white/[0.06] bg-black/25 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Step 0{index + 1}</div>
-                          <div className="mt-1 text-lg font-black text-white">{item.label}</div>
-                        </div>
-                        <div
-                          className="rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em]"
-                          style={{ color: item.color, borderColor: `${item.color}40`, backgroundColor: `${item.color}14` }}
-                        >
-                          score {Math.round(item.score)}
-                        </div>
-                      </div>
-                      <p className="mt-3 text-sm leading-6 text-slate-300">{item.insight}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 overflow-hidden rounded-2xl border border-white/[0.06]">
-            <div className="border-b border-white/[0.06] bg-white/[0.03] px-5 py-4">
-              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Tempi che puoi avvicinare</div>
-              <p className="mt-2 text-sm leading-6 text-slate-400">Se trasformi il ceiling in prestazione, questi sono i riferimenti che il modello considera credibili.</p>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/[0.04]">
-                  <th className="text-left text-[9px] font-black tracking-[0.25em] text-gray-600 px-5 py-3 uppercase">Gara</th>
-                  <th className="text-right text-[9px] font-black tracking-[0.25em] text-gray-500 px-5 py-3 uppercase">Attuale</th>
-                  <th className="text-right text-[9px] font-black tracking-[0.25em] text-[#C0FF00] px-5 py-3 uppercase">Potenziale</th>
-                  <th className="text-right text-[9px] font-black tracking-[0.25em] text-gray-600 px-5 py-3 uppercase">Guadagno</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.025]">
-                {Object.entries(potential.predictions ?? {}).map(([dist, potTime]) => {
-                  const curTime = potential.current_predictions?.[dist] as string | undefined;
-                  const delta = curTime && potTime ? formatDelta(curTime, potTime as string) : "";
-                  return (
-                    <tr key={dist} className="hover:bg-white/[0.015] transition-colors group">
-                      <td className="px-5 py-4 font-black text-white tracking-widest uppercase group-hover:text-[#C0FF00] transition-colors">
-                        {dist}
-                      </td>
-                      <td className="px-5 py-4 text-right font-mono text-gray-500 tabular-nums">
-                        {curTime ?? "—"}
-                      </td>
-                      <td className="px-5 py-4 text-right font-mono font-black text-[#C0FF00] tabular-nums text-lg">
-                        {potTime as string}
-                      </td>
-                      <td className="px-5 py-4 text-right text-sm font-black text-emerald-400 tabular-nums">
-                        {delta}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
+          </section>
+          </GridCard>
+        </div>
 
         {/* ══ CONFRONTO ════════════════════════════════════════════════════ */}
-        {comparison && (
-          <section className="rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
+        <div key="rd-confronto">
+          <GridCard scope="rd-confronto" disabled={isMobile}>
+          {comparison ? (
+          <section className="h-full overflow-auto custom-scrollbar rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6">
             <div className="flex items-center gap-2 mb-4">
               <BarChart2 className="w-4 h-4 text-indigo-400" />
               <span className="text-[9px] font-black tracking-[0.35em] text-gray-500 uppercase">
@@ -2151,31 +2055,43 @@ export function RunnerDnaView() {
               </div>
             )}
           </section>
-        )}
+          ) : (
+            <section className="h-full flex items-center justify-center rounded-[24px] backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
+              <p className="text-[10px] font-black tracking-[0.25em] text-slate-500 uppercase">Confronto non disponibile</p>
+            </section>
+          )}
+          </GridCard>
+        </div>
 
         {/* ══ UNLOCK + REGENERATE ══════════════════════════════════════════ */}
-        <section className="relative rounded-[24px] backdrop-blur-2xl border border-[#C0FF00]/25 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-[#C0FF00]/[0.06] to-black/50 p-4 md:p-5 lg:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-          <div className="flex-1">
+        <div key="rd-cta">
+          <GridCard scope="rd-cta" disabled={isMobile}>
+          <section className="relative h-full rounded-[24px] backdrop-blur-2xl border border-[#C0FF00]/25 shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-5 lg:p-6 flex flex-col items-start justify-between gap-4 overflow-auto custom-scrollbar">
+          <div>
             <div className="flex items-center gap-2 mb-3">
               <Target className="w-4 h-4 text-[#C0FF00]" />
               <span className="text-[9px] font-black tracking-[0.35em] text-[#C0FF00] uppercase">
                 Come sbloccare il tuo potenziale biologico
               </span>
             </div>
-            <p className="text-gray-300 leading-relaxed max-w-2xl">{humanizeCoachText(ai_coach.unlock_message)}</p>
+            <p className="text-gray-300 leading-relaxed text-sm">{humanizeCoachText(ai_coach.unlock_message)}</p>
           </div>
 
           <button
             onClick={() => void regenerate()}
             disabled={refreshing}
-            className="shrink-0 flex items-center gap-2 px-6 py-3 bg-white/[0.04] hover:bg-white/[0.08] border border-white/15 hover:border-white/25 rounded-2xl text-sm font-black tracking-widest text-white uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="shrink-0 self-stretch flex items-center justify-center gap-2 px-6 py-3 bg-white/[0.04] hover:bg-[#C0FF00]/10 border border-white/15 hover:border-[#C0FF00]/40 hover:text-[#C0FF00] rounded-2xl text-sm font-black tracking-widest text-white uppercase transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {refreshing
               ? <Dna className="w-4 h-4 animate-spin" />
               : <RefreshCcw className="w-4 h-4" />}
             {refreshing ? "Analizzando..." : "Rigenera DNA"}
           </button>
-        </section>
+          </section>
+          </GridCard>
+        </div>
+
+        </RdResponsiveGrid>
 
       </div>
     </div>

@@ -83,7 +83,7 @@ GARMIN_CSV_REPAIR_VERSION = "garmin-csv-repair-v2-2026-04-22"
 
 VDOT_RECENCY_WEIGHT_30D = 0.70
 VDOT_RECENCY_DECAY_LAMBDA = -math.log(VDOT_RECENCY_WEIGHT_30D) / 30.0
-VDOT_RECENT_ANCHOR_DAYS = 7
+VDOT_RECENT_ANCHOR_DAYS = 21  # 3 weeks: standard "current capacity" window per Daniels RF4 p.71
 
 # Build the callback URL from the current host (set via Render env or default)
 BACKEND_URL        = _normalise_backend_url(os.environ.get("BACKEND_URL"))
@@ -3537,14 +3537,28 @@ def _vdot_from_effort(
     if duration_min < 10:
         return None
 
+    # ── Layer 2: GAP (grade-adjusted pace) ───────────────────────────────────
+    # Use flat-equivalent pace so downhill runs don't inflate VDOT and uphill
+    # runs don't deflate it. _gap_pace_seconds returns None when no elevation
+    # data is available, in which case we fall back to the raw pace.
+    gap_s = _gap_pace_seconds(run)
+    base_pace_s = gap_s if (gap_s and 150 <= gap_s <= 600) else pace_s
+
+    # ── Layer 1: environmental normalization (temp/humidity/wind) ─────────────
+    # Convert the effort to its cool, calm-weather equivalent pace.
     environmental_delta = _environmental_pace_adjustment_sec_per_km(run)
-    corrected_pace_s = max(150.0, pace_s - environmental_delta)
+    corrected_pace_s = max(150.0, base_pace_s - environmental_delta)
     speed_mpm = 60000 / corrected_pace_s
     vo2 = -4.60 + 0.182258 * speed_mpm + 0.000104 * speed_mpm ** 2
 
     pct_max_duration = (0.8 + 0.1894393 * math.exp(-0.012778 * duration_min)
                         + 0.2989558 * math.exp(-0.1932605 * duration_min))
 
+    # Pace-only race-equivalent VDOT — the physiological ceiling implied by this
+    # pace if it were an all-out effort. Used to bound HR-derived inflation.
+    vdot_pace_only = vo2 / pct_max_duration if pct_max_duration > 0 else None
+
+    # ── Layer 3: HR as validator, not blind driver ───────────────────────────
     if avg_hr and max_hr > 0:
         hr_pct = avg_hr / max_hr
         if hr_pct < 0.75:
@@ -3560,7 +3574,16 @@ def _vdot_from_effort(
 
     if pct_max <= 0:
         return None
-    return vo2 / pct_max
+    vdot = vo2 / pct_max
+
+    # ── Layer 4: cap HR-driven inflation/deflation ───────────────────────────
+    # A glitchy sensor that under-reads HR (sweat/rain dropout) produces a low
+    # hr_pct → small pct_max → inflated VDOT. Bound the single-run estimate to
+    # ±8% of the pace-only ceiling so one corrupted HR trace can't spike VDOT.
+    if vdot_pace_only and vdot_pace_only > 0:
+        vdot = min(vdot, vdot_pace_only * 1.08)
+        vdot = max(vdot, vdot_pace_only * 0.92)
+    return vdot
 
 
 def _interval_vdot_from_splits(run: dict, max_hr: int) -> Optional[float]:
@@ -3633,6 +3656,70 @@ def _vdot_from_run(r: dict, max_hr: int = 190, resting_hr: int = 50) -> Optional
     candidates = [v for v in (total_vdot, interval_vdot) if v]
     return max(candidates) if candidates else None
 
+def _run_cardiac_drift_pct(run: dict) -> Optional[float]:
+    """HR decoupling between first and second half of a run (% drift).
+
+    High positive drift (HR climbing while pace held) means the effort was not
+    a clean steady state — heat, dehydration, or fatigue inflated HR late in the
+    run. Such a run's pace/HR relationship is a poor basis for a VDOT estimate.
+    Returns None when splits lack HR data.
+    """
+    splits = [s for s in (run.get("splits") or []) if _coerce_float(s.get("hr"))]
+    if len(splits) < 4:
+        return None
+    half = len(splits) // 2
+
+    def _avg_hr(rows: list) -> Optional[float]:
+        vals = [_coerce_float(s.get("hr")) for s in rows if _coerce_float(s.get("hr"))]
+        return sum(vals) / len(vals) if vals else None
+
+    h1 = _avg_hr(splits[:half])
+    h2 = _avg_hr(splits[half:])
+    if not h1 or not h2 or h1 <= 0:
+        return None
+    return (h2 - h1) / h1 * 100.0
+
+
+def _run_vdot_confidence(run: dict, max_hr: int = 190) -> float:
+    """Per-run reliability of the VDOT estimate, 0.2..1.0.
+
+    Down-weights runs whose pace or HR is contaminated by confounders the model
+    cannot fully correct: missing GPS, sparse splits, high cardiac drift,
+    implausible HR (sensor fault), un-correctable heat, and short samples.
+    A confident clean tempo run scores ~1.0; a short no-GPS run with a glitchy
+    HR trace scores near the 0.2 floor and barely moves the fused VDOT.
+    """
+    c = 1.0
+    if not _run_has_gps(run):
+        c *= 0.5
+    splits = run.get("splits") or []
+    if len(splits) < 3:
+        c *= 0.8
+
+    drift = _run_cardiac_drift_pct(run)
+    if drift is not None:
+        if drift > 8:
+            c *= 0.6
+        elif drift > 5:
+            c *= 0.8
+
+    avg_hr = _coerce_float(run.get("avg_hr"))
+    if avg_hr is not None and (avg_hr > max_hr + 3 or avg_hr < 90):
+        c *= 0.55  # sensor fault: HR above max or implausibly low on a hard run
+
+    temp = _weather_value(run, "apparent_temperature", "temperature", "temp_c")
+    if temp is None:
+        d = _run_date_obj(run)
+        if d and d.month in (6, 7, 8):
+            c *= 0.85  # suspected summer heat we couldn't correct
+
+    dist = _coerce_float(run.get("distance_km")) or 0.0
+    if dist < 4:
+        c *= 0.7
+
+    return max(0.2, min(1.0, c))
+
+
 def _calc_vdot(runs: list, max_hr: int = 190, weeks_window: int = 8,
                resting_hr: int = 50, as_of: Optional[dt.date] = None) -> Optional[float]:
     """Estimate current VDOT (backward compat wrapper)."""
@@ -3687,16 +3774,20 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
         weighted_sum = 0.0
         total_weight = 0.0
         for run, value in ranked:
-            w = _vdot_recency_weight(run, today)
+            # weight = recency × per-run reliability (confounder-aware)
+            w = _vdot_recency_weight(run, today) * _run_vdot_confidence(run, max_hr)
             weighted_sum += value * w
             total_weight += w
         return weighted_sum / total_weight if total_weight > 0 else None
 
     def _recent_anchor(candidates):
         cutoff = today - _dt.timedelta(days=VDOT_RECENT_ANCHOR_DAYS)
+        # Only let a recent run anchor the estimate if it is reliable enough —
+        # a glitchy/no-GPS spike must not drag current VDOT up on its own.
         recent_values = [
             value for run, value in candidates
             if (_run_date_obj(run) or _dt.date.min) >= cutoff
+            and _run_vdot_confidence(run, max_hr) >= 0.6
         ]
         return max(recent_values) if recent_values else None
 
@@ -3758,6 +3849,29 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
     recent_km = sum(r.get("distance_km", 0) for r in recent_runs)
     weekly_volume = round(recent_km / max(1, weeks_window), 1)
 
+    # ── Overall reliability + uncertainty band ───────────────────────────────
+    # The band widens when the contributing runs are noisy (low confidence) or
+    # disagree with each other (high spread). Surfaced as "VDOT 52 ±1.5 · MEDIA".
+    ranked_all = sorted(run_vdots, key=lambda x: x[1], reverse=True)[:6]
+    confidence = 0.0
+    band = None
+    range_low = range_high = None
+    if ranked_all and current:
+        confs = [_run_vdot_confidence(r, max_hr) for r, _ in ranked_all]
+        vals = [v for _, v in ranked_all]
+        confidence = round(sum(confs) / len(confs), 2)
+        if len(vals) >= 2:
+            mean_v = sum(vals) / len(vals)
+            stdev_v = (sum((x - mean_v) ** 2 for x in vals) / len(vals)) ** 0.5
+        else:
+            stdev_v = 0.0
+        band = round(1.0 + (1.0 - confidence) * 2.5 + stdev_v * 0.5, 1)
+        range_low = round(current - band, 1)
+        range_high = round(current + band, 1)
+    confidence_label = (
+        "alta" if confidence >= 0.75 else "media" if confidence >= 0.5 else "bassa"
+    )
+
     return {
         "current": current,
         "peak": peak,
@@ -3766,6 +3880,11 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
         "training_months": training_months,
         "weekly_volume": weekly_volume,
         "race_specific_vdot": race_specific_vdot,
+        "confidence": confidence,
+        "confidence_label": confidence_label,
+        "band": band,
+        "range_low": range_low,
+        "range_high": range_high,
     }
 
 
@@ -7137,9 +7256,19 @@ async def get_runner_dna_legacy():
 
     # ── VDOT — use best of: window-based (current form) vs best-efforts (true peak) ──
     be_efforts = be_doc.get("efforts", [])
-    vdot_from_runs   = _calc_vdot(runs, max_hr, weeks_window=8, resting_hr=resting_hr)
+    vdot_hist        = _calc_vdot_with_history(runs, max_hr, weeks_window=8, resting_hr=resting_hr)
+    vdot_from_runs   = vdot_hist.get("current")
     vdot_from_be     = _vdot_from_best_efforts(be_efforts)
     vdot_current     = max(vdot_from_runs or 28.0, vdot_from_be or 28.0)
+
+    # Reliability band centred on the surfaced VDOT (confounder-aware, see
+    # _run_vdot_confidence). Lets the UI show "52 ±1.5 · MEDIA" instead of a
+    # falsely precise single number.
+    vdot_band        = vdot_hist.get("band")
+    vdot_confidence  = vdot_hist.get("confidence")
+    vdot_conf_label  = vdot_hist.get("confidence_label")
+    vdot_range_low   = round(vdot_current - vdot_band, 1) if vdot_band else None
+    vdot_range_high  = round(vdot_current + vdot_band, 1) if vdot_band else None
 
     cutoff_old   = (date.today() - timedelta(weeks=24)).isoformat()
     older_runs   = [r for r in runs if r.get("date", "") < cutoff_old]
@@ -7318,6 +7447,11 @@ Rispondi SOLO JSON puro (no markdown):
             "archetype_description": ai_data.get("archetype_description", ""),
             "vdot_current":          round(vdot_current, 1),
             "vdot_delta":            vdot_delta,
+            "vdot_confidence":       vdot_confidence,
+            "vdot_confidence_label": vdot_conf_label,
+            "vdot_band":             vdot_band,
+            "vdot_range_low":        vdot_range_low,
+            "vdot_range_high":       vdot_range_high,
         },
         "stats": {
             "avg_pace":          pace_str,
