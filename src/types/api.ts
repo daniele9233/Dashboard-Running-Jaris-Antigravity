@@ -340,9 +340,18 @@ export interface GoalGap {
   predicted: string | null;
 }
 
+export interface RaceTempBand {
+  key: string;
+  label: string;
+  range: string;
+  humidity: number;
+  predictions: Record<string, string>;
+}
+
 export interface AnalyticsResponse {
   vdot: number | null;
   race_predictions: Record<string, string>;
+  race_predictions_temp?: { bands: RaceTempBand[] };
   pace_trend: { date: string; pace: string }[];
   zone_distribution: ZonePoint[];
   goal_gap: GoalGap | null;

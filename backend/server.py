@@ -4202,6 +4202,79 @@ def _predict_race(vdot: float, runs: Optional[list] = None, ctl: Optional[float]
     return result
 
 
+# ─── Temperature + humidity race-prediction bands ────────────────────────────
+RACE_TEMP_BANDS = [
+    {"key": "ideale",     "label": "Ideale",     "range": "5-11°C",  "temp_c": 8.0,  "humidity": 70},
+    {"key": "media",      "label": "Media",      "range": "12-19°C", "temp_c": 16.0, "humidity": 65},
+    {"key": "alta",       "label": "Alta",       "range": "20-26°C", "temp_c": 23.0, "humidity": 60},
+    {"key": "proibitiva", "label": "Proibitiva", "range": ">27°C",   "temp_c": 31.0, "humidity": 60},
+]
+
+
+def _apparent_temp_c(temp_c: float, humidity_pct: Optional[float]) -> float:
+    """Humidity-adjusted ('feels like') temperature for running.
+
+    Below ~20°C humidity barely affects performance — evaporative cooling still
+    works. Above 20°C, high humidity blocks sweat evaporation, so the effective
+    heat stress climbs with relative humidity. Linear surcharge keeps it legible.
+    """
+    if humidity_pct is None or temp_c <= 20.0:
+        return temp_c
+    return temp_c + max(0.0, humidity_pct - 50.0) / 100.0 * (temp_c - 20.0) * 0.7
+
+
+def _heat_slowdown_frac(temp_c: float, humidity_pct: Optional[float], dist_km: float) -> float:
+    """Fractional race-time slowdown vs a cool ~12°C optimum.
+
+    Distance-scaled because heat accumulates: a marathon in 30°C suffers far
+    more than a 5K. Coefficient runs ~0.35%/°C of excess at 5K up to ~0.80%/°C
+    at the marathon, applied to the humidity-adjusted apparent temperature.
+    Calibrated against heat-vs-performance studies (e.g. Ely 2007 marathon data:
+    ~+1 min/°C above optimum for a 3h runner near 25°C).
+    """
+    apparent = _apparent_temp_c(temp_c, humidity_pct)
+    excess = max(0.0, apparent - 12.0)
+    d = max(5.0, min(42.2, dist_km))
+    coef = 0.0035 + (d - 5.0) / (42.2 - 5.0) * (0.0080 - 0.0035)
+    return excess * coef
+
+
+def _predict_race_temp_bands(vdot: float, runs: Optional[list] = None,
+                             ctl: Optional[float] = None) -> dict:
+    """Race predictions across four climate bands (temp + humidity aware).
+
+    The 'ideale' band is the reference (cool, near-optimal); the others add a
+    distance-scaled heat penalty on top of the same endurance-aware base time
+    used by _predict_race, so the numbers stay consistent with the main card.
+    """
+    if not vdot:
+        return {"bands": []}
+    ctx = _compute_endurance_context(runs)
+    fractions = _compute_race_fractions(ctx["longest_km"], ctx["drift_pct"], ctl or 0)
+    dists = [("5K", 5.0), ("10K", 10.0), ("Half Marathon", 21.0975), ("Marathon", 42.195)]
+    base_secs = {}
+    for label, dist in dists:
+        t = _vdot_to_race_seconds(vdot * fractions[dist], dist)
+        if t:
+            base_secs[label] = t
+
+    bands = []
+    for band in RACE_TEMP_BANDS:
+        preds = {}
+        for label, dist in dists:
+            if label in base_secs:
+                frac = _heat_slowdown_frac(band["temp_c"], band["humidity"], dist)
+                preds[label] = _seconds_to_time_str(base_secs[label] * (1.0 + frac))
+        bands.append({
+            "key": band["key"],
+            "label": band["label"],
+            "range": band["range"],
+            "humidity": band["humidity"],
+            "predictions": preds,
+        })
+    return {"bands": bands}
+
+
 def _extract_fit_dynamics(binary_content: bytes) -> dict:
     """Extract Running Dynamics from FIT binary data using fitdecode.
 
@@ -5260,6 +5333,7 @@ async def get_analytics():
 
     # Goal gap (race predictions endurance-aware)
     preds_full = _predict_race(vdot, runs=runs, ctl=ctl_now) if vdot else {}
+    preds_temp = _predict_race_temp_bands(vdot, runs=runs, ctl=ctl_now) if vdot else {"bands": []}
     goal_gap = None
     if profile and profile.get("target_time") and vdot:
         goal_gap = {
@@ -5271,6 +5345,7 @@ async def get_analytics():
     return {
         "vdot": vdot,
         "race_predictions": preds_full,
+        "race_predictions_temp": preds_temp,
         "pace_trend": pace_trend,
         "zone_distribution": zone_dist,
         "goal_gap": goal_gap,

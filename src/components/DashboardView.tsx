@@ -305,6 +305,14 @@ export function DashboardView() {
     [predictions, runs, thresholdPace],
   );
 
+  // ── Previsione meteo: bande temperatura+umidità dal backend ──────────────
+  const tempBands = analyticsData?.race_predictions_temp?.bands ?? [];
+  const [tempBandKey, setTempBandKey] = useState<string>("ideale");
+  const activeBand = tempBands.find((b) => b.key === tempBandKey) ?? null;
+  const SHORT_TO_BAND_LABEL: Record<string, string> = {
+    "5K": "5K", "10K": "10K", "21K": "Half Marathon", "42K": "Marathon",
+  };
+
   // First-run onboarding gate (#6): zero corse → CTA Strava/Garmin.
   if (showOnboarding) {
     return <FirstRunOnboarding onImportClick={() => navigate("/activities")} />;
@@ -579,10 +587,35 @@ export function DashboardView() {
           <div key="previsione-gara">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("previsione-gara")}>
             <div className="h-full rounded-[24px] p-6 flex flex-col backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-3">
               <Target className="text-[#C0FF00]" size={14} />
               <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest">PREVISIONE GARA</span>
             </div>
+
+            {/* Selettore clima: temperatura + umidità */}
+            {tempBands.length > 0 && (
+              <div className="grid grid-cols-4 gap-1 mb-3">
+                {tempBands.map((b) => {
+                  const active = b.key === tempBandKey;
+                  return (
+                    <button
+                      key={b.key}
+                      type="button"
+                      onClick={() => setTempBandKey(b.key)}
+                      title={`${b.range} · umidità ~${b.humidity}%`}
+                      className={`flex flex-col items-center py-1.5 px-1 rounded-[12px] border transition-colors ${
+                        active
+                          ? "border-[#C0FF00]/40 bg-[#C0FF00]/10 text-[#C0FF00]"
+                          : "border-white/[0.06] bg-white/[0.02] text-[#777] hover:text-white hover:border-white/[0.12]"
+                      }`}
+                    >
+                      <span className="text-[8px] font-black tracking-[0.1em] uppercase leading-tight">{b.label}</span>
+                      <span className="text-[7px] font-bold opacity-70 leading-tight mt-0.5">{b.range}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             <div className="flex-1 flex flex-col gap-1.5">
               {racePredictions.map(p => {
@@ -601,6 +634,12 @@ export function DashboardView() {
                   }
                   return `${a}sec`;
                 };
+                // Climate override: when a band is selected, show its heat-adjusted time.
+                const bandTime = activeBand
+                  ? activeBand.predictions[SHORT_TO_BAND_LABEL[p.short]]
+                  : null;
+                const showClimate = !!bandTime;
+                const shownTime = bandTime ?? p.timeStr ?? "—";
                 return (
                   <div
                     key={p.short}
@@ -610,9 +649,19 @@ export function DashboardView() {
                       {p.short}
                     </span>
                     <span className="text-white text-sm font-black font-mono flex-1 text-center">
-                      {p.timeStr ?? "—"}
+                      {shownTime}
                     </span>
-                    {delta !== null && delta !== 0 ? (
+                    {showClimate ? (
+                      <span
+                        className="inline-flex items-center px-2 py-1 rounded-[12px] text-[9px] font-black tracking-widest uppercase"
+                        style={{
+                          background: tempBandKey === "ideale" ? "rgba(192,255,0,0.12)" : "rgba(244,63,94,0.12)",
+                          color: tempBandKey === "ideale" ? "#C0FF00" : "#F43F5E",
+                        }}
+                      >
+                        {activeBand?.label}
+                      </span>
+                    ) : delta !== null && delta !== 0 ? (
                       <span
                         className="inline-flex items-center gap-1 px-2 py-1 rounded-[12px] text-[11px] font-bold"
                         style={{ background: deltaBg, color: deltaColor }}
@@ -629,7 +678,9 @@ export function DashboardView() {
             </div>
 
             <div className="text-[#555] text-[9px] tracking-wider mt-3 text-center">
-              stimolo fisiologico ultima corsa → beneficio per distanza
+              {tempBands.length > 0
+                ? `previsione a ${activeBand?.range ?? "clima ideale"} · umidità ~${activeBand?.humidity ?? 65}%`
+                : "stimolo fisiologico ultima corsa → beneficio per distanza"}
             </div>
             </div>
            </GridCard>
