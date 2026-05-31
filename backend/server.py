@@ -6008,8 +6008,20 @@ async def get_supercompensation():
         db.fitness_freshness.find_one(profile_q, sort=[("date", -1)]),
     )
     max_hr = int((profile or {}).get("max_hr", 190) or 190)
+    resting_hr = int((profile or {}).get("resting_hr", 50) or 50)
     runs = await db.runs.find(q, analytics_run_projection()).sort("date", -1).to_list(80)
     today = dt.date.today()
+
+    # Athlete-relative intensity cutoffs from VDOT (Daniels paces). Used to
+    # classify stimulus by REAL intensity instead of a fixed pace, and to keep
+    # heat-inflated HR from mislabelling an easy long run as metabolic.
+    _athlete_vdot = _calc_vdot(runs, max_hr, resting_hr=resting_hr)
+    if _athlete_vdot:
+        _paces = _tp_daniels_paces(_athlete_vdot)
+        _threshold_pace_s = _parse_pace_sec(_paces.get("threshold")) or 270
+        _marathon_pace_s = _parse_pace_sec(_paces.get("marathon")) or 315
+    else:
+        _threshold_pace_s, _marathon_pace_s = 270, 315  # fallbacks (~4:30 / ~5:15)
 
     def _safe_float(value, default=0.0) -> float:
         try:
@@ -6042,29 +6054,49 @@ async def get_supercompensation():
         elevation = _safe_float(run.get("elevation_gain"), 0)
         text = " ".join(str(run.get(k) or "") for k in ("name", "run_type", "notes")).lower()
 
+        # Real intensity = pace corrected for grade (GAP) and weather, so a slow
+        # easy run in the heat — high HR from thermoregulation, not effort — is
+        # not mistaken for a threshold/metabolic session. Heat makes you slower,
+        # so the cool/flat-equivalent pace is FASTER than raw; that is the pace
+        # we compare against the athlete's Daniels zones.
+        gap_s = _gap_pace_seconds(run)
+        base_pace_s = gap_s if (gap_s and 150 <= gap_s <= 700) else pace_s
+        env_delta = _environmental_pace_adjustment_sec_per_km(run)
+        effort_pace_s = (base_pace_s - env_delta) if base_pace_s else None
+
+        # Intensity bands relative to the athlete (not fixed seconds).
+        is_quality = effort_pace_s is not None and effort_pace_s <= _threshold_pace_s + 20
+        is_easy = effort_pace_s is None or effort_pace_s >= _marathon_pace_s + 15
+
         neuromuscular_keys = ("repetition", "ripet", "sprint", "strides", "fartlek", "hill sprint", "salite brevi")
         metabolic_keys = ("tempo", "threshold", "soglia", "interval", "progressive", "medio", "vo2")
         structural_keys = ("long", "lungo", "trail", "hilly", "collinare", "easy lungo")
 
         if (
             any(k in text for k in neuromuscular_keys)
-            or (duration <= 45 and pace_s is not None and pace_s <= 300 and (hr_pct >= 0.82 or cadence >= 178))
+            or (duration <= 45 and effort_pace_s is not None and effort_pace_s <= 300 and (hr_pct >= 0.82 or cadence >= 178))
             or (duration <= 40 and cadence >= 182)
         ):
             return "Neuromuscolare", "neuromuscular", 7, "Velocita, coordinazione e reclutamento muscolare"
 
+        # Genuine metabolic stimulus: real pace at/near threshold, OR explicit
+        # quality keyword. HR alone is NOT enough — heat inflates it.
+        if any(k in text for k in metabolic_keys) or (20 <= duration <= 75 and is_quality):
+            return "Metabolico", "metabolic", 14, "Soglia, mitocondri ed economia aerobica"
+
+        # Structural: long volume or clearly easy aerobic work (incl. easy long
+        # runs in the heat that previously leaked into the metabolic bucket).
         if (
             any(k in text for k in structural_keys)
             or distance >= 14
-            or duration >= 75
+            or duration >= 70
             or elevation >= 250
+            or ((distance >= 10 or duration >= 60) and is_easy)
         ):
-            return "Strutturale", "structural", 21, "Tendini, capillari, tolleranza al volume"
+            return "Strutturale", "structural", 21, "Volume aerobico e resilienza tissutale"
 
-        if (
-            any(k in text for k in metabolic_keys)
-            or (20 <= duration <= 75 and (hr_pct >= 0.78 or (pace_s is not None and pace_s <= 340)))
-        ):
+        # Moderate continuous effort (between easy and threshold) → metabolic.
+        if 20 <= duration <= 75 and not is_easy:
             return "Metabolico", "metabolic", 14, "Soglia, mitocondri ed economia aerobica"
 
         if distance >= 10 or duration >= 60:
