@@ -1719,7 +1719,8 @@ def _build_vdot_progression(current: float, target: float, weeks_total: int,
 
 
 def _tp_quality_session(phase: str, goal: str, dist_km: float,
-                         paces: dict, week_vdot: float) -> tuple:
+                         paces: dict, week_vdot: float,
+                         target_time_str: str = "") -> tuple:
     """Return (type, title, description, pace) for the weekly quality session.
 
     Sessions are designed per Daniels' phase philosophy:
@@ -1738,7 +1739,17 @@ def _tp_quality_session(phase: str, goal: str, dist_km: float,
     # Race finish TIME (for context) and the per-km race PACE (the real target).
     race_pace = _vdot_to_race_time(week_vdot, race_dist)
     _race_secs = _vdot_to_race_seconds(week_vdot, race_dist)
-    race_pace_km = _format_secs(int(round(_race_secs / race_dist))) if _race_secs else tp
+    daniels_race_pace_km = _format_secs(int(round(_race_secs / race_dist))) if _race_secs else tp
+    # Race-pace sessions train the GOAL pace the athlete is building toward
+    # (target_time / distance), not the optimistic pure-Daniels pace. This is
+    # what a coach prescribes in the Specific phase and matches the runner's
+    # own plan. Falls back to the Daniels pace when no goal time is set.
+    _goal_min = _parse_time_str(target_time_str) if target_time_str else None
+    goal_race_pace_km = (
+        _format_secs(int(round(_goal_min * 60 / race_dist)))
+        if _goal_min and _goal_min > 0 else None
+    )
+    race_pace_km = goal_race_pace_km or daniels_race_pace_km
 
     if phase == "Base Aerobica":
         if int(dist_km * 10) % 3 == 0:
@@ -2036,7 +2047,8 @@ def _tp_strength_exercises(phase: str, day_type: str, week_in_phase: int = 0) ->
 
 
 def _tp_build_sessions(week_start, week_km: float, phase: str, goal: str,
-                       paces: dict, week_vdot: float, plan_mode: str = "balanced") -> list:
+                       paces: dict, week_vdot: float, plan_mode: str = "balanced",
+                       target_time_str: str = "") -> list:
     """Build 7-day session list for a training week."""
     from datetime import timedelta
     day_names = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
@@ -2097,7 +2109,7 @@ def _tp_build_sessions(week_start, week_km: float, phase: str, goal: str,
         dist_km = round(week_km * dist_map[day_offset], 1)
 
         if day_offset == 1:  # Tuesday = MAIN quality session
-            s_type, title, desc, pace = _tp_quality_session(phase, goal, dist_km, paces, week_vdot)
+            s_type, title, desc, pace = _tp_quality_session(phase, goal, dist_km, paces, week_vdot, target_time_str)
         elif day_offset == 3 and plan_mode != "conservative":  # Thursday = SECONDARY quality session (shorter intervals/tempo)
             s_type, title, desc, pace = _tp_secondary_quality_session(phase, goal, dist_km, paces, week_vdot)
         elif day_offset == 5:  # Saturday = long run
@@ -2309,7 +2321,7 @@ def _generate_plan_weeks(goal_race: str, weeks_total: int, max_weekly_km: float,
             week_start = current_date
             week_end = current_date + timedelta(days=6)
 
-            sessions = _tp_build_sessions(week_start, week_km, phase_name, goal_race, paces, wv, plan_mode)
+            sessions = _tp_build_sessions(week_start, week_km, phase_name, goal_race, paces, wv, plan_mode, target_time_str)
 
             weeks.append({
                 "athlete_id": athlete_id,
