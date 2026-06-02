@@ -43,6 +43,26 @@ type EnrichedRun = {
 
 const weatherCache = new Map<string, Promise<WeatherSnapshot | null>>();
 
+/**
+ * Detect an interval / repetition session (400-1500 m reps) so it can be
+ * normalised alongside continuous runs. Keyword first; otherwise look for
+ * manual rep laps at classic distances, ignoring the ~1000 m per-km auto-splits
+ * that every continuous run produces.
+ */
+function isIntervalSession(run: Run): boolean {
+  const text = `${run.run_type ?? ''} ${run.notes ?? ''}`.toLowerCase();
+  if (/\b(interval|ripet|fartlek|vo2|serie|series|400|600|800|1000|1200|1500)\b/.test(text)) {
+    return true;
+  }
+  const splits = run.splits ?? [];
+  if (splits.length < 4) return false;
+  const repLaps = splits.filter((s) => {
+    const d = Number(s.distance) || 0; // meters
+    return (d >= 350 && d <= 950) || (d >= 1100 && d <= 1600);
+  });
+  return repLaps.length >= 3;
+}
+
 function parsePaceToSeconds(pace?: string | null): number | null {
   if (!pace) return null;
   const clean = pace.replace('/km', '').trim();
@@ -190,8 +210,12 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
   const paceQualifiedRuns = React.useMemo(() => {
     return [...runs]
       .filter((run) => {
+        if (!run.start_latlng || run.is_treadmill) return false;
         const paceSec = parsePaceToSeconds(run.avg_pace);
-        return Boolean(run.start_latlng) && !run.is_treadmill && paceSec != null && paceSec < 300;
+        if (paceSec == null) return false;
+        // Continuous runs from 2 km up, plus interval sessions (400-1500 m reps).
+        const distance = run.distance_km ?? 0;
+        return distance >= 2 || isIntervalSession(run);
       })
       .sort((a, b) => b.date.localeCompare(a.date));
   }, [runs]);
@@ -222,10 +246,12 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
   }, [weatherWindowRuns, weatherByRun]);
 
   const hotReferenceRuns = React.useMemo(() => {
+    // Keep any run whose weather we could resolve, at any temperature. Cool runs
+    // simply normalise to a near-zero delta; hot runs show the real penalty.
     return weatherWindowRuns.filter((run) => {
       const weather = weatherByRun[run.id];
       const temperature = weather?.temperature ?? run.temperature ?? null;
-      return temperature != null && temperature > 20;
+      return temperature != null;
     });
   }, [weatherWindowRuns, weatherByRun]);
 
@@ -305,7 +331,7 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
             </div>
           </div>
           <p className="text-sm leading-7 max-w-3xl" style={{ color: '#A2ACB7' }}>
-            Qui leggeremo solo le corse outdoor con GPS e passo sotto 5:00/km, e poi terremo solo i riferimenti davvero corsi sopra i 20°C.
+            Qui leggiamo le corse outdoor con GPS dai 2 km in su (continue e ripetute 400-1500 m) e ne standardizziamo il passo a condizioni ideali 5–10°C.
             Al momento il campione non e ancora sufficiente.
           </p>
         </div>
@@ -330,13 +356,13 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
             </div>
             <div>
               <h2 className="text-2xl font-black uppercase tracking-wide text-white italic">Normalizzatore Ambientale</h2>
-              <p className="text-[11px] uppercase tracking-[0.25em]" style={{ color: MUTED }}>solo corse veloci in caldo reale</p>
+              <p className="text-[11px] uppercase tracking-[0.25em]" style={{ color: MUTED }}>corse continue ≥2 km e ripetute</p>
             </div>
           </div>
           <p className="text-sm leading-7 max-w-3xl" style={{ color: '#A2ACB7' }}>
             {pendingWeatherCount > 0
-              ? `Sto ancora leggendo il meteo storico delle ultime ${weatherWindowRuns.length} corse veloci: appena finisce il fetch, qui resteranno solo le uscite sopra i 20°C.`
-              : `Nel campione recente non ho trovato ancora corse outdoor sotto 5:00/km con temperatura superiore a 20°C. Appena compaiono, questo tab le usera come riferimenti.`}
+              ? `Sto leggendo il meteo storico delle ultime ${weatherWindowRuns.length} corse: appena finisce il fetch compaiono qui, normalizzate a condizioni ideali.`
+              : `Nel campione recente non ho ancora corse outdoor con GPS dai 2 km in su. Appena compaiono, questo tab le usera come riferimenti.`}
           </p>
         </div>
       </div>
@@ -367,14 +393,14 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
                 </div>
               </div>
               <p className="text-base leading-8" style={{ color: '#BAC4CF' }}>
-                Questo pannello prende solo le tue corse veloci reali sotto 5:00/km fatte in condizioni calde, legge il meteo storico sulle coordinate GPS del giorno
+                Questo pannello prende le tue corse outdoor dai 2 km in su — continue e ripetute 400-1500 m — legge il meteo storico sulle coordinate GPS del giorno
                 e pulisce il passo dai fattori esterni. Il risultato non e un “fantasy pace”, ma una stima standardizzata di quanto valeva davvero quella prestazione in condizioni STP:
                 aria fresca, umidita gestibile, vento leggero.
               </p>
               <div className="flex flex-wrap gap-3 mt-5">
                 {[
                   'STP target · 8°C / 55% RH / vento debole',
-                  'Solo corse outdoor GPS sotto 5:00/km e oltre 20°C',
+                  'Corse outdoor GPS ≥2 km + ripetute 400-1500 m',
                   'Temperatura e umidita da archivio meteo storico',
                   'Ora stimata quando la seduta non porta il timestamp completo',
                 ].map((item) => (
@@ -565,11 +591,11 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
         <div className="p-7 border-b border-white/[0.05] flex flex-col lg:flex-row lg:items-end justify-between gap-5">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[0.28em]" style={{ color: '#4D9EAE' }}>ultime corse lette</div>
-            <h3 className="text-2xl font-black text-white">Le tue uscite sotto 5:00/km, ripulite dal meteo</h3>
+            <h3 className="text-2xl font-black text-white">Le tue uscite ≥2 km e ripetute, ripulite dal meteo</h3>
           </div>
             <div className="text-sm leading-7 max-w-2xl" style={{ color: '#94A0AA' }}>
             Ogni card usa giorno reale e coordinate GPS reali. Se il backend non porta l’orario esatto, la lettura meteo viene ancorata a una fascia oraria coerente con il nome della seduta.
-            Qui restano solo le corse veloci con temperatura davvero sopra i 20°C.
+            Corse continue dai 2 km e sessioni di ripetute; il passo e standardizzato a condizioni ideali.
           </div>
         </div>
         <div className="p-7 grid grid-cols-1 xl:grid-cols-2 gap-4">
