@@ -1734,7 +1734,11 @@ def _tp_quality_session(phase: str, goal: str, dist_km: float,
     tp = paces.get("threshold") or "5:00"
     ip = paces.get("interval") or "4:30"
     rp = paces.get("repetition") or "4:10"
-    race_pace = _vdot_to_race_time(week_vdot, RACE_DISTANCES.get(goal, 5.0))
+    race_dist = RACE_DISTANCES.get(goal, 5.0)
+    # Race finish TIME (for context) and the per-km race PACE (the real target).
+    race_pace = _vdot_to_race_time(week_vdot, race_dist)
+    _race_secs = _vdot_to_race_seconds(week_vdot, race_dist)
+    race_pace_km = _format_secs(int(round(_race_secs / race_dist))) if _race_secs else tp
 
     if phase == "Base Aerobica":
         if int(dist_km * 10) % 3 == 0:
@@ -1781,24 +1785,24 @@ def _tp_quality_session(phase: str, goal: str, dist_km: float,
                 f"2 km defaticamento. VDOT target: {week_vdot}.", ip)
 
     if phase == "Specifico":
-        rp_str = race_pace or tp
+        finish = f" (gara ~{race_pace})" if race_pace else ""
         if goal == "5K":
             return ("intervals", "Race Pace 5K",
-                    f"2 km warm-up · 3×1600 m a ritmo gara 5K (target {rp_str}) con 2 min recupero · "
-                    f"2 km defaticamento. Simulazione dello sforzo gara.", ip)
+                    f"2 km warm-up · 3×1600 m a ritmo gara 5K {race_pace_km}/km{finish} con 2 min recupero · "
+                    f"2 km defaticamento. Simulazione dello sforzo gara.", race_pace_km)
         if goal == "10K":
             return ("intervals", "Race Pace 10K",
-                    f"2 km warm-up · 4×2000 m a ritmo gara 10K (target {rp_str}) con 90 s recupero · "
-                    f"2 km defaticamento. Abituarsi al ritmo gara.", ip)
+                    f"2 km warm-up · 4×2000 m a ritmo gara 10K {race_pace_km}/km{finish} con 90 s recupero · "
+                    f"2 km defaticamento. Abituarsi al ritmo gara.", race_pace_km)
         if goal == "Half Marathon":
             km_spec = round(min(dist_km, 14), 1)
             return ("tempo", "Race Pace HM",
-                    f"2 km warm-up · {km_spec} km continui @ {tp}/km (ritmo gara HM, target {rp_str}) · "
-                    f"2 km defaticamento.", tp)
+                    f"2 km warm-up · {km_spec} km continui a ritmo gara HM {race_pace_km}/km{finish} · "
+                    f"2 km defaticamento.", race_pace_km)
         mp_km = round(min(dist_km, 25), 1)
         return ("tempo", "Simulazione Maratona",
-                f"2 km warm-up · {mp_km} km @ {mp}/km (passo maratona, target {rp_str}) · "
-                f"2 km defaticamento.", mp)
+                f"2 km warm-up · {mp_km} km a ritmo gara maratona {race_pace_km}/km{finish} · "
+                f"2 km defaticamento.", race_pace_km)
 
     if phase == "Taper":
         return ("easy", "Easy + Strides",
