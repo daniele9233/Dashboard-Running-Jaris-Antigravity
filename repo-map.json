@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-02T18:04:51.625Z",
+  "generated_at": "2026-06-02T18:50:00.336Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 147,
+    "files": 148,
     "backend_routes": 57,
     "frontend_routes": 14,
     "api_clients": 59
@@ -2207,6 +2207,29 @@
       "size_bytes": 12626
     },
     {
+      "path": "src/components/KikkoderisoSub20.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component KikkoderisoSub20.",
+      "touch_when": [
+        "ai",
+        "garmin",
+        "layout",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "KikkoderisoSub20"
+      ],
+      "routes": [],
+      "imports": [
+        "lucide-react",
+        "react"
+      ],
+      "hash": "28428469a1b5c4ba75f7c856db0857a4fd2d6a606976aeca57c9e2b76c2185b0",
+      "last_modified": "2026-06-02T18:50:00.336Z",
+      "size_bytes": 17869
+    },
+    {
       "path": "src/components/LastRunMap.tsx",
       "kind": "frontend-component",
       "purpose": "React component LastRunMap.",
@@ -3123,12 +3146,13 @@
         "../hooks/apiCacheKeys",
         "../hooks/useApi",
         "../types/api",
+        "./KikkoderisoSub20",
         "lucide-react",
         "react"
       ],
-      "hash": "293d8e9f03442c228a956268ab22877007e209eb38980808d15fa94092040b4e",
-      "last_modified": "2026-05-16T19:25:48.436Z",
-      "size_bytes": 80638
+      "hash": "e3afb2584b0b4eee861f3b5c63785d34857fbf0fe96062fc02330f59a7718328",
+      "last_modified": "2026-06-02T18:12:58.291Z",
+      "size_bytes": 81448
     },
     {
       "path": "src/components/TrainingSidebar.tsx",

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer, Trophy } from "lucide-react";
+import { KikkoderisoSub20 } from "./KikkoderisoSub20";
 import { useApi, invalidateCache } from "../hooks/useApi";
 import { API_CACHE } from "../hooks/apiCacheKeys";
 import { getTrainingPlan, generateTrainingPlan, adaptTrainingPlan, evaluateTest } from "../api";
@@ -1111,6 +1112,7 @@ export function TrainingGrid() {
   const [previousView, setPreviousView] = useState<'Week' | 'Month' | 'Year' | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showAdaptModal, setShowAdaptModal] = useState(false);
+  const [showSub20, setShowSub20] = useState(false);
 
   const goToDay = (date: Date, fromView: 'Week' | 'Month' | 'Year') => {
     setCurrentDate(date);
@@ -1488,6 +1490,18 @@ export function TrainingGrid() {
         <div className="flex items-center gap-4">
           <button
             type="button"
+            onClick={() => setShowSub20((v) => !v)}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-black tracking-wide rounded-lg transition-colors border ${
+              showSub20
+                ? "bg-[#C0FF00] text-black border-[#C0FF00]"
+                : "bg-[#C0FF00]/10 text-[#C0FF00] border-[#C0FF00]/30 hover:bg-[#C0FF00]/20"
+            }`}
+          >
+            <Trophy className="w-4 h-4" />
+            kikkoderisoSub20
+          </button>
+          <button
+            type="button"
             onClick={() => setShowModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium rounded-lg transition-colors"
           >
@@ -1521,8 +1535,11 @@ export function TrainingGrid() {
         </div>
       </div>
 
+      {/* kikkoderisoSub20 — special personal plan with completion tracking */}
+      {showSub20 && <KikkoderisoSub20 />}
+
       {/* Empty state */}
-      {!hasPlan && planData !== null && (
+      {!showSub20 && !hasPlan && planData !== null && (
         <div className="flex flex-col items-center justify-center flex-1 text-center">
           <div className="w-16 h-16 rounded-full bg-[#1E1E1E] flex items-center justify-center mb-4 border border-[#2A2A2A]">
             <Sparkles className="w-8 h-8 text-gray-500" />
@@ -1540,7 +1557,7 @@ export function TrainingGrid() {
       )}
 
       {/* Calendar */}
-      {(hasPlan || planData === null) && (
+      {!showSub20 && (hasPlan || planData === null) && (
         <div className="flex-1 overflow-auto p-6">
           {view === 'Month' && renderMonthView()}
           {view === 'Week' && renderWeekView()}
