@@ -199,7 +199,13 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
     return [...runs]
       .filter((run) => {
         const paceSec = parsePaceToSeconds(run.avg_pace);
-        return Boolean(run.start_latlng) && !run.is_treadmill && paceSec != null && paceSec < 300;
+        return (
+          Boolean(run.start_latlng) &&
+          !run.is_treadmill &&
+          (run.distance_km ?? 0) >= 3 && // skip warm-ups / short fragments
+          paceSec != null &&
+          paceSec < 300
+        );
       })
       .sort((a, b) => b.date.localeCompare(a.date));
   }, [runs]);
@@ -316,7 +322,7 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
             </div>
           </div>
           <p className="text-sm leading-7 max-w-3xl" style={{ color: '#A2ACB7' }}>
-            Qui leggiamo le corse outdoor con GPS sotto 5:00/km e oltre 20°C, e ne standardizziamo il passo a condizioni ideali 5–10°C.
+            Qui leggiamo le corse outdoor con GPS dai 3 km in su, sotto 5:00/km e oltre 20°C, e ne standardizziamo il passo a condizioni ideali 5–10°C.
             Al momento il campione non e ancora sufficiente.
           </p>
         </div>
@@ -341,7 +347,7 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
             </div>
             <div>
               <h2 className="text-2xl font-black uppercase tracking-wide text-white italic">Normalizzatore Ambientale</h2>
-              <p className="text-[11px] uppercase tracking-[0.25em]" style={{ color: MUTED }}>corse sotto 5:00/km e oltre 20°C</p>
+              <p className="text-[11px] uppercase tracking-[0.25em]" style={{ color: MUTED }}>corse ≥3 km, sotto 5:00/km e oltre 20°C</p>
             </div>
           </div>
           <p className="text-sm leading-7 max-w-3xl" style={{ color: '#A2ACB7' }}>
@@ -385,7 +391,7 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
               <div className="flex flex-wrap gap-3 mt-5">
                 {[
                   'STP target · 8°C / 55% RH / vento debole',
-                  'Solo corse outdoor GPS sotto 5:00/km e oltre 20°C',
+                  'Corse outdoor GPS ≥3 km, sotto 5:00/km e oltre 20°C',
                   'Temperatura e umidita da archivio meteo storico',
                   'Ora stimata quando la seduta non porta il timestamp completo',
                 ].map((item) => (
