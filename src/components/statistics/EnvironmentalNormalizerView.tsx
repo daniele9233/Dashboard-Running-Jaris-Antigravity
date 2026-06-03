@@ -28,7 +28,7 @@ type WeatherSnapshot = {
   wind: number | null;
   estimatedHour: number;
   estimatedLabel: string;
-  source: 'archive' | 'run-fallback';
+  source: 'archive' | 'forecast' | 'run-fallback';
 };
 
 type EnrichedRun = {
@@ -126,7 +126,7 @@ async function fetchWeatherForRun(run: Run): Promise<WeatherSnapshot | null> {
         wind: winds[index] ?? null,
         estimatedHour: hour,
         estimatedLabel: label,
-        source: 'archive' as const,
+        source: (useForecast ? 'forecast' : 'archive') as 'archive' | 'forecast',
       };
     } catch {
       if (run.temperature == null) return null;
@@ -660,7 +660,11 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
                     <div className="text-[9px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>lettura</div>
                   </div>
                   <div className="text-sm font-black mt-2 text-white">
-                    {item.weather?.source === 'archive' ? 'meteo archivio' : 'fallback temperatura'}
+                    {item.weather?.source === 'archive'
+                      ? 'meteo archivio'
+                      : item.weather?.source === 'forecast'
+                        ? 'meteo recente'
+                        : 'fallback temperatura'}
                   </div>
                 </div>
               </div>
