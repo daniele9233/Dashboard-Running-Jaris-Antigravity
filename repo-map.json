@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-02T18:58:52.198Z",
+  "generated_at": "2026-06-03T05:38:58.018Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2890,9 +2890,9 @@
         "react",
         "recharts"
       ],
-      "hash": "a54b68d6fa84118382cfe3d2ff873c8953b279df9335605bb1c692e1b868943f",
-      "last_modified": "2026-06-02T18:04:51.626Z",
-      "size_bytes": 35122
+      "hash": "9944fc520dd64fc0328618fa5afcf89d65e97f616a7e9c8a6e841ee1cef90c85",
+      "last_modified": "2026-06-03T05:38:58.019Z",
+      "size_bytes": 35861
     },
     {
       "path": "src/components/statistics/PotenzialProgressiV2.tsx",

@@ -63,7 +63,7 @@ function formatPace(seconds?: number | null): string {
 
 function formatDateLabel(date: string): string {
   const d = new Date(date);
-  return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+  return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function inferRunHour(name?: string | null): { hour: number; label: string } {
@@ -90,17 +90,23 @@ async function fetchWeatherForRun(run: Run): Promise<WeatherSnapshot | null> {
 
   const request = (async () => {
     const [latitude, longitude] = run.start_latlng!;
+    // The archive API lags ~5 days, so recent runs (incl. today's) return no
+    // data there and would be dropped. For those use the forecast API, which
+    // serves recent past via past_days. Older runs use the historical archive.
+    const ageDays = (Date.now() - new Date(run.date).getTime()) / 86400000;
+    const useForecast = ageDays < 9;
     try {
-      const query = new URLSearchParams({
+      const base = {
         latitude: latitude.toString(),
         longitude: longitude.toString(),
-        start_date: run.date,
-        end_date: run.date,
         hourly: 'temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m',
         timezone: 'auto',
-      });
-      const response = await fetch(`https://archive-api.open-meteo.com/v1/archive?${query.toString()}`);
-      if (!response.ok) throw new Error(`archive ${response.status}`);
+      };
+      const url = useForecast
+        ? `https://api.open-meteo.com/v1/forecast?${new URLSearchParams({ ...base, past_days: '10', forecast_days: '1' }).toString()}`
+        : `https://archive-api.open-meteo.com/v1/archive?${new URLSearchParams({ ...base, start_date: run.date, end_date: run.date }).toString()}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`weather ${response.status}`);
       const json = await response.json();
       const times: string[] = json?.hourly?.time ?? [];
       const temperatures: Array<number | null> = json?.hourly?.temperature_2m ?? [];
@@ -108,8 +114,10 @@ async function fetchWeatherForRun(run: Run): Promise<WeatherSnapshot | null> {
       const apparentTemps: Array<number | null> = json?.hourly?.apparent_temperature ?? [];
       const winds: Array<number | null> = json?.hourly?.wind_speed_10m ?? [];
       const targetHour = String(hour).padStart(2, '0');
-      let index = times.findIndex((value) => value.includes(`T${targetHour}:00`));
-      if (index < 0) index = Math.min(Math.max(hour, 0), times.length - 1);
+      // Match the run's date AND hour (forecast returns many days).
+      let index = times.findIndex((value) => value.startsWith(`${run.date}T${targetHour}:00`));
+      if (index < 0) index = times.findIndex((value) => value.startsWith(run.date)); // any hour that day
+      if (index < 0 && !useForecast) index = Math.min(Math.max(hour, 0), times.length - 1);
       if (index < 0) return null;
       return {
         temperature: temperatures[index] ?? run.temperature ?? null,
