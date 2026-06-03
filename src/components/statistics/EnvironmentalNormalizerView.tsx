@@ -66,6 +66,18 @@ function formatDateLabel(date: string): string {
   return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+// Real local start hour from start_date_local (e.g. "2026-06-02T08:15:15Z").
+// The 'Z' is nominal — Strava stores local wall-clock here — so read the hour
+// straight from the string instead of timezone-converting via Date.
+function runStartHour(run: Run): number | null {
+  const s = run.start_date_local;
+  if (typeof s === 'string' && s.length >= 13 && s[10] === 'T') {
+    const h = parseInt(s.slice(11, 13), 10);
+    if (Number.isFinite(h) && h >= 0 && h <= 23) return h;
+  }
+  return null;
+}
+
 function inferRunHour(name?: string | null): { hour: number; label: string } {
   const text = (name ?? '').toLowerCase();
   if (text.includes('night')) return { hour: 22, label: 'stima notte · 22:00' };
@@ -83,7 +95,16 @@ function buildWeatherKey(run: Run, hour: number): string {
 
 async function fetchWeatherForRun(run: Run): Promise<WeatherSnapshot | null> {
   if (!run.start_latlng) return null;
-  const { hour, label } = inferRunHour(run.name);
+  // Prefer the run's real recorded start hour; only guess from the name when
+  // the activity carries no timestamp. The guess can land an hour too early
+  // (a "mattutina" assumed at 07:00 when it was actually 08:15), reading a
+  // sub-20°C temperature and wrongly dropping a warm run.
+  const realHour = runStartHour(run);
+  const inferred = inferRunHour(run.name);
+  const hour = realHour ?? inferred.hour;
+  const label = realHour != null
+    ? `ora reale · ${String(realHour).padStart(2, '0')}:00`
+    : inferred.label;
   const key = buildWeatherKey(run, hour);
   const cached = weatherCache.get(key);
   if (cached) return cached;

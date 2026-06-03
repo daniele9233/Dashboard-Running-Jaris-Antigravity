@@ -95,6 +95,7 @@ export interface Run {
     match_confidence?: number | null;
   } | null;
   name: string | null;
+  start_date_local?: string | null;
   elapsed_time?: number | null;
   weather?: string | null;
   temperature?: number | null;

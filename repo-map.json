@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-03T06:12:47.156Z",
+  "generated_at": "2026-06-03T06:39:12.792Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2891,9 +2891,9 @@
         "react",
         "recharts"
       ],
-      "hash": "ee1877371fe2afdd44c39e140afdf950b98e80a5e5c3865876f3d02c4066f002",
-      "last_modified": "2026-06-03T06:12:47.157Z",
-      "size_bytes": 36866
+      "hash": "847a0fda8f29ed06dfee506fff22e85f1944fa1a711e9865f5fc01f6839679b2",
+      "last_modified": "2026-06-03T06:39:12.793Z",
+      "size_bytes": 37851
     },
     {
       "path": "src/components/statistics/PotenzialProgressiV2.tsx",
@@ -3655,9 +3655,9 @@
       ],
       "routes": [],
       "imports": [],
-      "hash": "f8fa1531da9ab04ebc7e2ffcd37a0238cbcfe01c0097882c2fe1211fd50c9169",
-      "last_modified": "2026-05-30T08:44:16.529Z",
-      "size_bytes": 15477
+      "hash": "ed6ba1505fce02cfc5a40754db31c76c3fb3b996cfb5a7254b2bde9aba107b71",
+      "last_modified": "2026-06-03T06:38:54.414Z",
+      "size_bytes": 15514
     },
     {
       "path": "src/types/jarvis.ts",
