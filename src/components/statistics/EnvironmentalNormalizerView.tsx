@@ -118,15 +118,25 @@ async function fetchWeatherForRun(run: Run): Promise<WeatherSnapshot | null> {
       let index = times.findIndex((value) => value.startsWith(`${run.date}T${targetHour}:00`));
       if (index < 0) index = times.findIndex((value) => value.startsWith(run.date)); // any hour that day
       if (index < 0 && !useForecast) index = Math.min(Math.max(hour, 0), times.length - 1);
-      if (index < 0) return null;
+      // The device-recorded temperature (from the watch/Strava) is the ground
+      // truth for that exact moment — prefer it over the modelled value at a
+      // guessed hour, which can sit just under a threshold (e.g. 20.2°C at 07:00
+      // when the run was actually 22°C at 08:15).
+      const measuredTemp =
+        typeof run.temperature === 'number' && run.temperature > -50 ? run.temperature : null;
+      if (index < 0 && measuredTemp == null) return null;
+      const idx = index < 0 ? 0 : index;
       return {
-        temperature: temperatures[index] ?? run.temperature ?? null,
-        humidity: humidities[index] ?? null,
-        apparent: apparentTemps[index] ?? null,
-        wind: winds[index] ?? null,
+        temperature: measuredTemp ?? temperatures[idx] ?? null,
+        humidity: humidities[idx] ?? null,
+        apparent: apparentTemps[idx] ?? measuredTemp ?? null,
+        wind: winds[idx] ?? null,
         estimatedHour: hour,
-        estimatedLabel: label,
-        source: (useForecast ? 'forecast' : 'archive') as 'archive' | 'forecast',
+        estimatedLabel: measuredTemp != null ? `${label} · temp reale del dispositivo` : label,
+        source: (measuredTemp != null ? 'run-fallback' : useForecast ? 'forecast' : 'archive') as
+          | 'archive'
+          | 'forecast'
+          | 'run-fallback',
       };
     } catch {
       if (run.temperature == null) return null;
