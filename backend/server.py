@@ -6158,18 +6158,26 @@ async def get_vdot_paces():
             "repetition": pace_at_vo2_pct(1.10),
         }
     else:
-        # Nessun field test → USER BASELINE ZONES (verdict utente 2026-05).
-        # Analisi corsa 4km PBP rivelato: 4:20 GAP = I-pace, 4:30-4:35 = T-pace.
-        # Race predictions restano da fraction model (separate concern).
-        # Quando utente esegue field test, override via from_field_test=True.
+        # Nessun field test → zone E/M/T CONSERVATIVE (verdict utente 2026-05):
+        # Daniels classico sovrastima T/M perché assume tenuta endurance completa,
+        # che il runner sta ancora costruendo. Restano fisse finché non c'è base
+        # o un field test.
+        #
+        # MA le zone QUALITÀ (Interval, Repetition) seguono il VDOT REALE: sono
+        # VO2max/neuromuscolari, dipendono dal motore non dalla tenuta, e sono
+        # state confermate sul campo (3x1000 @3:50 = I-pace per VDOT 51, HR 90%).
+        # Tenere I a 4:20 hardcoded mentre il VDOT è 51 = 30s/km di errore. (fix 2026-06)
+        i_pace = pace_at_vo2_pct(0.98) or "4:20"   # I: da VDOT reale (VO2max work)
+        i_sec = _parse_pace_to_secs(i_pace)
+        r_pace = _secs_to_pace_str(i_sec - 15) if i_sec else "4:05"  # R: I − 15s
         paces_out = {
-            "easy":       "5:30",        # E: recovery/long run pace conversazionale
-            "marathon":   "5:00",        # M: tra T e M race pace, scalato tenuta
-            "threshold":  "4:32",        # T: sustainable ~1h (mid range 4:30-4:35)
+            "easy":       "5:30",        # E: recovery/long run conversazionale (conservativo)
+            "marathon":   "5:00",        # M: scalato tenuta (conservativo)
+            "threshold":  "4:32",        # T: sustainable ~1h (gap endurance, conservativo)
             "threshold_peak": "4:30",    # T peak: estremo inferiore range utente
             "threshold_empirical": threshold_empirical,
-            "interval":   "4:20",        # I: 5K race / VO2max work (user verdict)
-            "repetition": "4:05",        # R: I - 15s (sprint/neuromuscular)
+            "interval":   i_pace,        # I: VDOT-driven (motore, confermato sul campo)
+            "repetition": r_pace,        # R: I − 15s (sprint/neuromuscular)
         }
 
     return {

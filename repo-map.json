@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-04T05:31:54.416Z",
+  "generated_at": "2026-06-04T06:41:25.203Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -657,9 +657,9 @@
         "typing",
         "urllib.parse"
       ],
-      "hash": "7a1940ee7d97a1fa2000b70a37d368cc960f1ad03aa1799a3e689a5027305faa",
-      "last_modified": "2026-06-04T05:31:54.417Z",
-      "size_bytes": 430244
+      "hash": "a23ccc499423657baedf341069fb9199616a1a8f1d7341148613e8fd51ffc86b",
+      "last_modified": "2026-06-04T06:41:25.203Z",
+      "size_bytes": 430793
     },
     {
       "path": "backend/test_models.py",
@@ -3950,28 +3950,28 @@
       "path": "/api/admin/backfill-dynamics",
       "handler": "backfill_dynamics",
       "file": "backend/server.py",
-      "line": 7976
+      "line": 7984
     },
     {
       "method": "POST",
       "path": "/api/admin/reclassify-runs",
       "handler": "reclassify_runs",
       "file": "backend/server.py",
-      "line": 8030
+      "line": 8038
     },
     {
       "method": "POST",
       "path": "/api/ai/analyze-run",
       "handler": "analyze_run",
       "file": "backend/server.py",
-      "line": 6770
+      "line": 6778
     },
     {
       "method": "GET",
       "path": "/api/ai/dashboard-insight",
       "handler": "get_dashboard_insight",
       "file": "backend/server.py",
-      "line": 6878
+      "line": 6886
     },
     {
       "method": "GET",
@@ -3992,14 +3992,14 @@
       "path": "/api/badges",
       "handler": "get_badges",
       "file": "backend/server.py",
-      "line": 6515
+      "line": 6523
     },
     {
       "method": "GET",
       "path": "/api/best-efforts",
       "handler": "get_best_efforts",
       "file": "backend/server.py",
-      "line": 6683
+      "line": 6691
     },
     {
       "method": "GET",
@@ -4069,105 +4069,105 @@
       "path": "/api/garmin/auth-start",
       "handler": "garmin_auth_start",
       "file": "backend/server.py",
-      "line": 8306
+      "line": 8314
     },
     {
       "method": "GET",
       "path": "/api/garmin/csv-data",
       "handler": "get_garmin_csv_data",
       "file": "backend/server.py",
-      "line": 9504
+      "line": 9512
     },
     {
       "method": "DELETE",
       "path": "/api/garmin/csv-data/{doc_id}",
       "handler": "delete_garmin_csv_data",
       "file": "backend/server.py",
-      "line": 9523
+      "line": 9531
     },
     {
       "method": "POST",
       "path": "/api/garmin/csv-import",
       "handler": "garmin_csv_import",
       "file": "backend/server.py",
-      "line": 9322
+      "line": 9330
     },
     {
       "method": "POST",
       "path": "/api/garmin/csv-link",
       "handler": "garmin_csv_link",
       "file": "backend/server.py",
-      "line": 9495
+      "line": 9503
     },
     {
       "method": "POST",
       "path": "/api/garmin/exchange-ticket",
       "handler": "garmin_exchange_ticket",
       "file": "backend/server.py",
-      "line": 8329
+      "line": 8337
     },
     {
       "method": "GET",
       "path": "/api/garmin/gct-analysis",
       "handler": "get_gct_analysis",
       "file": "backend/server.py",
-      "line": 9546
+      "line": 9554
     },
     {
       "method": "POST",
       "path": "/api/garmin/login",
       "handler": "garmin_login_direct",
       "file": "backend/server.py",
-      "line": 8282
+      "line": 8290
     },
     {
       "method": "POST",
       "path": "/api/garmin/save-token",
       "handler": "garmin_save_token",
       "file": "backend/server.py",
-      "line": 8250
+      "line": 8258
     },
     {
       "method": "GET",
       "path": "/api/garmin/status",
       "handler": "garmin_status",
       "file": "backend/server.py",
-      "line": 8239
+      "line": 8247
     },
     {
       "method": "POST",
       "path": "/api/garmin/sync-all",
       "handler": "garmin_sync_all",
       "file": "backend/server.py",
-      "line": 8566
+      "line": 8574
     },
     {
       "method": "POST",
       "path": "/api/garmin/sync",
       "handler": "garmin_sync",
       "file": "backend/server.py",
-      "line": 8414
+      "line": 8422
     },
     {
       "method": "GET",
       "path": "/api/heatmap",
       "handler": "get_heatmap",
       "file": "backend/server.py",
-      "line": 6753
+      "line": 6761
     },
     {
       "method": "GET",
       "path": "/api/injury-risk",
       "handler": "get_injury_risk",
       "file": "backend/server.py",
-      "line": 6204
+      "line": 6212
     },
     {
       "method": "POST",
       "path": "/api/jarvis/chat",
       "handler": "jarvis_chat",
       "file": "backend/server.py",
-      "line": 8624
+      "line": 8632
     },
     {
       "method": "GET",
@@ -4181,35 +4181,35 @@
       "path": "/api/recovery-checkin",
       "handler": "post_recovery_checkin",
       "file": "backend/server.py",
-      "line": 6250
+      "line": 6258
     },
     {
       "method": "GET",
       "path": "/api/recovery-score",
       "handler": "get_recovery_score",
       "file": "backend/server.py",
-      "line": 6187
+      "line": 6195
     },
     {
       "method": "GET",
       "path": "/api/runner-dna-legacy",
       "handler": "get_runner_dna_legacy",
       "file": "backend/server.py",
-      "line": 7587
+      "line": 7595
     },
     {
       "method": "GET",
       "path": "/api/runner-dna",
       "handler": "get_runner_dna",
       "file": "backend/server.py",
-      "line": 7305
+      "line": 7313
     },
     {
       "method": "DELETE",
       "path": "/api/runner-dna/cache",
       "handler": "clear_runner_dna_cache",
       "file": "backend/server.py",
-      "line": 7931
+      "line": 7939
     },
     {
       "method": "POST",
@@ -4279,14 +4279,14 @@
       "path": "/api/supercompensation",
       "handler": "get_supercompensation",
       "file": "backend/server.py",
-      "line": 6262
+      "line": 6270
     },
     {
       "method": "GET",
       "path": "/api/test-ai",
       "handler": "test_ai_connection",
       "file": "backend/server.py",
-      "line": 7940
+      "line": 7948
     },
     {
       "method": "GET",
@@ -4342,14 +4342,14 @@
       "path": "/api/weekly-history",
       "handler": "get_weekly_history",
       "file": "backend/server.py",
-      "line": 6577
+      "line": 6585
     },
     {
       "method": "GET",
       "path": "/api/weekly-report",
       "handler": "get_weekly_report",
       "file": "backend/server.py",
-      "line": 6552
+      "line": 6560
     }
   ],
   "frontend_routes": [
