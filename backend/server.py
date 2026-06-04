@@ -866,6 +866,223 @@ def _classify_run(run_data: dict) -> str:
     return "easy"
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# STRUCTURAL WORKOUT DETECTION (ripetute / intervals)
+# ─────────────────────────────────────────────────────────────────────────────
+# Il classifier pace-only (`_classify_run`) NON distingue 3x1000 con recupero
+# da un tempo continuo: entrambi hanno avg_pace ~4:35 → "tempo". La struttura a
+# ripetute vive nella sequenza dei pace (lap o streams), non nella media.
+#
+# Strategia: separa i campioni/lap in due cluster di passo (lavoro vs recupero)
+# con 2-means; se ci sono ≥2 blocchi di "lavoro" veloce intervallati da recupero
+# nettamente più lento (sep = pace_rest/pace_work ≥ soglia) → `intervals`.
+# Un singolo blocco veloce sostenuto → `tempo`/`threshold`. Calibrato su dati
+# reali (3x1000 → sep 3.15; tempo continuo → sep ~1.1; easy → 0 blocchi).
+
+def _two_means_split(vals: list, iters: int = 25) -> tuple[float, float]:
+    """1-D 2-means su lista di pace (sec/km). Ritorna (centroide_veloce, centroide_lento)."""
+    if not vals:
+        return (0.0, 0.0)
+    cf, cs = min(vals), max(vals)
+    if cf == cs:
+        return (cf, cs)
+    for _ in range(iters):
+        fast = [v for v in vals if abs(v - cf) <= abs(v - cs)]
+        slow = [v for v in vals if abs(v - cf) > abs(v - cs)]
+        if not fast or not slow:
+            break
+        nf, ns = sum(fast) / len(fast), sum(slow) / len(slow)
+        if abs(nf - cf) < 0.1 and abs(ns - cs) < 0.1:
+            cf, cs = nf, ns
+            break
+        cf, cs = nf, ns
+    return (cf, cs)
+
+
+def _median_filter(arr: list, w: int) -> list:
+    n = len(arr)
+    out = []
+    for i in range(n):
+        window = sorted(arr[max(0, i - w):min(n, i + w + 1)])
+        out.append(window[len(window) // 2] if window else arr[i])
+    return out
+
+
+def _workout_structure_from_streams(streams: list, duration_minutes: float) -> Optional[dict]:
+    """Rileva struttura (lavoro/recupero) dai per-point streams.
+
+    Speed ∝ Δd per campione (dt uniforme = durata/n) → segmenta sui pace senza
+    bisogno del campo `pace` (spesso assente). Ritorna dict con sep/n_work/cov
+    o None se stream insufficiente.
+    """
+    st = streams or []
+    dur_s = (duration_minutes or 0) * 60
+    n = len(st)
+    if n < 12 or dur_s <= 0:
+        return None
+    ds = [s.get("d") for s in st if isinstance(s, dict)]
+    if len(ds) < 12:
+        return None
+    # riempi eventuali None mantenendo monotonia
+    for i in range(len(ds)):
+        if ds[i] is None:
+            ds[i] = ds[i - 1] if i > 0 else 0.0
+    n = len(ds)
+    dt = dur_s / (n - 1)
+    pace = []
+    for i in range(n - 1):
+        dd = ds[i + 1] - ds[i]
+        pace.append(999.0 if dd <= 0.3 else 1000.0 * dt / dd)  # 999 = fermo
+    pace.append(pace[-1] if pace else 999.0)
+    w = max(2, int(round(15.0 / dt)))  # smoothing ~15s
+    sp = _median_filter(pace, w)
+    moving = [p for p in sp if p < 900]
+    if len(moving) < 12:
+        return None
+    cf, cs = _two_means_split(moving)
+    sep = (cs / cf) if cf > 0 else 1.0
+    thr = (cf + cs) / 2.0
+    work = [1 if (p < thr and p < 900) else 0 for p in sp]
+    # blocchi contigui
+    blocks = []
+    i = 0
+    while i < n:
+        v = work[i]
+        j = i
+        while j < n and work[j] == v:
+            j += 1
+        seg_t = (j - i) * dt
+        seg_d = ds[min(j, n - 1)] - ds[i]
+        blocks.append([v, seg_t, seg_d])
+        i = j
+    # fondi micro-blocchi (<20s) nel precedente
+    merged = []
+    for b in blocks:
+        if merged and b[1] < 20:
+            merged[-1][1] += b[1]
+            merged[-1][2] += b[2]
+        else:
+            merged.append(b[:])
+    work_blocks = [b for b in merged if b[0] == 1 and b[1] >= 20 and b[2] >= 150]
+    work_d = [b[2] for b in work_blocks]
+    total_d = ds[-1] or 1.0
+    return {
+        "cf": cf, "cs": cs, "sep": sep,
+        "n_work": len(work_blocks),
+        "work_d": work_d,
+        "coverage": sum(work_d) / total_d if total_d else 0.0,
+    }
+
+
+def _workout_structure_from_laps(laps: list) -> Optional[dict]:
+    """Rileva struttura dalle lap Strava/Garmin (gold standard: split manuali).
+
+    Ogni lap: pace = 1000/average_speed. Filtra lap-artefatto (<120m o <15s).
+    2-means su pace lap → cluster lavoro/recupero.
+    """
+    if not laps:
+        return None
+    items = []
+    for lp in laps:
+        spd = lp.get("average_speed") or 0
+        dist = lp.get("distance") or 0
+        mt = lp.get("moving_time") or lp.get("elapsed_time") or 0
+        pace = (1000.0 / spd) if spd > 0 else ((mt / (dist / 1000.0)) if dist > 0 else None)
+        if pace is None or dist < 120 or mt < 15:
+            continue
+        items.append({"pace": pace, "d": dist, "t": mt})
+    if len(items) < 2:
+        return None
+    paces = [it["pace"] for it in items]
+    cf, cs = _two_means_split(paces)
+    sep = (cs / cf) if cf > 0 else 1.0
+    thr = (cf + cs) / 2.0
+    work = [it for it in items if it["pace"] <= thr]
+    rest = [it for it in items if it["pace"] > thr]
+    # conta blocchi di lavoro intervallati (≥1 recupero tra due lavori)
+    seq = [1 if it["pace"] <= thr else 0 for it in items]
+    n_work_blocks = sum(1 for k in range(len(seq)) if seq[k] == 1 and (k == 0 or seq[k - 1] == 0))
+    has_rest_between = any(seq[k] == 0 for k in range(1, len(seq) - 1))
+    return {
+        "cf": cf, "cs": cs, "sep": sep,
+        "n_work": n_work_blocks,
+        "n_rest": len(rest),
+        "has_rest_between": has_rest_between,
+        "work_d": [it["d"] for it in work],
+        "n_laps": len(items),
+    }
+
+
+_WORKOUT_NAME_HINTS = [
+    ("intervals", ("ripetut", "interval", "intervall", "x1000", "x800", "x600",
+                   "x400", "x200", "x300", "serie", "series", "vo2", "fartlek",
+                   "piramide", "pyramid", "allunghi", "strides")),
+    ("threshold", ("soglia", "threshold", "tempo run")),
+    ("tempo", ("tempo", "medio", "progressiv")),
+    ("long", ("lungo", "lunghissimo", "long run")),
+    ("recovery", ("recupero", "recovery", "rigeneran", "defatic", "lento facile")),
+    ("race", ("gara", "race", "competizione", "wedstrijd")),
+]
+
+
+def _name_workout_hint(name: str) -> Optional[str]:
+    nl = (name or "").lower()
+    for label, keys in _WORKOUT_NAME_HINTS:
+        if any(k in nl for k in keys):
+            return label
+    return None
+
+
+def _classify_run_v2(run_doc: dict) -> tuple[str, str]:
+    """Classifier strutturale: laps → streams → nome → fallback pace/distanza.
+
+    Ritorna (run_type, evidence). Distingue ripetute (intervals) da tempo
+    continuo guardando la STRUTTURA, non solo la media.
+    """
+    dist = run_doc.get("distance_km") or 0
+    pace_parts = (run_doc.get("avg_pace") or "6:00").split(":")
+    try:
+        ps = int(pace_parts[0]) * 60 + int(pace_parts[1])
+    except (ValueError, IndexError):
+        ps = 360
+    name = run_doc.get("name") or ""
+    hint = _name_workout_hint(name)
+
+    # 1) LAPS (gold standard)
+    lap_s = _workout_structure_from_laps(run_doc.get("laps"))
+    if lap_s and lap_s["n_work"] >= 2 and lap_s["sep"] >= 1.20 \
+            and lap_s["cf"] <= lap_s["cs"] * 0.82 and lap_s["has_rest_between"] \
+            and lap_s["cf"] <= 315:
+        return "intervals", f"laps n_work={lap_s['n_work']} sep={lap_s['sep']:.2f}"
+
+    # 2) STREAMS (per-point structure)
+    s = _workout_structure_from_streams(run_doc.get("streams"), run_doc.get("duration_minutes"))
+    if s:
+        work_dist = sum(s["work_d"])
+        # ripetute: ≥2 blocchi veloci, recupero nettamente più lento.
+        # cf≤315 (5:15) esclude run/walk easy (lavoro che NON è qualità reale).
+        if s["n_work"] >= 2 and s["sep"] >= 1.30 and s["cf"] <= s["cs"] * 0.80 and s["cf"] <= 315:
+            return "intervals", f"streams n_work={s['n_work']} sep={s['sep']:.2f} cf={s['cf']:.0f}"
+        # tempo/soglia continuo: blocco veloce SOSTENUTO (≥55% e ≥1.2km),
+        # pace in range soglia/tempo (230–315s). <230 = rep/sprint, non tempo.
+        if s["n_work"] >= 1 and s["coverage"] >= 0.55 and work_dist >= 1200 \
+                and 230 <= s["cf"] <= 315 and dist < 16:
+            if s["cf"] <= 258:
+                return "threshold", f"streams continuous cov={s['coverage']:.2f} cf={s['cf']:.0f}"
+            return "tempo", f"streams continuous cov={s['coverage']:.2f} cf={s['cf']:.0f}"
+
+    # 3) name hint per intervals quando struttura debole ma nome esplicito
+    if hint == "intervals" and s and s["n_work"] >= 2 and s["sep"] >= 1.18:
+        return "intervals", f"name+streams sep={s['sep']:.2f}"
+
+    # 4) fallback pace/distanza (logica storica) con assist dal nome
+    base = _classify_run({"distance_km": dist, "avg_pace": run_doc.get("avg_pace", "6:00")})
+    if hint in ("long", "recovery", "race", "threshold") and hint != base:
+        return hint, f"name='{name}' over {base}"
+    src = "no-stream" if not s else f"sep={s['sep']:.2f}"
+    return base, f"fallback pace={ps}s {src}"
+
+
 def _format_pace(speed_ms: float) -> str:
     """Convert m/s to min:sec/km pace string."""
     if speed_ms <= 0:
@@ -1067,6 +1284,7 @@ async def strava_sync():
             splits = []
             full_polyline = ""
             streams_data = None  # per-point streams for detailed chart
+            laps_data: list = []  # Strava laps → structural interval detection
             detail: dict = {}  # populated below if detail fetch succeeds
 
             try:
@@ -1135,6 +1353,27 @@ async def strava_sync():
                             "elapsed_time": sp.get("elapsed_time", 0),
                             "elevation_difference": sp.get("elevation_difference", 0),
                         })
+
+                    # Fetch laps (Strava manual/auto splits) for structural
+                    # interval detection: 3x1000 con recupero NON visibile dalla
+                    # media, ma le lap rivelano lavoro/recupero (gold standard).
+                    try:
+                        laps_resp = await http.get(
+                            f"https://www.strava.com/api/v3/activities/{strava_id}/laps",
+                            headers=headers,
+                        )
+                        if laps_resp.status_code == 200:
+                            for lp in laps_resp.json():
+                                laps_data.append({
+                                    "distance": lp.get("distance"),
+                                    "moving_time": lp.get("moving_time"),
+                                    "elapsed_time": lp.get("elapsed_time"),
+                                    "average_speed": lp.get("average_speed"),
+                                    "average_heartrate": lp.get("average_heartrate"),
+                                    "lap_index": lp.get("lap_index"),
+                                })
+                    except Exception:
+                        pass
             except Exception:
                 full_polyline = summary_polyline
 
@@ -1177,6 +1416,7 @@ async def strava_sync():
                 "elevation_gain": round(act.get("total_elevation_gain", 0), 1),
                 "splits": splits,
                 "streams": streams_data,  # per-point data: d, hr, cad, alt, pace, ll
+                "laps": laps_data,  # Strava laps for structural interval detection
                 "polyline": full_polyline or summary_polyline,
                 "start_latlng": start_latlng,
                 "plan_feedback": None,
@@ -1186,8 +1426,18 @@ async def strava_sync():
                 "avg_ground_contact_time":  fit_dynamics.get("avg_ground_contact_time") or detail.get("average_ground_contact_time"),
                 "avg_stride_length":        fit_dynamics.get("avg_stride_length") or detail.get("average_stride_length"),
             }
+            # Classificazione strutturale (laps → streams → nome → pace).
+            # Distingue ripetute (3x1000 con recupero) da tempo continuo, cosa
+            # impossibile dalla sola media. Sovrascrive il quick-classify sopra.
+            try:
+                rt, rt_ev = _classify_run_v2(run_doc)
+                run_doc["run_type"] = rt
+                run_doc["classify_evidence"] = rt_ev
+            except Exception as e:
+                print(f"[classify_v2] {strava_id}: {e}")
             # Manual override per casi specifici (es. treadmill TRX).
             # Solo display values; is_treadmill resta True → analytics escludono.
+            # (override DOPO classify → run_type manuale ha priorità)
             run_doc = _apply_manual_override(run_doc)
             # GAP (grade-adjusted pace) sec/km — pace-only effort normalizer.
             # Strava linear approx ~15s/km per 1% grade. Saved per-run so future
@@ -7774,6 +8024,105 @@ async def backfill_dynamics(limit: int = 20):
         "updated": updated,
         "total_attempted": len(runs_to_fix),
         "errors": errors
+    }
+
+
+@app.post("/api/admin/reclassify-runs")
+async def reclassify_runs(apply: bool = False, fetch_laps: bool = False, laps_limit: int = 60):
+    """Riclassifica run_type di tutte le corse con il detector strutturale v2.
+
+    Usa dati GIÀ in DB (streams + laps + nome) → nessuna chiamata Strava per la
+    classificazione. Distingue ripetute da tempo continuo guardando la struttura.
+
+    Query params:
+      - apply=false (default): DRY-RUN, ritorna solo il diff senza scrivere.
+      - apply=true: scrive run_type + classify_evidence nei doc modificati.
+      - fetch_laps=true: scarica le laps Strava per run che ne sono prive
+        (max laps_limit, rate-limit aware) prima di riclassificare.
+
+    Salta i run con manual_override=True (run_type manuale ha priorità).
+    """
+    athlete_id = await _get_athlete_id()
+    q: dict = {"athlete_id": athlete_id} if athlete_id else {}
+
+    # Opzionale: backfill laps da Strava per run che non le hanno
+    laps_fetched = 0
+    if fetch_laps:
+        tokens = await _get_active_strava_token()
+        if tokens:
+            tokens = await _refresh_token_if_needed(tokens)
+            headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+            need = await db.runs.find(
+                {**q, "strava_id": {"$exists": True},
+                 "$or": [{"laps": {"$exists": False}}, {"laps": {"$size": 0}}]}
+            ).sort("date", -1).to_list(laps_limit)
+            async with httpx.AsyncClient(timeout=30.0) as http:
+                for run in need:
+                    sid = run.get("strava_id")
+                    if not sid:
+                        continue
+                    try:
+                        r = await http.get(
+                            f"https://www.strava.com/api/v3/activities/{sid}/laps",
+                            headers=headers,
+                        )
+                        if r.status_code == 200:
+                            laps = [{
+                                "distance": lp.get("distance"),
+                                "moving_time": lp.get("moving_time"),
+                                "elapsed_time": lp.get("elapsed_time"),
+                                "average_speed": lp.get("average_speed"),
+                                "average_heartrate": lp.get("average_heartrate"),
+                                "lap_index": lp.get("lap_index"),
+                            } for lp in r.json()]
+                            await db.runs.update_one({"_id": run["_id"]}, {"$set": {"laps": laps}})
+                            laps_fetched += 1
+                    except Exception:
+                        pass
+
+    # Scan + riclassifica (solo dati in DB)
+    cursor = db.runs.find(q)
+    scanned = 0
+    skipped_override = 0
+    changes = []
+    async for run in cursor:
+        scanned += 1
+        if run.get("manual_override"):
+            skipped_override += 1
+            continue
+        try:
+            new_type, evidence = _classify_run_v2(run)
+        except Exception as e:
+            continue
+        old_type = run.get("run_type")
+        if new_type != old_type:
+            changes.append({
+                "date": (run.get("start_date_local") or run.get("date") or "")[:10],
+                "name": run.get("name"),
+                "distance_km": run.get("distance_km"),
+                "avg_pace": run.get("avg_pace"),
+                "old": old_type,
+                "new": new_type,
+                "evidence": evidence,
+            })
+            if apply:
+                await db.runs.update_one(
+                    {"_id": run["_id"]},
+                    {"$set": {"run_type": new_type, "classify_evidence": evidence}},
+                )
+
+    # conteggi transizioni
+    from collections import Counter as _Counter
+    trans = _Counter((c["old"], c["new"]) for c in changes)
+    return {
+        "ok": True,
+        "applied": apply,
+        "scanned": scanned,
+        "skipped_manual_override": skipped_override,
+        "laps_fetched": laps_fetched,
+        "changed": len(changes),
+        "transitions": {f"{k[0]}->{k[1]}": v for k, v in trans.most_common()},
+        "changes": sorted(changes, key=lambda c: c["date"]),
     }
 
 
