@@ -84,6 +84,7 @@ function pctColor(pct: number): string {
 // pendenza + temperatura + umidità (motore /api/sub20/evaluate-session).
 const QUAL_DATES_KEY = "metic:kikkoderiso-sub20:qualdates:v1";
 const EVALS_KEY = "metic:kikkoderiso-sub20:evals:v1";
+const MANUAL_WX_KEY = "metic:kikkoderiso-sub20:manualwx:v1";
 // Settimana 1 = giovedì 4/6/2026 (piano iniziato martedì 2/6). Mese 0-based.
 const QUAL_BASE = new Date(2026, 5, 4);
 
@@ -177,8 +178,10 @@ export function KikkoderisoSub20() {
   );
 
   // ── Auto-evaluation state ──
+  type ManualWx = { temp?: number; hum?: number };
   const [qualDates, setQualDates] = useState<Record<number, string>>(() => loadJson(QUAL_DATES_KEY));
   const [evals, setEvals] = useState<Record<number, Sub20EvalResult>>(() => loadJson(EVALS_KEY));
+  const [manualWx, setManualWx] = useState<Record<number, ManualWx>>(() => loadJson(MANUAL_WX_KEY));
   const [busyWeek, setBusyWeek] = useState<number | null>(null);
   const [openWeek, setOpenWeek] = useState<number | null>(null);
 
@@ -188,6 +191,9 @@ export function KikkoderisoSub20() {
   useEffect(() => {
     try { window.localStorage.setItem(EVALS_KEY, JSON.stringify(evals)); } catch { /* quota */ }
   }, [evals]);
+  useEffect(() => {
+    try { window.localStorage.setItem(MANUAL_WX_KEY, JSON.stringify(manualWx)); } catch { /* quota */ }
+  }, [manualWx]);
 
   const qualDateOf = useCallback((week: number) => qualDates[week] ?? defaultQualDate(week), [qualDates]);
 
@@ -196,13 +202,16 @@ export function KikkoderisoSub20() {
     if (!parsed) return;
     setBusyWeek(w.week);
     setOpenWeek(w.week);
+    const mwx = manualWx[w.week] || {};
     try {
       const res = await evaluateSub20Session({
         date: qualDates[w.week] ?? defaultQualDate(w.week),
         reps: parsed.reps,
         rep_m: parsed.rep_m,
         target_pace_sec: parsed.targetSec,
-        window_days: 4,
+        window_days: 2,
+        manual_temp_c: mwx.temp,
+        manual_humidity: mwx.hum,
       });
       setEvals((prev) => ({ ...prev, [w.week]: res }));
     } catch {
@@ -210,7 +219,7 @@ export function KikkoderisoSub20() {
     } finally {
       setBusyWeek(null);
     }
-  }, [qualDates]);
+  }, [qualDates, manualWx]);
 
   // Roll-up "dove sono migliorato"
   const progress = useMemo(() => {
@@ -428,6 +437,32 @@ export function KikkoderisoSub20() {
                           className="bg-white/[0.04] border border-white/10 rounded-lg px-2 py-1 text-[11px] text-gray-200 outline-none focus:border-[#C0FF00]/40 [color-scheme:dark]"
                         />
                       </label>
+                      <label className="flex items-center gap-1.5 text-[11px] text-gray-400" title="Override manuale temperatura (es. valore Strava). Lascia vuoto per usare meteo automatico.">
+                        <Thermometer className="w-3.5 h-3.5 text-amber-400" />
+                        <input
+                          type="number" step="0.1" inputMode="decimal" placeholder="auto"
+                          value={manualWx[w.week]?.temp ?? ""}
+                          onChange={(e) => setManualWx((p) => ({
+                            ...p,
+                            [w.week]: { ...p[w.week], temp: e.target.value === "" ? undefined : parseFloat(e.target.value) },
+                          }))}
+                          className="w-14 bg-white/[0.04] border border-white/10 rounded-lg px-2 py-1 text-[11px] text-gray-200 outline-none focus:border-amber-400/40"
+                        />
+                        <span className="text-gray-500">°C</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 text-[11px] text-gray-400" title="Override umidità">
+                        <Droplets className="w-3.5 h-3.5 text-sky-400" />
+                        <input
+                          type="number" step="1" min="0" max="100" inputMode="numeric" placeholder="auto"
+                          value={manualWx[w.week]?.hum ?? ""}
+                          onChange={(e) => setManualWx((p) => ({
+                            ...p,
+                            [w.week]: { ...p[w.week], hum: e.target.value === "" ? undefined : parseFloat(e.target.value) },
+                          }))}
+                          className="w-12 bg-white/[0.04] border border-white/10 rounded-lg px-2 py-1 text-[11px] text-gray-200 outline-none focus:border-sky-400/40"
+                        />
+                        <span className="text-gray-500">%</span>
+                      </label>
                       <button
                         type="button"
                         onClick={() => evaluate(w)}
@@ -574,7 +609,9 @@ function EvalResultView({
             <span className="flex items-center gap-1">
               <Thermometer className="w-3 h-3 text-amber-400" />
               {c.temp_c}°C{c.apparent_c != null ? ` (perc. ${c.apparent_c}°)` : ""}
-              <span className="text-gray-600">{c.temp_source === "strava_device" ? "· Garmin" : "· meteo"}</span>
+              <span className="text-gray-600">
+                {c.temp_source === "manual" ? "· manuale" : c.temp_source === "strava_device" ? "· Garmin" : "· meteo"}
+              </span>
             </span>
           )}
           {c.humidity != null && (

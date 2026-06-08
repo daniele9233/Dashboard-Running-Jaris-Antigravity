@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-08T10:20:54.964Z",
+  "generated_at": "2026-06-08T10:34:32.753Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -631,9 +631,9 @@
         "typing",
         "urllib.parse"
       ],
-      "hash": "d207c5b4675f5b76576e9a19463f09e75f9910fadd23482547127e417e4e915d",
-      "last_modified": "2026-06-08T10:20:54.964Z",
-      "size_bytes": 451133
+      "hash": "c9dfc94e7b58e5bf136bf33594c90c261d22ddd67acfdc950e9f9bad37ac8540",
+      "last_modified": "2026-06-08T10:33:22.821Z",
+      "size_bytes": 452685
     },
     {
       "path": "backend/test_models.py",
@@ -1560,9 +1560,9 @@
         "../types/jarvis",
         "./client"
       ],
-      "hash": "51744f1747f7acff610a1e098b6896d133f7665e6ed8edf7a567cd7649adf4f0",
-      "last_modified": "2026-06-08T07:36:51.401Z",
-      "size_bytes": 18327
+      "hash": "4865c7dcbdcd372e8e75f373996c003cd17dc97849f74c2e0840aa754a242e8c",
+      "last_modified": "2026-06-08T10:33:42.370Z",
+      "size_bytes": 18415
     },
     {
       "path": "src/App.tsx",
@@ -2202,9 +2202,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "89eddbdcc58a30719d7181f4fe5373f75e9c372897edf226e8877396b981aacd",
-      "last_modified": "2026-06-08T07:38:16.415Z",
-      "size_bytes": 30812
+      "hash": "556eebdd04e0ad7be453012cf882bbeee62560551e28f03833936abd7a6908fc",
+      "last_modified": "2026-06-08T10:34:32.754Z",
+      "size_bytes": 33302
     },
     {
       "path": "src/components/LastRunMap.tsx",
@@ -4018,84 +4018,84 @@
       "path": "/api/garmin/auth-start",
       "handler": "garmin_auth_start",
       "file": "backend/server.py",
-      "line": 8806
+      "line": 8849
     },
     {
       "method": "GET",
       "path": "/api/garmin/csv-data",
       "handler": "get_garmin_csv_data",
       "file": "backend/server.py",
-      "line": 10004
+      "line": 10047
     },
     {
       "method": "DELETE",
       "path": "/api/garmin/csv-data/{doc_id}",
       "handler": "delete_garmin_csv_data",
       "file": "backend/server.py",
-      "line": 10023
+      "line": 10066
     },
     {
       "method": "POST",
       "path": "/api/garmin/csv-import",
       "handler": "garmin_csv_import",
       "file": "backend/server.py",
-      "line": 9822
+      "line": 9865
     },
     {
       "method": "POST",
       "path": "/api/garmin/csv-link",
       "handler": "garmin_csv_link",
       "file": "backend/server.py",
-      "line": 9995
+      "line": 10038
     },
     {
       "method": "POST",
       "path": "/api/garmin/exchange-ticket",
       "handler": "garmin_exchange_ticket",
       "file": "backend/server.py",
-      "line": 8829
+      "line": 8872
     },
     {
       "method": "GET",
       "path": "/api/garmin/gct-analysis",
       "handler": "get_gct_analysis",
       "file": "backend/server.py",
-      "line": 10046
+      "line": 10089
     },
     {
       "method": "POST",
       "path": "/api/garmin/login",
       "handler": "garmin_login_direct",
       "file": "backend/server.py",
-      "line": 8782
+      "line": 8825
     },
     {
       "method": "POST",
       "path": "/api/garmin/save-token",
       "handler": "garmin_save_token",
       "file": "backend/server.py",
-      "line": 8750
+      "line": 8793
     },
     {
       "method": "GET",
       "path": "/api/garmin/status",
       "handler": "garmin_status",
       "file": "backend/server.py",
-      "line": 8739
+      "line": 8782
     },
     {
       "method": "POST",
       "path": "/api/garmin/sync-all",
       "handler": "garmin_sync_all",
       "file": "backend/server.py",
-      "line": 9066
+      "line": 9109
     },
     {
       "method": "POST",
       "path": "/api/garmin/sync",
       "handler": "garmin_sync",
       "file": "backend/server.py",
-      "line": 8914
+      "line": 8957
     },
     {
       "method": "GET",
@@ -4116,7 +4116,7 @@
       "path": "/api/jarvis/chat",
       "handler": "jarvis_chat",
       "file": "backend/server.py",
-      "line": 9124
+      "line": 9167
     },
     {
       "method": "GET",
@@ -4228,7 +4228,7 @@
       "path": "/api/sub20/evaluate-session",
       "handler": "sub20_evaluate_session",
       "file": "backend/server.py",
-      "line": 8480
+      "line": 8502
     },
     {
       "method": "GET",

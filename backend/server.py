@@ -8262,9 +8262,14 @@ def _extract_reps_from_laps(laps: list) -> list:
     return reps
 
 
-async def _fetch_run_weather(lat, lng, date_str, hour):
+async def _fetch_run_weather(lat, lng, date_str, hour_start=None, hour_end=None):
     """Open-Meteo per la corsa. Mirror logica frontend: forecast (past_days) per
-    run ≤9 giorni fa, altrimenti archive. Match su data+ora reale."""
+    run ≤9 giorni fa, altrimenti archive.
+
+    Se forniti hour_start + hour_end (durata corsa nota), restituisce la MEDIA
+    sulle ore coperte dalla corsa — più rappresentativa di un singolo snapshot,
+    soprattutto all'alba quando la temp varia 4°+ in un'ora.
+    """
     if lat is None or lng is None or not date_str:
         return None
     from datetime import date as _date
@@ -8300,27 +8305,44 @@ async def _fetch_run_weather(lat, lng, date_str, hour):
     apps = hourly.get("apparent_temperature") or []
     if not times:
         return None
-    target_h = hour if hour is not None else 8
-    best_idx = None
-    for idx, t in enumerate(times):
-        if t[:10] == date_str[:10]:
-            th = int(t[11:13]) if len(t) >= 13 else 0
-            if th == target_h:
-                best_idx = idx
-                break
-            if best_idx is None:
-                best_idx = idx
-    if best_idx is None:
-        best_idx = 0
 
-    def _g(arr):
-        return arr[best_idx] if best_idx < len(arr) and arr[best_idx] is not None else None
+    # Raccoglie tutti gli indici delle ore coperte (start..end inclusi)
+    hours_wanted = set()
+    if hour_start is not None:
+        if hour_end is None:
+            hour_end = hour_start
+        h = hour_start
+        while True:
+            hours_wanted.add(min(23, max(0, h)))
+            if h >= hour_end:
+                break
+            h += 1
+    else:
+        hours_wanted.add(8)
+
+    idxs = []
+    for idx, t in enumerate(times):
+        if t[:10] != date_str[:10]:
+            continue
+        th = int(t[11:13]) if len(t) >= 13 else 0
+        if th in hours_wanted:
+            idxs.append(idx)
+    if not idxs:
+        for idx, t in enumerate(times):
+            if t[:10] == date_str[:10]:
+                idxs.append(idx)
+                break
+
+    def _avg(arr):
+        vals = [arr[i] for i in idxs if i < len(arr) and arr[i] is not None]
+        return (sum(vals) / len(vals)) if vals else None
 
     return {
-        "temp_c": _g(temps),
-        "humidity": _g(hums),
-        "apparent_c": _g(apps),
+        "temp_c": _avg(temps),
+        "humidity": _avg(hums),
+        "apparent_c": _avg(apps),
         "source": "forecast" if use_forecast else "archive",
+        "hours_used": sorted(hours_wanted),
     }
 
 
@@ -8495,6 +8517,8 @@ async def sub20_evaluate_session(payload: dict = Body(...)):
     rep_m = float(payload.get("rep_m") or 1000)
     target_pace_sec = int(payload.get("target_pace_sec") or 0)
     window_days = int(payload.get("window_days") or 2)
+    manual_temp = payload.get("manual_temp_c")  # override utente: cosa vede su Strava
+    manual_humidity = payload.get("manual_humidity")
 
     athlete_id = await _get_athlete_id()
     q = {"athlete_id": athlete_id} if athlete_id else {}
@@ -8541,24 +8565,42 @@ async def sub20_evaluate_session(payload: dict = Body(...)):
     latlng = run.get("start_latlng") or []
     lat = latlng[0] if len(latlng) >= 2 else None
     lng = latlng[1] if len(latlng) >= 2 else None
+    # Intervallo orario coperto dalla corsa: start + durata → media oraria,
+    # invece di uno snapshot. All'alba la temp può variare 4° in un'ora.
     sdl = run.get("start_date_local") or ""
     hh = int(sdl[11:13]) if len(sdl) >= 13 and sdl[11:13].isdigit() else None
     mm = int(sdl[14:16]) if len(sdl) >= 16 and sdl[14:16].isdigit() else 0
-    hour = (hh + (1 if mm >= 30 else 0)) if hh is not None else None
-    if hour is not None and hour > 23:
-        hour = 23
+    dur_min = float(run.get("duration_minutes") or 0)
+    hour_start = hour_end = None
+    if hh is not None:
+        start_min = hh * 60 + mm
+        end_min = int(start_min + dur_min)
+        hour_start = start_min // 60
+        hour_end = min(23, end_min // 60)
 
-    device_temp = run.get("device_temp_c")  # solo fallback (sensore polso, inaffidabile)
-
-    weather = await _fetch_run_weather(lat, lng, run.get("date"), hour)
+    device_temp = run.get("device_temp_c")
+    weather = await _fetch_run_weather(lat, lng, run.get("date"), hour_start, hour_end)
     om_temp = weather.get("temp_c") if weather else None
     humidity = weather.get("humidity") if weather else None
-    # Open-Meteo air temp (2m) è la grandezza fisica corretta per il calcolo del
-    # caldo. La temp del DISPOSITIVO Garmin (average_temp) legge il calore del
-    # polso e sovrastima (es. 24° vs 15° reali) → la teniamo solo come fallback,
-    # NON la preferiamo: gonfiava il credito caldo e quindi il VDOT.
-    temp_c = om_temp if om_temp is not None else device_temp
-    temp_source = (weather.get("source") if weather else None) if om_temp is not None else "strava_device"
+    # Cascata di priorità:
+    # 1) override MANUALE per seduta (vince su tutto: l'utente vede Strava 18°)
+    # 2) Open-Meteo 2m air temp (fisicamente corretto, calibrato sulla cella)
+    # 3) Garmin average_temp SOLO se ≤22°C (sopra = sensore polso scaldato,
+    #    inaffidabile — gonfia il credito caldo e quindi il VDOT)
+    temp_source = None
+    if manual_temp is not None:
+        temp_c = float(manual_temp)
+        temp_source = "manual"
+    elif om_temp is not None:
+        temp_c = om_temp
+        temp_source = weather.get("source") if weather else "open-meteo"
+    elif device_temp is not None and device_temp <= 22:
+        temp_c = device_temp
+        temp_source = "strava_device"
+    else:
+        temp_c = None
+    if manual_humidity is not None:
+        humidity = float(manual_humidity)
     apparent_c = _apparent_temp_c(temp_c, humidity) if temp_c is not None else None
     heat_frac = _heat_slowdown_frac(temp_c, humidity, 5.0) if temp_c is not None else 0.0
     heat_sec = (avg_raw or 0) * heat_frac
@@ -8616,6 +8658,7 @@ async def sub20_evaluate_session(payload: dict = Body(...)):
             "heat_adj_sec": round(heat_sec),
             "temp_source": temp_source,
             "weather_source": weather.get("source") if weather else None,
+            "hours_used": weather.get("hours_used") if weather else None,
         },
         "normalized_avg_sec": round(norm_avg) if norm_avg else None,
         "delta_sec": round(delta) if delta is not None else None,

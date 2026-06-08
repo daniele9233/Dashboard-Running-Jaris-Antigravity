@@ -342,6 +342,7 @@ export interface Sub20Conditions {
   heat_adj_sec: number;
   temp_source: string | null;
   weather_source: string | null;
+  hours_used: number[] | null;
 }
 export interface Sub20Adaptation {
   absorb: string;
@@ -377,6 +378,8 @@ export const evaluateSub20Session = (body: {
   rep_m: number;
   target_pace_sec: number;
   window_days?: number;
+  manual_temp_c?: number;
+  manual_humidity?: number;
 }) => api.post<Sub20EvalResult>('/api/sub20/evaluate-session', body);
 
 // ─── JARVIS ──────────────────────────────────────────────────────────────────
