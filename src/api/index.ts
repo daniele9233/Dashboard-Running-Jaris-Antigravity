@@ -321,29 +321,6 @@ export const getUserLayout = () =>
 export const putUserLayout = (payload: { layouts: GridLayouts; hidden_keys?: string[] }) =>
   api.put<{ ok: boolean }>('/api/user/layout', payload);
 
-// ─── SUPPLEMENTS ─────────────────────────────────────────────────────────────
-export type SupplementId = 'creatine' | 'beta-alanine';
-export interface SupplementConfig {
-  start_date: string;       // YYYY-MM-DD
-  enabled: boolean;
-  checked_days?: string[];  // date strings YYYY-MM-DD — giorni di assunzione confermati
-}
-export interface SupplementsConfigResponse {
-  supplements: Record<SupplementId, SupplementConfig>;
-}
-export const getSupplementsConfig = () =>
-  api.get<SupplementsConfigResponse>('/api/supplements');
-
-export const updateSupplement = (
-  supId: SupplementId,
-  payload: {
-    start_date?: string;
-    enabled?: boolean;
-    check_date?: string;  // YYYY-MM-DD — giorno da spuntare/deselezionare
-    checked?: boolean;    // true = aggiungi, false = rimuovi
-  },
-) => api.put<SupplementsConfigResponse>(`/api/supplements/${supId}`, payload);
-
 // ─── JARVIS ──────────────────────────────────────────────────────────────────
 import type { JarvisResponse } from '../types/jarvis';
 export const jarvisChat = (transcript: string) =>
