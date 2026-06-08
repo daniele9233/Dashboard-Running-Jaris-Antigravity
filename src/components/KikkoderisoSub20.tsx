@@ -100,7 +100,8 @@ function loadJson<T>(key: string): T {
 function defaultQualDate(week: number): string {
   const d = new Date(QUAL_BASE);
   d.setDate(d.getDate() + (week - 1) * 7);
-  return d.toISOString().slice(0, 10);
+  // Local date components (NO toISOString — sfasa di 1 giorno in fuso UTC+).
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
 // "3×1000 @ 3:58" → { reps: 3, rep_m: 1000, targetSec: 238 }
@@ -453,8 +454,8 @@ export function KikkoderisoSub20() {
                       ) : (
                         <div className="mt-3 text-[12px] text-gray-500 leading-relaxed">
                           {ev.error === "no_reps"
-                            ? "Corsa trovata ma niente ripetute pulite (struttura continua o GPS rumoroso). Controlla il giorno."
-                            : "Nessuna corsa qualità vicino a questo giorno. Sposta il giorno o sincronizza Strava."}
+                            ? "Corsa di qualità trovata, ma non riconosco ripetute pulite (struttura continua o GPS rumoroso)."
+                            : "Nessuna seduta di qualità in questo giorno — niente da valutare. Imposta il giorno reale in cui hai fatto le ripetute."}
                         </div>
                       )
                     )}
@@ -519,7 +520,8 @@ function EvalResultView({
           {v.label}
         </span>
         <div className="text-[12px] text-gray-300">
-          Normalizzato <b className="text-white">{fmtPace(ev.normalized_avg_sec)}</b> vs target{" "}
+          Normalizzato <span className="text-gray-500">(PBP + temp ideale)</span>{" "}
+          <b className="text-white">{fmtPace(ev.normalized_avg_sec)}</b> vs target{" "}
           <b className="text-white">{fmtPace(target)}</b> → <b style={{ color: v.color }}>{fmtDelta(ev.delta_sec)}</b>
         </div>
         {ev.vdot_implied != null && (
@@ -532,19 +534,37 @@ function EvalResultView({
         </div>
       </div>
 
-      {/* Rep */}
-      <div className="flex flex-wrap gap-2">
+      {/* Rep: grezzo · PBP (pendenza) · a temp ideale · dislivello */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         {ev.reps!.map((r, i) => (
-          <div key={i} className="px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-[11px] whitespace-nowrap">
-            <span className="text-gray-500 font-black">R{i + 1}</span>{" "}
-            <span className="text-white font-black">{fmtPace(r.pace_sec)}</span>{" "}
-            <span className="text-gray-600">{Math.round(r.dist_m)}m</span>
-            {r.hr_avg != null && <span className="text-[#F43F5E]/80"> · {r.hr_avg}bpm</span>}
+          <div key={i} className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px]">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-gray-500 font-black tracking-wide">R{i + 1}</span>
+              <span className="flex items-center gap-2 text-[10px] text-gray-500">
+                {r.elev_m != null && (
+                  <span className="flex items-center gap-0.5">
+                    <Mountain className="w-3 h-3 text-emerald-400" />{r.elev_m > 0 ? "+" : ""}{r.elev_m}m
+                  </span>
+                )}
+                {r.hr_avg != null && <span className="text-[#F43F5E]/80">{r.hr_avg}bpm</span>}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <span><span className="text-gray-500">grezzo </span><b className="text-white">{fmtPace(r.pace_sec)}</b></span>
+              <span><span className="text-gray-500">PBP </span><b className="text-sky-300">{fmtPace(r.pbp_sec)}</b></span>
+              <span><span className="text-gray-500">ideale </span><b className="text-[#10B981]">{fmtPace(r.ideal_sec)}</b></span>
+            </div>
           </div>
         ))}
-        <div className="px-1 py-1.5 text-[11px] text-gray-600">
-          {ev.reps_done}/{ev.reps_prescribed} rep
-        </div>
+      </div>
+      <div className="text-[11px] text-gray-600">{ev.reps_done}/{ev.reps_prescribed} rep completate</div>
+
+      {/* Legenda */}
+      <div className="text-[10px] text-gray-500 leading-relaxed rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+        <b className="text-gray-400">grezzo</b> = passo reale corso · <b className="text-sky-300">PBP</b> = passo in base alla
+        pendenza (equivalente in piano: salita → più veloce, discesa → più lento) · <b className="text-[#10B981]">ideale</b> = a
+        temperatura ottimale (~12°C) · <b className="text-white">normalizzato</b> = PBP + temp ideale, il valore con cui giudico
+        AVANTI / INDIETRO.
       </div>
 
       {/* Condizioni */}
@@ -554,6 +574,7 @@ function EvalResultView({
             <span className="flex items-center gap-1">
               <Thermometer className="w-3 h-3 text-amber-400" />
               {c.temp_c}°C{c.apparent_c != null ? ` (perc. ${c.apparent_c}°)` : ""}
+              <span className="text-gray-600">{c.temp_source === "strava_device" ? "· Garmin" : "· meteo"}</span>
             </span>
           )}
           {c.humidity != null && (

@@ -326,6 +326,10 @@ export interface Sub20RepDetail {
   dist_m: number;
   dur_s: number;
   pace_sec: number | null;
+  elev_m: number | null;
+  grade_pct: number | null;
+  pbp_sec: number | null;
+  ideal_sec: number | null;
   hr_avg: number | null;
   hr_max: number | null;
 }
@@ -336,6 +340,7 @@ export interface Sub20Conditions {
   net_elev_m: number;
   grade_adj_sec: number;
   heat_adj_sec: number;
+  temp_source: string | null;
   weather_source: string | null;
 }
 export interface Sub20Adaptation {
@@ -363,6 +368,7 @@ export interface Sub20EvalResult {
   suggested_pct?: number | null;
   vdot_implied?: number | null;
   adaptation?: Sub20Adaptation;
+  reason?: string;
   error?: string;
 }
 export const evaluateSub20Session = (body: {

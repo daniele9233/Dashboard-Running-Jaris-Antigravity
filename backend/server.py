@@ -1411,6 +1411,7 @@ async def strava_sync():
                 "location": act.get("location_city") or act.get("timezone", "").split("/")[-1],
                 "avg_cadence": act.get("average_cadence"),
                 "elevation_gain": round(act.get("total_elevation_gain", 0), 1),
+                "device_temp_c": detail.get("average_temp") if detail.get("average_temp") is not None else act.get("average_temp"),
                 "splits": splits,
                 "streams": streams_data,  # per-point data: d, hr, cad, alt, pace, ll
                 "laps": laps_data,  # Strava laps for structural interval detection
@@ -8168,6 +8169,7 @@ def _extract_reps_from_streams(streams: list, duration_minutes: float,
         return []
     ds = [s.get("d") for s in st if isinstance(s, dict)]
     hrs = [s.get("hr") for s in st if isinstance(s, dict)]
+    alts = [s.get("alt") for s in st if isinstance(s, dict)]
     if len(ds) < 12:
         return []
     for i in range(len(ds)):
@@ -8214,10 +8216,17 @@ def _extract_reps_from_streams(streams: list, duration_minutes: float,
         if seg_t < 20 or seg_d < min_rep_m:
             continue
         block_hr = [hrs[k] for k in range(i0, min(i1, len(hrs))) if hrs[k]]
+        a_start = alts[i0] if i0 < len(alts) and alts[i0] is not None else None
+        ae = min(i1, len(alts) - 1)
+        a_end = alts[ae] if ae >= 0 and alts[ae] is not None else None
+        elev_m = round(a_end - a_start, 1) if (a_start is not None and a_end is not None) else None
+        grade_pct = (elev_m / seg_d * 100.0) if (elev_m is not None and seg_d > 0) else None
         reps.append({
             "dist_m": round(seg_d),
             "dur_s": round(seg_t),
             "pace_sec": round(1000.0 * seg_t / seg_d) if seg_d > 0 else None,
+            "elev_m": elev_m,
+            "grade_pct": round(grade_pct, 2) if grade_pct is not None else None,
             "hr_avg": round(sum(block_hr) / len(block_hr)) if block_hr else None,
             "hr_max": max(block_hr) if block_hr else None,
         })
@@ -8247,6 +8256,7 @@ def _extract_reps_from_laps(laps: list) -> list:
             reps.append({
                 "dist_m": round(dist), "dur_s": round(mt),
                 "pace_sec": round(pace),
+                "elev_m": None, "grade_pct": None,
                 "hr_avg": round(hr) if hr else None, "hr_max": None,
             })
     return reps
@@ -8379,33 +8389,34 @@ async def sub20_evaluate_session(payload: dict = Body(...)):
     reps_prescribed = int(payload.get("reps") or 0)
     rep_m = float(payload.get("rep_m") or 1000)
     target_pace_sec = int(payload.get("target_pace_sec") or 0)
-    window_days = int(payload.get("window_days") or 4)
+    window_days = int(payload.get("window_days") or 2)
 
     athlete_id = await _get_athlete_id()
     q = {"athlete_id": athlete_id} if athlete_id else {}
     lo = (center - timedelta(days=window_days)).isoformat()
     hi = (center + timedelta(days=window_days)).isoformat()
-    candidates = []
+
+    # SOLO sessioni di QUALITÀ (intervals). Niente fallback a corse facili:
+    # se non c'è una qualità in questa finestra → non valutare nulla.
+    quality = []
     async for r in db.runs.find({**q, "date": {"$gte": lo, "$lte": hi}}):
         if r.get("is_treadmill"):
             continue
-        candidates.append(r)
-    if not candidates:
-        return {"matched": False}
+        if r.get("run_type") != "intervals":
+            continue
+        quality.append(r)
+    if not quality:
+        return {"matched": False, "reason": "no_quality"}
 
-    need_m = reps_prescribed * rep_m
     def _score(r):
         rd = (r.get("date") or "")[:10]
         try:
             yy, mm, dd = [int(x) for x in rd.split("-")]
-            ddiff = abs((_date(yy, mm, dd) - center).days)
+            return abs((_date(yy, mm, dd) - center).days)
         except Exception:
-            ddiff = 99
-        is_int = 0 if r.get("run_type") == "intervals" else 1
-        dist_ok = 0 if (r.get("distance_km") or 0) * 1000 >= need_m * 0.6 else 1
-        return (is_int, dist_ok, ddiff)
-    candidates.sort(key=_score)
-    run = candidates[0]
+            return 99
+    quality.sort(key=_score)
+    run = quality[0]
 
     reps = _extract_reps_from_laps(run.get("laps") or []) or \
         _extract_reps_from_streams(run.get("streams") or [], run.get("duration_minutes"))
@@ -8415,28 +8426,67 @@ async def sub20_evaluate_session(payload: dict = Body(...)):
 
     rep_paces = [rp["pace_sec"] for rp in reps if rp.get("pace_sec")]
     avg_raw = sum(rep_paces) / len(rep_paces) if rep_paces else None
-
-    # ── pendenza (GAP run-level → ratio applicato per-rep) ──
-    avg_pace_sec = _pace_to_sec(run.get("avg_pace")) or avg_raw
-    gap_sec = run.get("gap_pace_sec")
-    gap_ratio = (gap_sec / avg_pace_sec) if (gap_sec and avg_pace_sec) else 1.0
     net_elev = sum((sp.get("elevation_difference") or 0) for sp in (run.get("splits") or []))
 
-    # ── meteo ──
+    # ── meteo: preferisci temperatura DISPOSITIVO (Garmin/Strava average_temp),
+    #    è quella che vede l'utente su Strava. Open-Meteo per umidità + fallback. ──
     latlng = run.get("start_latlng") or []
     lat = latlng[0] if len(latlng) >= 2 else None
     lng = latlng[1] if len(latlng) >= 2 else None
     sdl = run.get("start_date_local") or ""
-    hour = int(sdl[11:13]) if len(sdl) >= 13 and sdl[11:13].isdigit() else None
+    hh = int(sdl[11:13]) if len(sdl) >= 13 and sdl[11:13].isdigit() else None
+    mm = int(sdl[14:16]) if len(sdl) >= 16 and sdl[14:16].isdigit() else 0
+    hour = (hh + (1 if mm >= 30 else 0)) if hh is not None else None
+    if hour is not None and hour > 23:
+        hour = 23
+
+    device_temp = run.get("device_temp_c")
+    if device_temp is None and run.get("strava_id"):
+        try:
+            tokens = await _get_active_strava_token()
+            if tokens:
+                tokens = await _refresh_token_if_needed(tokens)
+                async with httpx.AsyncClient(timeout=15.0) as http:
+                    dr = await http.get(
+                        f"https://www.strava.com/api/v3/activities/{run['strava_id']}",
+                        headers={"Authorization": f"Bearer {tokens['access_token']}"},
+                    )
+                    if dr.status_code == 200:
+                        at = dr.json().get("average_temp")
+                        if at is not None:
+                            device_temp = at
+                            await db.runs.update_one({"_id": run["_id"]},
+                                                     {"$set": {"device_temp_c": at}})
+        except Exception:
+            pass
+
     weather = await _fetch_run_weather(lat, lng, run.get("date"), hour)
-    temp_c = weather.get("temp_c") if weather else None
+    om_temp = weather.get("temp_c") if weather else None
     humidity = weather.get("humidity") if weather else None
+    temp_c = device_temp if device_temp is not None else om_temp
+    temp_source = "strava_device" if device_temp is not None else (weather.get("source") if weather else None)
+    apparent_c = _apparent_temp_c(temp_c, humidity) if temp_c is not None else None
     heat_frac = _heat_slowdown_frac(temp_c, humidity, 5.0) if temp_c is not None else 0.0
     heat_sec = (avg_raw or 0) * heat_frac
 
-    # ── normalizza (flat-equivalent GAP − credito caldo) ──
-    norm_paces = [p * gap_ratio - heat_sec for p in rep_paces]
+    # ── arricchisci ogni rep: PBP (passo in base alla pendenza) + passo a temp ideale ──
+    for rp in reps:
+        praw = rp.get("pace_sec")
+        if praw is None:
+            rp["pbp_sec"] = None
+            rp["ideal_sec"] = None
+            continue
+        g = rp.get("grade_pct")
+        rp["pbp_sec"] = round(praw - _grade_adjustment_sec(g)) if g is not None else praw
+        rp["ideal_sec"] = round(praw - heat_sec)
+
+    # normalizzato = PBP (pendenza) − credito caldo, per-rep
+    norm_paces = [rp["pbp_sec"] - heat_sec for rp in reps if rp.get("pbp_sec") is not None]
     norm_avg = sum(norm_paces) / len(norm_paces) if norm_paces else None
+    grade_adj_avg = (sum((rp["pbp_sec"] - rp["pace_sec"]) for rp in reps
+                         if rp.get("pbp_sec") is not None and rp.get("pace_sec") is not None)
+                     / len(rep_paces)) if rep_paces else 0
+
     delta = (norm_avg - target_pace_sec) if (norm_avg and target_pace_sec) else None
     if delta is None:
         verdict = "ND"
@@ -8466,11 +8516,11 @@ async def sub20_evaluate_session(payload: dict = Body(...)):
         "conditions": {
             "temp_c": round(temp_c, 1) if temp_c is not None else None,
             "humidity": round(humidity) if humidity is not None else None,
-            "apparent_c": (round(weather["apparent_c"], 1)
-                           if weather and weather.get("apparent_c") is not None else None),
+            "apparent_c": round(apparent_c, 1) if apparent_c is not None else None,
             "net_elev_m": round(net_elev, 1),
-            "grade_adj_sec": round(avg_raw * (gap_ratio - 1)) if avg_raw else 0,
+            "grade_adj_sec": round(grade_adj_avg),
             "heat_adj_sec": round(heat_sec),
+            "temp_source": temp_source,
             "weather_source": weather.get("source") if weather else None,
         },
         "normalized_avg_sec": round(norm_avg) if norm_avg else None,
