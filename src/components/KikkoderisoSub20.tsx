@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Target, Flame, ShieldAlert, Zap, CheckCircle2, RotateCcw, Trophy } from "lucide-react";
+import { Target, Flame, Zap, CheckCircle2, RotateCcw, Trophy } from "lucide-react";
 
 /**
  * kikkoderisoSub20 — personal Sub-20 5K plan (Piano_Sub20_5K_Daniele.pdf).
@@ -53,22 +53,6 @@ const GOLDEN_RULES = [
   "Facili a frequenza cardiaca, non a passo. Tetto FC ~140 bpm. A 18°C escono ~5:45–6:15, a 30–34°C anche 6:30–7:00. Entrambi corretti.",
   "Idratazione e sale. In estate bevi prima e dopo, reintegra sali: una qualità disidratato non rende e carica i tendini.",
   "Il piede comanda. Se tibiale posteriore (sx) o Achille (dx) danno segnali, salti il lungo successivo e non aumenti il volume. 48h tra le intense sempre.",
-];
-
-const STRENGTH_A = [
-  ["Short foot (arco corto)", "3×10/piede", "Muscolatura intrinseca, sostiene l'arco"],
-  ["Inversione con elastico", "3×15/piede", "Rinforzo diretto del tibiale posteriore"],
-  ["Calf raise ginocchio teso", "3×12", "Polpaccio + soleo, scarico Achille"],
-  ["Calf raise ginocchio flesso", "3×12", "Soleo isolato (chiave per Achille)"],
-  ["Heel drop eccentrico", "3×10 lento", "Tendine d'Achille, fase eccentrica"],
-];
-
-const STRENGTH_B = [
-  ["Clamshell con elastico", "3×15/lato", "Gluteo medio, stabilizza il bacino"],
-  ["Ponte glutei monopodalico", "3×12/lato", "Catena posteriore, spinta"],
-  ["Plank + plank laterale", "3×30–45″", "Core anti-rotazione, postura nel finale"],
-  ["Affondi camminati", "3×10/gamba", "Forza unilaterale, controllo ginocchio"],
-  ["Hop / skip (pliometria)", "3×20″ (piede ok)", "Rigidità elastica = economia di corsa"],
 ];
 
 type ScoreMap = Record<string, number>;
@@ -302,53 +286,15 @@ export function KikkoderisoSub20() {
         </p>
       </div>
 
-      {/* Strength routines */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {[
-          { title: "Seduta A · Prevenzione piede/caviglia", sub: "2×/sett · ~12 min", rows: STRENGTH_A, color: "#22D3EE" },
-          { title: "Seduta B · Forza e stabilità", sub: "2×/sett · ~15 min", rows: STRENGTH_B, color: "#A855F7" },
-        ].map((block) => (
-          <div key={block.title} className="rounded-2xl border border-white/10 bg-[#1A1A1A] p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-sm font-black text-white">{block.title}</div>
-              <span className="text-[10px] font-black tracking-widest uppercase" style={{ color: block.color }}>{block.sub}</span>
-            </div>
-            <div className="space-y-2">
-              {block.rows.map(([ex, dose, why]) => (
-                <div key={ex} className="flex items-start justify-between gap-3 py-2 border-b border-white/[0.04] last:border-0">
-                  <div className="min-w-0">
-                    <div className="text-sm font-bold text-gray-200">{ex}</div>
-                    <div className="text-[10px] text-gray-500 leading-snug">{why}</div>
-                  </div>
-                  <span className="shrink-0 text-[11px] font-black tracking-wide" style={{ color: block.color }}>{dose}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Strides + warnings */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl border border-white/10 bg-[#1A1A1A] p-5">
-          <div className="flex items-center gap-2 mb-2 text-[10px] font-black tracking-[0.25em] text-[#C0FF00] uppercase">
-            <CheckCircle2 className="w-4 h-4" /> Allunghi (allenanti)
-          </div>
-          <p className="text-sm text-gray-300 leading-relaxed">
-            Dopo 2 corse facili a settimana: 4–6 allunghi da 80–100 m in progressione fino a velocità superiore al ritmo
-            gara, recupero camminando. Migliorano la meccanica e rendono il 3:59 più «facile» senza affaticare.
-          </p>
+      {/* Strides */}
+      <div className="rounded-2xl border border-white/10 bg-[#1A1A1A] p-5">
+        <div className="flex items-center gap-2 mb-2 text-[10px] font-black tracking-[0.25em] text-[#C0FF00] uppercase">
+          <CheckCircle2 className="w-4 h-4" /> Allunghi (allenanti)
         </div>
-        <div className="rounded-2xl border border-[#F43F5E]/25 bg-[#F43F5E]/[0.04] p-5">
-          <div className="flex items-center gap-2 mb-2 text-[10px] font-black tracking-[0.25em] text-[#F43F5E] uppercase">
-            <ShieldAlert className="w-4 h-4" /> Avvertenze (storia clinica)
-          </div>
-          <p className="text-sm text-gray-300 leading-relaxed">
-            Evita Vajrasana e leg raise a gamba tesa. Mantieni il drenaggio quando serve (gamba piegata sollevata, argilla
-            verde). Se compare dolore al tibiale posteriore o all'Achille, fermati sull'esercizio e riduci il carico: il
-            piano funziona solo se i tendini restano silenti.
-          </p>
-        </div>
+        <p className="text-sm text-gray-300 leading-relaxed">
+          Dopo 2 corse facili a settimana: 4–6 allunghi da 80–100 m in progressione fino a velocità superiore al ritmo
+          gara, recupero camminando. Migliorano la meccanica e rendono il 3:59 più «facile» senza affaticare.
+        </p>
       </div>
 
       <p className="text-[11px] text-gray-600 text-center pb-4">

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-08T06:08:46.424Z",
+  "generated_at": "2026-06-08T06:16:12.762Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2197,9 +2197,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "28428469a1b5c4ba75f7c856db0857a4fd2d6a606976aeca57c9e2b76c2185b0",
-      "last_modified": "2026-06-02T18:50:00.336Z",
-      "size_bytes": 17869
+      "hash": "8dee7600ffab26888985f08cf8210388e48baab9395dbaf3be5fff243fa92946",
+      "last_modified": "2026-06-08T06:16:12.762Z",
+      "size_bytes": 14684
     },
     {
       "path": "src/components/LastRunMap.tsx",
