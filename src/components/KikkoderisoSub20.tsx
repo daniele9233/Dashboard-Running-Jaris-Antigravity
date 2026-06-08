@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Target, Flame, Zap, CheckCircle2, RotateCcw, Trophy } from "lucide-react";
+import {
+  Flame, Zap, CheckCircle2, RotateCcw, Trophy, CalendarDays, TrendingUp,
+  Thermometer, Droplets, Mountain, Clock, Activity, Loader2,
+} from "lucide-react";
+import { evaluateSub20Session, type Sub20EvalResult } from "../api";
 
 /**
  * kikkoderisoSub20 — personal Sub-20 5K plan (Piano_Sub20_5K_Daniele.pdf).
@@ -75,6 +79,55 @@ function pctColor(pct: number): string {
   return "#3A3A3A";
 }
 
+// ── Auto-evaluation (kikkoderisoSub20) ──────────────────────────────────────
+// Confronto automatico della qualità eseguita vs prescritto, normalizzato per
+// pendenza + temperatura + umidità (motore /api/sub20/evaluate-session).
+const QUAL_DATES_KEY = "metic:kikkoderiso-sub20:qualdates:v1";
+const EVALS_KEY = "metic:kikkoderiso-sub20:evals:v1";
+// Settimana 1 = giovedì 4/6/2026 (piano iniziato martedì 2/6). Mese 0-based.
+const QUAL_BASE = new Date(2026, 5, 4);
+
+function loadJson<T>(key: string): T {
+  if (typeof window === "undefined") return {} as T;
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : ({} as T);
+  } catch {
+    return {} as T;
+  }
+}
+
+function defaultQualDate(week: number): string {
+  const d = new Date(QUAL_BASE);
+  d.setDate(d.getDate() + (week - 1) * 7);
+  return d.toISOString().slice(0, 10);
+}
+
+// "3×1000 @ 3:58" → { reps: 3, rep_m: 1000, targetSec: 238 }
+function parseQual(qual: string): { reps: number; rep_m: number; targetSec: number } | null {
+  const m = qual.match(/(\d+)\s*[×x]\s*(\d+)\s*@\s*(\d+):(\d+)/i);
+  if (!m) return null;
+  return { reps: +m[1], rep_m: +m[2], targetSec: +m[3] * 60 + +m[4] };
+}
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const fmtPace = (sec: number | null | undefined): string =>
+  sec == null ? "—" : `${Math.floor(sec / 60)}:${pad2(Math.round(sec % 60))}`;
+const fmtDelta = (sec: number | null | undefined): string =>
+  sec == null ? "—" : `${sec > 0 ? "+" : ""}${sec}s/km`;
+const fmtDate = (iso: string | undefined): string => {
+  if (!iso) return "—";
+  const [y, m, d] = iso.slice(0, 10).split("-");
+  return `${d}/${m}/${y.slice(2)}`;
+};
+
+const VERDICT: Record<string, { label: string; color: string; desc: string }> = {
+  AVANTI:   { label: "AVANTI",   color: "#10B981", desc: "più forte del piano" },
+  IN_LINEA: { label: "IN LINEA", color: "#C0FF00", desc: "in linea col piano" },
+  INDIETRO: { label: "INDIETRO", color: "#F43F5E", desc: "sotto il prescritto" },
+  ND:       { label: "N/D",      color: "#6B7280", desc: "dati insufficienti" },
+};
+
 export function KikkoderisoSub20() {
   const [scores, setScores] = useState<ScoreMap>(() => loadScores());
 
@@ -121,6 +174,54 @@ export function KikkoderisoSub20() {
     },
     [scores],
   );
+
+  // ── Auto-evaluation state ──
+  const [qualDates, setQualDates] = useState<Record<number, string>>(() => loadJson(QUAL_DATES_KEY));
+  const [evals, setEvals] = useState<Record<number, Sub20EvalResult>>(() => loadJson(EVALS_KEY));
+  const [busyWeek, setBusyWeek] = useState<number | null>(null);
+  const [openWeek, setOpenWeek] = useState<number | null>(null);
+
+  useEffect(() => {
+    try { window.localStorage.setItem(QUAL_DATES_KEY, JSON.stringify(qualDates)); } catch { /* quota */ }
+  }, [qualDates]);
+  useEffect(() => {
+    try { window.localStorage.setItem(EVALS_KEY, JSON.stringify(evals)); } catch { /* quota */ }
+  }, [evals]);
+
+  const qualDateOf = useCallback((week: number) => qualDates[week] ?? defaultQualDate(week), [qualDates]);
+
+  const evaluate = useCallback(async (w: WeekRow) => {
+    const parsed = parseQual(w.qual);
+    if (!parsed) return;
+    setBusyWeek(w.week);
+    setOpenWeek(w.week);
+    try {
+      const res = await evaluateSub20Session({
+        date: qualDates[w.week] ?? defaultQualDate(w.week),
+        reps: parsed.reps,
+        rep_m: parsed.rep_m,
+        target_pace_sec: parsed.targetSec,
+        window_days: 4,
+      });
+      setEvals((prev) => ({ ...prev, [w.week]: res }));
+    } catch {
+      setEvals((prev) => ({ ...prev, [w.week]: { matched: false, error: "network" } }));
+    } finally {
+      setBusyWeek(null);
+    }
+  }, [qualDates]);
+
+  // Roll-up "dove sono migliorato"
+  const progress = useMemo(() => {
+    const items = Object.entries(evals)
+      .map(([wk, r]) => ({ week: +wk, r }))
+      .filter((x) => x.r.matched && x.r.vdot_implied != null)
+      .sort((a, b) => (a.r.run_date || "").localeCompare(b.r.run_date || ""));
+    if (items.length === 0) return null;
+    const first = items[0].r.vdot_implied as number;
+    const last = items[items.length - 1].r.vdot_implied as number;
+    return { items, first, last, delta: +(last - first).toFixed(1), count: items.length };
+  }, [evals]);
 
   const sessionText = (w: WeekRow, slot: Slot): { main: string; note?: string } => {
     if (slot === "mar") return { main: w.mar };
@@ -180,6 +281,39 @@ export function KikkoderisoSub20() {
           ))}
         </ol>
       </div>
+
+      {/* Dove sono migliorato (roll-up auto-valutazioni) */}
+      {progress && (
+        <div className="rounded-2xl border border-[#10B981]/25 bg-[#10B981]/[0.04] p-5">
+          <div className="flex items-center gap-2 mb-3 text-[10px] font-black tracking-[0.25em] text-[#10B981] uppercase">
+            <TrendingUp className="w-4 h-4" /> Dove sono migliorato
+          </div>
+          <div className="flex flex-wrap items-end gap-x-8 gap-y-4">
+            <div>
+              <div className="text-[10px] font-black tracking-widest text-gray-500 uppercase mb-1">VDOT implicito</div>
+              <div className="text-3xl font-black text-white">
+                {progress.first.toFixed(1)} <span className="text-gray-600 text-xl">→</span> {progress.last.toFixed(1)}
+              </div>
+              <div className="text-[11px] font-black mt-1" style={{ color: progress.delta >= 0 ? "#10B981" : "#F43F5E" }}>
+                {progress.delta >= 0 ? "+" : ""}{progress.delta} · {progress.count} sedute valutate
+              </div>
+            </div>
+            <div className="flex-1 min-w-[220px] flex flex-wrap gap-2">
+              {progress.items.map(({ week, r }) => (
+                <div key={week} className="px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-[10px] whitespace-nowrap">
+                  <span className="text-gray-500 font-black">S{week}</span>{" "}
+                  <span style={{ color: VERDICT[r.verdict || "ND"].color }} className="font-black">{fmtDelta(r.delta_sec)}</span>{" "}
+                  <span className="text-gray-600">VDOT {r.vdot_implied?.toFixed(1)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <p className="text-[11px] text-gray-500 mt-3 leading-relaxed">
+            Passo normalizzato (pendenza + caldo) vs prescritto. Il delta che scende settimana dopo settimana a parità di
+            sforzo = stai migliorando.
+          </p>
+        </div>
+      )}
 
       {/* Weekly plan with completion tracking */}
       <div className="space-y-4">
@@ -268,6 +402,65 @@ export function KikkoderisoSub20() {
                   );
                 })}
               </div>
+
+              {/* Auto-valutazione qualità */}
+              {(() => {
+                const parsed = parseQual(w.qual);
+                if (!parsed) return null;
+                const ev = evals[w.week];
+                const busy = busyWeek === w.week;
+                const open = openWeek === w.week && !!ev;
+                const qid = `w${w.week}-qual`;
+                return (
+                  <div className="border-t border-white/[0.06] px-4 py-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-1.5 text-[10px] font-black tracking-[0.2em] text-[#C0FF00] uppercase">
+                        <Activity className="w-3.5 h-3.5" /> Auto-valutazione qualità
+                      </div>
+                      <label className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                        <CalendarDays className="w-3.5 h-3.5 text-gray-500" />
+                        <span className="hidden sm:inline">Giorno</span>
+                        <input
+                          type="date"
+                          value={qualDateOf(w.week)}
+                          onChange={(e) => setQualDates((p) => ({ ...p, [w.week]: e.target.value }))}
+                          className="bg-white/[0.04] border border-white/10 rounded-lg px-2 py-1 text-[11px] text-gray-200 outline-none focus:border-[#C0FF00]/40 [color-scheme:dark]"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => evaluate(w)}
+                        disabled={busy}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black tracking-wide border border-[#C0FF00]/30 bg-[#C0FF00]/10 text-[#C0FF00] hover:bg-[#C0FF00]/20 transition-colors disabled:opacity-50"
+                      >
+                        {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                        {busy ? "Analizzo…" : ev ? "Rivaluta" : "Valuta seduta"}
+                      </button>
+                      {ev && (
+                        <button
+                          type="button"
+                          onClick={() => setOpenWeek(open ? null : w.week)}
+                          className="text-[11px] text-gray-500 hover:text-gray-300 transition-colors"
+                        >
+                          {open ? "nascondi" : "mostra"}
+                        </button>
+                      )}
+                    </div>
+
+                    {open && ev && (
+                      ev.matched && ev.reps && ev.reps.length > 0 ? (
+                        <EvalResultView ev={ev} target={parsed.targetSec} onApply={(p) => setScore(qid, p)} applied={scores[qid]} />
+                      ) : (
+                        <div className="mt-3 text-[12px] text-gray-500 leading-relaxed">
+                          {ev.error === "no_reps"
+                            ? "Corsa trovata ma niente ripetute pulite (struttura continua o GPS rumoroso). Controlla il giorno."
+                            : "Nessuna corsa qualità vicino a questo giorno. Sposta il giorno o sincronizza Strava."}
+                        </div>
+                      )
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           );
         })}
@@ -300,6 +493,116 @@ export function KikkoderisoSub20() {
       <p className="text-[11px] text-gray-600 text-center pb-4">
         Piano personale · i target di passo valgono in condizioni fresche; in estate governa sempre sulla frequenza cardiaca.
       </p>
+    </div>
+  );
+}
+
+// ── Risultato auto-valutazione di una qualità ───────────────────────────────
+function EvalResultView({
+  ev, target, onApply, applied,
+}: {
+  ev: Sub20EvalResult;
+  target: number;
+  onApply: (pct: number) => void;
+  applied?: number;
+}) {
+  const v = VERDICT[ev.verdict || "ND"];
+  const c = ev.conditions;
+  return (
+    <div className="mt-3 space-y-3">
+      {/* Verdetto + normalizzato vs target */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span
+          className="px-3 py-1.5 rounded-lg text-xs font-black tracking-widest"
+          style={{ background: `${v.color}1A`, color: v.color, border: `1px solid ${v.color}55` }}
+        >
+          {v.label}
+        </span>
+        <div className="text-[12px] text-gray-300">
+          Normalizzato <b className="text-white">{fmtPace(ev.normalized_avg_sec)}</b> vs target{" "}
+          <b className="text-white">{fmtPace(target)}</b> → <b style={{ color: v.color }}>{fmtDelta(ev.delta_sec)}</b>
+        </div>
+        {ev.vdot_implied != null && (
+          <div className="text-[12px] text-gray-400">
+            VDOT implicito <b className="text-[#C0FF00]">{ev.vdot_implied.toFixed(1)}</b>
+          </div>
+        )}
+        <div className="text-[11px] text-gray-600">
+          {fmtDate(ev.run_date)} · grezzo {fmtPace(ev.avg_raw_sec)}
+        </div>
+      </div>
+
+      {/* Rep */}
+      <div className="flex flex-wrap gap-2">
+        {ev.reps!.map((r, i) => (
+          <div key={i} className="px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-[11px] whitespace-nowrap">
+            <span className="text-gray-500 font-black">R{i + 1}</span>{" "}
+            <span className="text-white font-black">{fmtPace(r.pace_sec)}</span>{" "}
+            <span className="text-gray-600">{Math.round(r.dist_m)}m</span>
+            {r.hr_avg != null && <span className="text-[#F43F5E]/80"> · {r.hr_avg}bpm</span>}
+          </div>
+        ))}
+        <div className="px-1 py-1.5 text-[11px] text-gray-600">
+          {ev.reps_done}/{ev.reps_prescribed} rep
+        </div>
+      </div>
+
+      {/* Condizioni */}
+      {c && (
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-400">
+          {c.temp_c != null && (
+            <span className="flex items-center gap-1">
+              <Thermometer className="w-3 h-3 text-amber-400" />
+              {c.temp_c}°C{c.apparent_c != null ? ` (perc. ${c.apparent_c}°)` : ""}
+            </span>
+          )}
+          {c.humidity != null && (
+            <span className="flex items-center gap-1">
+              <Droplets className="w-3 h-3 text-sky-400" />
+              {c.humidity}%
+            </span>
+          )}
+          <span className="flex items-center gap-1">
+            <Mountain className="w-3 h-3 text-emerald-400" />
+            {c.net_elev_m > 0 ? "+" : ""}{c.net_elev_m}m
+          </span>
+          {(c.grade_adj_sec !== 0 || c.heat_adj_sec !== 0) && (
+            <span className="text-gray-500">
+              credito: pendenza {c.grade_adj_sec > 0 ? "+" : ""}{c.grade_adj_sec}s · caldo −{c.heat_adj_sec}s
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Quando avrà effetto */}
+      {ev.adaptation && (
+        <div className="flex items-start gap-2 text-[11px] text-gray-400 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+          <Clock className="w-3.5 h-3.5 text-[#C0FF00] mt-0.5 shrink-0" />
+          <span>
+            <b className="text-gray-200">Effetto sulla performance:</b> dal{" "}
+            <b className="text-white">{fmtDate(ev.adaptation.peak_from)}</b> al{" "}
+            <b className="text-white">{fmtDate(ev.adaptation.peak_to)}</b>.{" "}
+            <span className="text-gray-500">{ev.adaptation.note}</span>
+          </span>
+        </div>
+      )}
+
+      {/* Applica % suggerito */}
+      {ev.suggested_pct != null && (
+        <button
+          type="button"
+          onClick={() => onApply(ev.suggested_pct as number)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black tracking-wide border transition-colors"
+          style={{
+            borderColor: applied === ev.suggested_pct ? "#10B981" : "rgba(192,255,0,0.3)",
+            background: applied === ev.suggested_pct ? "#10B98122" : "rgba(192,255,0,0.08)",
+            color: applied === ev.suggested_pct ? "#10B981" : "#C0FF00",
+          }}
+        >
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          {applied === ev.suggested_pct ? `Applicato ${ev.suggested_pct}%` : `Applica ${ev.suggested_pct}% al punteggio`}
+        </button>
+      )}
     </div>
   );
 }

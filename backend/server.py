@@ -8132,6 +8132,357 @@ async def reclassify_runs(apply: bool = False, fetch_laps: bool = False, laps_li
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  SUB-20 PLAN — AUTO SESSION EVALUATION (kikkoderisoSub20)
+# ═══════════════════════════════════════════════════════════════════════════════
+# Confronta una qualità eseguita col prescritto dal piano, NORMALIZZANDO per
+# condizioni reali: pendenza (GAP asimmetrico), temperatura+umidità (heat
+# slowdown). Estrae le rep dai laps/streams, dà verdetto AVANTI/IN LINEA/INDIETRO,
+# propone il % di successo, stima il VDOT implicito e la finestra in cui la seduta
+# produrrà effetto sulla performance (supercompensazione).
+
+def _pace_to_sec(p) -> Optional[int]:
+    """'3:58' → 238. None su input invalido."""
+    try:
+        if isinstance(p, (int, float)):
+            return int(p)
+        parts = str(p).split(":")
+        if len(parts) != 2:
+            return None
+        return int(parts[0]) * 60 + int(parts[1])
+    except Exception:
+        return None
+
+
+def _extract_reps_from_streams(streams: list, duration_minutes: float,
+                               min_rep_m: float = 250.0) -> list:
+    """Dettaglio per-rep dai streams: [{dist_m, dur_s, pace_sec, hr_avg, hr_max}].
+
+    Stessa segmentazione del detector (_workout_structure_from_streams): 2-means
+    sui pace, blocchi 'lavoro' = cluster veloce. Qui restituisce i dettagli di
+    OGNI rep (passo, durata, HR) per il confronto col prescritto.
+    """
+    st = streams or []
+    dur_s = (duration_minutes or 0) * 60
+    n = len(st)
+    if n < 12 or dur_s <= 0:
+        return []
+    ds = [s.get("d") for s in st if isinstance(s, dict)]
+    hrs = [s.get("hr") for s in st if isinstance(s, dict)]
+    if len(ds) < 12:
+        return []
+    for i in range(len(ds)):
+        if ds[i] is None:
+            ds[i] = ds[i - 1] if i > 0 else 0.0
+    n = len(ds)
+    dt = dur_s / (n - 1)
+    pace = []
+    for i in range(n - 1):
+        dd = ds[i + 1] - ds[i]
+        pace.append(999.0 if dd <= 0.3 else 1000.0 * dt / dd)
+    pace.append(pace[-1] if pace else 999.0)
+    w = max(2, int(round(15.0 / dt)))
+    sp = _median_filter(pace, w)
+    moving = [p for p in sp if p < 900]
+    if len(moving) < 12:
+        return []
+    cf, cs = _two_means_split(moving)
+    thr = (cf + cs) / 2.0
+    work = [1 if (p < thr and p < 900) else 0 for p in sp]
+    blocks = []
+    i = 0
+    while i < n:
+        v = work[i]
+        j = i
+        while j < n and work[j] == v:
+            j += 1
+        blocks.append([v, i, j])
+        i = j
+    merged = []
+    for b in blocks:
+        seg_t = (b[2] - b[1]) * dt
+        if merged and seg_t < 20:
+            merged[-1][2] = b[2]
+        else:
+            merged.append(b[:])
+    reps = []
+    for b in merged:
+        if b[0] != 1:
+            continue
+        i0, i1 = b[1], b[2]
+        seg_t = (i1 - i0) * dt
+        seg_d = ds[min(i1, n - 1)] - ds[i0]
+        if seg_t < 20 or seg_d < min_rep_m:
+            continue
+        block_hr = [hrs[k] for k in range(i0, min(i1, len(hrs))) if hrs[k]]
+        reps.append({
+            "dist_m": round(seg_d),
+            "dur_s": round(seg_t),
+            "pace_sec": round(1000.0 * seg_t / seg_d) if seg_d > 0 else None,
+            "hr_avg": round(sum(block_hr) / len(block_hr)) if block_hr else None,
+            "hr_max": max(block_hr) if block_hr else None,
+        })
+    return reps
+
+
+def _extract_reps_from_laps(laps: list) -> list:
+    """Rep dai laps Strava (gold standard): cluster veloce = lavoro."""
+    if not laps:
+        return []
+    items = []
+    for lp in laps:
+        spd = lp.get("average_speed") or 0
+        dist = lp.get("distance") or 0
+        mt = lp.get("moving_time") or lp.get("elapsed_time") or 0
+        pace = (1000.0 / spd) if spd > 0 else None
+        if pace is None or dist < 120 or mt < 15:
+            continue
+        items.append((pace, dist, mt, lp.get("average_heartrate")))
+    if len(items) < 2:
+        return []
+    cf, cs = _two_means_split([it[0] for it in items])
+    thr = (cf + cs) / 2.0
+    reps = []
+    for pace, dist, mt, hr in items:
+        if pace <= thr:
+            reps.append({
+                "dist_m": round(dist), "dur_s": round(mt),
+                "pace_sec": round(pace),
+                "hr_avg": round(hr) if hr else None, "hr_max": None,
+            })
+    return reps
+
+
+async def _fetch_run_weather(lat, lng, date_str, hour):
+    """Open-Meteo per la corsa. Mirror logica frontend: forecast (past_days) per
+    run ≤9 giorni fa, altrimenti archive. Match su data+ora reale."""
+    if lat is None or lng is None or not date_str:
+        return None
+    from datetime import date as _date
+    try:
+        y, m, d = [int(x) for x in date_str[:10].split("-")]
+        days_ago = (dt.datetime.utcnow().date() - _date(y, m, d)).days
+    except Exception:
+        days_ago = 999
+    use_forecast = 0 <= days_ago <= 9
+    base = {
+        "latitude": str(lat), "longitude": str(lng),
+        "hourly": "temperature_2m,relative_humidity_2m,apparent_temperature",
+        "timezone": "auto",
+    }
+    if use_forecast:
+        params = {**base, "past_days": "10", "forecast_days": "1"}
+        url = "https://api.open-meteo.com/v1/forecast"
+    else:
+        params = {**base, "start_date": date_str[:10], "end_date": date_str[:10]}
+        url = "https://archive-api.open-meteo.com/v1/archive"
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as http:
+            r = await http.get(url, params=params)
+            if r.status_code != 200:
+                return None
+            j = r.json()
+    except Exception:
+        return None
+    hourly = j.get("hourly") or {}
+    times = hourly.get("time") or []
+    temps = hourly.get("temperature_2m") or []
+    hums = hourly.get("relative_humidity_2m") or []
+    apps = hourly.get("apparent_temperature") or []
+    if not times:
+        return None
+    target_h = hour if hour is not None else 8
+    best_idx = None
+    for idx, t in enumerate(times):
+        if t[:10] == date_str[:10]:
+            th = int(t[11:13]) if len(t) >= 13 else 0
+            if th == target_h:
+                best_idx = idx
+                break
+            if best_idx is None:
+                best_idx = idx
+    if best_idx is None:
+        best_idx = 0
+
+    def _g(arr):
+        return arr[best_idx] if best_idx < len(arr) and arr[best_idx] is not None else None
+
+    return {
+        "temp_c": _g(temps),
+        "humidity": _g(hums),
+        "apparent_c": _g(apps),
+        "source": "forecast" if use_forecast else "archive",
+    }
+
+
+def _sub20_suggest_pct(avg_raw, target, reps_done, reps_prescribed, rep_paces) -> Optional[int]:
+    """Propone il % successo (— /50/70/90/100) da esecuzione RAW vs prescritto."""
+    if not avg_raw or not target:
+        return None
+    tiers = [0, 50, 70, 90, 100]
+    diff = avg_raw - target  # negativo = più veloce del target
+    if diff <= 3:
+        base = 100
+    elif diff <= 8:
+        base = 90
+    elif diff <= 15:
+        base = 70
+    else:
+        base = 50
+    # penale fade: ultima rep >5% più lenta della prima
+    if len(rep_paces) >= 2 and rep_paces[-1] > rep_paces[0] * 1.05:
+        base = tiers[max(0, tiers.index(base) - 1)]
+    # completamento parziale
+    done_ratio = reps_done / max(1, reps_prescribed)
+    if done_ratio < 0.6:
+        base = min(base, 50)
+    elif done_ratio < 1.0:
+        base = min(base, 70)
+    return base
+
+
+def _sub20_adaptation_window(date_str: str, rep_m: float) -> dict:
+    """Finestra di supercompensazione: quando la seduta produce effetto."""
+    from datetime import date as _date, timedelta
+    try:
+        y, m, d = [int(x) for x in date_str[:10].split("-")]
+        base = _date(y, m, d)
+    except Exception:
+        return {}
+    if rep_m >= 1600:
+        lo, hi, kind = 12, 16, "resistenza specifica / soglia"
+    else:
+        lo, hi, kind = 10, 12, "VO2max"
+    return {
+        "absorb": "24–48h",
+        "peak_from": (base + timedelta(days=lo)).isoformat(),
+        "peak_to": (base + timedelta(days=hi)).isoformat(),
+        "kind": kind,
+        "note": (f"Stimolo {kind}: assorbito in 24–48h. Beneficio su performance "
+                 f"tra +{lo} e +{hi} giorni (supercompensazione)."),
+    }
+
+
+@app.post("/api/sub20/evaluate-session")
+async def sub20_evaluate_session(payload: dict = Body(...)):
+    """Valuta una qualità del piano Sub-20 contro il prescritto, normalizzando
+    per pendenza + temperatura + umidità.
+
+    Body: { date, reps, rep_m, target_pace_sec, window_days? }
+    """
+    from datetime import date as _date, timedelta
+    try:
+        center_str = str(payload.get("date") or "")[:10]
+        y, m, d = [int(x) for x in center_str.split("-")]
+        center = _date(y, m, d)
+    except Exception:
+        return {"matched": False, "error": "bad_date"}
+    reps_prescribed = int(payload.get("reps") or 0)
+    rep_m = float(payload.get("rep_m") or 1000)
+    target_pace_sec = int(payload.get("target_pace_sec") or 0)
+    window_days = int(payload.get("window_days") or 4)
+
+    athlete_id = await _get_athlete_id()
+    q = {"athlete_id": athlete_id} if athlete_id else {}
+    lo = (center - timedelta(days=window_days)).isoformat()
+    hi = (center + timedelta(days=window_days)).isoformat()
+    candidates = []
+    async for r in db.runs.find({**q, "date": {"$gte": lo, "$lte": hi}}):
+        if r.get("is_treadmill"):
+            continue
+        candidates.append(r)
+    if not candidates:
+        return {"matched": False}
+
+    need_m = reps_prescribed * rep_m
+    def _score(r):
+        rd = (r.get("date") or "")[:10]
+        try:
+            yy, mm, dd = [int(x) for x in rd.split("-")]
+            ddiff = abs((_date(yy, mm, dd) - center).days)
+        except Exception:
+            ddiff = 99
+        is_int = 0 if r.get("run_type") == "intervals" else 1
+        dist_ok = 0 if (r.get("distance_km") or 0) * 1000 >= need_m * 0.6 else 1
+        return (is_int, dist_ok, ddiff)
+    candidates.sort(key=_score)
+    run = candidates[0]
+
+    reps = _extract_reps_from_laps(run.get("laps") or []) or \
+        _extract_reps_from_streams(run.get("streams") or [], run.get("duration_minutes"))
+    if not reps:
+        return {"matched": True, "run_id": str(run.get("_id")),
+                "run_date": run.get("date"), "reps": [], "error": "no_reps"}
+
+    rep_paces = [rp["pace_sec"] for rp in reps if rp.get("pace_sec")]
+    avg_raw = sum(rep_paces) / len(rep_paces) if rep_paces else None
+
+    # ── pendenza (GAP run-level → ratio applicato per-rep) ──
+    avg_pace_sec = _pace_to_sec(run.get("avg_pace")) or avg_raw
+    gap_sec = run.get("gap_pace_sec")
+    gap_ratio = (gap_sec / avg_pace_sec) if (gap_sec and avg_pace_sec) else 1.0
+    net_elev = sum((sp.get("elevation_difference") or 0) for sp in (run.get("splits") or []))
+
+    # ── meteo ──
+    latlng = run.get("start_latlng") or []
+    lat = latlng[0] if len(latlng) >= 2 else None
+    lng = latlng[1] if len(latlng) >= 2 else None
+    sdl = run.get("start_date_local") or ""
+    hour = int(sdl[11:13]) if len(sdl) >= 13 and sdl[11:13].isdigit() else None
+    weather = await _fetch_run_weather(lat, lng, run.get("date"), hour)
+    temp_c = weather.get("temp_c") if weather else None
+    humidity = weather.get("humidity") if weather else None
+    heat_frac = _heat_slowdown_frac(temp_c, humidity, 5.0) if temp_c is not None else 0.0
+    heat_sec = (avg_raw or 0) * heat_frac
+
+    # ── normalizza (flat-equivalent GAP − credito caldo) ──
+    norm_paces = [p * gap_ratio - heat_sec for p in rep_paces]
+    norm_avg = sum(norm_paces) / len(norm_paces) if norm_paces else None
+    delta = (norm_avg - target_pace_sec) if (norm_avg and target_pace_sec) else None
+    if delta is None:
+        verdict = "ND"
+    elif delta <= -5:
+        verdict = "AVANTI"
+    elif delta <= 5:
+        verdict = "IN_LINEA"
+    else:
+        verdict = "INDIETRO"
+
+    reps_done = len(rep_paces)
+    pct = _sub20_suggest_pct(avg_raw, target_pace_sec, reps_done, reps_prescribed, rep_paces)
+    vdot_impl = _vdot_from_race(3.0, norm_avg * 3.0) if norm_avg else None
+    adaptation = _sub20_adaptation_window(run.get("date"), rep_m)
+
+    return {
+        "matched": True,
+        "run_id": str(run.get("_id")),
+        "run_date": run.get("date"),
+        "run_name": run.get("name"),
+        "run_type": run.get("run_type"),
+        "reps": reps,
+        "reps_done": reps_done,
+        "reps_prescribed": reps_prescribed,
+        "avg_raw_sec": round(avg_raw) if avg_raw else None,
+        "target_pace_sec": target_pace_sec,
+        "conditions": {
+            "temp_c": round(temp_c, 1) if temp_c is not None else None,
+            "humidity": round(humidity) if humidity is not None else None,
+            "apparent_c": (round(weather["apparent_c"], 1)
+                           if weather and weather.get("apparent_c") is not None else None),
+            "net_elev_m": round(net_elev, 1),
+            "grade_adj_sec": round(avg_raw * (gap_ratio - 1)) if avg_raw else 0,
+            "heat_adj_sec": round(heat_sec),
+            "weather_source": weather.get("source") if weather else None,
+        },
+        "normalized_avg_sec": round(norm_avg) if norm_avg else None,
+        "delta_sec": round(delta) if delta is not None else None,
+        "verdict": verdict,
+        "suggested_pct": pct,
+        "vdot_implied": round(vdot_impl, 1) if vdot_impl else None,
+        "adaptation": adaptation,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  GARMIN CONNECT — Running Dynamics via FIT download
 # ═══════════════════════════════════════════════════════════════════════════════
 

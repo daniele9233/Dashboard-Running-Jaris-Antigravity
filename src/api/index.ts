@@ -321,6 +321,58 @@ export const getUserLayout = () =>
 export const putUserLayout = (payload: { layouts: GridLayouts; hidden_keys?: string[] }) =>
   api.put<{ ok: boolean }>('/api/user/layout', payload);
 
+// ─── SUB-20 SESSION EVALUATION (kikkoderisoSub20) ────────────────────────────
+export interface Sub20RepDetail {
+  dist_m: number;
+  dur_s: number;
+  pace_sec: number | null;
+  hr_avg: number | null;
+  hr_max: number | null;
+}
+export interface Sub20Conditions {
+  temp_c: number | null;
+  humidity: number | null;
+  apparent_c: number | null;
+  net_elev_m: number;
+  grade_adj_sec: number;
+  heat_adj_sec: number;
+  weather_source: string | null;
+}
+export interface Sub20Adaptation {
+  absorb: string;
+  peak_from: string;
+  peak_to: string;
+  kind: string;
+  note: string;
+}
+export interface Sub20EvalResult {
+  matched: boolean;
+  run_id?: string;
+  run_date?: string;
+  run_name?: string;
+  run_type?: string;
+  reps?: Sub20RepDetail[];
+  reps_done?: number;
+  reps_prescribed?: number;
+  avg_raw_sec?: number | null;
+  target_pace_sec?: number;
+  conditions?: Sub20Conditions;
+  normalized_avg_sec?: number | null;
+  delta_sec?: number | null;
+  verdict?: 'AVANTI' | 'IN_LINEA' | 'INDIETRO' | 'ND';
+  suggested_pct?: number | null;
+  vdot_implied?: number | null;
+  adaptation?: Sub20Adaptation;
+  error?: string;
+}
+export const evaluateSub20Session = (body: {
+  date: string;
+  reps: number;
+  rep_m: number;
+  target_pace_sec: number;
+  window_days?: number;
+}) => api.post<Sub20EvalResult>('/api/sub20/evaluate-session', body);
+
 // ─── JARVIS ──────────────────────────────────────────────────────────────────
 import type { JarvisResponse } from '../types/jarvis';
 export const jarvisChat = (transcript: string) =>

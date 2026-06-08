@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-08T06:16:12.762Z",
+  "generated_at": "2026-06-08T06:52:49.965Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -15,9 +15,9 @@
   },
   "counts": {
     "files": 146,
-    "backend_routes": 58,
+    "backend_routes": 59,
     "frontend_routes": 13,
-    "api_clients": 57
+    "api_clients": 58
   },
   "files": [
     {
@@ -536,6 +536,9 @@
         "_ensure_indexes",
         "_environmental_pace_adjustment_sec_per_km",
         "_extract_fit_dynamics",
+        "_extract_reps_from_laps",
+        "_extract_reps_from_streams",
+        "_fetch_run_weather",
         "_filter_runs_for_range",
         "_find_matching_run_for_garmin_csv",
         "_format_pace",
@@ -543,10 +546,7 @@
         "_gap_pace_seconds",
         "_garmin_biomechanics_from_doc",
         "_garmin_csv_active_query",
-        "_garmin_csv_doc_to_run_like",
-        "_garmin_csv_fingerprint",
-        "_garmin_csv_quality_score",
-        "_garmin_login"
+        "_garmin_csv_doc_to_run_like"
       ],
       "routes": [
         "DELETE /api/field-test/{test_id}",
@@ -604,6 +604,7 @@
         "POST /api/runs/reapply-overrides",
         "POST /api/strava/exchange-code",
         "POST /api/strava/sync",
+        "POST /api/sub20/evaluate-session",
         "POST /api/training-plan/adapt",
         "POST /api/training-plan/evaluate-test",
         "POST /api/training-plan/generate"
@@ -630,9 +631,9 @@
         "typing",
         "urllib.parse"
       ],
-      "hash": "9adf4020e71dfcdf442a1028be5a17a2f7d47914b6b1ec09f4e1d8c7065530bb",
-      "last_modified": "2026-06-08T06:08:27.183Z",
-      "size_bytes": 430601
+      "hash": "595e676845ed521ae1882cfffe3e4d04e7258e581d4770367e90a15f66940eec",
+      "last_modified": "2026-06-08T06:46:53.176Z",
+      "size_bytes": 444622
     },
     {
       "path": "backend/test_models.py",
@@ -1439,6 +1440,7 @@
         "deleteFieldTest",
         "deleteGarminCsvData",
         "disconnectStrava",
+        "evaluateSub20Session",
         "evaluateTest",
         "exchangeGarminTicket",
         "exchangeStravaCode",
@@ -1491,8 +1493,7 @@
         "recalculateFitnessFreshness",
         "saveGarminToken",
         "setActiveStravaAthlete",
-        "StravaConnection",
-        "StravaConnectionsResponse"
+        "StravaConnection"
       ],
       "routes": [
         "DELETE /api/field-test/${id}",
@@ -1548,6 +1549,7 @@
         "POST /api/recovery-checkin",
         "POST /api/strava/exchange-code",
         "POST /api/strava/sync",
+        "POST /api/sub20/evaluate-session",
         "POST /api/training-plan/adapt",
         "POST /api/training-plan/evaluate-test",
         "POST /api/training-plan/generate",
@@ -1558,9 +1560,9 @@
         "../types/jarvis",
         "./client"
       ],
-      "hash": "9cb7a9ff4f063ab695a2f19ec5903d1affb6ede9595603224c4fb0c2badc364b",
-      "last_modified": "2026-06-08T06:08:23.505Z",
-      "size_bytes": 16713
+      "hash": "50ed83d9593fcb605be271041a63b5d978b0e38276700921a4bb50e0b39a98fc",
+      "last_modified": "2026-06-08T06:49:17.586Z",
+      "size_bytes": 18165
     },
     {
       "path": "src/App.tsx",
@@ -2184,8 +2186,10 @@
       "purpose": "React component KikkoderisoSub20.",
       "touch_when": [
         "ai",
+        "api",
         "garmin",
         "layout",
+        "strava",
         "training",
         "types"
       ],
@@ -2194,12 +2198,13 @@
       ],
       "routes": [],
       "imports": [
+        "../api",
         "lucide-react",
         "react"
       ],
-      "hash": "8dee7600ffab26888985f08cf8210388e48baab9395dbaf3be5fff243fa92946",
-      "last_modified": "2026-06-08T06:16:12.762Z",
-      "size_bytes": 14684
+      "hash": "163be6f289cfaadaa5d7ab352f3072d03d9646b51f149a7c6fe285ee4ce577fd",
+      "last_modified": "2026-06-08T06:52:49.966Z",
+      "size_bytes": 29077
     },
     {
       "path": "src/components/LastRunMap.tsx",
@@ -4013,84 +4018,84 @@
       "path": "/api/garmin/auth-start",
       "handler": "garmin_auth_start",
       "file": "backend/server.py",
-      "line": 8311
+      "line": 8662
     },
     {
       "method": "GET",
       "path": "/api/garmin/csv-data",
       "handler": "get_garmin_csv_data",
       "file": "backend/server.py",
-      "line": 9509
+      "line": 9860
     },
     {
       "method": "DELETE",
       "path": "/api/garmin/csv-data/{doc_id}",
       "handler": "delete_garmin_csv_data",
       "file": "backend/server.py",
-      "line": 9528
+      "line": 9879
     },
     {
       "method": "POST",
       "path": "/api/garmin/csv-import",
       "handler": "garmin_csv_import",
       "file": "backend/server.py",
-      "line": 9327
+      "line": 9678
     },
     {
       "method": "POST",
       "path": "/api/garmin/csv-link",
       "handler": "garmin_csv_link",
       "file": "backend/server.py",
-      "line": 9500
+      "line": 9851
     },
     {
       "method": "POST",
       "path": "/api/garmin/exchange-ticket",
       "handler": "garmin_exchange_ticket",
       "file": "backend/server.py",
-      "line": 8334
+      "line": 8685
     },
     {
       "method": "GET",
       "path": "/api/garmin/gct-analysis",
       "handler": "get_gct_analysis",
       "file": "backend/server.py",
-      "line": 9551
+      "line": 9902
     },
     {
       "method": "POST",
       "path": "/api/garmin/login",
       "handler": "garmin_login_direct",
       "file": "backend/server.py",
-      "line": 8287
+      "line": 8638
     },
     {
       "method": "POST",
       "path": "/api/garmin/save-token",
       "handler": "garmin_save_token",
       "file": "backend/server.py",
-      "line": 8255
+      "line": 8606
     },
     {
       "method": "GET",
       "path": "/api/garmin/status",
       "handler": "garmin_status",
       "file": "backend/server.py",
-      "line": 8244
+      "line": 8595
     },
     {
       "method": "POST",
       "path": "/api/garmin/sync-all",
       "handler": "garmin_sync_all",
       "file": "backend/server.py",
-      "line": 8571
+      "line": 8922
     },
     {
       "method": "POST",
       "path": "/api/garmin/sync",
       "handler": "garmin_sync",
       "file": "backend/server.py",
-      "line": 8419
+      "line": 8770
     },
     {
       "method": "GET",
@@ -4111,7 +4116,7 @@
       "path": "/api/jarvis/chat",
       "handler": "jarvis_chat",
       "file": "backend/server.py",
-      "line": 8629
+      "line": 8980
     },
     {
       "method": "GET",
@@ -4217,6 +4222,13 @@
       "handler": "strava_sync",
       "file": "backend/server.py",
       "line": 1201
+    },
+    {
+      "method": "POST",
+      "path": "/api/sub20/evaluate-session",
+      "handler": "sub20_evaluate_session",
+      "file": "backend/server.py",
+      "line": 8365
     },
     {
       "method": "GET",
@@ -4411,6 +4423,12 @@
       "name": "disconnectStrava",
       "method": "DELETE",
       "path": "/api/strava/connection${athleteId ? ",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "evaluateSub20Session",
+      "method": "POST",
+      "path": "/api/sub20/evaluate-session",
       "file": "src/api/index.ts"
     },
     {
