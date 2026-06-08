@@ -8372,6 +8372,111 @@ def _sub20_adaptation_window(date_str: str, rep_m: float) -> dict:
     }
 
 
+def _pbp_adj_sec(grade_pct: float) -> float:
+    """PBP (passo in base alla pendenza) ALLINEATO a Strava, per matchare la
+    colonna che l'utente vede nei parziali.
+
+    Calibrato sui dati reali Strava: +0.5% → ~3.5s/km più veloce (≈7 s/km/%),
+    −0.9% → ~5s/km più lento (≈5.6 s/km/%). Ritorna i sec/km da sottrarre al
+    passo grezzo per ottenere il PBP. NB: distinto dal _grade_adjustment_sec
+    globale (modello Minetti più aggressivo, usato per VDOT) — qui serve solo
+    la coerenza VISIVA con Strava.
+    """
+    if grade_pct >= 0:
+        return grade_pct * 7.0
+    return grade_pct * 5.6  # negativo → PBP più lento
+
+
+def _reps_from_laps(laps: list, streams: list) -> list:
+    """Rep dai LAP ufficiali Strava (= i parziali che vede l'utente).
+
+    Passo/durata dal lap; dislivello per-lap calcolato slice-ando lo stream di
+    altitudine sul range di distanza cumulata del lap. Cluster veloce = lavoro.
+    """
+    if not laps:
+        return []
+    items = []
+    cum = 0.0
+    for lp in laps:
+        dist = lp.get("distance") or 0
+        mt = lp.get("moving_time") or lp.get("elapsed_time") or 0
+        spd = lp.get("average_speed") or 0
+        pace = (1000.0 / spd) if spd > 0 else ((mt / (dist / 1000.0)) if dist > 0 else None)
+        start_d = cum
+        cum += dist
+        items.append({"pace": pace, "dist": dist, "mt": mt,
+                      "hr": lp.get("average_heartrate"), "start_d": start_d, "end_d": cum})
+    valid = [it for it in items if it["pace"] and it["dist"] >= 120 and it["mt"] >= 15]
+    if len(valid) < 2:
+        return []
+    cf, cs = _two_means_split([it["pace"] for it in valid])
+    thr = (cf + cs) / 2.0
+    ds = [s.get("d") for s in streams] if streams else []
+    alts = [s.get("alt") for s in streams] if streams else []
+
+    def _alt_at(dist_m):
+        if not ds:
+            return None
+        for k in range(len(ds)):
+            if ds[k] is not None and ds[k] >= dist_m:
+                return alts[k] if k < len(alts) else None
+        return alts[-1] if alts else None
+
+    reps = []
+    for it in valid:
+        if it["pace"] > thr:
+            continue  # recupero
+        a0 = _alt_at(it["start_d"])
+        a1 = _alt_at(it["end_d"])
+        elev = round(a1 - a0, 1) if (a0 is not None and a1 is not None) else None
+        grade = (elev / it["dist"] * 100.0) if (elev is not None and it["dist"] > 0) else None
+        reps.append({
+            "dist_m": round(it["dist"]),
+            "dur_s": round(it["mt"]),
+            "pace_sec": round(it["pace"]),
+            "elev_m": elev,
+            "grade_pct": round(grade, 2) if grade is not None else None,
+            "hr_avg": round(it["hr"]) if it["hr"] else None,
+            "hr_max": None,
+        })
+    return reps
+
+
+async def _ensure_run_laps(run: dict) -> list:
+    """Ritorna i lap del run; se mancano in DB li scarica live da Strava e li salva."""
+    laps = run.get("laps") or []
+    if laps:
+        return laps
+    sid = run.get("strava_id")
+    if not sid:
+        return []
+    try:
+        tokens = await _get_active_strava_token()
+        if not tokens:
+            return []
+        tokens = await _refresh_token_if_needed(tokens)
+        async with httpx.AsyncClient(timeout=20.0) as http:
+            r = await http.get(
+                f"https://www.strava.com/api/v3/activities/{sid}/laps",
+                headers={"Authorization": f"Bearer {tokens['access_token']}"},
+            )
+            if r.status_code != 200:
+                return []
+            laps = [{
+                "distance": lp.get("distance"),
+                "moving_time": lp.get("moving_time"),
+                "elapsed_time": lp.get("elapsed_time"),
+                "average_speed": lp.get("average_speed"),
+                "average_heartrate": lp.get("average_heartrate"),
+                "lap_index": lp.get("lap_index"),
+            } for lp in r.json()]
+            if laps:
+                await db.runs.update_one({"_id": run["_id"]}, {"$set": {"laps": laps}})
+    except Exception:
+        return run.get("laps") or []
+    return laps
+
+
 @app.post("/api/sub20/evaluate-session")
 async def sub20_evaluate_session(payload: dict = Body(...)):
     """Valuta una qualità del piano Sub-20 contro il prescritto, normalizzando
@@ -8418,7 +8523,10 @@ async def sub20_evaluate_session(payload: dict = Body(...)):
     quality.sort(key=_score)
     run = quality[0]
 
-    reps = _extract_reps_from_laps(run.get("laps") or []) or \
+    # Rep dai LAP ufficiali Strava (= i parziali che vede l'utente); scarica
+    # live se mancano. Fallback: segmentazione streams.
+    laps = await _ensure_run_laps(run)
+    reps = _reps_from_laps(laps, run.get("streams") or []) or \
         _extract_reps_from_streams(run.get("streams") or [], run.get("duration_minutes"))
     if not reps:
         return {"matched": True, "run_id": str(run.get("_id")),
@@ -8440,25 +8548,7 @@ async def sub20_evaluate_session(payload: dict = Body(...)):
     if hour is not None and hour > 23:
         hour = 23
 
-    device_temp = run.get("device_temp_c")
-    if device_temp is None and run.get("strava_id"):
-        try:
-            tokens = await _get_active_strava_token()
-            if tokens:
-                tokens = await _refresh_token_if_needed(tokens)
-                async with httpx.AsyncClient(timeout=15.0) as http:
-                    dr = await http.get(
-                        f"https://www.strava.com/api/v3/activities/{run['strava_id']}",
-                        headers={"Authorization": f"Bearer {tokens['access_token']}"},
-                    )
-                    if dr.status_code == 200:
-                        at = dr.json().get("average_temp")
-                        if at is not None:
-                            device_temp = at
-                            await db.runs.update_one({"_id": run["_id"]},
-                                                     {"$set": {"device_temp_c": at}})
-        except Exception:
-            pass
+    device_temp = run.get("device_temp_c")  # solo fallback (sensore polso, inaffidabile)
 
     weather = await _fetch_run_weather(lat, lng, run.get("date"), hour)
     om_temp = weather.get("temp_c") if weather else None
@@ -8481,7 +8571,7 @@ async def sub20_evaluate_session(payload: dict = Body(...)):
             rp["ideal_sec"] = None
             continue
         g = rp.get("grade_pct")
-        rp["pbp_sec"] = round(praw - _grade_adjustment_sec(g)) if g is not None else praw
+        rp["pbp_sec"] = round(praw - _pbp_adj_sec(g)) if g is not None else praw
         rp["ideal_sec"] = round(praw - heat_sec)
 
     # normalizzato = PBP (pendenza) − credito caldo, per-rep
