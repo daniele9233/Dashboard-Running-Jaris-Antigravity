@@ -8463,8 +8463,12 @@ async def sub20_evaluate_session(payload: dict = Body(...)):
     weather = await _fetch_run_weather(lat, lng, run.get("date"), hour)
     om_temp = weather.get("temp_c") if weather else None
     humidity = weather.get("humidity") if weather else None
-    temp_c = device_temp if device_temp is not None else om_temp
-    temp_source = "strava_device" if device_temp is not None else (weather.get("source") if weather else None)
+    # Open-Meteo air temp (2m) è la grandezza fisica corretta per il calcolo del
+    # caldo. La temp del DISPOSITIVO Garmin (average_temp) legge il calore del
+    # polso e sovrastima (es. 24° vs 15° reali) → la teniamo solo come fallback,
+    # NON la preferiamo: gonfiava il credito caldo e quindi il VDOT.
+    temp_c = om_temp if om_temp is not None else device_temp
+    temp_source = (weather.get("source") if weather else None) if om_temp is not None else "strava_device"
     apparent_c = _apparent_temp_c(temp_c, humidity) if temp_c is not None else None
     heat_frac = _heat_slowdown_frac(temp_c, humidity, 5.0) if temp_c is not None else 0.0
     heat_sec = (avg_raw or 0) * heat_frac

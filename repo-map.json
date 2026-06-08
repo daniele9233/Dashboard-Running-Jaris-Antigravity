@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-08T07:38:16.414Z",
+  "generated_at": "2026-06-08T07:47:49.553Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -631,9 +631,9 @@
         "typing",
         "urllib.parse"
       ],
-      "hash": "d1f5337656bbe14b636f069441868ce9a8fa611e7b910733bf0caeb47664e5a8",
-      "last_modified": "2026-06-08T07:36:30.351Z",
-      "size_bytes": 447349
+      "hash": "d36619b2cea50a74f4bd81260c09a9ba59ad6f05fbd8e3c36b774d51b2715b47",
+      "last_modified": "2026-06-08T07:47:49.553Z",
+      "size_bytes": 447660
     },
     {
       "path": "backend/test_models.py",
@@ -4018,84 +4018,84 @@
       "path": "/api/garmin/auth-start",
       "handler": "garmin_auth_start",
       "file": "backend/server.py",
-      "line": 8712
+      "line": 8716
     },
     {
       "method": "GET",
       "path": "/api/garmin/csv-data",
       "handler": "get_garmin_csv_data",
       "file": "backend/server.py",
-      "line": 9910
+      "line": 9914
     },
     {
       "method": "DELETE",
       "path": "/api/garmin/csv-data/{doc_id}",
       "handler": "delete_garmin_csv_data",
       "file": "backend/server.py",
-      "line": 9929
+      "line": 9933
     },
     {
       "method": "POST",
       "path": "/api/garmin/csv-import",
       "handler": "garmin_csv_import",
       "file": "backend/server.py",
-      "line": 9728
+      "line": 9732
     },
     {
       "method": "POST",
       "path": "/api/garmin/csv-link",
       "handler": "garmin_csv_link",
       "file": "backend/server.py",
-      "line": 9901
+      "line": 9905
     },
     {
       "method": "POST",
       "path": "/api/garmin/exchange-ticket",
       "handler": "garmin_exchange_ticket",
       "file": "backend/server.py",
-      "line": 8735
+      "line": 8739
     },
     {
       "method": "GET",
       "path": "/api/garmin/gct-analysis",
       "handler": "get_gct_analysis",
       "file": "backend/server.py",
-      "line": 9952
+      "line": 9956
     },
     {
       "method": "POST",
       "path": "/api/garmin/login",
       "handler": "garmin_login_direct",
       "file": "backend/server.py",
-      "line": 8688
+      "line": 8692
     },
     {
       "method": "POST",
       "path": "/api/garmin/save-token",
       "handler": "garmin_save_token",
       "file": "backend/server.py",
-      "line": 8656
+      "line": 8660
     },
     {
       "method": "GET",
       "path": "/api/garmin/status",
       "handler": "garmin_status",
       "file": "backend/server.py",
-      "line": 8645
+      "line": 8649
     },
     {
       "method": "POST",
       "path": "/api/garmin/sync-all",
       "handler": "garmin_sync_all",
       "file": "backend/server.py",
-      "line": 8972
+      "line": 8976
     },
     {
       "method": "POST",
       "path": "/api/garmin/sync",
       "handler": "garmin_sync",
       "file": "backend/server.py",
-      "line": 8820
+      "line": 8824
     },
     {
       "method": "GET",
@@ -4116,7 +4116,7 @@
       "path": "/api/jarvis/chat",
       "handler": "jarvis_chat",
       "file": "backend/server.py",
-      "line": 9030
+      "line": 9034
     },
     {
       "method": "GET",
