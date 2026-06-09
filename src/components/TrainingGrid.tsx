@@ -1,10 +1,10 @@
 import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer, Trophy } from "lucide-react";
-import { KikkoderisoSub20 } from "./KikkoderisoSub20";
 import { useApi, invalidateCache } from "../hooks/useApi";
 import { API_CACHE } from "../hooks/apiCacheKeys";
 import { getTrainingPlan, generateTrainingPlan, adaptTrainingPlan, evaluateTest } from "../api";
 import type { Session, TrainingPlanResponse, AdaptAdaptation } from "../types/api";
+import { SUB20_SESSIONS, SUB20_META, SUB20_LEGEND } from "../data/sub20Plan";
 
 const SESSION_COLORS: Record<string, string> = {
   easy:      "#8B5CF6",
@@ -1138,9 +1138,29 @@ export function TrainingGrid() {
     return map;
   }, [planData]);
 
+  // Piano Sub-20 statico (dal PDF) — stesso calendario, dataset diverso.
+  const sub20Map = useMemo(() => {
+    const map: Record<string, Session> = {};
+    for (const s of SUB20_SESSIONS) map[s.date] = s;
+    return map;
+  }, []);
+
   const getSession = (year: number, month: number, day: number): Session | undefined => {
     const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return sessionMap[key];
+    return (showSub20 ? sub20Map : sessionMap)[key];
+  };
+
+  // Entrando nel piano Sub-20, salta al suo inizio (giugno 2026, vista Mese).
+  const toggleSub20 = () => {
+    setShowSub20((v) => {
+      const nv = !v;
+      if (nv) {
+        const [y, m, d] = SUB20_META.startDate.split("-").map(Number);
+        setCurrentDate(new Date(y, m - 1, d));
+        setView("Month");
+      }
+      return nv;
+    });
   };
 
   const next = () => {
@@ -1469,9 +1489,17 @@ export function TrainingGrid() {
       <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-white">Training Menu</h1>
-          {hasPlan && (() => {
+          {showSub20 ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400 bg-[#1E1E1E] border border-[#2A2A2A] px-3 py-1 rounded-full">
+                {SUB20_META.weeks} sett. · {SUB20_META.phase}
+              </span>
+              <span className="text-xs text-[#C0FF00] bg-[#C0FF00]/10 border border-[#C0FF00]/20 px-3 py-1 rounded-full">
+                🎯 {SUB20_META.goalRace} in {SUB20_META.goalTime}
+              </span>
+            </div>
+          ) : hasPlan && (() => {
             const firstW = planData!.weeks[0];
-            const lastW = planData!.weeks[planData!.weeks.length - 1];
             return (
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500 bg-[#1E1E1E] border border-[#2A2A2A] px-3 py-1 rounded-full">
@@ -1490,7 +1518,7 @@ export function TrainingGrid() {
         <div className="flex items-center gap-4">
           <button
             type="button"
-            onClick={() => setShowSub20((v) => !v)}
+            onClick={toggleSub20}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-black tracking-wide rounded-lg transition-colors border ${
               showSub20
                 ? "bg-[#C0FF00] text-black border-[#C0FF00]"
@@ -1500,14 +1528,16 @@ export function TrainingGrid() {
             <Trophy className="w-4 h-4" />
             kikkoderisoSub20
           </button>
-          <button
-            type="button"
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            <Sparkles className="w-4 h-4" />
-            Genera Piano
-          </button>
+          {!showSub20 && (
+            <button
+              type="button"
+              onClick={() => setShowModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <Sparkles className="w-4 h-4" />
+              Genera Piano
+            </button>
+          )}
 
           <div className="flex bg-[#1E1E1E] rounded-md border border-[#2A2A2A] p-1">
             {(['Day', 'Week', 'Month', 'Year'] as const).map(v => (
@@ -1535,9 +1565,6 @@ export function TrainingGrid() {
         </div>
       </div>
 
-      {/* kikkoderisoSub20 — special personal plan with completion tracking */}
-      {showSub20 && <KikkoderisoSub20 />}
-
       {/* Empty state */}
       {!showSub20 && !hasPlan && planData !== null && (
         <div className="flex flex-col items-center justify-center flex-1 text-center">
@@ -1556,24 +1583,24 @@ export function TrainingGrid() {
         </div>
       )}
 
-      {/* Calendar */}
-      {!showSub20 && (hasPlan || planData === null) && (
+      {/* Calendar (piano generico o Sub-20: stesso rendering, dataset diverso) */}
+      {(showSub20 || hasPlan || planData === null) && (
         <div className="flex-1 overflow-auto p-6">
           {view === 'Month' && renderMonthView()}
           {view === 'Week' && renderWeekView()}
           {view === 'Day' && renderDayView()}
           {view === 'Year' && renderYearView()}
           {/* Legend */}
-          {hasPlan && (
+          {(showSub20 || hasPlan) && (
             <div className="flex flex-wrap items-center gap-4 mt-6 pt-4 border-t border-[#2A2A2A]">
-              {([
+              {(showSub20 ? SUB20_LEGEND : ([
                 { color: SESSION_COLORS.easy,      label: 'Easy / Recovery' },
                 { color: SESSION_COLORS.tempo,     label: 'Tempo' },
                 { color: SESSION_COLORS.intervals, label: 'Intervals' },
                 { color: SESSION_COLORS.long,      label: 'Long Run' },
                 { color: SESSION_COLORS.strength,  label: 'Riposo + Forza' },
                 { color: '#2A2A2A',                label: 'Riposo', opacity: 0.3 },
-              ] as Array<{ color: string; label: string; opacity?: number }>).map(({ color, label, opacity }) => (
+              ] as Array<{ color: string; label: string; opacity?: number }>)).map(({ color, label, opacity }) => (
                 <div key={label} className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: color, opacity: (opacity as number | undefined) ?? 0.9 }} />
                   <span className="text-xs text-gray-500">{label}</span>

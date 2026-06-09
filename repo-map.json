@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-09T05:45:31.361Z",
+  "generated_at": "2026-06-09T06:18:39.318Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2181,31 +2181,6 @@
       "size_bytes": 12626
     },
     {
-      "path": "src/components/KikkoderisoSub20.tsx",
-      "kind": "frontend-component",
-      "purpose": "React component KikkoderisoSub20.",
-      "touch_when": [
-        "ai",
-        "garmin",
-        "layout",
-        "strava",
-        "training",
-        "types"
-      ],
-      "exports": [
-        "KikkoderisoSub20"
-      ],
-      "routes": [],
-      "imports": [
-        "../api",
-        "lucide-react",
-        "react"
-      ],
-      "hash": "754ece22d467092f645612798432497c48ebdd74fc08215c334b15a690a61890",
-      "last_modified": "2026-06-09T05:45:31.362Z",
-      "size_bytes": 39397
-    },
-    {
       "path": "src/components/LastRunMap.tsx",
       "kind": "frontend-component",
       "purpose": "React component LastRunMap.",
@@ -3094,16 +3069,16 @@
       "routes": [],
       "imports": [
         "../api",
+        "../data/sub20Plan",
         "../hooks/apiCacheKeys",
         "../hooks/useApi",
         "../types/api",
-        "./KikkoderisoSub20",
         "lucide-react",
         "react"
       ],
-      "hash": "e3afb2584b0b4eee861f3b5c63785d34857fbf0fe96062fc02330f59a7718328",
-      "last_modified": "2026-06-02T18:12:58.291Z",
-      "size_bytes": 81448
+      "hash": "3f33e7dc4c6a32bc5dba72570ab621b42262041ab5822a6463571f47051109f2",
+      "last_modified": "2026-06-09T06:18:39.318Z",
+      "size_bytes": 82573
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -3298,6 +3273,29 @@
       "hash": "871474f36e4442d4281f9ae4fbac599ba418d73faabf3fcf44e6b085e2b09c81",
       "last_modified": "2026-04-29T06:17:00.249Z",
       "size_bytes": 1776
+    },
+    {
+      "path": "src/data/sub20Plan.ts",
+      "kind": "frontend-source",
+      "purpose": "frontend-source sub20Plan.ts.",
+      "touch_when": [
+        "ai",
+        "layout",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "SUB20_LEGEND",
+        "SUB20_META",
+        "SUB20_SESSIONS"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api"
+      ],
+      "hash": "c18f85e06b5e0adfaf1adfc80fd51d0636b575a0e88b3bfcfc1057e1725f930a",
+      "last_modified": "2026-06-09T06:17:26.535Z",
+      "size_bytes": 9505
     },
     {
       "path": "src/hooks/apiCacheKeys.ts",
