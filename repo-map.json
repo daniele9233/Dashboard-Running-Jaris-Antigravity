@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-08T10:34:32.753Z",
+  "generated_at": "2026-06-09T05:45:31.361Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2186,7 +2186,6 @@
       "purpose": "React component KikkoderisoSub20.",
       "touch_when": [
         "ai",
-        "api",
         "garmin",
         "layout",
         "strava",
@@ -2202,9 +2201,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "556eebdd04e0ad7be453012cf882bbeee62560551e28f03833936abd7a6908fc",
-      "last_modified": "2026-06-08T10:34:32.754Z",
-      "size_bytes": 33302
+      "hash": "754ece22d467092f645612798432497c48ebdd74fc08215c334b15a690a61890",
+      "last_modified": "2026-06-09T05:45:31.362Z",
+      "size_bytes": 39397
     },
     {
       "path": "src/components/LastRunMap.tsx",
