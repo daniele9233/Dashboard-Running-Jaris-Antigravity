@@ -1,8 +1,11 @@
-import { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer, Trophy } from "lucide-react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer, Trophy, XCircle } from "lucide-react";
 import { useApi, invalidateCache } from "../hooks/useApi";
 import { API_CACHE } from "../hooks/apiCacheKeys";
-import { getTrainingPlan, generateTrainingPlan, adaptTrainingPlan, evaluateTest } from "../api";
+import {
+  getTrainingPlan, generateTrainingPlan, adaptTrainingPlan, evaluateTest,
+  getSub20Status, putSub20Status, type Sub20StatusResponse, type Sub20SessionStatus,
+} from "../api";
 import type { Session, TrainingPlanResponse, AdaptAdaptation } from "../types/api";
 import { SUB20_SESSIONS, SUB20_META, SUB20_LEGEND } from "../data/sub20Plan";
 
@@ -1163,6 +1166,33 @@ export function TrainingGrid() {
     });
   };
 
+  // ── Esiti sedute Sub-20 (persistenti su DB) ──
+  const { data: sub20StatusData } = useApi<Sub20StatusResponse>(getSub20Status, { cacheKey: "sub20-status" });
+  const [sub20Status, setSub20StatusLocal] = useState<Record<string, Sub20SessionStatus>>({});
+  useEffect(() => {
+    if (sub20StatusData?.statuses) setSub20StatusLocal(sub20StatusData.statuses);
+  }, [sub20StatusData]);
+
+  const keyOf = (year: number, month: number, day: number) =>
+    `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const sub20StatusOf = (year: number, month: number, day: number): Sub20SessionStatus | undefined =>
+    showSub20 ? sub20Status[keyOf(year, month, day)] : undefined;
+
+  const markSub20 = useCallback(async (date: string, status: Sub20SessionStatus | null) => {
+    setSub20StatusLocal((prev) => {
+      const next = { ...prev };
+      if (status) next[date] = status; else delete next[date];
+      return next;
+    });
+    try {
+      const res = await putSub20Status(date, status);
+      if (res?.statuses) setSub20StatusLocal(res.statuses);
+      invalidateCache("sub20-status");
+    } catch {
+      /* l'ottimistico resta; ritenta al prossimo click */
+    }
+  }, []);
+
   const next = () => {
     const d = new Date(currentDate);
     if (view === 'Month') d.setMonth(d.getMonth() + 1);
@@ -1224,6 +1254,9 @@ export function TrainingGrid() {
 
             const session = getSession(year, month, day);
             const display = toDisplay(session);
+            const st = sub20StatusOf(year, month, day);
+            const done = st === 'done' || (!showSub20 && display?.completed);
+            const failed = st === 'failed';
             const isToday = day === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear();
 
             return (
@@ -1237,12 +1270,13 @@ export function TrainingGrid() {
                 </span>
                 {display && (
                   <div
-                    className={`flex-1 rounded-md p-2 border-l-4 bg-[#121212] flex flex-col gap-1 ${display.completed ? 'opacity-60' : ''}`}
-                    style={{ borderLeftColor: display.color }}
+                    className={`flex-1 rounded-md p-2 border-l-4 bg-[#121212] flex flex-col gap-1 ${done ? 'opacity-60' : ''}`}
+                    style={{ borderLeftColor: failed ? '#EF4444' : display.color }}
                   >
                     <span className="text-xs font-bold text-gray-200">{display.title}</span>
                     <span className="text-[10px] text-gray-400 line-clamp-2 leading-tight">{display.details.join(' · ')}</span>
-                    {display.completed && <span className="text-[10px] text-[#10B981]">✓ Completata</span>}
+                    {done && <span className="text-[10px] text-[#10B981]">✓ Effettuata</span>}
+                    {failed && <span className="text-[10px] text-[#EF4444]">✗ Fallita</span>}
                   </div>
                 )}
               </div>
@@ -1274,6 +1308,9 @@ export function TrainingGrid() {
           {weekDays.map(date => {
             const session = getSession(date.getFullYear(), date.getMonth(), date.getDate());
             const display = toDisplay(session);
+            const st = sub20StatusOf(date.getFullYear(), date.getMonth(), date.getDate());
+            const done = st === 'done' || (!showSub20 && display?.completed);
+            const failed = st === 'failed';
             const isToday = date.toDateString() === new Date().toDateString();
 
             return (
@@ -1290,14 +1327,15 @@ export function TrainingGrid() {
                 </div>
 
                 {display ? (
-                  <div className={`flex-1 rounded-lg p-4 border-t-4 bg-[#121212] flex flex-col gap-3 ${display.completed ? 'opacity-60' : ''}`} style={{ borderTopColor: display.color }}>
+                  <div className={`flex-1 rounded-lg p-4 border-t-4 bg-[#121212] flex flex-col gap-3 ${done ? 'opacity-60' : ''}`} style={{ borderTopColor: failed ? '#EF4444' : display.color }}>
                     <span className="text-sm font-bold text-gray-200 uppercase tracking-wider">{display.title}</span>
                     <div className="flex flex-col gap-2">
                       {display.details.map((d, i) => (
                         <span key={i} className="text-xs text-gray-400 bg-[#1E1E1E] px-2 py-1.5 rounded">{d}</span>
                       ))}
                     </div>
-                    {display.completed && <span className="text-xs text-[#10B981] mt-auto">✓ Completata</span>}
+                    {done && <span className="text-xs text-[#10B981] mt-auto">✓ Effettuata</span>}
+                    {failed && <span className="text-xs text-[#EF4444] mt-auto">✗ Fallita</span>}
                   </div>
                 ) : (
                   <div className="flex-1 flex items-center justify-center text-sm text-gray-600 font-medium bg-[#121212] rounded-lg border border-[#2A2A2A] border-dashed">
@@ -1316,6 +1354,10 @@ export function TrainingGrid() {
   const renderDayView = () => {
     const session = getSession(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
     const display = toDisplay(session);
+    const dayKey = keyOf(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+    const st = sub20StatusOf(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+    const done = st === 'done' || (!showSub20 && display?.completed);
+    const failed = st === 'failed';
 
     return (
       <div className="h-full flex items-start justify-center pt-10">
@@ -1336,17 +1378,53 @@ export function TrainingGrid() {
           </h2>
 
           {display ? (
-            <div className={`rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-8 border-l-4 ${display.completed ? 'opacity-75' : ''}`} style={{ borderLeftColor: display.color }}>
+            <div className={`rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-8 border-l-4 ${done ? 'opacity-75' : ''}`} style={{ borderLeftColor: failed ? '#EF4444' : display.color }}>
               <div className="flex items-center justify-between mb-8 pb-6 border-b border-[#2A2A2A]">
                 <h3 className="text-2xl font-bold text-gray-200">{display.title}</h3>
                 <span className={`px-4 py-1.5 rounded-full text-sm font-medium border ${
-                  display.completed
+                  done
                     ? 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]'
+                    : failed
+                    ? 'bg-[#EF4444]/10 border-[#EF4444]/30 text-[#EF4444]'
                     : 'bg-[#1E1E1E] border-[#2A2A2A] text-gray-300'
                 }`}>
-                  {display.completed ? '✓ Completata' : 'Programmata'}
+                  {done ? '✓ Effettuata' : failed ? '✗ Fallita' : 'Programmata'}
                 </span>
               </div>
+
+              {/* Esito — solo Sub-20, persistente su DB */}
+              {showSub20 && (
+                <div className="mb-6 pb-6 border-b border-[#2A2A2A]">
+                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Esito allenamento</div>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => markSub20(dayKey, done ? null : 'done')}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold border transition-colors ${
+                        done
+                          ? 'bg-[#10B981] border-[#10B981] text-black'
+                          : 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981] hover:bg-[#10B981]/20'
+                      }`}
+                    >
+                      <CheckCircle2 className="w-4 h-4" /> Effettuato
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => markSub20(dayKey, failed ? null : 'failed')}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold border transition-colors ${
+                        failed
+                          ? 'bg-[#EF4444] border-[#EF4444] text-white'
+                          : 'bg-[#EF4444]/10 border-[#EF4444]/30 text-[#EF4444] hover:bg-[#EF4444]/20'
+                      }`}
+                    >
+                      <XCircle className="w-4 h-4" /> Fallito
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-gray-600 mt-2.5">
+                    Salvato sul database, permanente. Ritocca lo stesso pulsante per annullare.
+                  </p>
+                </div>
+              )}
 
               <p className="text-gray-300 leading-relaxed mb-6">{display.description}</p>
 
@@ -1461,15 +1539,18 @@ export function TrainingGrid() {
                   if (!day) return <div key={`empty-${idx}`} className="aspect-square" />;
                   const session = getSession(year, month, day);
                   const display = toDisplay(session);
+                  const st = sub20StatusOf(year, month, day);
+                  const done = st === 'done' || (!showSub20 && display?.completed);
+                  const failed = st === 'failed';
                   return (
                     <div
                       key={`${year}-${month}-${day}`}
                       className="aspect-square rounded-sm"
                       style={{
-                        backgroundColor: display ? display.color : '#2A2A2A',
-                        opacity: display ? (display.completed ? 0.5 : 0.9) : 0.3,
+                        backgroundColor: failed ? '#EF4444' : display ? display.color : '#2A2A2A',
+                        opacity: display ? (done ? 0.45 : 0.9) : 0.3,
                       }}
-                      title={display ? `${day} ${monthNames[month]}: ${display.title}` : `${day} ${monthNames[month]}`}
+                      title={display ? `${day} ${monthNames[month]}: ${display.title}${done ? ' ✓' : failed ? ' ✗' : ''}` : `${day} ${monthNames[month]}`}
                     />
                   );
                 })}

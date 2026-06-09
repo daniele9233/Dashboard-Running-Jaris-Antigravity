@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-09T06:18:39.318Z",
+  "generated_at": "2026-06-09T12:22:44.682Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -15,9 +15,9 @@
   },
   "counts": {
     "files": 146,
-    "backend_routes": 59,
+    "backend_routes": 61,
     "frontend_routes": 13,
-    "api_clients": 58
+    "api_clients": 60
   },
   "files": [
     {
@@ -578,6 +578,7 @@
         "GET /api/strava/callback",
         "GET /api/strava/connections",
         "GET /api/strava/status",
+        "GET /api/sub20/status",
         "GET /api/supercompensation",
         "GET /api/test-ai",
         "GET /api/training-plan",
@@ -607,7 +608,8 @@
         "POST /api/sub20/evaluate-session",
         "POST /api/training-plan/adapt",
         "POST /api/training-plan/evaluate-test",
-        "POST /api/training-plan/generate"
+        "POST /api/training-plan/generate",
+        "PUT /api/sub20/status"
       ],
       "imports": [
         "anthropic",
@@ -631,9 +633,9 @@
         "typing",
         "urllib.parse"
       ],
-      "hash": "c9dfc94e7b58e5bf136bf33594c90c261d22ddd67acfdc950e9f9bad37ac8540",
-      "last_modified": "2026-06-08T10:33:22.821Z",
-      "size_bytes": 452685
+      "hash": "4e660f8663a8cc0f19441203404012bb3048f3b3c599038b1a23eea17a9aaeca",
+      "last_modified": "2026-06-09T07:07:11.726Z",
+      "size_bytes": 453921
     },
     {
       "path": "backend/test_models.py",
@@ -1476,6 +1478,7 @@
         "getStravaAuthUrl",
         "getStravaConnections",
         "getStravaStatus",
+        "getSub20Status",
         "getSupercompensation",
         "getTrainingPlan",
         "getUserLayout",
@@ -1489,11 +1492,10 @@
         "linkGarminCsv",
         "postFieldTest",
         "postRecoveryCheckin",
+        "putSub20Status",
         "putUserLayout",
         "recalculateFitnessFreshness",
-        "saveGarminToken",
-        "setActiveStravaAthlete",
-        "StravaConnection"
+        "saveGarminToken"
       ],
       "routes": [
         "DELETE /api/field-test/${id}",
@@ -1526,6 +1528,7 @@
         "GET /api/strava/auth-url",
         "GET /api/strava/connections",
         "GET /api/strava/status",
+        "GET /api/sub20/status",
         "GET /api/supercompensation",
         "GET /api/training-plan",
         "GET /api/training-plan/current",
@@ -1553,6 +1556,7 @@
         "POST /api/training-plan/adapt",
         "POST /api/training-plan/evaluate-test",
         "POST /api/training-plan/generate",
+        "PUT /api/sub20/status",
         "PUT /api/user/layout"
       ],
       "imports": [
@@ -1560,9 +1564,9 @@
         "../types/jarvis",
         "./client"
       ],
-      "hash": "4865c7dcbdcd372e8e75f373996c003cd17dc97849f74c2e0840aa754a242e8c",
-      "last_modified": "2026-06-08T10:33:42.370Z",
-      "size_bytes": 18415
+      "hash": "af639d16ebefd64ef5472a949fa9f1faa116de68276736fb5a96fdad41104678",
+      "last_modified": "2026-06-09T07:07:26.489Z",
+      "size_bytes": 18892
     },
     {
       "path": "src/App.tsx",
@@ -3076,9 +3080,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "3f33e7dc4c6a32bc5dba72570ab621b42262041ab5822a6463571f47051109f2",
-      "last_modified": "2026-06-09T06:18:39.318Z",
-      "size_bytes": 82573
+      "hash": "e493ccf8cf527ef192e0c7f5fc8670eaa84e6b17342b6baa52734855d2d57b1e",
+      "last_modified": "2026-06-09T12:22:44.683Z",
+      "size_bytes": 87051
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -4015,84 +4019,84 @@
       "path": "/api/garmin/auth-start",
       "handler": "garmin_auth_start",
       "file": "backend/server.py",
-      "line": 8849
+      "line": 8875
     },
     {
       "method": "GET",
       "path": "/api/garmin/csv-data",
       "handler": "get_garmin_csv_data",
       "file": "backend/server.py",
-      "line": 10047
+      "line": 10073
     },
     {
       "method": "DELETE",
       "path": "/api/garmin/csv-data/{doc_id}",
       "handler": "delete_garmin_csv_data",
       "file": "backend/server.py",
-      "line": 10066
+      "line": 10092
     },
     {
       "method": "POST",
       "path": "/api/garmin/csv-import",
       "handler": "garmin_csv_import",
       "file": "backend/server.py",
-      "line": 9865
+      "line": 9891
     },
     {
       "method": "POST",
       "path": "/api/garmin/csv-link",
       "handler": "garmin_csv_link",
       "file": "backend/server.py",
-      "line": 10038
+      "line": 10064
     },
     {
       "method": "POST",
       "path": "/api/garmin/exchange-ticket",
       "handler": "garmin_exchange_ticket",
       "file": "backend/server.py",
-      "line": 8872
+      "line": 8898
     },
     {
       "method": "GET",
       "path": "/api/garmin/gct-analysis",
       "handler": "get_gct_analysis",
       "file": "backend/server.py",
-      "line": 10089
+      "line": 10115
     },
     {
       "method": "POST",
       "path": "/api/garmin/login",
       "handler": "garmin_login_direct",
       "file": "backend/server.py",
-      "line": 8825
+      "line": 8851
     },
     {
       "method": "POST",
       "path": "/api/garmin/save-token",
       "handler": "garmin_save_token",
       "file": "backend/server.py",
-      "line": 8793
+      "line": 8819
     },
     {
       "method": "GET",
       "path": "/api/garmin/status",
       "handler": "garmin_status",
       "file": "backend/server.py",
-      "line": 8782
+      "line": 8808
     },
     {
       "method": "POST",
       "path": "/api/garmin/sync-all",
       "handler": "garmin_sync_all",
       "file": "backend/server.py",
-      "line": 9109
+      "line": 9135
     },
     {
       "method": "POST",
       "path": "/api/garmin/sync",
       "handler": "garmin_sync",
       "file": "backend/server.py",
-      "line": 8957
+      "line": 8983
     },
     {
       "method": "GET",
@@ -4113,7 +4117,7 @@
       "path": "/api/jarvis/chat",
       "handler": "jarvis_chat",
       "file": "backend/server.py",
-      "line": 9167
+      "line": 9193
     },
     {
       "method": "GET",
@@ -4226,6 +4230,20 @@
       "handler": "sub20_evaluate_session",
       "file": "backend/server.py",
       "line": 8502
+    },
+    {
+      "method": "GET",
+      "path": "/api/sub20/status",
+      "handler": "get_sub20_status",
+      "file": "backend/server.py",
+      "line": 8673
+    },
+    {
+      "method": "PUT",
+      "path": "/api/sub20/status",
+      "handler": "set_sub20_status",
+      "file": "backend/server.py",
+      "line": 8681
     },
     {
       "method": "GET",
@@ -4615,6 +4633,12 @@
       "file": "src/api/index.ts"
     },
     {
+      "name": "getSub20Status",
+      "method": "GET",
+      "path": "/api/sub20/status",
+      "file": "src/api/index.ts"
+    },
+    {
       "name": "getSupercompensation",
       "method": "GET",
       "path": "/api/supercompensation",
@@ -4678,6 +4702,12 @@
       "name": "postRecoveryCheckin",
       "method": "POST",
       "path": "/api/recovery-checkin",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "putSub20Status",
+      "method": "PUT",
+      "path": "/api/sub20/status",
       "file": "src/api/index.ts"
     },
     {

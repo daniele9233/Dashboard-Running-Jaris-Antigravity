@@ -382,6 +382,16 @@ export const evaluateSub20Session = (body: {
   manual_humidity?: number;
 }) => api.post<Sub20EvalResult>('/api/sub20/evaluate-session', body);
 
+// Esiti sedute Sub-20 (effettuato / fallito) — persistenti su DB
+export type Sub20SessionStatus = 'done' | 'failed';
+export interface Sub20StatusResponse {
+  statuses: Record<string, Sub20SessionStatus>;
+  ok?: boolean;
+}
+export const getSub20Status = () => api.get<Sub20StatusResponse>('/api/sub20/status');
+export const putSub20Status = (date: string, status: Sub20SessionStatus | null) =>
+  api.put<Sub20StatusResponse>('/api/sub20/status', { date, status });
+
 // ─── JARVIS ──────────────────────────────────────────────────────────────────
 import type { JarvisResponse } from '../types/jarvis';
 export const jarvisChat = (transcript: string) =>
