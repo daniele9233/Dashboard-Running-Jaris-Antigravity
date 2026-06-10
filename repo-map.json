@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-10T17:52:12.501Z",
+  "generated_at": "2026-06-10T18:02:50.400Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2357,6 +2357,7 @@
         "ai",
         "layout",
         "profile",
+        "runner-dna",
         "statistics",
         "strava",
         "training",
@@ -2373,9 +2374,9 @@
         "react",
         "recharts"
       ],
-      "hash": "1dfa1e43bf26fcdce4db6bb868835b791a0625193d685f9c5e0b16d3edcc9704",
-      "last_modified": "2026-05-16T07:40:26.515Z",
-      "size_bytes": 84223
+      "hash": "105efcadcea1b4d28a474a6a2eacfa18a71132b63e2f72b68e966065040fdc55",
+      "last_modified": "2026-06-10T18:02:50.401Z",
+      "size_bytes": 49445
     },
     {
       "path": "src/components/RecentActivities.tsx",

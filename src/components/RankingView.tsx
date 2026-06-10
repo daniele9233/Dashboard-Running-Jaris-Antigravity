@@ -1,7 +1,9 @@
 /**
- * RANKING & BENCHMARK — METIC LAB
- * Tab 1: Benchmark manuale — inserisci sesso/età/tempo
- * Tab 2: La Mia Classifica — auto-profilo + tutti i PB multi-distanza
+ * RANKING — METIC LAB
+ * La Mia Classifica in stile "carta atleta" (come Runner DNA):
+ * rank card con bordo gradiente, percentile FUT-style, tier ladder,
+ * card distanza, radar multi-distanza, scouting Riegel.
+ * Dati reali: profilo + best efforts. Benchmark FIDAL/ENDU/WAVA.
  */
 
 import { useState, useEffect, useMemo } from "react";
@@ -9,9 +11,14 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, Legend, Tooltip as RechartTooltip,
 } from "recharts";
-import { Target, TrendingUp, Zap, Award, Users, ChevronRight, RefreshCw, Info, BarChart2 } from "lucide-react";
+import { Target, Trophy, Zap, Award, RefreshCw, BarChart2, TrendingUp } from "lucide-react";
 import { getProfile, getBestEfforts } from "../api";
 import type { Profile, BestEffort } from "../types/api";
+
+const MONO = "JetBrains Mono, monospace";
+
+const CARD =
+  "rounded-3xl p-6 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA CONSTANTS
@@ -73,28 +80,24 @@ const DIST_PARAMS: Record<Sex, Record<DistKey, { mu: number; sigma: number }>> =
   },
 };
 
-// ALL PARTICIPANTS — ENDU + MySDAM + Parkrun Italy + Run Card + gare non competitive
-// Mediana più lenta, σ=0.30 (campo più eterogeneo)
-// Sorgenti: ENDU statistiche 2023 (~600K finisher/anno), Maratona di Roma finisher data,
-//           Stramilano finisher distribution, RunRepeat Italian dataset (35M+ risultati globali)
+// ALL PARTICIPANTS — ENDU + MySDAM + Parkrun Italy + Run Card + non competitive
 const ALL_PARTICIPANTS_PARAMS: Record<Sex, Record<DistKey, { mu: number; sigma: number }>> = {
   M: {
-    "3K":  { mu: Math.log(1080),  sigma: 0.30 },  // 18:00 median
-    "5K":  { mu: Math.log(1800),  sigma: 0.30 },  // 30:00 median
-    "10K": { mu: Math.log(3720),  sigma: 0.30 },  // 62:00 median
-    "HM":  { mu: Math.log(8100),  sigma: 0.30 },  // 2:15:00 median
-    "M":   { mu: Math.log(17100), sigma: 0.30 },  // 4:45:00 median
+    "3K":  { mu: Math.log(1080),  sigma: 0.30 },
+    "5K":  { mu: Math.log(1800),  sigma: 0.30 },
+    "10K": { mu: Math.log(3720),  sigma: 0.30 },
+    "HM":  { mu: Math.log(8100),  sigma: 0.30 },
+    "M":   { mu: Math.log(17100), sigma: 0.30 },
   },
   F: {
-    "3K":  { mu: Math.log(1320),  sigma: 0.30 },  // 22:00 median
-    "5K":  { mu: Math.log(2160),  sigma: 0.30 },  // 36:00 median
-    "10K": { mu: Math.log(4440),  sigma: 0.30 },  // 74:00 median
-    "HM":  { mu: Math.log(9600),  sigma: 0.30 },  // 2:40:00 median
-    "M":   { mu: Math.log(19200), sigma: 0.30 },  // 5:20:00 median
+    "3K":  { mu: Math.log(1320),  sigma: 0.30 },
+    "5K":  { mu: Math.log(2160),  sigma: 0.30 },
+    "10K": { mu: Math.log(4440),  sigma: 0.30 },
+    "HM":  { mu: Math.log(9600),  sigma: 0.30 },
+    "M":   { mu: Math.log(19200), sigma: 0.30 },
   },
 };
 
-// Extended tier labels for all-participants context
 const ALL_POP_TIERS = [
   { minPct: 98, label: "ÉLITE ASSOLUTA",     color: "#FFD700" },
   { minPct: 93, label: "ATLETA COMPETITIVO", color: "#C0FF00" },
@@ -323,452 +326,112 @@ function findPb(pbs: Record<string, { time: string }>, candidates: string[]): st
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BELL CURVE SVG (Tab 1)
+// UI PRIMITIVES (stile carta atleta — come Runner DNA)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function gaussianPDF(z: number): number {
-  return Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI);
-}
-
-function BellCurve({ userPercentile, tierColor }: { userPercentile: number; tierColor: string }) {
-  const W = 560, H = 130, PADDING_X = 20;
-  const Z_MIN = -3.5, Z_MAX = 3.5, Z_RANGE = Z_MAX - Z_MIN;
-  const POINTS = 200;
-
-  const zToX = (z: number) => PADDING_X + ((z - Z_MIN) / Z_RANGE) * (W - 2 * PADDING_X);
-  const userX = zToX(probit(userPercentile / 100));
-
-  const curvePoints: [number, number][] = [];
-  for (let i = 0; i <= POINTS; i++) {
-    const z = Z_MIN + (i / POINTS) * Z_RANGE;
-    curvePoints.push([zToX(z), H - 16 - gaussianPDF(z) * (H - 32) / gaussianPDF(0)]);
-  }
-  const pathD = curvePoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" ");
-
-  function makeTierFill(minPct: number, maxPct: number, color: string) {
-    const z1 = probit(minPct / 100);
-    const z2 = maxPct < 100 ? probit(maxPct / 100) : 3.5;
-    const x1 = Math.max(PADDING_X, zToX(z1));
-    const x2 = Math.min(W - PADDING_X, zToX(z2));
-    if (x2 <= x1) return null;
-    const zone: [number, number][] = [];
-    for (let i = 0; i <= POINTS; i++) {
-      const z = Z_MIN + (i / POINTS) * Z_RANGE;
-      const x = zToX(z);
-      if (x >= x1 && x <= x2)
-        zone.push([x, H - 16 - gaussianPDF(z) * (H - 32) / gaussianPDF(0)]);
-    }
-    if (zone.length < 2) return null;
-    const bottom = H - 16;
-    return {
-      fillD: `M ${x1.toFixed(1)} ${bottom} ` +
-             zone.map(p => `L ${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" ") +
-             ` L ${x2.toFixed(1)} ${bottom} Z`,
-      color,
-    };
-  }
-
-  const bands = [
-    makeTierFill(0, 75, "#FB923C"), makeTierFill(75, 90, "#A78BFA"),
-    makeTierFill(90, 97, "#22D3EE"), makeTierFill(97, 99, "#C0FF00"),
-    makeTierFill(99, 100, "#FFD700"),
-  ].filter(Boolean);
-
-  return (
-    <div className="relative w-full" style={{ maxWidth: W + 40 }}>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: H }}>
-        {bands.map((b, i) => b ? <path key={i} d={b.fillD} fill={b.color} fillOpacity="0.12" /> : null)}
-        {[75, 90, 97, 99].map(pct => (
-          <line key={pct} x1={zToX(probit(pct/100))} y1={12} x2={zToX(probit(pct/100))} y2={H - 16}
-            stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeDasharray="3,4" />
-        ))}
-        <path d={pathD} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
-        <line x1={PADDING_X} y1={H - 16} x2={W - PADDING_X} y2={H - 16}
-          stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
-        <line x1={userX} y1={10} x2={userX} y2={H - 16}
-          stroke={tierColor} strokeWidth="2" strokeDasharray="4,3"
-          style={{ filter: `drop-shadow(0 0 6px ${tierColor})` }} />
-        <circle cx={userX} cy={H - 16} r={5} fill={tierColor}
-          style={{ filter: `drop-shadow(0 0 8px ${tierColor})` }} />
-        {[
-          { pct: 37, label: "GUERRIERO" }, { pct: 82, label: "AVANZATO" },
-          { pct: 93, label: "COMP." },     { pct: 98, label: "ELITE" },
-          { pct: 99.5, label: "PODIO" },
-        ].map(({ pct, label }) => (
-          <text key={label} x={zToX(probit(pct/100))} y={H - 3}
-            textAnchor="middle" fontSize="7" fill="rgba(255,255,255,0.30)"
-            fontFamily="JetBrains Mono, monospace" fontWeight="700" letterSpacing="0.05em">
-            {label}
-          </text>
-        ))}
-      </svg>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TIER TABLE (Tab 1)
-// ─────────────────────────────────────────────────────────────────────────────
-
-function TierTable({ dist, sex, age, userSec, userPct }: {
-  dist: DistKey; sex: Sex; age: number; userSec: number; userPct: number;
+function CardHeader({
+  title, subtitle, icon: Icon, right,
+}: {
+  title: string; subtitle: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  right?: React.ReactNode;
 }) {
-  const benchmarks = useMemo(() => getAdjustedBenchmarks(dist, sex, age), [dist, sex, age]);
-  const userTier = getTierFromPct(userPct);
-
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--app-border)" }}>
-      <div className="px-4 py-3 border-b flex items-center gap-2"
-        style={{ borderColor: "var(--app-border)", background: "rgba(255,255,255,0.02)" }}>
-        <Award className="w-3.5 h-3.5" style={{ color: "var(--app-accent)" }} />
-        <span className="text-[10px] font-black tracking-widest" style={{ color: "var(--app-text)" }}>
-          TABELLA TIER — {DISTANCES.find(d => d.key === dist)?.label.toUpperCase()}
-        </span>
-      </div>
+    <div className="flex items-start justify-between gap-4 mb-5">
       <div>
-        {[
-          { key: "podio", tier: TIERS[0] }, { key: "elite", tier: TIERS[1] },
-          { key: "competitive", tier: TIERS[2] }, { key: "advanced", tier: TIERS[3] },
-          { key: "warrior", tier: TIERS[4] },
-        ].map(({ key, tier }) => {
-          const threshold = benchmarks[key];
-          const isUser = tier.id === userTier.id;
-          const isBeaten = userSec <= threshold;
-          const gap = userSec - threshold;
-          return (
-            <div key={key}
-              className="flex items-center justify-between px-4 py-2.5 border-b last:border-b-0"
-              style={{ borderColor: "var(--app-border)", background: isUser ? `${tier.color}18` : "transparent" }}>
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: tier.color, boxShadow: isUser ? `0 0 6px ${tier.color}` : "none" }} />
-                <div className="min-w-0">
-                  <div className="text-[9px] font-black tracking-widest truncate"
-                    style={{ color: isUser ? tier.color : "var(--app-text-muted)" }}>
-                    {tier.label}
-                  </div>
-                  <div className="text-[8px]" style={{ color: "var(--app-text-dim)" }}>{tier.sublabel}</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 flex-shrink-0">
-                <div className="text-right">
-                  <div className="text-[11px] font-black" style={{ color: "var(--app-text)" }}>
-                    {formatTime(threshold)}
-                  </div>
-                  <div className="text-[8px]" style={{ color: "var(--app-text-dim)" }}>soglia</div>
-                </div>
-                <div className="text-right w-20">
-                  {isUser ? (
-                    <div className="text-[8px] font-black px-2 py-0.5 rounded-full"
-                      style={{ background: `${tier.color}30`, color: tier.color }}>SEI QUI</div>
-                  ) : isBeaten ? (
-                    <div className="text-[9px] font-black" style={{ color: "#22D3EE" }}>✓ SUPERATO</div>
-                  ) : (
-                    <div className="text-[9px] font-black" style={{ color: "var(--app-text-dim)" }}>
-                      -{formatTime(Math.abs(gap))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+        <h3 className="text-white text-base font-black tracking-tight flex items-center gap-2">
+          {Icon && <Icon className="w-4 h-4 text-[#C0FF00]" />}
+          {title}
+        </h3>
+        <p className="text-[#A0A0A0] text-[10px] tracking-widest uppercase mt-1">{subtitle}</p>
       </div>
+      {right}
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DISTANCE PREDICTOR (Tab 1)
-// ─────────────────────────────────────────────────────────────────────────────
+function PillBadge({ label, color = "#C0FF00" }: { label: string; color?: string }) {
+  return (
+    <div
+      className="flex items-center gap-2 px-3 py-1 rounded-full shrink-0"
+      style={{ background: `${color}10`, border: `1px solid ${color}20` }}
+    >
+      <div className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+      <span className="text-[10px] font-black tracking-widest uppercase" style={{ color }}>
+        {label}
+      </span>
+    </div>
+  );
+}
 
-function DistancePredictor({ userSec, fromDist, sex, userPct }: {
-  userSec: number; fromDist: DistKey; sex: Sex; age: number; userPct: number;
+// Riga stat FUT-style della rank card: percentile + distanza + barra + tempo
+function RankStatRow({ dist, pct, time, color, delay }: {
+  dist: DistKey; pct: number; time: string; color: string; delay: number;
 }) {
-  const fromMeters = DISTANCES.find(d => d.key === fromDist)!.meters;
+  const [filled, setFilled] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setFilled(true), delay);
+    return () => clearTimeout(t);
+  }, [delay]);
+
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--app-border)" }}>
-      <div className="px-4 py-3 border-b flex items-center gap-2"
-        style={{ borderColor: "var(--app-border)", background: "rgba(255,255,255,0.02)" }}>
-        <TrendingUp className="w-3.5 h-3.5" style={{ color: "#22D3EE" }} />
-        <span className="text-[10px] font-black tracking-widest" style={{ color: "var(--app-text)" }}>
-          RIEGEL PREDICTOR
-        </span>
-        <div className="ml-auto group relative">
-          <Info className="w-3 h-3 cursor-help" style={{ color: "var(--app-text-dim)" }} />
-          <div className="absolute right-0 top-5 bg-[#0A0A0A] border rounded-xl p-3 text-[9px] leading-relaxed z-10 w-52 hidden group-hover:block"
-            style={{ borderColor: "var(--app-border)", color: "var(--app-text-muted)" }}>
-            Formula Riegel: T2 = T1 × (D2/D1)^1.06. Scarto &gt;15% = deficit identificato.
-          </div>
-        </div>
+    <div className="flex items-center gap-3">
+      <span className="w-11 text-2xl font-black tabular-nums leading-none" style={{ fontFamily: MONO, color }}>
+        {Math.round(pct)}
+      </span>
+      <span className="w-9 text-[10px] font-black tracking-[0.15em] text-gray-400">{dist}</span>
+      <div className="flex-1 h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-700 ease-out"
+          style={{ width: filled ? `${pct}%` : "0%", background: color }}
+        />
       </div>
-      <div className="p-3 space-y-1">
-        {DISTANCES.filter(d => d.key !== fromDist).map(td => {
-          const predicted = riegelPredict(userSec, fromMeters, td.meters);
-          const predictedPct = computePercentile(predicted, td.key, sex);
-          const diff = predictedPct - userPct;
-          const t = getTierFromPct(predictedPct);
-          return (
-            <div key={td.key}
-              className="flex items-center justify-between px-3 py-2 rounded-xl"
-              style={{ background: "rgba(255,255,255,0.02)" }}>
-              <span className="text-[9px] font-black tracking-wider" style={{ color: "var(--app-text-muted)" }}>
-                {td.label.toUpperCase()}
-              </span>
-              <div className="flex items-center gap-3">
-                <div className="text-[11px] font-black" style={{ color: "var(--app-text)" }}>
-                  {formatTime(Math.round(predicted))}
-                </div>
-                <div className="text-[9px] px-2 py-0.5 rounded-full font-black"
-                  style={{ background: `${t.color}20`, color: t.color }}>
-                  {t.id === "warrior" ? "GUERRIERO" : t.label.split(" ")[0]}
-                </div>
-                {Math.abs(diff) > 3 && (
-                  <div className="text-[8px] font-black"
-                    style={{ color: diff > 0 ? "#22D3EE" : "#FB7185" }}>
-                    {diff > 0 ? "↑" : "↓"}{Math.abs(Math.round(diff))}%
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <span className="w-16 text-right text-[11px] font-bold tabular-nums text-gray-400" style={{ fontFamily: MONO }}>
+        {time}
+      </span>
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// WAVA CARD (shared)
-// ─────────────────────────────────────────────────────────────────────────────
-
-function WAVACard({ score, age, sex }: { score: number; age: number; sex: Sex }) {
-  const color = score >= 80 ? "#FFD700" : score >= 70 ? "#C0FF00" : score >= 60 ? "#22D3EE" : score >= 50 ? "#A78BFA" : "#FB923C";
-  const label = score >= 80 ? "WORLD CLASS" : score >= 70 ? "ELITE AMATORIALE" : score >= 60 ? "SOLIDO COMPETITIVO" : score >= 50 ? "ALLENATO" : "IN SVILUPPO";
-  const curFactor = getWavaFactor(sex, age);
-  return (
-    <div className="rounded-2xl border p-4 space-y-3" style={{ borderColor: "var(--app-border)" }}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Zap className="w-3.5 h-3.5" style={{ color }} />
-          <span className="text-[10px] font-black tracking-widest" style={{ color: "var(--app-text)" }}>
-            AGE-GRADED SCORE
-          </span>
-        </div>
-        <div className="text-[8px] font-black px-2 py-0.5 rounded-full"
-          style={{ background: `${color}20`, color }}>WMA 2015</div>
-      </div>
-      <div className="flex items-center gap-4">
-        <div className="relative w-20 h-20 flex-shrink-0">
-          <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
-            <circle cx="40" cy="40" r="30" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
-            <circle cx="40" cy="40" r="30" fill="none" stroke={color} strokeWidth="8"
-              strokeDasharray={`${2 * Math.PI * 30 * score / 100} ${2 * Math.PI * 30}`}
-              strokeLinecap="round"
-              style={{ filter: `drop-shadow(0 0 6px ${color})` }} />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-lg font-black leading-none" style={{ color }}>{score.toFixed(0)}</span>
-            <span className="text-[7px]" style={{ color: "var(--app-text-dim)" }}>%</span>
-          </div>
-        </div>
-        <div className="space-y-1.5">
-          <div className="text-[9px] font-black" style={{ color }}>{label}</div>
-          <div className="text-[8px] leading-relaxed" style={{ color: "var(--app-text-dim)" }}>
-            A {age} anni il tuo fattore età è{" "}
-            <strong style={{ color: "var(--app-text-muted)" }}>{(curFactor * 100).toFixed(1)}%</strong>
-          </div>
-          <div className="text-[8px]" style={{ color: "var(--app-text-dim)" }}>
-            Score 70%+ = <span style={{ color: "#C0FF00" }}>Elite amatoriale</span> ·
-            80%+ = <span style={{ color: "#FFD700" }}>World class</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// RIVAL FINDER TEASER (Tab 1)
-// ─────────────────────────────────────────────────────────────────────────────
-
-function RivalFinderTeaser({ fidalCat, userPct, dist }: { fidalCat: string; userPct: number; dist: DistKey }) {
-  const distLabel = DISTANCES.find(d => d.key === dist)?.label ?? dist;
-  const rivalPct = Math.min(userPct + 2 + Math.random() * 3, 99.8);
-  const gapSecs = Math.floor(Math.random() * 25) + 10;
-  return (
-    <div className="rounded-2xl border p-5 relative overflow-hidden"
-      style={{ borderColor: "rgba(192,255,0,0.15)", background: "rgba(192,255,0,0.03)" }}>
-      <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-5"
-        style={{ background: "radial-gradient(circle, #C0FF00, transparent)" }} />
-      <div className="flex items-start justify-between relative">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4" style={{ color: "var(--app-accent)" }} />
-            <span className="text-[10px] font-black tracking-widest" style={{ color: "var(--app-accent)" }}>
-              RIVAL FINDER
-            </span>
-            <div className="text-[8px] px-2 py-0.5 rounded-full font-black"
-              style={{ background: "rgba(192,255,0,0.15)", color: "var(--app-accent)" }}>COMING SOON</div>
-          </div>
-          <p className="text-xs font-black leading-relaxed max-w-lg" style={{ color: "var(--app-text)" }}>
-            C'è un <span style={{ color: "var(--app-accent)" }}>{fidalCat}</span> nella tua regione che corre
-            i {distLabel} <span style={{ color: "var(--app-accent)" }}>{gapSecs} secondi</span> più veloce di te.
-            È il {(100 - Math.round(rivalPct)).toFixed(0)}° percentile. Vuoi vedere come si allena?
-          </p>
-          <p className="text-[9px] leading-relaxed" style={{ color: "var(--app-text-dim)" }}>
-            Stesso sesso, stessa fascia d'età, prestazione leggermente superiore.
-            Studia la sua distribuzione di carico. Poi vai a prenderlo.
-          </p>
-        </div>
-        <ChevronRight className="w-6 h-6 flex-shrink-0 mt-1" style={{ color: "rgba(192,255,0,0.4)" }} />
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// HERO PERCENTILE (Tab 1)
-// ─────────────────────────────────────────────────────────────────────────────
-
-function HeroPercentile({ pct, tier, nextTier, gapSec, fidalCat }: {
-  pct: number; tier: TierDef; nextTier: { tier: TierDef; gapPct: number } | null;
-  gapSec: number; fidalCat: string;
-}) {
-  return (
-    <div className="rounded-2xl border p-5 relative overflow-hidden"
-      style={{ borderColor: `${tier.color}30`, background: `${tier.color}08` }}>
-      <div className="absolute -bottom-16 -right-16 w-56 h-56 rounded-full opacity-10"
-        style={{ background: `radial-gradient(circle, ${tier.color}, transparent)` }} />
-      <div className="relative space-y-4">
-        <div className="flex items-center gap-2">
-          <div className="text-[9px] font-black px-3 py-1 rounded-full tracking-widest"
-            style={{ background: `${tier.color}20`, color: tier.color }}>{fidalCat}</div>
-          <div className="text-[8px]" style={{ color: "var(--app-text-dim)" }}>CATEGORIA MASTER FIDAL</div>
-        </div>
-        <div className="space-y-1">
-          <div className="flex items-end gap-2">
-            <span className="text-5xl md:text-6xl font-black leading-none"
-              style={{ color: tier.color, textShadow: `0 0 30px ${tier.color}60` }}>
-              {Math.round(pct)}
-            </span>
-            <div className="pb-2 space-y-0.5">
-              <div className="text-xl font-black" style={{ color: tier.color }}>%</div>
-              <div className="text-[8px] font-black tracking-widest" style={{ color: "var(--app-text-dim)" }}>
-                PERCENTILE
-              </div>
-            </div>
-          </div>
-          <div className="text-xs font-black tracking-wide" style={{ color: "var(--app-text-muted)" }}>
-            Sei più veloce del <span style={{ color: "var(--app-text)" }}>{Math.round(pct)}%</span> dei runner nella tua categoria
-          </div>
-        </div>
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border"
-          style={{ borderColor: `${tier.color}40`, background: `${tier.color}15` }}>
-          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tier.color, boxShadow: `0 0 8px ${tier.color}` }} />
-          <span className="text-[10px] font-black tracking-widest" style={{ color: tier.color }}>{tier.label}</span>
-          <span className="text-[8px]" style={{ color: `${tier.color}80` }}>{tier.sublabel}</span>
-        </div>
-        {nextTier && (
-          <div className="border-t pt-3 space-y-1.5" style={{ borderColor: "var(--app-border)" }}>
-            <div className="text-[8px] font-black tracking-widest" style={{ color: "var(--app-text-dim)" }}>
-              PROSSIMO TIER
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: nextTier.tier.color }} />
-                <span className="text-[10px] font-black" style={{ color: nextTier.tier.color }}>
-                  {nextTier.tier.label}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black" style={{ color: "var(--app-text)" }}>
-                  -{formatTime(Math.round(gapSec))}
-                </span>
-                <span className="text-[8px]" style={{ color: "var(--app-text-dim)" }}>da togliere</span>
-              </div>
-            </div>
-            <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-              <div className="h-full rounded-full transition-all duration-1000"
-                style={{
-                  width: `${Math.min(100, (pct / nextTier.tier.minPct) * 100)}%`,
-                  background: `linear-gradient(90deg, ${tier.color}, ${nextTier.tier.color})`,
-                  boxShadow: `0 0 8px ${tier.color}60`,
-                }} />
-            </div>
-          </div>
-        )}
-        {!nextTier && (
-          <div className="border-t pt-3" style={{ borderColor: "var(--app-border)" }}>
-            <div className="text-[10px] font-black" style={{ color: "#FFD700" }}>
-              LIVELLO MASSIMO RAGGIUNTO — SEI AL PODIO
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TAB 2 — LA MIA CLASSIFICA
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Dual percentile bar for Tab 2
+// Doppia barra popolazione (competitivo / tutti i runner)
 function PopBars({ compPct, allPct }: { compPct: number; allPct: number }) {
   const compTier = getTierFromPct(compPct);
   const allTier = getAllPopTier(allPct);
   return (
-    <div className="space-y-2.5">
-      {/* Competitive field */}
-      <div className="space-y-1">
-        <div className="flex items-center justify-between">
-          <span className="text-[8px] font-black tracking-wider" style={{ color: "var(--app-text-dim)" }}>
-            CAMPO COMPETITIVO (FIDAL + TESSERATI)
+    <div className="space-y-3">
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[9px] font-black tracking-[0.14em] uppercase text-gray-500">
+            Campo competitivo · FIDAL
           </span>
-          <span className="text-[9px] font-black" style={{ color: compTier.color }}>
-            TOP {Math.round(100 - compPct)}%
+          <span className="text-[10px] font-black tabular-nums" style={{ fontFamily: MONO, color: compTier.color }}>
+            TOP {Math.max(1, Math.round(100 - compPct))}%
           </span>
         </div>
-        <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-          <div className="h-full rounded-full transition-all duration-1000"
-            style={{
-              width: `${compPct}%`,
-              background: `linear-gradient(90deg, ${compTier.color}80, ${compTier.color})`,
-              boxShadow: `0 0 6px ${compTier.color}60`,
-            }} />
-        </div>
-        <div className="text-[8px]" style={{ color: compTier.color }}>
-          {compTier.label} · più veloce del {Math.round(compPct)}% dei runner FIDAL
+        <div className="h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
+          <div className="h-full rounded-full transition-all duration-700"
+            style={{ width: `${compPct}%`, background: compTier.color }} />
         </div>
       </div>
-      {/* All participants */}
-      <div className="space-y-1">
-        <div className="flex items-center justify-between">
-          <span className="text-[8px] font-black tracking-wider" style={{ color: "var(--app-text-dim)" }}>
-            TUTTI I RUNNER (ENDU · MYSDAM · RUN CARD · PARKRUN)
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[9px] font-black tracking-[0.14em] uppercase text-gray-500">
+            Tutti i runner · ENDU/Parkrun
           </span>
-          <span className="text-[9px] font-black" style={{ color: allTier.color }}>
-            TOP {Math.round(100 - allPct)}%
+          <span className="text-[10px] font-black tabular-nums" style={{ fontFamily: MONO, color: allTier.color }}>
+            TOP {Math.max(1, Math.round(100 - allPct))}%
           </span>
         </div>
-        <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-          <div className="h-full rounded-full transition-all duration-1000"
-            style={{
-              width: `${allPct}%`,
-              background: `linear-gradient(90deg, ${allTier.color}80, ${allTier.color})`,
-              boxShadow: `0 0 6px ${allTier.color}60`,
-            }} />
-        </div>
-        <div className="text-[8px]" style={{ color: allTier.color }}>
-          {allTier.label} · più veloce del {Math.round(allPct)}% di tutti i runner italiani di gara
+        <div className="h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
+          <div className="h-full rounded-full transition-all duration-700"
+            style={{ width: `${allPct}%`, background: allTier.color }} />
         </div>
       </div>
     </div>
   );
 }
 
-// Single distance analysis card for Tab 2
+// Card per singola distanza
 function DistanceRankCard({ dist, userSec, sex, age }: {
   dist: DistKey; userSec: number; sex: Sex; age: number;
 }) {
@@ -781,95 +444,80 @@ function DistanceRankCard({ dist, userSec, sex, age }: {
   const wava = computeWAVA(userSec, dist, sex, age);
   const pace = formatPace(userSec, distInfo.meters);
   const wavaColor = wava >= 80 ? "#FFD700" : wava >= 70 ? "#C0FF00" : wava >= 60 ? "#22D3EE" : "#A78BFA";
-  const benchmarks = useMemo(() => getAdjustedBenchmarks(dist, sex, age), [dist, sex, age]);
 
   return (
-    <div className="rounded-2xl border overflow-hidden"
-      style={{ borderColor: `${tier.color}25`, background: `${tier.color}05` }}>
-      {/* Card header */}
-      <div className="px-4 py-3 border-b flex items-center justify-between"
-        style={{ borderColor: `${tier.color}20`, background: `${tier.color}10` }}>
-        <div className="flex items-center gap-3">
-          <div>
-            <div className="text-[9px] font-black tracking-widest" style={{ color: "var(--app-text-dim)" }}>
-              {distInfo.label.toUpperCase()}
-            </div>
-            <div className="text-2xl font-black leading-none" style={{ color: tier.color }}>
-              {formatTime(userSec)}
-            </div>
+    <div className={CARD}>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="text-[10px] font-black tracking-[0.2em] uppercase text-gray-500">
+            {distInfo.label}
           </div>
-          <div className="pl-3 border-l space-y-0.5" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-            <div className="text-[9px]" style={{ color: "var(--app-text-dim)" }}>{pace}</div>
-            <div className="text-[8px] px-2 py-0.5 rounded-full font-black inline-block"
-              style={{ background: `${tier.color}20`, color: tier.color }}>
-              {tier.label}
-            </div>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-3xl font-black tabular-nums leading-none text-white" style={{ fontFamily: MONO }}>
+              {formatTime(userSec)}
+            </span>
+            <span className="text-[10px] font-bold text-gray-500" style={{ fontFamily: MONO }}>{pace}</span>
+          </div>
+          <div className="mt-3">
+            <PillBadge label={tier.label} color={tier.color} />
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-3xl font-black leading-none" style={{ color: tier.color,
-            textShadow: `0 0 20px ${tier.color}60` }}>
+        <div className="text-right shrink-0">
+          <div
+            className="text-5xl font-black italic tabular-nums leading-none"
+            style={{ fontFamily: MONO, color: tier.color, textShadow: `0 0 24px ${tier.color}50` }}
+          >
             {Math.round(compPct)}
           </div>
-          <div className="text-[8px] font-black" style={{ color: "var(--app-text-dim)" }}>% comp.</div>
+          <div className="mt-1 text-[9px] font-black tracking-[0.2em] uppercase text-gray-600">
+            Percentile
+          </div>
         </div>
       </div>
 
-      {/* Population bars */}
-      <div className="px-4 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+      <div className="pt-4 mt-4 border-t border-white/[0.06]">
         <PopBars compPct={compPct} allPct={allPct} />
       </div>
 
-      {/* Stats row: WAVA + next tier + tier benchmark */}
-      <div className="px-4 py-3 grid grid-cols-3 gap-3">
-        {/* WAVA */}
-        <div className="space-y-0.5">
-          <div className="text-[7px] font-black tracking-wider" style={{ color: "var(--app-text-dim)" }}>
-            AGE-GRADED
+      <div className="grid grid-cols-3 gap-3 pt-4 mt-4 border-t border-white/[0.06]">
+        <div>
+          <div className="text-[#555] text-[9px] font-black tracking-widest uppercase">Age-graded</div>
+          <div className="mt-1 text-lg font-black tabular-nums leading-none" style={{ fontFamily: MONO, color: wavaColor }}>
+            {wava.toFixed(0)}%
           </div>
-          <div className="text-base font-black" style={{ color: wavaColor }}>{wava.toFixed(0)}%</div>
-          <div className="text-[7px]" style={{ color: "var(--app-text-dim)" }}>WMA score</div>
         </div>
-        {/* Next tier gap */}
-        <div className="space-y-0.5">
-          <div className="text-[7px] font-black tracking-wider" style={{ color: "var(--app-text-dim)" }}>
-            PROSSIMO TIER
-          </div>
+        <div>
+          <div className="text-[#555] text-[9px] font-black tracking-widest uppercase">Prossimo tier</div>
           {nextTier ? (
-            <>
-              <div className="text-base font-black" style={{ color: nextTier.tier.color }}>
-                -{formatTime(Math.round(Math.max(gapSec, 0)))}
-              </div>
-              <div className="text-[7px] truncate" style={{ color: nextTier.tier.color }}>
-                {nextTier.tier.label.split(" ")[0]}
-              </div>
-            </>
+            <div className="mt-1 text-lg font-black tabular-nums leading-none" style={{ fontFamily: MONO, color: nextTier.tier.color }}>
+              -{formatTime(Math.round(Math.max(gapSec, 0)))}
+            </div>
           ) : (
-            <div className="text-[9px] font-black" style={{ color: "#FFD700" }}>PODIO ✓</div>
+            <div className="mt-1 text-lg font-black leading-none" style={{ fontFamily: MONO, color: "#FFD700" }}>
+              PODIO
+            </div>
           )}
         </div>
-        {/* Tier threshold time (age-adjusted) */}
-        <div className="space-y-0.5">
-          <div className="text-[7px] font-black tracking-wider" style={{ color: "var(--app-text-dim)" }}>
-            SOGLIA {tier.sublabel.toUpperCase()}
+        <div>
+          <div className="text-[#555] text-[9px] font-black tracking-widest uppercase">Categoria</div>
+          <div className="mt-1 text-lg font-black leading-none text-white" style={{ fontFamily: MONO }}>
+            {getFidalCategory(sex, age)}
           </div>
-          <div className="text-base font-black" style={{ color: "var(--app-text-muted)" }}>
-            {formatTime(benchmarks[tier.id] ?? 0)}
-          </div>
-          <div className="text-[7px]" style={{ color: "var(--app-text-dim)" }}>età-aggiustata</div>
         </div>
       </div>
 
-      {/* Tier progress bar */}
       {nextTier && (
-        <div className="px-4 pb-3">
-          <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-            <div className="h-full rounded-full"
+        <div className="mt-4">
+          <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden">
+            <div className="h-full rounded-full transition-all duration-1000"
               style={{
                 width: `${Math.min(100, (compPct / nextTier.tier.minPct) * 100)}%`,
                 background: `linear-gradient(90deg, ${tier.color}, ${nextTier.tier.color})`,
-                boxShadow: `0 0 6px ${tier.color}50`,
               }} />
+          </div>
+          <div className="mt-1.5 flex justify-between text-[9px] font-black tracking-[0.12em] uppercase">
+            <span style={{ color: tier.color }}>{tier.label}</span>
+            <span style={{ color: nextTier.tier.color }}>{nextTier.tier.label}</span>
           </div>
         </div>
       )}
@@ -877,11 +525,10 @@ function DistanceRankCard({ dist, userSec, sex, age }: {
   );
 }
 
-// Multi-distance radar chart
-function MultiDistRadar({ userTimes, sex, age }: {
+// Radar multi-distanza
+function MultiDistRadar({ userTimes, sex }: {
   userTimes: Partial<Record<DistKey, number>>;
   sex: Sex;
-  age: number;
 }) {
   const activeDists = DISTANCES.filter(d => !!userTimes[d.key]);
   if (activeDists.length < 3) return null;
@@ -896,17 +543,13 @@ function MultiDistRadar({ userTimes, sex, age }: {
   });
 
   return (
-    <div className="rounded-2xl border p-5" style={{ borderColor: "var(--app-border)" }}>
-      <div className="flex items-center gap-2 mb-4">
-        <BarChart2 className="w-3.5 h-3.5" style={{ color: "#A78BFA" }} />
-        <span className="text-[10px] font-black tracking-widest" style={{ color: "var(--app-text)" }}>
-          RADAR MULTI-DISTANZA
-        </span>
-        <div className="ml-auto text-[8px]" style={{ color: "var(--app-text-dim)" }}>
-          valore = percentile (0–100)
-        </div>
-      </div>
-      <ResponsiveContainer width="100%" height={260}>
+    <div className={CARD}>
+      <CardHeader
+        title="Radar Multi-Distanza"
+        subtitle="Percentile per distanza · 0-100"
+        icon={BarChart2}
+      />
+      <ResponsiveContainer width="100%" height={280}>
         <RadarChart data={radarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
           <PolarGrid stroke="rgba(255,255,255,0.08)" />
           <PolarAngleAxis
@@ -951,8 +594,8 @@ function MultiDistRadar({ userTimes, sex, age }: {
   );
 }
 
-// Comparative table — all distances side by side
-function ComparativeTierTableFull({ userTimes, sex, age }: {
+// Tabella comparativa tier — tutti i PB
+function ComparativeTierTable({ userTimes, sex, age }: {
   userTimes: Partial<Record<DistKey, number>>;
   sex: Sex;
   age: number;
@@ -963,69 +606,59 @@ function ComparativeTierTableFull({ userTimes, sex, age }: {
   const tierKeys = ["podio", "elite", "competitive", "advanced", "warrior"] as const;
 
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--app-border)" }}>
-      <div className="px-4 py-3 border-b flex items-center gap-2"
-        style={{ borderColor: "var(--app-border)", background: "rgba(255,255,255,0.02)" }}>
-        <Award className="w-3.5 h-3.5" style={{ color: "var(--app-accent)" }} />
-        <span className="text-[10px] font-black tracking-widest" style={{ color: "var(--app-text)" }}>
-          TABELLA COMPARATIVA TIER — TUTTI I PB (età-aggiustati)
-        </span>
+    <div className={CARD + " !p-0 overflow-hidden"}>
+      <div className="px-6 pt-6 pb-5">
+        <CardHeader
+          title="Tabella Tier"
+          subtitle="Soglie età-aggiustate · tutti i tuoi PB"
+          icon={Award}
+        />
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full" style={{ fontFamily: MONO }}>
           <thead>
-            <tr style={{ borderBottom: "1px solid var(--app-border)", background: "rgba(255,255,255,0.01)" }}>
-              <th className="px-4 py-2 text-left text-[8px] font-black tracking-widest"
-                style={{ color: "var(--app-text-dim)" }}>TIER</th>
+            <tr className="border-y border-white/[0.06] bg-white/[0.02]">
+              <th className="px-6 py-2.5 text-left text-[9px] font-black tracking-[0.18em] text-gray-500 uppercase">Tier</th>
               {activeDists.map(d => (
-                <th key={d.key} className="px-3 py-2 text-center text-[8px] font-black tracking-wider"
-                  style={{ color: "var(--app-text-dim)" }}>{d.label.toUpperCase()}</th>
+                <th key={d.key} className="px-4 py-2.5 text-center text-[9px] font-black tracking-[0.14em] text-gray-500 uppercase">
+                  {d.key}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {/* User row first */}
-            <tr style={{ background: "rgba(192,255,0,0.04)", borderBottom: "1px solid rgba(192,255,0,0.1)" }}>
-              <td className="px-4 py-2.5">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--app-accent)" }} />
-                  <span className="text-[9px] font-black" style={{ color: "var(--app-accent)" }}>I MIEI PB</span>
-                </div>
+            <tr className="border-b border-[#C0FF00]/15 bg-[#C0FF00]/[0.04]">
+              <td className="px-6 py-3">
+                <span className="text-[10px] font-black tracking-[0.14em] text-[#C0FF00] uppercase">I miei PB</span>
               </td>
               {activeDists.map(d => {
                 const sec = userTimes[d.key]!;
                 const tier = getTierFromPct(computePercentile(sec, d.key, sex));
                 return (
-                  <td key={d.key} className="px-3 py-2.5 text-center">
-                    <div className="text-[11px] font-black" style={{ color: tier.color }}>
+                  <td key={d.key} className="px-4 py-3 text-center">
+                    <div className="text-sm font-black tabular-nums" style={{ color: tier.color }}>
                       {formatTime(sec)}
                     </div>
-                    <div className="text-[7px] mt-0.5" style={{ color: "var(--app-text-dim)" }}>
+                    <div className="text-[8px] text-gray-600 mt-0.5">
                       {formatPace(sec, DISTANCES.find(dd => dd.key === d.key)!.meters)}
                     </div>
                   </td>
                 );
               })}
             </tr>
-            {/* Tier rows */}
             {tierKeys.map(tkey => {
               const tier = TIERS.find(t => t.id === tkey)!;
               return (
-                <tr key={tkey}
-                  className="border-b last:border-b-0"
-                  style={{ borderColor: "var(--app-border)" }}>
-                  <td className="px-4 py-2.5">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: tier.color }} />
+                <tr key={tkey} className="border-b border-white/[0.04] last:border-b-0">
+                  <td className="px-6 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: tier.color }} />
                       <div>
-                        <div className="text-[8px] font-black" style={{ color: tier.color }}>
+                        <div className="text-[9px] font-black tracking-[0.1em] uppercase" style={{ color: tier.color }}>
                           {tier.label}
                         </div>
-                        <div className="text-[7px]" style={{ color: "var(--app-text-dim)" }}>
-                          {tier.sublabel}
-                        </div>
+                        <div className="text-[8px] text-gray-600">{tier.sublabel}</div>
                       </div>
                     </div>
                   </td>
@@ -1037,21 +670,16 @@ function ComparativeTierTableFull({ userTimes, sex, age }: {
                     const userTier = getTierFromPct(computePercentile(userSec, d.key, sex));
                     const isCurrentTier = userTier.id === tkey;
                     return (
-                      <td key={d.key} className="px-3 py-2.5 text-center"
-                        style={{ background: isCurrentTier ? `${tier.color}12` : "transparent" }}>
-                        <div className="text-[10px] font-black"
-                          style={{ color: isCurrentTier ? tier.color : "var(--app-text-muted)" }}>
+                      <td key={d.key} className="px-4 py-3 text-center"
+                        style={{ background: isCurrentTier ? `${tier.color}10` : "transparent" }}>
+                        <div className="text-[11px] font-black tabular-nums"
+                          style={{ color: isCurrentTier ? tier.color : "rgba(255,255,255,0.55)" }}>
                           {formatTime(benchmark)}
                         </div>
-                        {!isCurrentTier && (
-                          <div className="text-[7px] mt-0.5"
-                            style={{ color: beaten ? "#22D3EE" : "var(--app-text-dim)" }}>
-                            {beaten ? `✓ +${formatTime(Math.abs(gap))}` : `-${formatTime(Math.abs(gap))}`}
-                          </div>
-                        )}
-                        {isCurrentTier && (
-                          <div className="text-[7px] mt-0.5" style={{ color: tier.color }}>SEI QUI</div>
-                        )}
+                        <div className="text-[8px] mt-0.5 font-bold"
+                          style={{ color: isCurrentTier ? tier.color : beaten ? "#22D3EE" : "rgba(255,255,255,0.25)" }}>
+                          {isCurrentTier ? "SEI QUI" : beaten ? `+${formatTime(Math.abs(gap))}` : `-${formatTime(Math.abs(gap))}`}
+                        </div>
                       </td>
                     );
                   })}
@@ -1065,8 +693,8 @@ function ComparativeTierTableFull({ userTimes, sex, age }: {
   );
 }
 
-// Profile assessment text based on Riegel balance
-function ProfileAssessment({ userTimes, sex, fidalCat }: {
+// Scouting Riegel — forza/deficit per distanza
+function RiegelScouting({ userTimes, sex, fidalCat }: {
   userTimes: Partial<Record<DistKey, number>>;
   sex: Sex;
   fidalCat: string;
@@ -1074,29 +702,17 @@ function ProfileAssessment({ userTimes, sex, fidalCat }: {
   const activeDists = DISTANCES.filter(d => !!userTimes[d.key]);
   if (activeDists.length < 2) return null;
 
-  // Cross-predict all distances from first available PB
   const base = activeDists[0];
-  const baseMeters = base.meters;
   const baseSec = userTimes[base.key]!;
+  const basePct = computePercentile(baseSec, base.key, sex);
 
-  interface AnalysisResult {
-    dist: DistKey;
-    label: string;
-    actualSec: number;
-    predictedSec: number;
-    pctDiff: number;
-    actualPct: number;
-  }
-
-  const analysis: AnalysisResult[] = activeDists
+  const analysis = activeDists
     .filter(d => d.key !== base.key)
     .map(d => {
-      const predicted = riegelPredict(baseSec, baseMeters, d.meters);
+      const predicted = riegelPredict(baseSec, base.meters, d.meters);
       const actual = userTimes[d.key]!;
-      const ratio = (actual - predicted) / predicted * 100;
       const actualPct = computePercentile(actual, d.key, sex);
-      const basePct = computePercentile(baseSec, base.key, sex);
-      return { dist: d.key, label: d.label, actualSec: actual, predictedSec: predicted, pctDiff: actualPct - basePct, actualPct };
+      return { dist: d.key, label: d.label, actualSec: actual, predictedSec: predicted, pctDiff: actualPct - basePct };
     });
 
   const deficits = analysis.filter(a => a.pctDiff < -5);
@@ -1104,84 +720,67 @@ function ProfileAssessment({ userTimes, sex, fidalCat }: {
   const balanced = analysis.filter(a => Math.abs(a.pctDiff) <= 5);
 
   return (
-    <div className="rounded-2xl border p-5 space-y-3"
-      style={{ borderColor: "rgba(192,255,0,0.1)", background: "rgba(192,255,0,0.02)" }}>
-      <div className="flex items-center gap-2">
-        <Target className="w-3.5 h-3.5" style={{ color: "var(--app-accent)" }} />
-        <span className="text-[10px] font-black tracking-widest" style={{ color: "var(--app-accent)" }}>
-          PROFILO ATLETICO — {fidalCat}
-        </span>
+    <div className={CARD}>
+      <CardHeader
+        title="Scouting Riegel"
+        subtitle={`Equilibrio tra distanze · ${fidalCat} · base ${base.key}`}
+        icon={Target}
+      />
+
+      <div className="space-y-2.5">
+        {strengths.map(s => (
+          <div key={s.dist} className="flex gap-3 items-start text-xs leading-5 text-[#A0A0A0]">
+            <span className="w-4 shrink-0 text-center font-bold text-[#C0FF00]" style={{ fontFamily: MONO }}>+</span>
+            <span>
+              <span className="text-[#C0FF00] font-black">{s.label}</span> — sopra la tua media di{" "}
+              <span className="font-black text-white">+{Math.round(s.pctDiff)} percentili</span>: qui sei più forte del tuo profilo.
+            </span>
+          </div>
+        ))}
+        {deficits.map(d => (
+          <div key={d.dist} className="flex gap-3 items-start text-xs leading-5 text-[#A0A0A0]">
+            <span className="w-4 shrink-0 text-center font-bold text-[#F43F5E]" style={{ fontFamily: MONO }}>−</span>
+            <span>
+              <span className="text-[#F43F5E] font-black">{d.label}</span> — il Riegel prevede{" "}
+              <span className="font-black text-white" style={{ fontFamily: MONO }}>{formatTime(Math.round(d.predictedSec))}</span>,
+              hai <span className="font-black text-white" style={{ fontFamily: MONO }}>{formatTime(d.actualSec)}</span>.{" "}
+              {d.dist === "M" || d.dist === "HM" ? "Deficit di resistenza aerobica." : "Deficit di velocità/lattacido."}
+            </span>
+          </div>
+        ))}
+        {balanced.map(b => (
+          <div key={b.dist} className="flex gap-3 items-start text-xs leading-5 text-[#A0A0A0]">
+            <span className="w-4 shrink-0 text-center font-bold text-[#22D3EE]" style={{ fontFamily: MONO }}>=</span>
+            <span>
+              <span className="text-[#22D3EE] font-black">{b.label}</span> — coerente con il tuo profilo.
+            </span>
+          </div>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {strengths.length > 0 && (
-          <div className="rounded-xl p-3 space-y-1.5"
-            style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.15)" }}>
-            <div className="text-[8px] font-black tracking-wider" style={{ color: "#22D3EE" }}>
-              PUNTI DI FORZA
-            </div>
-            {strengths.map(s => (
-              <div key={s.dist} className="text-[9px]" style={{ color: "var(--app-text-muted)" }}>
-                <span style={{ color: "#22D3EE" }}>{s.label}</span> —
-                sei sopra la tua media di <span style={{ color: "#22D3EE" }}>+{Math.round(s.pctDiff)} pct</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {deficits.length > 0 && (
-          <div className="rounded-xl p-3 space-y-1.5"
-            style={{ background: "rgba(251,113,133,0.08)", border: "1px solid rgba(251,113,133,0.15)" }}>
-            <div className="text-[8px] font-black tracking-wider" style={{ color: "#FB7185" }}>
-              DEFICIT IDENTIFICATI
-            </div>
-            {deficits.map(d => (
-              <div key={d.dist} className="text-[9px]" style={{ color: "var(--app-text-muted)" }}>
-                <span style={{ color: "#FB7185" }}>{d.label}</span> —
-                il Riegel prevede <span style={{ color: "#FB7185" }}>{formatTime(Math.round(d.predictedSec))}</span>,
-                hai {formatTime(d.actualSec)}.{" "}
-                {d.dist === "M" || d.dist === "HM" ? "Deficit aerobico/resistenza." : "Deficit velocità/lattacido."}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {balanced.length > 0 && (
-          <div className="rounded-xl p-3 space-y-1.5"
-            style={{ background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.15)" }}>
-            <div className="text-[8px] font-black tracking-wider" style={{ color: "#A78BFA" }}>
-              BILANCIATO
-            </div>
-            {balanced.map(b => (
-              <div key={b.dist} className="text-[9px]" style={{ color: "var(--app-text-muted)" }}>
-                <span style={{ color: "#A78BFA" }}>{b.label}</span> — coerente con il tuo profilo
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {deficits.some(d => d.dist === "M" || d.dist === "HM") && (
-        <p className="text-[9px] leading-relaxed italic" style={{ color: "var(--app-text-dim)" }}>
-          Il tuo tempo sulla distanza lunga è sbilanciato rispetto ai tuoi numeri brevi.
-          Hai un <span style={{ color: "#FB7185" }}>deficit di resistenza aerobica</span>: il tuo
-          cuore gira forte ma le gambe cedono dopo il 25° km. Aumenta il volume delle long run al 65-70% LTHR.
-        </p>
-      )}
-
-      {deficits.some(d => d.dist === "3K" || d.dist === "5K") && (
-        <p className="text-[9px] leading-relaxed italic" style={{ color: "var(--app-text-dim)" }}>
-          La resistenza ti è amica ma la velocità soffre.
-          Hai un <span style={{ color: "#FB7185" }}>deficit lattacido</span>: aggiungi 1 sessione/settimana
-          di ripetute brevi (200-400m) al 95-100% VMA.
-        </p>
+      {(deficits.some(d => d.dist === "M" || d.dist === "HM") || deficits.some(d => d.dist === "3K" || d.dist === "5K")) && (
+        <div className="pt-4 mt-4 border-t border-white/[0.06] space-y-2">
+          {deficits.some(d => d.dist === "M" || d.dist === "HM") && (
+            <p className="text-[11px] leading-5 text-gray-400">
+              La distanza lunga è sbilanciata rispetto ai tuoi numeri brevi: aumenta il volume delle long run al 65-70% LTHR.
+            </p>
+          )}
+          {deficits.some(d => d.dist === "3K" || d.dist === "5K") && (
+            <p className="text-[11px] leading-5 text-gray-400">
+              La velocità soffre rispetto alla resistenza: aggiungi 1 sessione/settimana di ripetute brevi (200-400m) al 95-100% VMA.
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
 }
 
-// Main Tab 2 component
-function MyRankingTab() {
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN VIEW
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function RankingView() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [efforts, setEfforts] = useState<BestEffort[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1196,16 +795,13 @@ function MyRankingTab() {
         if (p) setProfile(p);
         if (e) setEfforts(e);
 
-        // Auto-select distances where we found a time from either source
         const found: DistKey[] = [];
         for (const dist of DISTANCES) {
-          // Check best efforts first
           const effortMatch = e.find(ef =>
             EFFORT_TO_DIST.find(m => m.key === dist.key)
               ?.candidates.some(c => ef.distance.toLowerCase() === c.toLowerCase())
           );
           if (effortMatch) { found.push(dist.key); continue; }
-          // Fall back to profile pbs
           if (p && findPb(p.pbs ?? {}, PB_KEYS[dist.key])) found.push(dist.key);
         }
         if (found.length > 0) setSelectedDists(found);
@@ -1222,13 +818,11 @@ function MyRankingTab() {
   const age = profile?.age ?? 40;
   const fidalCat = getFidalCategory(sex, age);
 
-  // Merge times: best_efforts (Strava scan) wins over profile pbs, take faster if both exist
+  // Merge tempi: best_efforts vs profile pbs — vince il più veloce
   const userTimes: Partial<Record<DistKey, number>> = useMemo(() => {
     const result: Partial<Record<DistKey, number>> = {};
     for (const dist of DISTANCES) {
       const candidates: number[] = [];
-
-      // From Strava best efforts
       const mapping = EFFORT_TO_DIST.find(m => m.key === dist.key);
       if (mapping) {
         const effortMatch = efforts.find(ef =>
@@ -1239,8 +833,6 @@ function MyRankingTab() {
           if (sec) candidates.push(sec);
         }
       }
-
-      // From profile pbs
       if (profile?.pbs) {
         const pbTime = findPb(profile.pbs, PB_KEYS[dist.key]);
         if (pbTime) {
@@ -1248,8 +840,6 @@ function MyRankingTab() {
           if (sec) candidates.push(sec);
         }
       }
-
-      // Take the best (fastest) time
       if (candidates.length > 0) {
         result[dist.key] = Math.min(...candidates);
       }
@@ -1267,466 +857,262 @@ function MyRankingTab() {
     selectedDists.includes(d.key) && !!userTimes[d.key]
   );
 
+  // Hero: la distanza con percentile competitivo più alto
+  const heroStats = useMemo(() => {
+    let best: { dist: DistKey; pct: number } | null = null;
+    for (const d of activeDists) {
+      const pct = computePercentile(userTimes[d.key]!, d.key, sex);
+      if (!best || pct > best.pct) best = { dist: d.key, pct };
+    }
+    return best;
+  }, [activeDists, userTimes, sex]);
+
+  const heroTier = heroStats ? getTierFromPct(heroStats.pct) : null;
+  const heroNextTier = heroStats ? getNextTier(heroStats.pct) : null;
+  const bestWava = useMemo(() => {
+    let max = 0;
+    for (const d of activeDists) {
+      max = Math.max(max, computeWAVA(userTimes[d.key]!, d.key, sex, age));
+    }
+    return max;
+  }, [activeDists, userTimes, sex, age]);
+
+  const activeTimes = Object.fromEntries(activeDists.map(d => [d.key, userTimes[d.key]!]));
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24 gap-3">
-        <RefreshCw className="w-5 h-5 animate-spin" style={{ color: "var(--app-accent)" }} />
-        <span className="text-sm font-black" style={{ color: "var(--app-text-dim)" }}>
+      <main className="flex-1 flex items-center justify-center bg-[#0A0A0A] gap-3">
+        <RefreshCw className="w-5 h-5 animate-spin text-[#C0FF00]" />
+        <span className="text-sm font-black uppercase tracking-widest text-gray-500">
           Carico profilo e PB...
         </span>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="space-y-5">
-      {/* Profile banner */}
-      {profile && (
-        <div className="rounded-2xl border px-5 py-4 flex items-center justify-between"
-          style={{ borderColor: "var(--app-border)", background: "rgba(255,255,255,0.01)" }}>
-          <div className="flex items-center gap-4">
-            {profile.strava_profile_pic || profile.profile_pic ? (
-              <img
-                src={profile.strava_profile_pic || profile.profile_pic}
-                alt="avatar"
-                className="w-10 h-10 rounded-full object-cover border"
-                style={{ borderColor: "var(--app-border-strong)" }}
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-                <span className="text-sm font-black text-white">
-                  {(profile.name ?? "?")[0]?.toUpperCase()}
-                </span>
-              </div>
-            )}
-            <div>
-              <div className="text-sm font-black" style={{ color: "var(--app-text)" }}>
-                {profile.name ?? "Atleta"}
-              </div>
-              <div className="text-[9px]" style={{ color: "var(--app-text-dim)" }}>
-                {age} anni · {sex === "M" ? "Uomo" : "Donna"} · {profile.level ?? "Runner"}
-              </div>
-            </div>
+    <main className="flex-1 overflow-y-auto bg-[#0A0A0A] text-white p-4 md:p-6 lg:p-10 min-h-0 custom-scrollbar">
+      <div className="max-w-[1500px] mx-auto space-y-5 md:space-y-6">
+
+        {/* ── HEADER ── */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter text-white uppercase italic">
+              La Mia <span className="text-[#C0FF00]">Classifica</span>
+            </h1>
+            <p className="text-gray-600 text-[10px] font-black tracking-[0.3em] uppercase mt-2">
+              Posizionamento reale · FIDAL · ENDU · WAVA age-graded
+            </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-center px-3 py-1.5 rounded-xl"
-              style={{ background: "rgba(192,255,0,0.08)", border: "1px solid rgba(192,255,0,0.15)" }}>
-              <div className="text-xs font-black" style={{ color: "var(--app-accent)" }}>{fidalCat}</div>
-              <div className="text-[7px]" style={{ color: "var(--app-text-dim)" }}>MASTER FIDAL</div>
-            </div>
-            <div className="text-center px-3 py-1.5 rounded-xl"
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid var(--app-border)" }}>
-              <div className="text-xs font-black" style={{ color: "var(--app-text)" }}>
-                {Object.keys(userTimes).length}
-              </div>
-              <div className="text-[7px]" style={{ color: "var(--app-text-dim)" }}>PB RILEVATI</div>
-            </div>
-          </div>
+          {heroTier && (
+            <PillBadge label={`${heroTier.label} · ${heroTier.sublabel}`} color={heroTier.color} />
+          )}
         </div>
-      )}
 
-      {/* Distance selector */}
-      <div className="space-y-2">
-        <div className="text-[9px] font-black tracking-widest" style={{ color: "var(--app-text-dim)" }}>
-          SELEZIONA DISTANZE DA ANALIZZARE
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {DISTANCES.map(d => {
-            const hasPb = !!userTimes[d.key];
-            const isSelected = selectedDists.includes(d.key);
-            return (
-              <button key={d.key}
-                onClick={() => hasPb && toggleDist(d.key)}
-                className="px-3 py-2 rounded-xl border text-[10px] font-black tracking-wider transition-all"
-                style={{
-                  borderColor: isSelected && hasPb ? "var(--app-accent)" : "var(--app-border)",
-                  background: isSelected && hasPb ? "rgba(192,255,0,0.1)" : "transparent",
-                  color: isSelected && hasPb ? "var(--app-accent)" : hasPb ? "var(--app-text-muted)" : "var(--app-text-faint)",
-                  cursor: hasPb ? "pointer" : "not-allowed",
-                  opacity: hasPb ? 1 : 0.4,
-                }}>
-                {d.key}
-                {hasPb && (
-                  <span className="ml-1.5 text-[8px]" style={{ color: isSelected ? "var(--app-accent)" : "var(--app-text-dim)" }}>
-                    {formatTime(userTimes[d.key]!)}
-                  </span>
-                )}
-                {!hasPb && (
-                  <span className="ml-1.5 text-[7px]" style={{ color: "var(--app-text-faint)" }}>
-                    no PB
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        {Object.keys(userTimes).length === 0 && !loading && (
-          <div className="text-[9px]" style={{ color: "#FB7185" }}>
-            Nessun Personal Best trovato nel profilo. Vai su "PROFILO" per inserire i tuoi PB.
-          </div>
-        )}
-      </div>
-
-      {/* Distance cards grid */}
-      {activeDists.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {activeDists.map(d => (
-            <DistanceRankCard
-              key={d.key}
-              dist={d.key}
-              userSec={userTimes[d.key]!}
-              sex={sex}
-              age={age}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Multi-distance radar */}
-      {activeDists.length >= 3 && (
-        <MultiDistRadar
-          userTimes={Object.fromEntries(activeDists.map(d => [d.key, userTimes[d.key]!]))}
-          sex={sex}
-          age={age}
-        />
-      )}
-
-      {/* Comparative tier table */}
-      {activeDists.length >= 2 && (
-        <ComparativeTierTableFull
-          userTimes={Object.fromEntries(activeDists.map(d => [d.key, userTimes[d.key]!]))}
-          sex={sex}
-          age={age}
-        />
-      )}
-
-      {/* Profile assessment */}
-      {activeDists.length >= 2 && (
-        <ProfileAssessment
-          userTimes={Object.fromEntries(activeDists.map(d => [d.key, userTimes[d.key]!]))}
-          sex={sex}
-          fidalCat={fidalCat}
-        />
-      )}
-
-      {/* Benchmark sources info */}
-      <div className="text-[8px] leading-relaxed space-y-1" style={{ color: "var(--app-text-faint)" }}>
-        <div className="font-black tracking-wider">FONTI BENCHMARK</div>
-        <div>
-          <strong style={{ color: "rgba(255,255,255,0.25)" }}>Campo Competitivo</strong>: FIDAL classifiche 2022-2024,
-          ENDU gare competitive (tesserati), MySDAM ranking italiani. ~450K runner/anno.{" "}
-          <strong style={{ color: "rgba(255,255,255,0.25)" }}>Tutti i Runner</strong>: ENDU + MySDAM + Parkrun Italy
-          (tutte le categorie inclusi possessori Run Card), Stramilano, Maratona di Roma, Corriferrara, maratone
-          regionali con campo allargato. RunRepeat global (35M+ risultati, calibrati su distribuzione italiana).
-          Atleti internazionali con gare in Italia da Athlinks/MarathonRankings. ~1.5M runner/anno stimati.
-          Age-grading WMA 2015. Formula predittiva: Riegel T₂ = T₁ × (D₂/D₁)^1.06.
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MAIN RANKING VIEW (con tab switcher)
-// ─────────────────────────────────────────────────────────────────────────────
-
-export function RankingView() {
-  const [activeTab, setActiveTab] = useState<"benchmark" | "mia-classifica">("benchmark");
-
-  // Tab 1 state
-  const [sex, setSex] = useState<Sex>("M");
-  const [age, setAge] = useState<number>(40);
-  const [dist, setDist] = useState<DistKey>("10K");
-  const [timeInput, setTimeInput] = useState<string>("");
-  const [loadingProfile, setLoadingProfile] = useState(false);
-
-  useEffect(() => {
-    setLoadingProfile(true);
-    getProfile()
-      .then((profile: Profile) => {
-        if (profile.age) setAge(profile.age);
-        if (profile.sex) {
-          const s = profile.sex.toUpperCase();
-          if (s === "M" || s === "MALE" || s === "UOMO") setSex("M");
-          else if (s === "F" || s === "FEMALE" || s === "DONNA") setSex("F");
-        }
-        const time = findPb(profile.pbs ?? {}, PB_KEYS[dist]);
-        if (time) setTimeInput(time);
-      })
-      .catch(() => {})
-      .finally(() => setLoadingProfile(false));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleDistChange = (newDist: DistKey) => {
-    setDist(newDist);
-    setTimeInput("");
-    getProfile()
-      .then((profile: Profile) => {
-        const time = findPb(profile.pbs ?? {}, PB_KEYS[newDist]);
-        if (time) setTimeInput(time);
-      })
-      .catch(() => {});
-  };
-
-  const userSec = useMemo(() => parseTime(timeInput), [timeInput]);
-  const isValid = userSec !== null && userSec > 0;
-
-  const percentile = useMemo(() =>
-    isValid ? computePercentile(userSec!, dist, sex) : null,
-    [userSec, dist, sex, isValid]
-  );
-  const tier = useMemo(() =>
-    percentile !== null ? getTierFromPct(percentile) : null,
-    [percentile]
-  );
-  const nextTier = useMemo(() =>
-    percentile !== null ? getNextTier(percentile) : null,
-    [percentile]
-  );
-  const gapSec = useMemo(() => {
-    if (!isValid || !nextTier) return 0;
-    return computeTimeGapForNextTier(userSec!, dist, sex, nextTier.tier.minPct);
-  }, [userSec, dist, sex, nextTier, isValid]);
-
-  const wavaScore = useMemo(() =>
-    isValid ? computeWAVA(userSec!, dist, sex, age) : null,
-    [userSec, dist, sex, age, isValid]
-  );
-
-  const fidalCat = getFidalCategory(sex, age);
-  const timeInputPlaceholder = dist === "M" ? "HH:MM:SS" : dist === "HM" ? "H:MM:SS" : "MM:SS";
-
-  const TABS = [
-    { id: "benchmark" as const,       label: "BENCHMARK MANUALE", icon: Target },
-    { id: "mia-classifica" as const,  label: "LA MIA CLASSIFICA", icon: Award  },
-  ];
-
-  return (
-    <main className="flex-1 overflow-y-auto" style={{ background: "var(--app-bg)" }}>
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-4 md:py-8 space-y-4 md:space-y-6">
-
-        {/* ── HEADER */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-              style={{ background: "rgba(192,255,0,0.1)", border: "1px solid rgba(192,255,0,0.2)" }}>
-              <Target className="w-4 h-4" style={{ color: "var(--app-accent)" }} />
-            </div>
-            <div>
-              <h1 className="text-xl font-black tracking-tight" style={{ color: "var(--app-text)" }}>
-                RANKING & BENCHMARK
-              </h1>
-              <p className="text-[9px] tracking-widest" style={{ color: "var(--app-text-dim)" }}>
-                POSIZIONAMENTO MASTER SM/SF · FIDAL · ENDU · MYSDAM · RUN CARD · WAVA
+        {Object.keys(userTimes).length === 0 ? (
+          <div className={CARD + " flex flex-col items-center justify-center py-20 gap-4"}>
+            <Trophy className="w-10 h-10 text-gray-700" />
+            <div className="text-center">
+              <p className="text-sm font-black uppercase tracking-widest text-gray-400">
+                Nessun Personal Best trovato
+              </p>
+              <p className="text-[11px] text-gray-600 mt-2">
+                Sincronizza Strava o inserisci i tuoi PB nella sezione Profilo per sbloccare la classifica.
               </p>
             </div>
           </div>
-          <div className="rounded-2xl border px-5 py-3"
-            style={{ borderColor: "var(--app-border)", background: "rgba(255,255,255,0.01)" }}>
-            <p className="text-[10px] leading-loose italic" style={{ color: "var(--app-text-dim)" }}>
-              "La maggior parte delle persone vede solo un numero sul GPS. Noi vediamo la battaglia contro
-              il decadimento, il millimetro guadagnato sulla soglia. Non sei qui per partecipare. Sei qui per{" "}
-              <span style={{ color: "var(--app-accent)" }}>scalare il ranking</span>."
-            </p>
-          </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-5 md:gap-6 items-start">
 
-        {/* ── TAB SWITCHER */}
-        <div className="flex items-center gap-1 p-1 rounded-2xl border w-fit"
-          style={{ borderColor: "var(--app-border)", background: "rgba(255,255,255,0.02)" }}>
-          {TABS.map(tab => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.id;
-            return (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[9px] font-black tracking-widest transition-all"
-                style={{
-                  background: active ? "var(--app-accent)" : "transparent",
-                  color: active ? "#000" : "var(--app-text-dim)",
-                }}>
-                <Icon className="w-3 h-3" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+            {/* ── COLONNA SINISTRA: RANK CARD ── */}
+            <div className="space-y-5">
+              <div className="rounded-3xl p-[1.5px] bg-gradient-to-b from-[#C0FF00]/70 via-[#22D3EE]/25 to-transparent shadow-[0_8px_40px_rgba(192,255,0,0.12)]">
+                <div className="rounded-[22px] bg-gradient-to-b from-[#10130A] via-[#0B0D08] to-[#080808] p-6 relative overflow-hidden">
+                  <div aria-hidden className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-[#C0FF00]/[0.07] blur-3xl" />
 
-        {/* ── TAB 1: BENCHMARK MANUALE */}
-        {activeTab === "benchmark" && (
-          <div className="space-y-5">
-            {/* Input panel */}
-            <div className="rounded-2xl border p-5 space-y-4"
-              style={{ borderColor: "var(--app-border)", background: "rgba(255,255,255,0.01)" }}>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black tracking-widest" style={{ color: "var(--app-text-muted)" }}>
-                  PARAMETRI ATLETA
-                </span>
-                {loadingProfile && (
-                  <div className="flex items-center gap-1.5">
-                    <RefreshCw className="w-3 h-3 animate-spin" style={{ color: "var(--app-text-dim)" }} />
-                    <span className="text-[8px]" style={{ color: "var(--app-text-dim)" }}>Carico profilo...</span>
+                  {/* Percentile hero */}
+                  <div className="relative flex items-start justify-between">
+                    <div>
+                      <span
+                        className="text-7xl font-black italic leading-none tabular-nums"
+                        style={{ fontFamily: MONO, color: heroTier?.color ?? "#C0FF00" }}
+                      >
+                        {heroStats ? Math.round(heroStats.pct) : "—"}
+                      </span>
+                      <div className="mt-1 text-[10px] font-black tracking-[0.3em] uppercase text-gray-500">
+                        Percentile · {heroStats?.dist ?? ""}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Trophy className="w-7 h-7 ml-auto" style={{ color: `${heroTier?.color ?? "#C0FF00"}B0` }} />
+                      <div className="mt-2 text-[9px] font-black tracking-[0.2em] uppercase" style={{ color: heroTier?.color }}>
+                        {heroTier?.sublabel}
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-              <div className="flex flex-wrap items-end gap-4">
-                {/* SEX */}
-                <div className="space-y-1.5">
-                  <label className="text-[8px] font-black tracking-widest" style={{ color: "var(--app-text-dim)" }}>
-                    SESSO
-                  </label>
-                  <div className="flex rounded-xl overflow-hidden border" style={{ borderColor: "var(--app-border)" }}>
-                    {(["M", "F"] as Sex[]).map(s => (
-                      <button key={s} onClick={() => setSex(s)}
-                        className="px-5 py-2 text-[10px] font-black tracking-wider transition-all"
-                        style={{
-                          background: sex === s ? "var(--app-accent)" : "transparent",
-                          color: sex === s ? "#000" : "var(--app-text-dim)",
-                        }}>
-                        {s === "M" ? "UOMO" : "DONNA"}
-                      </button>
+
+                  <div className="relative mt-4 pb-4 border-b border-white/[0.08]">
+                    <div className="text-xl font-black uppercase tracking-tight text-white">
+                      {heroTier?.label ?? "—"}
+                    </div>
+                    <div className="text-[10px] font-black tracking-[0.18em] uppercase text-gray-500 mt-1">
+                      {profile?.name ?? "Atleta"} · {fidalCat} · {age} anni
+                    </div>
+                  </div>
+
+                  {/* Stat rows per distanza */}
+                  <div className="relative mt-5 space-y-3.5">
+                    {activeDists.map((d, i) => {
+                      const sec = userTimes[d.key]!;
+                      const pct = computePercentile(sec, d.key, sex);
+                      const tier = getTierFromPct(pct);
+                      return (
+                        <RankStatRow
+                          key={d.key}
+                          dist={d.key}
+                          pct={pct}
+                          time={formatTime(sec)}
+                          color={tier.color}
+                          delay={200 + i * 130}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  {/* Footer card */}
+                  <div className="relative mt-6 pt-4 border-t border-white/[0.08] grid grid-cols-3 gap-2 text-center">
+                    {[
+                      { label: "WAVA max", value: bestWava > 0 ? `${bestWava.toFixed(0)}%` : "—", color: bestWava >= 70 ? "#C0FF00" : "#22D3EE" },
+                      { label: "PB attivi", value: String(activeDists.length), color: "#fff" },
+                      { label: "Categoria", value: fidalCat, color: "#A78BFA" },
+                    ].map(({ label, value, color }) => (
+                      <div key={label}>
+                        <div className="text-base font-black tabular-nums" style={{ fontFamily: MONO, color }}>{value}</div>
+                        <div className="text-[8px] font-black tracking-[0.2em] uppercase text-gray-600 mt-0.5">{label}</div>
+                      </div>
                     ))}
                   </div>
                 </div>
-                {/* AGE */}
-                <div className="space-y-1.5">
-                  <label className="text-[8px] font-black tracking-widest" style={{ color: "var(--app-text-dim)" }}>
-                    ETÀ — <span style={{ color: "var(--app-accent)" }}>{age} anni</span>
-                    <span className="ml-2 px-1.5 py-0.5 rounded text-[7px]"
-                      style={{ background: "rgba(192,255,0,0.1)", color: "var(--app-accent)" }}>
-                      {fidalCat}
+              </div>
+
+              {/* Prossimo tier */}
+              {heroStats && heroNextTier && heroTier && (
+                <div className={CARD}>
+                  <CardHeader
+                    title="Prossimo Tier"
+                    subtitle={`Sulla tua distanza migliore · ${heroStats.dist}`}
+                    icon={TrendingUp}
+                  />
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-black tabular-nums" style={{ fontFamily: MONO, color: heroNextTier.tier.color }}>
+                      -{formatTime(Math.round(Math.max(computeTimeGapForNextTier(userTimes[heroStats.dist]!, heroStats.dist, sex, heroNextTier.tier.minPct), 0)))}
                     </span>
-                  </label>
-                  <input type="range" min={18} max={80} value={age}
-                    onChange={e => setAge(Number(e.target.value))}
-                    className="w-36 accent-[#C0FF00]" />
-                </div>
-                {/* DISTANCE */}
-                <div className="space-y-1.5">
-                  <label className="text-[8px] font-black tracking-widest" style={{ color: "var(--app-text-dim)" }}>
-                    DISTANZA
-                  </label>
-                  <div className="flex rounded-xl overflow-hidden border" style={{ borderColor: "var(--app-border)" }}>
-                    {DISTANCES.map(d => (
-                      <button key={d.key} onClick={() => handleDistChange(d.key)}
-                        className="px-3 py-2 text-[9px] font-black tracking-wider transition-all"
-                        style={{
-                          background: dist === d.key ? "var(--app-accent)" : "transparent",
-                          color: dist === d.key ? "#000" : "var(--app-text-dim)",
-                        }}>
-                        {d.key}
-                      </button>
-                    ))}
+                    <span className="text-[10px] font-black tracking-[0.16em] uppercase text-gray-500">
+                      da togliere
+                    </span>
                   </div>
-                </div>
-                {/* TIME */}
-                <div className="space-y-1.5">
-                  <label className="text-[8px] font-black tracking-widest" style={{ color: "var(--app-text-dim)" }}>
-                    TEMPO ({timeInputPlaceholder})
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input type="text" value={timeInput}
-                      onChange={e => setTimeInput(e.target.value)}
-                      placeholder={timeInputPlaceholder}
-                      className="border rounded-xl px-3 py-2 text-xs font-black w-28 focus:outline-none"
+                  <div className="mt-4 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-1000"
                       style={{
-                        background: "var(--app-input-bg)",
-                        borderColor: isValid ? "rgba(192,255,0,0.3)" : "var(--app-border)",
-                        color: "var(--app-text)",
+                        width: `${Math.min(100, (heroStats.pct / heroNextTier.tier.minPct) * 100)}%`,
+                        background: `linear-gradient(90deg, ${heroTier.color}, ${heroNextTier.tier.color})`,
+                        boxShadow: `0 0 10px ${heroTier.color}50`,
                       }} />
-                    {isValid && (
-                      <div className="w-2 h-2 rounded-full"
-                        style={{ background: "var(--app-accent)", boxShadow: "0 0 6px var(--app-accent)" }} />
-                    )}
+                  </div>
+                  <div className="mt-2 flex justify-between text-[9px] font-black tracking-[0.12em] uppercase">
+                    <span style={{ color: heroTier.color }}>{heroTier.label}</span>
+                    <span style={{ color: heroNextTier.tier.color }}>{heroNextTier.tier.label}</span>
                   </div>
                 </div>
-              </div>
-              {!isValid && timeInput.length > 0 && (
-                <div className="text-[9px] font-black" style={{ color: "#FB7185" }}>
-                  Formato non valido. Usa MM:SS (es. 38:45) o H:MM:SS (es. 1:28:30)
+              )}
+              {heroStats && !heroNextTier && (
+                <div className={CARD + " text-center"}>
+                  <Zap className="w-6 h-6 mx-auto text-[#FFD700]" />
+                  <div className="mt-2 text-sm font-black uppercase tracking-widest text-[#FFD700]">
+                    Livello massimo — sei al podio
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Results */}
-            {isValid && percentile !== null && tier !== null ? (
-              <div className="space-y-4">
-                {/* Bell curve */}
-                <div className="rounded-2xl border p-5"
-                  style={{ borderColor: "var(--app-border)", background: "rgba(255,255,255,0.01)" }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: tier.color, boxShadow: `0 0 6px ${tier.color}` }} />
-                      <span className="text-[10px] font-black tracking-widest" style={{ color: "var(--app-text)" }}>
-                        DISTRIBUZIONE — {DISTANCES.find(d => d.key === dist)?.label.toUpperCase()} — {fidalCat}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {TIERS.slice().reverse().map(t => (
-                        <div key={t.id} className="flex items-center gap-1">
-                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: t.color }} />
-                          <span className="text-[7px] font-black hidden lg:block"
-                            style={{ color: t.id === tier.id ? t.color : "var(--app-text-dim)" }}>
-                            {t.id === "warrior" ? "GUERRIERO" : t.label.split(" ")[0]}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <BellCurve userPercentile={percentile} tierColor={tier.color} />
-                  <div className="mt-3 flex items-center justify-center gap-2">
-                    <span className="text-[9px]" style={{ color: "var(--app-text-dim)" }}>Sei più veloce del</span>
-                    <span className="text-sm font-black" style={{ color: tier.color }}>{Math.round(percentile)}%</span>
-                    <span className="text-[9px]" style={{ color: "var(--app-text-dim)" }}>
-                      dei runner {fidalCat} italiani su questa distanza
-                    </span>
-                  </div>
-                </div>
+            {/* ── COLONNA DESTRA ── */}
+            <div className="space-y-5 md:space-y-6 min-w-0">
 
-                {/* Two columns */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div className="space-y-4">
-                    <HeroPercentile pct={percentile} tier={tier} nextTier={nextTier}
-                      gapSec={gapSec} fidalCat={fidalCat} />
-                    <TierTable dist={dist} sex={sex} age={age} userSec={userSec!} userPct={percentile} />
-                  </div>
-                  <div className="space-y-4">
-                    {wavaScore !== null && <WAVACard score={wavaScore} age={age} sex={sex} />}
-                    <DistancePredictor userSec={userSec!} fromDist={dist}
-                      sex={sex} age={age} userPct={percentile} />
-                  </div>
-                </div>
-
-                <RivalFinderTeaser fidalCat={fidalCat} userPct={percentile} dist={dist} />
-              </div>
-            ) : (
-              <div className="rounded-2xl border flex flex-col items-center justify-center py-20 space-y-4"
-                style={{ borderColor: "var(--app-border)", borderStyle: "dashed" }}>
-                <Target className="w-10 h-10 opacity-20" style={{ color: "var(--app-accent)" }} />
-                <div className="text-center space-y-1">
-                  <p className="text-sm font-black" style={{ color: "var(--app-text-muted)" }}>
-                    INSERISCI IL TUO TEMPO
-                  </p>
-                  <p className="text-[10px]" style={{ color: "var(--app-text-dim)" }}>
-                    Seleziona distanza e inserisci il tuo PB per vedere il ranking
-                  </p>
+              {/* Selettore distanze */}
+              <div className={CARD}>
+                <CardHeader
+                  title="Le Tue Distanze"
+                  subtitle="PB rilevati da Strava + profilo · attiva/disattiva"
+                  icon={Target}
+                />
+                <div className="flex flex-wrap gap-2">
+                  {DISTANCES.map(d => {
+                    const hasPb = !!userTimes[d.key];
+                    const isSelected = selectedDists.includes(d.key);
+                    const active = isSelected && hasPb;
+                    return (
+                      <button key={d.key}
+                        onClick={() => hasPb && toggleDist(d.key)}
+                        disabled={!hasPb}
+                        className="px-4 py-2.5 rounded-2xl border text-[10px] font-black tracking-wider transition-all disabled:cursor-not-allowed"
+                        style={{
+                          borderColor: active ? "rgba(192,255,0,0.4)" : "rgba(255,255,255,0.08)",
+                          background: active ? "rgba(192,255,0,0.1)" : "rgba(255,255,255,0.02)",
+                          color: active ? "#C0FF00" : hasPb ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.25)",
+                          opacity: hasPb ? 1 : 0.45,
+                        }}>
+                        {d.key}
+                        <span className="ml-2 text-[9px] font-bold tabular-nums" style={{ fontFamily: MONO, color: active ? "#C0FF00" : "rgba(255,255,255,0.35)" }}>
+                          {hasPb ? formatTime(userTimes[d.key]!) : "no PB"}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-            )}
 
-            <div className="text-[8px] leading-relaxed space-y-1" style={{ color: "var(--app-text-faint)" }}>
-              <div className="font-black tracking-wider">METODOLOGIA</div>
-              <div>
-                Benchmark basati su FIDAL classifiche 2022-2024, ENDU/TDS/MySDAM statistiche.
-                Distribuzione log-normale σ=0.22 calibrata su gare competitive italiane.
-                Age-grading WMA 2015. Riegel T₂ = T₁ × (D₂/D₁)^1.06.
-              </div>
+              {/* Card distanza */}
+              {activeDists.length > 0 && (
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                  {activeDists.map(d => (
+                    <DistanceRankCard
+                      key={d.key}
+                      dist={d.key}
+                      userSec={userTimes[d.key]!}
+                      sex={sex}
+                      age={age}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Radar */}
+              {activeDists.length >= 3 && (
+                <MultiDistRadar userTimes={activeTimes} sex={sex} />
+              )}
+
+              {/* Tabella comparativa */}
+              {activeDists.length >= 2 && (
+                <ComparativeTierTable userTimes={activeTimes} sex={sex} age={age} />
+              )}
+
+              {/* Scouting Riegel */}
+              {activeDists.length >= 2 && (
+                <RiegelScouting userTimes={activeTimes} sex={sex} fidalCat={fidalCat} />
+              )}
             </div>
           </div>
         )}
 
-        {/* ── TAB 2: LA MIA CLASSIFICA */}
-        {activeTab === "mia-classifica" && <MyRankingTab />}
+        {/* ── FOOTER FONTI ── */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-1 pb-4">
+          <span className="text-[9px] font-black tracking-widest uppercase text-[#444] max-w-3xl leading-4">
+            Fonti: FIDAL 2022-2024 · ENDU · MySDAM · Parkrun Italy · Run Card · age-grading WMA 2015 · Riegel T₂ = T₁ × (D₂/D₁)^1.06
+          </span>
+          <span className="text-[9px] font-black tracking-widest uppercase text-[#444] shrink-0">
+            Metic Lab · Ranking
+          </span>
+        </div>
 
       </div>
     </main>
