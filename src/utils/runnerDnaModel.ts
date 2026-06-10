@@ -273,6 +273,9 @@ export function getRunnerDnaRank(score: number): RunnerDnaRank {
   return rankRules.find((rank) => score >= rank.min) ?? rankRules[rankRules.length - 1];
 }
 
+/** Soglie rank ordinate dal livello più alto: usate dalla scala livelli di RunnerDnaV2View. */
+export const RANK_RULES: readonly RunnerDnaRank[] = rankRules;
+
 export function paceToSeconds(value: unknown): number | null {
   if (typeof value !== "string") return null;
   const clean = value.replace("/km", "").trim();

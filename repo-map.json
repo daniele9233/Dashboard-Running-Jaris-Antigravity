@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-10T11:22:59.122Z",
+  "generated_at": "2026-06-10T12:01:41.606Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,9 +14,9 @@
     ]
   },
   "counts": {
-    "files": 146,
+    "files": 149,
     "backend_routes": 61,
-    "frontend_routes": 13,
+    "frontend_routes": 14,
     "api_clients": 60
   },
   "files": [
@@ -1598,6 +1598,7 @@
         "/ranking",
         "/recovery",
         "/runner-dna",
+        "/runner-dna-v1",
         "/runner-dna-v2",
         "/statistics",
         "/training"
@@ -1616,9 +1617,9 @@
         "react-i18next",
         "react-router-dom"
       ],
-      "hash": "f20e322ae7575783e78288dd0c6587d07c66ad18aa10d43aec8666549acef135",
-      "last_modified": "2026-06-08T06:08:12.474Z",
-      "size_bytes": 10002
+      "hash": "7ca6bbcf9c1bc98fd2016e5edd0055075ac4f8bd5cfd37b2b66e51e8b4bbc734",
+      "last_modified": "2026-06-10T12:00:33.946Z",
+      "size_bytes": 10412
     },
     {
       "path": "src/components/ActivitiesView.tsx",
@@ -2437,6 +2438,33 @@
       "size_bytes": 39380
     },
     {
+      "path": "src/components/runner-dna/dnaShared.ts",
+      "kind": "frontend-runner-dna-component",
+      "purpose": "React component dnaShared.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "garmin",
+        "runner-dna"
+      ],
+      "exports": [
+        "BIOMECH_SHORT_LABELS",
+        "DISTANCE_LABELS",
+        "DISTANCE_ORDER",
+        "formatDelta",
+        "formatItalianDecimal",
+        "humanizeCoachText",
+        "MONO",
+        "TREND_COLORS"
+      ],
+      "routes": [],
+      "imports": [],
+      "hash": "b33dd7c48a51c678b808dc900d3c8691bb34cb39b01ed3ee8b7e0ff15bc02e5a",
+      "last_modified": "2026-06-10T11:57:02.659Z",
+      "size_bytes": 1921
+    },
+    {
       "path": "src/components/runner-dna/RunnerDnaLoading.tsx",
       "kind": "frontend-runner-dna-component",
       "purpose": "React component RunnerDnaLoading.",
@@ -2459,6 +2487,60 @@
       "hash": "486db194a01e9b2d9cffcaf7e91a834e8c49e7b7fc9305d34914c411cedf1149",
       "last_modified": "2026-04-22T19:30:15.157Z",
       "size_bytes": 3494
+    },
+    {
+      "path": "src/components/RunnerDnaV1View.tsx",
+      "kind": "frontend-view",
+      "purpose": "Page/view component for RunnerDnaV1.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "layout",
+        "runner-dna",
+        "statistics"
+      ],
+      "exports": [
+        "RunnerDnaV1View"
+      ],
+      "routes": [],
+      "imports": [
+        "../hooks/useRunnerDnaUiModel",
+        "./runner-dna/dnaShared",
+        "./runner-dna/RunnerDnaLoading",
+        "lucide-react",
+        "react"
+      ],
+      "hash": "b869c50686e3c93e151d36bb049ab56e9cf362d97af15dd08d9bf46c12040301",
+      "last_modified": "2026-06-10T12:01:41.607Z",
+      "size_bytes": 21188
+    },
+    {
+      "path": "src/components/RunnerDnaV2View.tsx",
+      "kind": "frontend-view",
+      "purpose": "Page/view component for RunnerDnaV2.",
+      "touch_when": [
+        "ai",
+        "garmin",
+        "layout",
+        "runner-dna",
+        "statistics",
+        "training"
+      ],
+      "exports": [
+        "RunnerDnaV2View"
+      ],
+      "routes": [],
+      "imports": [
+        "../hooks/useRunnerDnaUiModel",
+        "../utils/runnerDnaModel",
+        "./runner-dna/dnaShared",
+        "./runner-dna/RunnerDnaLoading",
+        "lucide-react",
+        "react"
+      ],
+      "hash": "84906105e15fd028aa47681d1b61edc6e0659864bd2624c78c5e671032f28a36",
+      "last_modified": "2026-06-10T12:00:07.603Z",
+      "size_bytes": 22572
     },
     {
       "path": "src/components/RunnerDnaView.tsx",
@@ -3812,6 +3894,7 @@
         "formatRaceTime",
         "getRunnerDnaRank",
         "paceToSeconds",
+        "RANK_RULES",
         "RunnerDnaBiomechanicMetric",
         "RunnerDnaDistanceTalent",
         "RunnerDnaEvolutionPoint",
@@ -3824,9 +3907,9 @@
       "imports": [
         "../types/api"
       ],
-      "hash": "7ee1a7a5cab759c7956578740eb193a32755f4eeb4e242d7ad0aca988a08d5e9",
-      "last_modified": "2026-04-22T20:07:53.480Z",
-      "size_bytes": 27699
+      "hash": "04eb01c7a4c8939f48122a49f6f0dfc32d6a64d2cd3e0aa12d20e9f1afeb75b8",
+      "last_modified": "2026-06-10T11:57:16.217Z",
+      "size_bytes": 27860
     },
     {
       "path": "src/utils/telemetry.ts",
@@ -4323,79 +4406,85 @@
       "path": "*",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 192
+      "line": 197
     },
     {
       "path": "/",
       "element": "DashboardView",
       "file": "src/App.tsx",
-      "line": 180
+      "line": 184
     },
     {
       "path": "/activities",
       "element": "ActivitiesView",
       "file": "src/App.tsx",
-      "line": 181
+      "line": 185
     },
     {
       "path": "/activities/:runId",
       "element": "RoutesViewWrapper",
       "file": "src/App.tsx",
-      "line": 182
+      "line": 186
     },
     {
       "path": "/biometrics",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 190
+      "line": 195
     },
     {
       "path": "/insights",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 191
+      "line": 196
     },
     {
       "path": "/profile",
       "element": "ProfileView",
       "file": "src/App.tsx",
-      "line": 188
+      "line": 193
     },
     {
       "path": "/ranking",
       "element": "RankingView",
       "file": "src/App.tsx",
-      "line": 185
+      "line": 191
     },
     {
       "path": "/recovery",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 189
+      "line": 194
     },
     {
       "path": "/runner-dna",
       "element": "RunnerDnaView",
       "file": "src/App.tsx",
-      "line": 184
+      "line": 188
+    },
+    {
+      "path": "/runner-dna-v1",
+      "element": "RunnerDnaV1View",
+      "file": "src/App.tsx",
+      "line": 189
     },
     {
       "path": "/runner-dna-v2",
-      "element": "Navigate",
+      "element": "RunnerDnaV2View",
       "file": "src/App.tsx",
-      "line": 186
+      "line": 190
     },
     {
       "path": "/statistics",
       "element": "StatisticsView",
       "file": "src/App.tsx",
-      "line": 187
+      "line": 192
     },
     {
       "path": "/training",
       "element": "TrainingView",
       "file": "src/App.tsx",
-      "line": 183
+      "line": 187
     }
   ],
   "api_clients": [

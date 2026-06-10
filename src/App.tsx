@@ -21,6 +21,8 @@ const StatisticsView = lazy(() => import("./components/statistics/StatisticsView
 const RoutesView     = lazy(() => import("./components/RoutesView").then((m) => ({ default: m.RoutesView })));
 const ActivitiesView = lazy(() => import("./components/ActivitiesView").then((m) => ({ default: m.ActivitiesView })));
 const RunnerDnaView  = lazy(() => import("./components/RunnerDnaView").then((m) => ({ default: m.RunnerDnaView })));
+const RunnerDnaV1View = lazy(() => import("./components/RunnerDnaV1View").then((m) => ({ default: m.RunnerDnaV1View })));
+const RunnerDnaV2View = lazy(() => import("./components/RunnerDnaV2View").then((m) => ({ default: m.RunnerDnaV2View })));
 const RankingView    = lazy(() => import("./components/RankingView").then((m) => ({ default: m.RankingView })));
 import { useParams } from "react-router-dom";
 import { exchangeStravaCode, syncStrava, getProfile } from "./api";
@@ -74,6 +76,8 @@ function AppContent() {
     { path: "/activities",  label: t("nav.activities") },
     { path: "/statistics",  label: t("nav.statistics") },
     { path: "/runner-dna",  label: t("nav.runnerDna")  },
+    { path: "/runner-dna-v1", label: "DNA V1" },
+    { path: "/runner-dna-v2", label: "DNA V2" },
     { path: "/ranking",     label: t("nav.ranking")    },
     { path: "/profile",     label: t("nav.profile")    },
   ];
@@ -182,8 +186,9 @@ function AppContent() {
                 <Route path="/activities/:runId" element={<RoutesViewWrapper />} />
                 <Route path="/training"         element={<TrainingView />} />
                 <Route path="/runner-dna"       element={<RunnerDnaView />} />
+                <Route path="/runner-dna-v1"    element={<RunnerDnaV1View />} />
+                <Route path="/runner-dna-v2"    element={<RunnerDnaV2View />} />
                 <Route path="/ranking"          element={<RankingView />} />
-                <Route path="/runner-dna-v2"    element={<Navigate to="/runner-dna" replace />} />
                 <Route path="/statistics"       element={<StatisticsView />} />
                 <Route path="/profile"          element={<ProfileView />} />
                 <Route path="/recovery"         element={<ComingSoonView label="Recovery" />} />
