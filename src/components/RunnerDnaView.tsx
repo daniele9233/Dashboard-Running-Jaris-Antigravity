@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Dna, RefreshCcw, BrainCircuit, Medal, TrendingUp, Footprints, ChevronRight } from "lucide-react";
 import { useRunnerDnaUiModel } from "../hooks/useRunnerDnaUiModel";
-import { RunnerDnaLoading } from "./runner-dna/RunnerDnaLoading";
 import { RANK_RULES } from "../utils/runnerDnaModel";
 import {
   MONO, formatItalianDecimal, humanizeCoachText, formatDelta,
@@ -25,6 +24,79 @@ const STAT_ABBR: Record<string, string> = {
 
 const CARD =
   "rounded-3xl p-6 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50";
+
+// ─── DNA HELIX SVG (loading storico) ─────────────────────────────────────────
+function DnaHelixDecor({ className = "" }: { className?: string }) {
+  const h = 420, w = 72, amp = 24, loops = 4, steps = 140;
+  const pts1: string[] = [], pts2: string[] = [];
+  const rungs: [number, number, number][] = [];
+
+  for (let i = 0; i <= steps; i++) {
+    const y = (i / steps) * h;
+    const angle = (i / steps) * Math.PI * 2 * loops;
+    const x1 = w / 2 + amp * Math.sin(angle);
+    const x2 = w / 2 + amp * Math.sin(angle + Math.PI);
+    pts1.push(`${i === 0 ? "M" : "L"}${x1.toFixed(1)},${y.toFixed(1)}`);
+    pts2.push(`${i === 0 ? "M" : "L"}${x2.toFixed(1)},${y.toFixed(1)}`);
+    if (i % 14 === 0) rungs.push([x1, x2, y]);
+  }
+
+  return (
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      className={`w-16 shrink-0 ${className}`}
+      style={{ filter: "drop-shadow(0 0 10px rgba(192,255,0,0.25))" }}
+    >
+      <defs>
+        <linearGradient id="hg1" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#C0FF00" stopOpacity="0.9" />
+          <stop offset="50%" stopColor="#00FFAA" stopOpacity="0.7" />
+          <stop offset="100%" stopColor="#C0FF00" stopOpacity="0.2" />
+        </linearGradient>
+        <linearGradient id="hg2" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#C0FF00" stopOpacity="0.4" />
+          <stop offset="50%" stopColor="#00FFAA" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#C0FF00" stopOpacity="0.1" />
+        </linearGradient>
+      </defs>
+      <path d={pts1.join(" ")} stroke="url(#hg1)" strokeWidth="2.5" fill="none" />
+      <path d={pts2.join(" ")} stroke="url(#hg2)" strokeWidth="2.5" fill="none" />
+      {rungs.map(([x1, x2, y], i) => (
+        <g key={i}>
+          <line x1={x1} y1={y} x2={x2} y2={y} stroke="#C0FF00" strokeWidth="1.5" opacity="0.3" />
+          <circle cx={x1} cy={y} r="3" fill="#C0FF00" opacity="0.85" />
+          <circle cx={x2} cy={y} r="2.5" fill="#C0FF00" opacity="0.4" />
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+// ─── LOADING (animazione storica: elica + dots) ──────────────────────────────
+function LoadingView() {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center min-h-0 bg-[#030303] gap-8 p-8">
+      <DnaHelixDecor className="w-20 animate-pulse" />
+      <div className="text-center space-y-2">
+        <h2 className="text-[#C0FF00] font-black text-3xl tracking-[0.2em] animate-pulse uppercase">
+          Sequenziamento DNA in corso...
+        </h2>
+        <p className="text-gray-600 text-sm tracking-widest uppercase">
+          Il coach olimpico sta analizzando il tuo profilo fisiologico
+        </p>
+      </div>
+      <div className="flex gap-2">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="w-2 h-2 rounded-full bg-[#C0FF00]"
+            style={{ animation: `bounce 1.2s ease-in-out ${i * 0.15}s infinite` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // ─── DONUT GAUGE ─────────────────────────────────────────────────────────────
 function DonutGauge({ pct, size = 140 }: { pct: number; size?: number }) {
@@ -90,7 +162,7 @@ function CardStatRow({ abbr, label, score, color, delay }: {
 export function RunnerDnaView() {
   const { model, loading, refreshing, error, regenerate } = useRunnerDnaUiModel();
 
-  if (loading || refreshing) return <RunnerDnaLoading label="Compilazione carta atleta" />;
+  if (loading || refreshing) return <LoadingView />;
 
   if (error || !model) {
     return (

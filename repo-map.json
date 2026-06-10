@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-10T12:54:00.924Z",
+  "generated_at": "2026-06-10T13:12:28.768Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2496,6 +2496,7 @@
         "ai",
         "garmin",
         "layout",
+        "profile",
         "runner-dna",
         "statistics",
         "training"
@@ -2508,13 +2509,12 @@
         "../hooks/useRunnerDnaUiModel",
         "../utils/runnerDnaModel",
         "./runner-dna/dnaShared",
-        "./runner-dna/RunnerDnaLoading",
         "lucide-react",
         "react"
       ],
-      "hash": "9cd3cc1d09788e092912b91e2fbc0b20d7db5c471acdf66d7781c5b534a66841",
-      "last_modified": "2026-06-10T12:53:33.293Z",
-      "size_bytes": 22492
+      "hash": "567d09979f324b0fddf3de9f3ff56184a66866f228d59d290f94d2df3cd32690",
+      "last_modified": "2026-06-10T13:12:28.768Z",
+      "size_bytes": 25542
     },
     {
       "path": "src/components/SettingsControls.tsx",
