@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { Dna, RefreshCcw } from "lucide-react";
+import { Dna, RefreshCcw, BrainCircuit, Trophy, Zap, Target, Footprints } from "lucide-react";
 import { useRunnerDnaUiModel } from "../hooks/useRunnerDnaUiModel";
 import { RunnerDnaLoading } from "./runner-dna/RunnerDnaLoading";
 
-const ACCENT = "#C8FF2D";
+const MONO = "JetBrains Mono, monospace";
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 function formatItalianDecimal(value: number, digits = 1) {
@@ -32,110 +32,24 @@ function formatDelta(from: string, to: string): string {
   const diff = parseTimeSecs(from) - parseTimeSecs(to);
   if (diff <= 0) return "";
   const m = Math.floor(diff / 60), s = diff % 60;
-  return `−${m}:${s.toString().padStart(2, "0")}`;
+  return `-${m}:${s.toString().padStart(2, "0")}`;
 }
 
 const DISTANCE_LABELS: Record<string, string> = {
   "5K": "5K",
   "10K": "10K",
-  "HALF MARATHON": "Mezza",
-  "MARATHON": "Maratona",
+  "HALF MARATHON": "MEZZA",
+  "MARATHON": "MARATONA",
 };
 const DISTANCE_ORDER = ["5K", "10K", "HALF MARATHON", "MARATHON"];
 
 const TREND_COLORS: Record<string, string> = {
-  "In Forte Crescita": ACCENT,
-  "In Crescita": "#86EFAC",
-  "Stabile": "#FCD34D",
+  "In Forte Crescita": "#C0FF00",
+  "In Crescita": "#34D399",
+  "Stabile": "#F59E0B",
   "In Calo": "#F97316",
-  "In Forte Regressione": "#EF4444",
+  "In Forte Regressione": "#F43F5E",
 };
-
-// ─── MICRO LABEL ─────────────────────────────────────────────────────────────
-function MicroLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600">
-      {children}
-    </div>
-  );
-}
-
-// ─── SCORE RING ──────────────────────────────────────────────────────────────
-function ScoreRing({ score }: { score: number }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setMounted(true), 150);
-    return () => clearTimeout(t);
-  }, []);
-
-  const size = 210, sw = 3, r = (size - sw * 2) / 2;
-  const circ = 2 * Math.PI * r;
-  const offset = circ * (1 - Math.min(1, score / 100));
-
-  return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90 absolute inset-0">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={sw} />
-        <circle
-          cx={size / 2} cy={size / 2} r={r} fill="none"
-          stroke={ACCENT} strokeWidth={sw} strokeLinecap="round"
-          strokeDasharray={circ}
-          strokeDashoffset={mounted ? offset : circ}
-          style={{ transition: "stroke-dashoffset 1.6s cubic-bezier(0.22,1,0.36,1)" }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-7xl font-extralight tracking-tighter text-white leading-none tabular-nums">
-          {score}
-        </span>
-        <span className="mt-2 text-[10px] font-black uppercase tracking-[0.3em] text-slate-600">
-          DNA Score
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// ─── SCORE BAR ───────────────────────────────────────────────────────────────
-function ScoreBar({
-  label, score, delay, highlight,
-}: {
-  label: string; score: number; delay: number; highlight: boolean;
-}) {
-  const [filled, setFilled] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setFilled(true), delay);
-    return () => clearTimeout(t);
-  }, [delay]);
-
-  const bar = (
-    <div className="h-px relative bg-white/[0.08]">
-      <div
-        className="absolute inset-y-0 left-0 -top-px h-[3px] rounded-full transition-all duration-1000 ease-out"
-        style={{
-          width: filled ? `${score}%` : "0%",
-          backgroundColor: highlight ? ACCENT : "rgba(255,255,255,0.55)",
-        }}
-      />
-    </div>
-  );
-
-  return (
-    <div className="grid grid-cols-[1fr_44px] md:grid-cols-[minmax(110px,190px)_1fr_44px] items-center gap-x-5">
-      <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-        {label}
-      </div>
-      <div className="hidden md:block">{bar}</div>
-      <div
-        className="text-right text-lg font-light tabular-nums leading-none"
-        style={{ color: highlight ? ACCENT : "#fff" }}
-      >
-        {score}
-      </div>
-      <div className="col-span-2 mt-3 md:hidden">{bar}</div>
-    </div>
-  );
-}
 
 const BIOMECH_SHORT_LABELS: Record<string, string> = {
   cadence: "Cadenza",
@@ -145,13 +59,123 @@ const BIOMECH_SHORT_LABELS: Record<string, string> = {
   stride: "Falcata",
 };
 
-// ─── VERDICT DOT ─────────────────────────────────────────────────────────────
-const VERDICT_DOT: Record<string, string> = {
-  positivo: ACCENT,
-  neutro: "#7DD3FC",
-  "da migliorare": "#FBBF24",
-  "non disponibile": "#475569",
-};
+// ─── SHARED UI (stile Carico & Forma) ────────────────────────────────────────
+const CARD =
+  "rounded-3xl p-6 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50";
+
+function CardHeader({
+  title, subtitle, icon: Icon, right,
+}: {
+  title: string; subtitle: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 mb-6">
+      <div>
+        <h3 className="text-white text-base font-black tracking-tight flex items-center gap-2">
+          {Icon && <Icon className="w-4 h-4 text-[#C0FF00]" />}
+          {title}
+        </h3>
+        <p className="text-[#A0A0A0] text-[10px] tracking-widest uppercase mt-1">{subtitle}</p>
+      </div>
+      {right}
+    </div>
+  );
+}
+
+function PillBadge({ label, color = "#C0FF00" }: { label: string; color?: string }) {
+  return (
+    <div
+      className="flex items-center gap-2 px-3 py-1 rounded-full shrink-0"
+      style={{ background: `${color}10`, border: `1px solid ${color}20` }}
+    >
+      <div className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+      <span className="text-[10px] font-black tracking-widest uppercase" style={{ color }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function KpiTile({
+  label, value, suffix, color, delta,
+}: {
+  label: string; value: string; suffix?: string; color: string; delta?: string;
+}) {
+  return (
+    <div
+      className="rounded-2xl px-4 py-3 flex flex-col gap-0.5"
+      style={{ background: `${color}10`, border: `1px solid ${color}25` }}
+    >
+      <div className="flex items-baseline gap-2">
+        <span className="text-2xl font-black tabular-nums" style={{ color, fontFamily: MONO }}>
+          {value}
+        </span>
+        {suffix && <span className="text-[10px] font-black text-[#555]">{suffix}</span>}
+        {delta && (
+          <span className="text-[10px] font-black tabular-nums text-[#34D399]">{delta}</span>
+        )}
+      </div>
+      <span className="text-[10px] font-black tracking-widest uppercase" style={{ color: `${color}99` }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function StatCell({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[#555] text-[9px] font-black tracking-widest uppercase">{label}</span>
+      <span
+        className="text-lg font-black tabular-nums leading-none"
+        style={{ fontFamily: MONO, color: accent ?? "#fff" }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+// ─── SCORE BAR (stile Zone di Passo) ─────────────────────────────────────────
+function ScoreBarRow({
+  label, status, score, color, isMax, delay,
+}: {
+  label: string; status: string; score: number; color: string; isMax: boolean; delay: number;
+}) {
+  const [filled, setFilled] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setFilled(true), delay);
+    return () => clearTimeout(t);
+  }, [delay]);
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-28 sm:w-40 shrink-0">
+        <div className="text-[10px] font-black tracking-widest uppercase truncate" style={{ color }}>
+          {label}
+        </div>
+        <div className="text-[9px] text-[#555] truncate">{status}</div>
+      </div>
+      <div className="flex-1 h-2.5 bg-[#111] rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-700"
+          style={{
+            width: filled ? `${score}%` : "0%",
+            background: color,
+            boxShadow: isMax ? `0 0 8px ${color}55` : "none",
+          }}
+        />
+      </div>
+      <div className="w-14 text-right shrink-0">
+        <span className="text-white text-sm font-black tabular-nums" style={{ fontFamily: MONO }}>
+          {score}<span className="text-[#555] text-[10px]">/100</span>
+        </span>
+      </div>
+    </div>
+  );
+}
 
 // ─── MAIN ────────────────────────────────────────────────────────────────────
 export function RunnerDnaView() {
@@ -161,9 +185,9 @@ export function RunnerDnaView() {
 
   if (error || !model) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center min-h-0 bg-[#030303] p-8 gap-4">
-        <Dna className="w-10 h-10 text-slate-700" />
-        <p className="text-slate-500 uppercase tracking-[0.25em] text-xs font-black text-center">
+      <div className="flex-1 flex flex-col items-center justify-center min-h-0 bg-[#0A0A0A] p-8 gap-4">
+        <Dna className="w-12 h-12 text-gray-700" />
+        <p className="text-gray-500 uppercase tracking-widest text-sm font-black text-center">
           Dati insufficienti — effettua almeno 5 corse per sbloccare il tuo DNA
         </p>
       </div>
@@ -176,10 +200,14 @@ export function RunnerDnaView() {
   const vdotGain = vdot !== null && ceiling !== null
     ? Math.max(0, Math.round((ceiling - vdot) * 10) / 10)
     : null;
-  const trendColor = TREND_COLORS[model.performance.trendStatus] ?? "#FCD34D";
+  const trendColor = TREND_COLORS[model.performance.trendStatus] ?? "#F59E0B";
 
-  const scoreItems = [...model.scores.items];
+  const scoreItems = model.scores.items;
   const maxScore = Math.max(...scoreItems.map((s) => s.score), 0);
+  const strongest = scoreItems.find((s) => s.score === maxScore) ?? null;
+  const weakest = scoreItems.length
+    ? scoreItems.reduce((min, s) => (s.score < min.score ? s : min), scoreItems[0])
+    : null;
 
   const predictions = DISTANCE_ORDER
     .map((dist) => {
@@ -201,255 +229,281 @@ export function RunnerDnaView() {
   const priorities = model.diagnostics.priorities.slice(0, 3);
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#030303] min-h-0 custom-scrollbar">
-      <div className="max-w-[1080px] mx-auto px-6 md:px-10 py-12 md:py-16">
+    <div className="flex-1 overflow-y-auto bg-[#0A0A0A] text-white p-4 md:p-6 lg:p-10 min-h-0 custom-scrollbar">
+      <div className="max-w-[1800px] mx-auto space-y-5 md:space-y-6">
 
-        {/* ── HEADER ─────────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between mb-14">
-          <div className="flex items-center gap-3">
-            <Dna className="w-4 h-4" style={{ color: ACCENT }} />
-            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">
-              Runner DNA
-            </span>
+        {/* ── HEADER ── */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter text-white uppercase italic">
+              Runner <span className="text-[#C0FF00]">DNA</span>
+            </h1>
+            <p className="text-gray-600 text-[10px] font-black tracking-[0.3em] uppercase mt-2">
+              Profilo fisiologico calcolato dai tuoi dati reali
+            </p>
           </div>
           <button
             onClick={() => void regenerate()}
             disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-white hover:border-white/25 transition-colors disabled:opacity-40"
+            className="flex items-center gap-2 px-5 py-3 bg-[#0D0D0D] border border-[#1E1E1E] rounded-2xl text-[10px] font-black tracking-widest uppercase text-gray-400 hover:text-[#C0FF00] hover:border-[#C0FF00]/30 transition-all shadow-2xl disabled:opacity-40 self-start lg:self-auto"
           >
-            <RefreshCcw className="w-3 h-3" />
-            Rigenera
+            <RefreshCcw className="w-4 h-4" />
+            Rigenera DNA
           </button>
         </div>
 
-        {/* ── HERO ───────────────────────────────────────────────────────── */}
-        <section className="flex flex-col lg:flex-row items-center lg:items-start gap-12 lg:gap-16">
-          <ScoreRing score={model.scores.overall} />
+        {/* ── IDENTITÀ ATLETICA ── */}
+        <div className={CARD}>
+          <CardHeader
+            title="Identità Atletica"
+            subtitle={model.identity.archetype}
+            icon={Dna}
+            right={<PillBadge label={model.performance.trendStatus} color={trendColor} />}
+          />
 
-          <div className="flex-1 min-w-0 text-center lg:text-left">
-            <MicroLabel>Identità atletica</MicroLabel>
-            <h1 className="mt-4 text-5xl md:text-6xl font-extralight tracking-tighter text-white leading-none">
-              {model.identity.rank.name}
-            </h1>
-            <p className="mt-5 text-sm leading-7 text-slate-400 max-w-xl mx-auto lg:mx-0">
-              {model.identity.description}
-            </p>
-            <div className="mt-6 flex flex-wrap items-center justify-center lg:justify-start gap-x-3 gap-y-2 text-[11px] font-black uppercase tracking-[0.18em]">
-              <span style={{ color: trendColor }}>{model.performance.trendStatus}</span>
-              <span className="text-slate-700">·</span>
-              <span className="text-slate-400">Distanza ideale {model.performance.idealDistance}</span>
-              {model.base.weeklyFrequency !== null && model.base.weeklyFrequency > 0 && (
-                <>
-                  <span className="text-slate-700">·</span>
-                  <span className="text-slate-400">
-                    {formatItalianDecimal(model.base.weeklyFrequency, 1)} uscite/sett
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="shrink-0 w-full lg:w-44 grid grid-cols-3 lg:grid-cols-1 gap-px bg-white/[0.06] rounded-2xl overflow-hidden border border-white/[0.06]">
-            {[
-              { label: "VDOT", value: vdot !== null ? formatItalianDecimal(vdot, 1) : "—", accent: true },
-              { label: "Ceiling", value: ceiling !== null ? formatItalianDecimal(ceiling, 1) : "—", accent: false },
-              { label: "PB 5K", value: model.performance.pb5k, accent: false },
-            ].map(({ label, value, accent }) => (
-              <div key={label} className="bg-[#050505] px-5 py-4 text-center lg:text-left">
-                <div className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-600">{label}</div>
-                <div
-                  className="mt-1.5 text-2xl font-extralight tracking-tight tabular-nums"
-                  style={{ color: accent ? ACCENT : "#fff" }}
-                >
-                  {value}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ── DNA SCORES ─────────────────────────────────────────────────── */}
-        <section className="mt-20">
-          <MicroLabel>Profilo</MicroLabel>
-          <div className="mt-8 space-y-7">
-            {scoreItems.map((item, i) => (
-              <ScoreBar
-                key={item.key}
-                label={item.label}
-                score={item.score}
-                delay={200 + i * 120}
-                highlight={item.score === maxScore}
-              />
-            ))}
-          </div>
-        </section>
-
-        {/* ── POTENZIALE ─────────────────────────────────────────────────── */}
-        <section className="mt-20 grid gap-12 lg:grid-cols-2 lg:gap-16">
-          <div>
-            <MicroLabel>Potenziale</MicroLabel>
-            <div className="mt-8 flex items-baseline gap-3">
-              <span className="text-5xl font-extralight tracking-tighter text-white tabular-nums">
-                {potentialPct !== null ? Math.round(potentialPct) : "—"}
-                <span className="text-2xl text-slate-500">%</span>
-              </span>
-              <span className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
-                attivato
-              </span>
-            </div>
-
-            {vdot !== null && ceiling !== null && (
-              <div className="mt-8">
-                <div className="relative h-px bg-white/[0.08]">
-                  <div
-                    className="absolute inset-y-0 left-0 -top-px h-[3px] rounded-full"
-                    style={{
-                      width: `${Math.min(100, Math.max(4, potentialPct ?? 0))}%`,
-                      backgroundColor: ACCENT,
-                    }}
-                  />
-                  <div
-                    className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
-                    style={{
-                      left: `calc(${Math.min(100, Math.max(4, potentialPct ?? 0))}% - 4px)`,
-                      backgroundColor: ACCENT,
-                      boxShadow: `0 0 12px ${ACCENT}80`,
-                    }}
-                  />
-                </div>
-                <div className="mt-4 flex justify-between text-[11px] font-black uppercase tracking-[0.18em]">
-                  <span className="text-slate-400">
-                    Oggi <span className="text-white">{formatItalianDecimal(vdot, 1)}</span>
-                  </span>
-                  {vdotGain !== null && vdotGain > 0 && (
-                    <span style={{ color: ACCENT }}>+{formatItalianDecimal(vdotGain, 1)}</span>
-                  )}
-                  <span className="text-slate-400">
-                    Ceiling <span className="text-white">{formatItalianDecimal(ceiling, 1)}</span>
-                  </span>
-                </div>
-              </div>
-            )}
-
-            <p className="mt-8 text-sm leading-7 text-slate-500 max-w-md">
-              Il ceiling è il tetto fisiologico che il modello considera raggiungibile
-              con il tuo profilo attuale di carico, efficienza e recupero.
-            </p>
-          </div>
-
-          {predictions.length > 0 && (
+          <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,560px)] lg:items-center">
             <div>
-              <MicroLabel>Tempi raggiungibili</MicroLabel>
-              <div className="mt-8 divide-y divide-white/[0.06]">
+              <div className="text-2xl md:text-3xl font-black tracking-tight text-white">
+                {model.identity.rank.name}
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-[#A0A0A0] max-w-2xl">
+                {model.identity.description}
+              </p>
+              <div className="flex gap-3 mt-4 text-[10px] text-[#555] font-semibold tracking-wider flex-wrap">
+                <span className="text-[#888]">Distanza ideale {model.performance.idealDistance}</span>
+                {model.base.weeklyFrequency !== null && model.base.weeklyFrequency > 0 && (
+                  <>
+                    <span>·</span>
+                    <span>{formatItalianDecimal(model.base.weeklyFrequency, 1)} uscite/sett.</span>
+                  </>
+                )}
+                <span>·</span>
+                <span>PB 5K {model.performance.pb5k}</span>
+                <span>·</span>
+                <span>PB 10K {model.performance.pb10k}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <KpiTile label="DNA Score" value={String(model.scores.overall)} suffix="/100" color="#C0FF00" />
+              <KpiTile label="VDOT" value={vdot !== null ? vdot.toFixed(1) : "—"} color="#22D3EE" />
+              <KpiTile label="Ceiling" value={ceiling !== null ? ceiling.toFixed(1) : "—"} color="#A78BFA" />
+              <KpiTile
+                label="Attivato"
+                value={potentialPct !== null ? `${Math.round(potentialPct)}` : "—"}
+                suffix="%"
+                color="#F97316"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ── PROFILO DNA + TEMPI ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
+
+          <div className={CARD}>
+            <CardHeader
+              title="Profilo DNA"
+              subtitle="5 dimensioni · score 0-100"
+              icon={Trophy}
+              right={strongest ? <PillBadge label={`Top · ${strongest.label}`} color={strongest.color} /> : undefined}
+            />
+            <div className="space-y-4">
+              {scoreItems.map((item, i) => (
+                <ScoreBarRow
+                  key={item.key}
+                  label={item.label}
+                  status={item.status}
+                  score={item.score}
+                  color={item.color}
+                  isMax={item.score === maxScore}
+                  delay={150 + i * 120}
+                />
+              ))}
+            </div>
+            <div className="grid grid-cols-3 gap-4 pt-5 mt-6 border-t border-white/[0.06]">
+              <StatCell label="Più forte" value={strongest?.label ?? "—"} accent={strongest?.color} />
+              <StatCell label="Da costruire" value={weakest?.label ?? "—"} accent={weakest?.color} />
+              <StatCell label="Proiezione" value={`${model.scores.projected}/100`} accent="#C0FF00" />
+            </div>
+          </div>
+
+          <div className={CARD + " flex flex-col"}>
+            <CardHeader
+              title="Tempi Raggiungibili"
+              subtitle="Attuale → potenziale al ceiling"
+              icon={Target}
+              right={vdotGain !== null && vdotGain > 0
+                ? <PillBadge label={`+${formatItalianDecimal(vdotGain, 1)} VDOT`} />
+                : undefined}
+            />
+            {predictions.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center min-h-[120px]">
+                <span className="text-[#444] text-xs font-black tracking-widest uppercase">Dati insufficienti</span>
+              </div>
+            ) : (
+              <div className="flex-1 space-y-3">
                 {predictions.map((p) => (
-                  <div key={p.dist} className="py-4 flex items-baseline justify-between gap-4">
-                    <span className="w-20 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+                  <div
+                    key={p.dist}
+                    className="flex items-center gap-3 rounded-2xl bg-white/[0.03] border border-white/[0.05] px-4 py-3"
+                  >
+                    <span className="w-20 text-[10px] font-black tracking-widest text-[#888] uppercase shrink-0">
                       {p.label}
                     </span>
-                    <span className="text-sm font-light text-slate-600 tabular-nums">
+                    <span className="flex-1 text-right text-sm font-black tabular-nums text-[#555]" style={{ fontFamily: MONO }}>
                       {p.currentTime ?? "—"}
                     </span>
-                    <span className="flex-1 text-right text-xl font-extralight tracking-tight text-white tabular-nums">
+                    <span className="text-[#444] text-xs shrink-0">→</span>
+                    <span className="w-20 text-right text-lg font-black tabular-nums text-[#C0FF00]" style={{ fontFamily: MONO }}>
                       {p.potentialTime}
                     </span>
-                    <span className="w-16 text-right text-xs font-black tabular-nums" style={{ color: ACCENT }}>
+                    <span className="w-14 text-right text-[11px] font-black tabular-nums text-[#34D399] shrink-0" style={{ fontFamily: MONO }}>
                       {p.delta}
                     </span>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-        </section>
-
-        {/* ── COACH ──────────────────────────────────────────────────────── */}
-        <section className="mt-20">
-          <MicroLabel>Coach</MicroLabel>
-          <p className="mt-8 text-xl md:text-2xl font-light leading-relaxed text-slate-200 max-w-3xl">
-            {humanizeCoachText(model.identity.coachVerdict)}
-          </p>
-
-          <div className="mt-12 grid gap-10 md:grid-cols-3">
-            <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.25em]" style={{ color: ACCENT }}>
-                Punti di forza
-              </div>
-              <ul className="mt-5 space-y-4">
-                {strengths.map((s, i) => (
-                  <li key={i} className="text-sm leading-6 text-slate-400">
-                    {humanizeCoachText(s)}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.25em] text-rose-400">
-                Limiti
-              </div>
-              <ul className="mt-5 space-y-4">
-                {weaknesses.map((w, i) => (
-                  <li key={i} className="text-sm leading-6 text-slate-400">
-                    {humanizeCoachText(w)}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.25em] text-sky-300">
-                Priorità
-              </div>
-              <ul className="mt-5 space-y-4">
-                {priorities.map((p, i) => (
-                  <li key={p} className="flex gap-3 text-sm leading-6 text-slate-400">
-                    <span className="font-black text-slate-600 tabular-nums">0{i + 1}</span>
-                    <span>{humanizeCoachText(p)}</span>
-                  </li>
-                ))}
-              </ul>
+            )}
+            <div className="grid grid-cols-3 gap-4 pt-5 mt-6 border-t border-white/[0.06]">
+              <StatCell
+                label="VDOT oggi"
+                value={vdot !== null ? vdot.toFixed(1) : "—"}
+                accent="#22D3EE"
+              />
+              <StatCell
+                label="Ceiling"
+                value={ceiling !== null ? ceiling.toFixed(1) : "—"}
+                accent="#A78BFA"
+              />
+              <StatCell
+                label="Attivato"
+                value={potentialPct !== null ? `${Math.round(potentialPct)}%` : "—"}
+                accent="#F97316"
+              />
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* ── DINAMICA DI CORSA ──────────────────────────────────────────── */}
-        <section className="mt-20">
-          <MicroLabel>Dinamica di corsa</MicroLabel>
-          <div className="mt-8 grid grid-cols-2 md:grid-cols-5 gap-px bg-white/[0.06] rounded-2xl overflow-hidden border border-white/[0.06]">
-            {model.biomechanics.map((m) => (
-              <div key={m.key} className="bg-[#050505] px-5 py-5 last:odd:col-span-2 md:last:odd:col-span-1">
-                <div className="flex items-center gap-2">
+        {/* ── COACH + PRIORITÀ ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
+
+          <div className={CARD}>
+            <CardHeader
+              title="Verdetto Coach"
+              subtitle="AI analysis sul tuo profilo"
+              icon={BrainCircuit}
+            />
+            <p className="text-sm leading-relaxed text-gray-300">
+              {humanizeCoachText(model.identity.coachVerdict)}
+            </p>
+
+            <div className="grid gap-6 sm:grid-cols-2 pt-5 mt-6 border-t border-white/[0.06]">
+              <div>
+                <div className="text-[10px] font-black tracking-widest uppercase text-[#C0FF00] mb-3">
+                  Punti di forza
+                </div>
+                <ul className="space-y-2.5">
+                  {strengths.map((s, i) => (
+                    <li key={i} className="flex gap-2.5 items-start text-xs leading-5 text-[#A0A0A0]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#C0FF00] shrink-0 mt-1.5" />
+                      {humanizeCoachText(s)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <div className="text-[10px] font-black tracking-widest uppercase text-[#F43F5E] mb-3">
+                  Limiti
+                </div>
+                <ul className="space-y-2.5">
+                  {weaknesses.map((w, i) => (
+                    <li key={i} className="flex gap-2.5 items-start text-xs leading-5 text-[#A0A0A0]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#F43F5E] shrink-0 mt-1.5" />
+                      {humanizeCoachText(w)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div className={CARD + " flex flex-col"}>
+            <CardHeader
+              title="Priorità di Allenamento"
+              subtitle="Dove guadagni di più adesso"
+              icon={Zap}
+            />
+            <div className="flex-1 space-y-3">
+              {priorities.map((item, index) => (
+                <div
+                  key={item}
+                  className="flex gap-4 items-start rounded-2xl bg-white/[0.03] border border-white/[0.05] px-4 py-3.5"
+                >
                   <span
-                    className="w-1.5 h-1.5 rounded-full shrink-0"
-                    style={{ backgroundColor: VERDICT_DOT[m.verdict] ?? "#475569" }}
-                  />
-                  <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-600 truncate">
+                    className="text-xl font-black tabular-nums shrink-0 leading-6 text-[#C0FF00]"
+                    style={{ fontFamily: MONO }}
+                  >
+                    0{index + 1}
+                  </span>
+                  <p className="text-xs leading-5 text-gray-300">{humanizeCoachText(item)}</p>
+                </div>
+              ))}
+            </div>
+            {!priorities.some((p) => model.identity.unlockMessage.includes(p)) && (
+              <p className="text-[10px] leading-4 text-[#555] pt-5 mt-6 border-t border-white/[0.06]">
+                {humanizeCoachText(model.identity.unlockMessage)}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* ── DINAMICA DI CORSA ── */}
+        <div className={CARD}>
+          <CardHeader
+            title="Dinamica di Corsa"
+            subtitle="Medie reali dalle corse con dati Garmin"
+            icon={Footprints}
+          />
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
+            {model.biomechanics.map((m) => {
+              const color = m.available ? m.color : "#475569";
+              return (
+                <div
+                  key={m.key}
+                  className="rounded-2xl px-4 py-3 flex flex-col gap-1.5"
+                  style={{ background: `${color}10`, border: `1px solid ${color}25` }}
+                >
+                  <span className="text-[10px] font-black tracking-widest uppercase truncate" style={{ color: `${color}99` }}>
                     {BIOMECH_SHORT_LABELS[m.key] ?? m.label}
                   </span>
-                </div>
-                <div className="mt-3 flex items-baseline gap-1">
-                  <span className="text-2xl font-extralight tracking-tight text-white tabular-nums">
-                    {m.available ? m.displayValue : "—"}
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-2xl font-black tabular-nums text-white" style={{ fontFamily: MONO }}>
+                      {m.available ? m.displayValue : "—"}
+                    </span>
+                    {m.available && <span className="text-[10px] font-black text-[#555]">{m.unit}</span>}
+                  </div>
+                  <span className="text-[9px] text-[#555] tracking-wider">
+                    {m.available ? `target ${m.benchmark}` : "non disponibile"}
                   </span>
-                  {m.available && (
-                    <span className="text-[10px] text-slate-600">{m.unit}</span>
-                  )}
+                  <span className="text-[9px] font-black tracking-widest uppercase" style={{ color }}>
+                    {m.verdictLabel}
+                  </span>
                 </div>
-                <div className="mt-2 text-[9px] text-slate-600 tracking-wide">
-                  {m.available ? m.benchmark : "non disponibile"}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-        </section>
+        </div>
 
-        {/* ── FOOTER ─────────────────────────────────────────────────────── */}
-        <footer className="mt-20 pt-8 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-3">
-          <span className="text-[10px] tracking-[0.15em] uppercase text-slate-700 font-black">
+        {/* ── FOOTER ── */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-1 pb-4">
+          <span className="text-[9px] font-black tracking-widest uppercase text-[#444]">
             {model.freshness.label}
           </span>
-          <span className="text-[10px] tracking-[0.15em] uppercase text-slate-700 font-black">
-            Metic Lab
+          <span className="text-[9px] font-black tracking-widest uppercase text-[#444]">
+            Metic Lab · Elite Performance
           </span>
-        </footer>
+        </div>
 
       </div>
     </div>

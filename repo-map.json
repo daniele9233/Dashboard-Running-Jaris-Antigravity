@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-10T10:42:55.283Z",
+  "generated_at": "2026-06-10T11:22:59.122Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2484,9 +2484,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "77c97b7fdf63af70d003d20d2ab33e58296309619d7eddaada6b0b5d0837e715",
-      "last_modified": "2026-06-10T10:42:55.284Z",
-      "size_bytes": 20550
+      "hash": "5a993ccd758626fd176f09872097b7d93b793397082d21c17d521b408c094d37",
+      "last_modified": "2026-06-10T11:22:59.123Z",
+      "size_bytes": 21126
     },
     {
       "path": "src/components/SettingsControls.tsx",
