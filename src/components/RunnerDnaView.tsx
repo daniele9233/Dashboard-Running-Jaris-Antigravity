@@ -298,19 +298,37 @@ export function RunnerDnaView() {
               </div>
             </div>
 
-            {/* Potenziale */}
-            <div className={CARD + " flex items-center gap-5"}>
-              {potentialPct !== null ? <DonutGauge pct={potentialPct} /> : null}
-              <div className="min-w-0">
-                <div className="text-[10px] font-black tracking-widest uppercase text-[#A0A0A0]">Potenziale</div>
-                {vdotGain !== null && vdotGain > 0 && (
-                  <div className="mt-2 text-2xl font-black tabular-nums text-[#C0FF00]" style={{ fontFamily: MONO }}>
-                    +{formatItalianDecimal(vdotGain, 1)} <span className="text-xs text-gray-500">VDOT</span>
-                  </div>
-                )}
-                <p className="mt-2 text-[11px] leading-4 text-gray-500">
-                  Margine ancora sbloccabile rispetto al tetto fisiologico stimato ({ceiling !== null ? ceiling.toFixed(1) : "—"}).
-                </p>
+            {/* Potenziale + come sbloccarlo */}
+            <div className={CARD}>
+              <div className="flex items-center gap-5">
+                {potentialPct !== null ? <DonutGauge pct={potentialPct} /> : null}
+                <div className="min-w-0">
+                  <div className="text-[10px] font-black tracking-widest uppercase text-[#A0A0A0]">Potenziale</div>
+                  {vdotGain !== null && vdotGain > 0 && (
+                    <div className="mt-2 text-2xl font-black tabular-nums text-[#C0FF00]" style={{ fontFamily: MONO }}>
+                      +{formatItalianDecimal(vdotGain, 1)} <span className="text-xs text-gray-500">VDOT</span>
+                    </div>
+                  )}
+                  <p className="mt-2 text-[11px] leading-4 text-gray-500">
+                    Margine ancora sbloccabile rispetto al tetto fisiologico stimato ({ceiling !== null ? ceiling.toFixed(1) : "—"}).
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-4 mt-5 border-t border-white/[0.06]">
+                <div className="text-[10px] font-black tracking-widest uppercase text-[#C0FF00] mb-3">
+                  Come sbloccarlo
+                </div>
+                <div className="space-y-2.5">
+                  {priorities.map((item, index) => (
+                    <div key={item} className="flex gap-3 items-start rounded-xl bg-white/[0.03] border border-white/[0.05] px-3.5 py-2.5">
+                      <span className="text-base font-black tabular-nums text-[#C0FF00] leading-5" style={{ fontFamily: MONO }}>
+                        0{index + 1}
+                      </span>
+                      <p className="text-[11px] leading-5 text-gray-300">{humanizeCoachText(item)}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -446,29 +464,31 @@ export function RunnerDnaView() {
               </p>
 
               <div className="grid gap-6 md:grid-cols-2 pt-5 mt-5 border-t border-white/[0.06]">
-                <div className="space-y-2.5">
-                  {strengths.map((s, i) => (
-                    <div key={`s-${i}`} className="flex gap-3 items-start text-xs leading-5 text-[#A0A0A0]">
-                      <span className="w-4 shrink-0 text-center font-bold text-[#C0FF00]" style={{ fontFamily: MONO }}>+</span>
-                      {humanizeCoachText(s)}
-                    </div>
-                  ))}
-                  {weaknesses.map((w, i) => (
-                    <div key={`w-${i}`} className="flex gap-3 items-start text-xs leading-5 text-[#A0A0A0]">
-                      <span className="w-4 shrink-0 text-center font-bold text-[#F43F5E]" style={{ fontFamily: MONO }}>−</span>
-                      {humanizeCoachText(w)}
-                    </div>
-                  ))}
+                <div>
+                  <div className="text-[10px] font-black tracking-widest uppercase text-[#C0FF00] mb-3">
+                    Punti di forza
+                  </div>
+                  <div className="space-y-2.5">
+                    {strengths.map((s, i) => (
+                      <div key={`s-${i}`} className="flex gap-3 items-start text-xs leading-5 text-[#A0A0A0]">
+                        <span className="w-4 shrink-0 text-center font-bold text-[#C0FF00]" style={{ fontFamily: MONO }}>+</span>
+                        {humanizeCoachText(s)}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-3">
-                  {priorities.map((item, index) => (
-                    <div key={item} className="flex gap-3 items-start rounded-xl bg-white/[0.03] border border-white/[0.05] px-3.5 py-2.5">
-                      <span className="text-base font-black tabular-nums text-[#C0FF00] leading-5" style={{ fontFamily: MONO }}>
-                        0{index + 1}
-                      </span>
-                      <p className="text-[11px] leading-5 text-gray-300">{humanizeCoachText(item)}</p>
-                    </div>
-                  ))}
+                <div>
+                  <div className="text-[10px] font-black tracking-widest uppercase text-[#F43F5E] mb-3">
+                    Limiti
+                  </div>
+                  <div className="space-y-2.5">
+                    {weaknesses.map((w, i) => (
+                      <div key={`w-${i}`} className="flex gap-3 items-start text-xs leading-5 text-[#A0A0A0]">
+                        <span className="w-4 shrink-0 text-center font-bold text-[#F43F5E]" style={{ fontFamily: MONO }}>−</span>
+                        {humanizeCoachText(w)}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

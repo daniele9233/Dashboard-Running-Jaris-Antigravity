@@ -78,7 +78,7 @@ GARMIN_EMAIL       = os.environ.get("GARMIN_EMAIL", "")
 GARMIN_PASSWORD    = os.environ.get("GARMIN_PASSWORD", "")
 APP_VERSION        = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT") or os.environ.get("COMMIT_SHA") or "local"
 ANALYTICS_SCHEMA_VERSION = "pro-v11-2026-05-02"
-RUNNER_DNA_SCHEMA_VERSION = "runner-dna-v5-2026-05-02"
+RUNNER_DNA_SCHEMA_VERSION = "runner-dna-v6-2026-06-10"
 GARMIN_CSV_REPAIR_VERSION = "garmin-csv-repair-v2-2026-04-22"
 
 VDOT_RECENCY_WEIGHT_30D = 0.70
@@ -6750,6 +6750,53 @@ async def get_best_efforts():
                     "run_id": run_id,
                 }
 
+    # ── Merge PB manuali dal profilo ──────────────────────────────────────────
+    # Corse importate senza splits/streams (es. Garmin CSV) non sono visibili
+    # al calcolo sopra: il PB inserito a mano nel profilo vince se più veloce.
+    profile_doc = await db.profile.find_one({"athlete_id": athlete_id} if athlete_id else {}) or {}
+    profile_pbs = profile_doc.get("pbs") or {}
+    pb_key_map = {
+        "1 km": ["1K", "1k", "1000"],
+        "5 km": ["5K", "5k", "5000"],
+        "10 km": ["10K", "10k", "10000"],
+        "15 km": ["15K", "15k"],
+        "Mezza Maratona": ["Half Marathon", "Mezza", "Mezza Maratona", "21K", "21k"],
+        "Maratona": ["Marathon", "Maratona", "42K", "42k"],
+    }
+    target_m_by_label = {t[0]: t[1] for t in targets}
+
+    def _pb_time_to_secs(value: str) -> Optional[float]:
+        try:
+            parts = [float(p) for p in str(value).strip().split(":")]
+        except ValueError:
+            return None
+        if len(parts) == 3:
+            return parts[0] * 3600 + parts[1] * 60 + parts[2]
+        if len(parts) == 2:
+            return parts[0] * 60 + parts[1]
+        return None
+
+    for label, profile_keys in pb_key_map.items():
+        entry_key = next((k for k in profile_pbs if any(k.lower() == c.lower() for c in profile_keys)), None)
+        if not entry_key:
+            continue
+        pb = profile_pbs.get(entry_key) or {}
+        pb_secs = _pb_time_to_secs(pb.get("time", ""))
+        if not pb_secs or pb_secs <= 0:
+            continue
+        pace_s = pb_secs / (target_m_by_label[label] / 1000.0)
+        if pace_s < MIN_PACE_S:
+            continue
+        if bests.get(label) is None or pace_s < bests[label]["pace_s"]:
+            bests[label] = {
+                "distance": label,
+                "time": _secs_to_time(pb_secs),
+                "pace": _secs_to_time(pace_s) + "/km",
+                "pace_s": pace_s,
+                "date": pb.get("date", ""),
+                "run_id": "",
+            }
+
     result = [v for v in bests.values() if v is not None]
     order = [t[0] for t in targets]
     result.sort(key=lambda x: order.index(x["distance"]) if x["distance"] in order else 99)
@@ -7331,7 +7378,6 @@ async def get_runner_dna():
     runs = [_normalise_run_quality_fields(dict(run)) for run in runs]
     profile = await db.profile.find_one(q) or {}
     ff_docs = await db.fitness_freshness.find(q).sort("date", -1).to_list(30)
-    be_doc = await db.best_efforts.find_one(q) or {}
     garmin_csv_docs = []
     if athlete_id:
         garmin_csv_docs = await db.garmin_csv_data.find(
@@ -7383,13 +7429,24 @@ async def get_runner_dna():
     total_zone = sum(zones.values()) or 1
     zone_dist = {k: round(v / total_zone * 100) for k, v in zones.items()}
 
-    be_efforts = be_doc.get("efforts", [])
-    vdot_from_runs = _calc_vdot(runs, max_hr, weeks_window=8, resting_hr=resting_hr)
-    vdot_from_be = _vdot_from_best_efforts(be_efforts)
-    vdot_current = max(vdot_from_runs or 28.0, vdot_from_be or 28.0)
+    # VDOT: stessa fonte canonica della dashboard (/api/vdot/paces) —
+    # field test recente se presente, altrimenti _calc_vdot sulle sole corse
+    # outdoor GPS (il set di runner-dna include anche tapis roulant/no-GPS,
+    # che gonfiano il VDOT e creavano mismatch col valore in dashboard).
+    vdot_runs = [
+        r for r in runs
+        if not r.get("is_treadmill")
+        and (
+            r.get("has_gps")
+            or r.get("polyline")
+            or (r.get("start_latlng") or [None])[0] is not None
+        )
+    ]
+    active_vdot, _from_ft = await _get_active_vdot(athlete_id, vdot_runs or runs, max_hr, resting_hr)
+    vdot_current = float(active_vdot or 28.0)
 
     cutoff_old = (dt.date.today() - dt.timedelta(weeks=24)).isoformat()
-    older_runs = [r for r in runs if str(r.get("date", "")) < cutoff_old]
+    older_runs = [r for r in (vdot_runs or runs) if str(r.get("date", "")) < cutoff_old]
     older_vdot = _calc_vdot(older_runs, max_hr, weeks_window=16, resting_hr=resting_hr) if len(older_runs) >= 3 else None
     vdot_delta = round(vdot_current - older_vdot, 1) if older_vdot else None
 
@@ -7397,9 +7454,25 @@ async def get_runner_dna():
         first_run_d = dt.date.fromisoformat(str(runs[0]["date"])[:10])
         last_run_d = dt.date.fromisoformat(str(runs[-1]["date"])[:10])
         weeks_active = max(1.0, (last_run_d - first_run_d).days / 7)
-        freq = total_runs / weeks_active
     except Exception:
-        weeks_active, freq = 1.0, 0.0
+        weeks_active = 1.0
+
+    # Uscite/settimana: giorni DISTINTI con almeno una corsa nelle ultime 12
+    # settimane. Conteggiare i singoli doc gonfia il valore (warmup + lavoro
+    # nello stesso giorno = 2-3 attività) e la media lifetime non riflette
+    # l'abitudine attuale.
+    try:
+        freq_cutoff = (dt.date.today() - dt.timedelta(weeks=12)).isoformat()
+        recent_dates = {str(r.get("date", ""))[:10] for r in runs if str(r.get("date", "")) >= freq_cutoff}
+        recent_dates.discard("")
+        if recent_dates:
+            span_days = (dt.date.today() - dt.date.fromisoformat(min(recent_dates))).days
+            freq_weeks = max(1.0, min(12.0, span_days / 7))
+            freq = len(recent_dates) / freq_weeks
+        else:
+            freq = 0.0
+    except Exception:
+        freq = 0.0
 
     consistency_score = int(max(0, min(100, round((freq / 4.0) * 100))))
 
