@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-09T12:22:44.682Z",
+  "generated_at": "2026-06-10T10:42:55.283Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2468,14 +2468,11 @@
         "activities",
         "ai",
         "cadence",
-        "dashboard",
         "garmin",
         "layout",
         "profile",
         "runner-dna",
-        "statistics",
-        "training",
-        "types"
+        "statistics"
       ],
       "exports": [
         "RunnerDnaView"
@@ -2483,15 +2480,13 @@
       "routes": [],
       "imports": [
         "../hooks/useRunnerDnaUiModel",
-        "./GridCard",
+        "./runner-dna/RunnerDnaLoading",
         "lucide-react",
-        "react",
-        "react-grid-layout/legacy",
-        "recharts"
+        "react"
       ],
-      "hash": "74ca4daa8d561c896aa8be1970e0e9875172aac43f0e29edddc6f16b49b7b77f",
-      "last_modified": "2026-05-30T06:52:06.267Z",
-      "size_bytes": 110989
+      "hash": "77c97b7fdf63af70d003d20d2ab33e58296309619d7eddaada6b0b5d0837e715",
+      "last_modified": "2026-06-10T10:42:55.284Z",
+      "size_bytes": 20550
     },
     {
       "path": "src/components/SettingsControls.tsx",
