@@ -78,20 +78,20 @@ function runStartHour(run: Run): number | null {
   return null;
 }
 
-// All hours covered by the run (start → start+duration). A 07:25→07:47 run
-// covers hours [7, 8]: averaging them (≈20.6°C) is what the runner felt,
-// while the 07:00 snapshot alone (19.9°C) can sit just under the 20°C hot
-// threshold and wrongly drop the run from the list.
+// The two hourly samples closest to the run's MIDPOINT. Hourly readings are
+// instantaneous at HH:00: a 07:25→07:47 run sits between the 07:00 (19.9°C)
+// and 08:00 (21.3°C) samples, and the start-hour snapshot alone can sit just
+// under the 20°C hot threshold and wrongly drop the run. Averaging the two
+// bracketing samples (≈20.6°C) matches what the runner actually felt.
 function runCoveredHours(run: Run, startHour: number): number[] {
   const s = run.start_date_local;
   const minutes =
     typeof s === 'string' && s.length >= 16 ? parseInt(s.slice(14, 16), 10) : 0;
   const startMin = startHour * 60 + (Number.isFinite(minutes) ? minutes : 0);
-  const endMin = startMin + Math.max(0, run.duration_minutes ?? 0);
-  const endHour = Math.min(23, Math.floor(endMin / 60));
-  const hours: number[] = [];
-  for (let h = startHour; h <= endHour; h += 1) hours.push(h);
-  return hours.length ? hours : [startHour];
+  const midMin = startMin + Math.max(0, run.duration_minutes ?? 0) / 2;
+  const h1 = Math.min(23, Math.floor(midMin / 60));
+  const h2 = Math.min(23, Math.max(h1, Math.round(midMin / 60)));
+  return h1 === h2 ? [h1] : [h1, h2];
 }
 
 function inferRunHour(name?: string | null): { hour: number; label: string } {

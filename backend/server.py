@@ -3915,6 +3915,16 @@ def _vdot_from_run(r: dict, max_hr: int = 190, resting_hr: int = 50) -> Optional
         return None
     duration_min = r.get("duration_minutes", 0) or 0
     avg_hr = r.get("avg_hr")
+    # HR steady-state: il primo split include il ramp-up cardiaco (HR insegue
+    # il VO2 per ~2-3 min), quindi l'HR medio dell'intera corsa sottostima lo
+    # sforzo su run brevi → %VO2max troppo bassa → VDOT gonfiato di 2-4 punti
+    # su tempo da 4-5km. Escludi il primo split quando ci sono dati a
+    # sufficienza; mai abbassare sotto l'avg ufficiale (corse in fade).
+    split_hrs = [_coerce_float(s.get("hr")) for s in (r.get("splits") or [])]
+    split_hrs = [h for h in split_hrs if h]
+    if avg_hr and len(split_hrs) >= 3:
+        steady_hr = sum(split_hrs[1:]) / len(split_hrs[1:])
+        avg_hr = max(avg_hr, steady_hr)
     total_vdot = _vdot_from_effort(r, dist, duration_min, pace_s, avg_hr, max_hr)
     interval_vdot = _interval_vdot_from_splits(r, max_hr)
     candidates = [v for v in (total_vdot, interval_vdot) if v]
@@ -4083,7 +4093,13 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
             if (_run_date_obj(run) or _dt.date.min) >= cutoff
             and _run_vdot_confidence(run, max_hr) >= 0.6
         ]
-        return max(recent_values) if recent_values else None
+        # Corroborazione: il SECONDO massimo, non il massimo. Una singola
+        # uscita anomala (4km in giornata umida con grosso credito caldo) non
+        # puo' settare il VDOT globale da sola; con un solo campione recente
+        # lascia decidere la media pesata.
+        if len(recent_values) >= 2:
+            return sorted(recent_values)[-2]
+        return None
 
     cutoff_16w = (today - _dt.timedelta(weeks=16)).isoformat()
 
@@ -6169,6 +6185,7 @@ async def get_vdot_paces():
     # standard (nessuna fraction penalty: utente ha già dimostrato VDOT reale).
     # Se nessun field test: fraction model basato su runs history.
     end_ctx = _compute_endurance_context(runs)
+    preds_full = _predict_race(vdot, runs=runs, ctl=ctl_now)
 
     if from_field_test:
         # VDOT da field test = potenziale attuale realmente espresso.
@@ -6195,23 +6212,30 @@ async def get_vdot_paces():
             "repetition": pace_at_vo2_pct(1.10),
         }
     else:
-        # Nessun field test → zone E/M/T CONSERVATIVE (verdict utente 2026-05):
-        # Daniels classico sovrastima T/M perché assume tenuta endurance completa,
-        # che il runner sta ancora costruendo. Restano fisse finché non c'è base
-        # o un field test.
-        #
-        # MA le zone QUALITÀ (Interval, Repetition) seguono il VDOT REALE: sono
-        # VO2max/neuromuscolari, dipendono dal motore non dalla tenuta, e sono
-        # state confermate sul campo (3x1000 @3:50 = I-pace per VDOT 51, HR 90%).
-        # Tenere I a 4:20 hardcoded mentre il VDOT è 51 = 30s/km di errore. (fix 2026-06)
+        # Nessun field test → zone CONSERVATIVE ma DINAMICHE (rev. 2026-06-11).
+        # Storia: i valori erano hardcoded (T 4:32, verdict 2026-05) perché il
+        # VDOT era sistematicamente distorto (niente correzione caldo, penalità
+        # drift sui negative split, HR ramp-up non gestito). Con quei bias
+        # corretti, congelare le zone crea l'errore opposto: 11/06 l'utente ha
+        # corso 4:21/km per 22min SOTTO la banda HR di soglia (86-87%) con
+        # 20.6°C/76% — il 4:32 fisso era ormai 10-15s/km troppo lento.
+        # T sostenibile ~1h = 81% VO2max (non Daniels classico 86-88%, che
+        # assume tenuta endurance completa). M scalato sulla tenuta reale.
+        # M = passo maratona PREVISTO (endurance-aware), non il teorico dal
+        # motore: senza tenuta da maratona il teorico (0.74-0.78) esce 40s/km
+        # piu' veloce della previsione gara stessa — incoerenza visibile.
+        m_secs_total = _time_to_seconds(preds_full.get("Marathon"))
+        m_pace = (_secs_to_pace_str(int(round(m_secs_total / 42.195)))
+                  if m_secs_total else pace_at_vo2_pct(0.74))
         i_pace = pace_at_vo2_pct(0.98) or "4:20"   # I: da VDOT reale (VO2max work)
         i_sec = _parse_pace_to_secs(i_pace)
         r_pace = _secs_to_pace_str(i_sec - 15) if i_sec else "4:05"  # R: I − 15s
         paces_out = {
-            "easy":       "5:30",        # E: recovery/long run conversazionale (conservativo)
-            "marathon":   "5:00",        # M: scalato tenuta (conservativo)
-            "threshold":  "4:32",        # T: sustainable ~1h (gap endurance, conservativo)
-            "threshold_peak": "4:30",    # T peak: estremo inferiore range utente
+            "easy":       pace_at_vo2_pct(0.60),   # E: conversazionale; resta la zona
+                                                   # piu' lenta anche con M penalizzato
+            "marathon":   m_pace,                  # M: dalla previsione endurance-aware
+            "threshold":  pace_at_vo2_pct(0.81),   # T: sustainable ~1h
+            "threshold_peak": pace_at_vo2_pct(0.86),  # T Daniels classico (peak)
             "threshold_empirical": threshold_empirical,
             "interval":   i_pace,        # I: VDOT-driven (motore, confermato sul campo)
             "repetition": r_pace,        # R: I − 15s (sprint/neuromuscular)
@@ -6221,7 +6245,7 @@ async def get_vdot_paces():
         "vdot": vdot,
         "from_field_test": from_field_test,
         "paces": paces_out,
-        "race_predictions": _predict_race(vdot, runs=runs, ctl=ctl_now),
+        "race_predictions": preds_full,
     }
 
 
@@ -8479,9 +8503,13 @@ async def _run_weather_fields(run_doc: dict) -> dict:
     dur_min = float(run_doc.get("duration_minutes") or 0)
     hour_start = hour_end = None
     if hh is not None:
-        start_min = hh * 60 + mm
-        hour_start = start_min // 60
-        hour_end = min(23, int(start_min + dur_min) // 60)
+        # Due campioni orari piu' vicini al PUNTO MEDIO della corsa: i dati
+        # Open-Meteo sono istantanei a HH:00, e una 07:25->07:47 sta tra il
+        # campione 07:00 (piu' freddo) e 08:00 — lo snapshot dell'ora di start
+        # legge 1-2°C in meno di quel che il runner ha sentito.
+        mid_min = hh * 60 + mm + dur_min / 2
+        hour_start = min(23, int(mid_min // 60))
+        hour_end = min(23, max(hour_start, int(round(mid_min / 60))))
     w = await _fetch_run_weather(lat, lng, date_str, hour_start, hour_end)
     if not w or w.get("temp_c") is None:
         return {}
