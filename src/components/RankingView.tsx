@@ -10,8 +10,9 @@ import { useState, useEffect, useMemo } from "react";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, Legend, Tooltip as RechartTooltip,
+  AreaChart, Area, XAxis, YAxis, ReferenceLine,
 } from "recharts";
-import { Target, Trophy, Zap, Award, RefreshCw, BarChart2, TrendingUp } from "lucide-react";
+import { Target, Trophy, Zap, Award, RefreshCw, BarChart2, TrendingUp, Users } from "lucide-react";
 import { getProfile, getBestEfforts } from "../api";
 import type { Profile, BestEffort } from "../types/api";
 
@@ -767,6 +768,186 @@ function RiegelScouting({ userTimes, sex, fidalCat }: {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CURVA DEL CAMPO — densità log-normale dei tempi con bande tier + marker utente
+// ─────────────────────────────────────────────────────────────────────────────
+
+function FieldCurve({ dist, userSec, sex }: { dist: DistKey; userSec: number; sex: Sex }) {
+  const { mu, sigma } = DIST_PARAMS[sex][dist];
+
+  const { data, tMin, tMax, stops, ticks } = useMemo(() => {
+    const tMin = Math.exp(mu - 3.2 * sigma);
+    const tMax = Math.exp(mu + 3.2 * sigma);
+    const N = 80;
+    const data = Array.from({ length: N + 1 }, (_, i) => {
+      const t = tMin + ((tMax - tMin) * i) / N;
+      const z = (Math.log(t) - mu) / sigma;
+      return { t, y: Math.exp(-(z * z) / 2) / (t * sigma) };
+    });
+
+    // Bande colore: zona tra due soglie consecutive = colore del tier di quella fascia
+    const stops: Array<{ offset: number; color: string }> = [{ offset: 0, color: TIERS[0].color }];
+    TIERS.filter(t => t.minPct > 0).forEach((tier, i) => {
+      const bound = Math.exp(probit(1 - tier.minPct / 100) * sigma + mu);
+      const off = Math.max(0, Math.min(1, (bound - tMin) / (tMax - tMin)));
+      const next = TIERS[i + 1] ?? TIERS[TIERS.length - 1];
+      stops.push({ offset: off, color: tier.color });
+      stops.push({ offset: off, color: next.color });
+    });
+    stops.push({ offset: 1, color: TIERS[TIERS.length - 1].color });
+
+    const tickAt = (pct: number) => Math.exp(probit(1 - pct / 100) * sigma + mu);
+    const ticks = [tickAt(99), tickAt(90), tickAt(75), Math.exp(mu), tickAt(25)];
+
+    return { data, tMin, tMax, stops, ticks };
+  }, [mu, sigma]);
+
+  const userPct = computePercentile(userSec, dist, sex);
+
+  const CurveTooltip = ({ active, payload }: {
+    active?: boolean;
+    payload?: Array<{ payload: { t: number } }>;
+  }) => {
+    if (!active || !payload?.length) return null;
+    const t = payload[0].payload.t;
+    const pct = Math.round((1 - normCDF((Math.log(t) - mu) / sigma)) * 1000) / 10;
+    const tier = getTierFromPct(pct);
+    return (
+      <div className="rounded-xl border border-white/10 bg-[#0A0A0A]/95 px-3 py-2">
+        <div className="text-sm font-black text-white tabular-nums" style={{ fontFamily: MONO }}>
+          {formatTime(Math.round(t))}
+        </div>
+        <div className="text-[9px] font-black tracking-widest uppercase mt-0.5" style={{ color: tier.color }}>
+          {pct}° percentile · {tier.label}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className={CARD}>
+      <CardHeader
+        title="Curva del Campo"
+        subtitle={`Distribuzione tempi · campo competitivo · ${dist}`}
+        icon={BarChart2}
+      />
+      <div className="h-[190px] -mx-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 18, right: 8, left: 8, bottom: 0 }}>
+            <defs>
+              <linearGradient id={`field-grad-${dist}`} x1="0" y1="0" x2="1" y2="0">
+                {stops.map((s, i) => (
+                  <stop key={i} offset={`${(s.offset * 100).toFixed(2)}%`} stopColor={s.color} stopOpacity={0.5} />
+                ))}
+              </linearGradient>
+            </defs>
+            <XAxis
+              dataKey="t" type="number" domain={[tMin, tMax]} ticks={ticks}
+              tickFormatter={(v: number) => formatTime(Math.round(v))}
+              tick={{ fontSize: 9, fontFamily: MONO, fill: "#666" }}
+              axisLine={false} tickLine={false}
+            />
+            <YAxis hide />
+            <RechartTooltip content={<CurveTooltip />} cursor={{ stroke: "rgba(255,255,255,0.2)" }} />
+            <Area type="monotone" dataKey="y" stroke="rgba(255,255,255,0.4)" strokeWidth={1.5}
+              fill={`url(#field-grad-${dist})`} isAnimationActive={false} />
+            <ReferenceLine
+              x={userSec} stroke="#C0FF00" strokeWidth={2} strokeDasharray="5 3"
+              label={{ value: "SEI QUI", position: "top", fill: "#C0FF00", fontSize: 9, fontFamily: MONO, fontWeight: 900 }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="grid grid-cols-3 gap-2 pt-4 mt-2 border-t border-white/[0.06] text-center">
+        {[
+          { label: "Il tuo tempo", value: formatTime(userSec), color: "#C0FF00" },
+          { label: "Mediana campo", value: formatTime(Math.round(Math.exp(mu))), color: "#fff" },
+          { label: "Più veloce di", value: `${Math.round(userPct)}%`, color: getTierFromPct(userPct).color },
+        ].map(({ label, value, color }) => (
+          <div key={label}>
+            <div className="text-base font-black tabular-nums" style={{ fontFamily: MONO, color }}>{value}</div>
+            <div className="text-[8px] font-black tracking-[0.2em] uppercase text-gray-600 mt-0.5">{label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SIMULATORE GARA — posizione stimata al traguardo per dimensione campo
+// ─────────────────────────────────────────────────────────────────────────────
+
+const FIELD_SIZES = [200, 500, 1000, 5000];
+
+function RaceSimulator({ dist, pct }: { dist: DistKey; pct: number }) {
+  const [field, setField] = useState(1000);
+
+  const position = Math.max(1, Math.round(field * (1 - pct / 100)));
+  const beaten = field - position;
+  // 100 punti = il campo in scala; i punti davanti a te sono in proporzione
+  const aheadDots = Math.min(99, Math.max(0, Math.round((position / field) * 100) - 1));
+
+  return (
+    <div className={CARD}>
+      <CardHeader
+        title="Simulatore Gara"
+        subtitle={`Posizione stimata · ${dist} · campo competitivo`}
+        icon={Users}
+      />
+
+      <div className="flex flex-wrap gap-1.5">
+        {FIELD_SIZES.map(n => {
+          const active = n === field;
+          return (
+            <button key={n} onClick={() => setField(n)}
+              className="px-3 py-1.5 rounded-xl border text-[10px] font-black tracking-wider transition-all tabular-nums"
+              style={{
+                fontFamily: MONO,
+                borderColor: active ? "rgba(192,255,0,0.4)" : "rgba(255,255,255,0.08)",
+                background: active ? "rgba(192,255,0,0.1)" : "rgba(255,255,255,0.02)",
+                color: active ? "#C0FF00" : "rgba(255,255,255,0.5)",
+              }}>
+              {n}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 flex items-baseline gap-2">
+        <span className="text-4xl font-black tabular-nums leading-none text-[#C0FF00]" style={{ fontFamily: MONO }}>
+          ≈{position}°
+        </span>
+        <span className="text-[10px] font-black tracking-[0.16em] uppercase text-gray-500">
+          su {field} al traguardo
+        </span>
+      </div>
+      <div className="mt-1.5 text-[11px] text-gray-400">
+        Ne batti <span className="font-black text-white tabular-nums" style={{ fontFamily: MONO }}>{beaten}</span> —
+        davanti a te solo il <span className="font-black text-white tabular-nums" style={{ fontFamily: MONO }}>{Math.round((position / field) * 100)}%</span> del campo.
+      </div>
+
+      <div className="mt-4 grid gap-[3px]" style={{ gridTemplateColumns: "repeat(20, 1fr)" }}>
+        {Array.from({ length: 100 }, (_, i) => {
+          const isYou = i === aheadDots;
+          return (
+            <div key={i} className="aspect-square rounded-full transition-all"
+              style={{
+                background: isYou ? "#fff" : i < aheadDots ? "rgba(255,255,255,0.14)" : "rgba(192,255,0,0.65)",
+                boxShadow: isYou ? "0 0 8px #C0FF00, 0 0 0 2px rgba(192,255,0,0.8)" : "none",
+                transform: isYou ? "scale(1.25)" : "none",
+              }} />
+          );
+        })}
+      </div>
+      <div className="mt-3 flex justify-between text-[8px] font-black tracking-[0.2em] uppercase text-gray-600">
+        <span>← Testa della gara</span>
+        <span>Coda →</span>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PACE ROADMAP — sec/km da guadagnare per ogni tier/percentile target
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -942,7 +1123,7 @@ export function RankingView() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [efforts, setEfforts] = useState<BestEffort[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDists, setSelectedDists] = useState<DistKey[]>(["5K", "10K"]);
+  const [selectedDists, setSelectedDists] = useState<DistKey[]>(["5K"]);
 
   useEffect(() => {
     setLoading(true);
@@ -962,7 +1143,8 @@ export function RankingView() {
           if (effortMatch) { found.push(dist.key); continue; }
           if (p && findPb(p.pbs ?? {}, PB_KEYS[dist.key])) found.push(dist.key);
         }
-        if (found.length > 0) setSelectedDists(found);
+        // Apertura: solo la distanza migliore (5K se presente), le altre si attivano dai chip
+        if (found.length > 0) setSelectedDists(found.includes("5K") ? ["5K"] : [found[0]]);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -1191,6 +1373,11 @@ export function RankingView() {
                   </div>
                 </div>
               )}
+
+              {/* Simulatore gara */}
+              {heroStats && (
+                <RaceSimulator dist={heroStats.dist} pct={heroStats.pct} />
+              )}
             </div>
 
             {/* ── COLONNA DESTRA ── */}
@@ -1229,7 +1416,7 @@ export function RankingView() {
                 </div>
               </div>
 
-              {/* Card distanza */}
+              {/* Card distanza + curva del campo */}
               {activeDists.length > 0 && (
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
                   {activeDists.map(d => (
@@ -1241,6 +1428,9 @@ export function RankingView() {
                       age={age}
                     />
                   ))}
+                  {heroStats && (
+                    <FieldCurve dist={heroStats.dist} userSec={userTimes[heroStats.dist]!} sex={sex} />
+                  )}
                 </div>
               )}
 
@@ -1250,7 +1440,7 @@ export function RankingView() {
               )}
 
               {/* Tabella comparativa */}
-              {activeDists.length >= 2 && (
+              {activeDists.length >= 1 && (
                 <ComparativeTierTable userTimes={activeTimes} sex={sex} />
               )}
 
@@ -1259,10 +1449,8 @@ export function RankingView() {
                 <PaceRoadmap heroStats={heroStats} userTimes={userTimes} sex={sex} />
               )}
 
-              {/* Scouting Riegel */}
-              {activeDists.length >= 2 && (
-                <RiegelScouting userTimes={activeTimes} sex={sex} fidalCat={fidalCat} />
-              )}
+              {/* Scouting Riegel — analizza tutti i PB reali, non solo i selezionati */}
+              <RiegelScouting userTimes={userTimes} sex={sex} fidalCat={fidalCat} />
             </div>
           </div>
         )}
