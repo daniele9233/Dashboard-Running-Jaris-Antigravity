@@ -37,30 +37,17 @@ interface TierDef {
 }
 
 const TIERS: TierDef[] = [
-  { id: "podio",      label: "PODIO CATEGORIA",        sublabel: "Top 1%",  color: "#FFD700", textColor: "#000", minPct: 99 },
-  { id: "elite",      label: "ELITE AMATORIALE",        sublabel: "Top 3%",  color: "#C0FF00", textColor: "#000", minPct: 97 },
-  { id: "competitive",label: "COMPETITIVO NAZIONALE",   sublabel: "Top 10%", color: "#22D3EE", textColor: "#000", minPct: 90 },
-  { id: "advanced",   label: "AVANZATO",                sublabel: "Top 25%", color: "#A78BFA", textColor: "#fff", minPct: 75 },
-  { id: "warrior",    label: "GUERRIERO DELLA DOMENICA",sublabel: "Top 50%", color: "#FB923C", textColor: "#fff", minPct: 0  },
+  { id: "fuoriclasse", label: "FUORICLASSE",              sublabel: "Top 0.5%",       color: "#F5F5F4", textColor: "#000", minPct: 99.5 },
+  { id: "podio",       label: "PODIO CATEGORIA",          sublabel: "Top 1%",         color: "#FFD700", textColor: "#000", minPct: 99 },
+  { id: "elite",       label: "ELITE AMATORIALE",         sublabel: "Top 3%",         color: "#C0FF00", textColor: "#000", minPct: 97 },
+  { id: "cacciatore",  label: "CACCIATORE DI PODI",       sublabel: "Top 5%",         color: "#00FFAA", textColor: "#000", minPct: 95 },
+  { id: "competitive", label: "COMPETITIVO NAZIONALE",    sublabel: "Top 10%",        color: "#22D3EE", textColor: "#000", minPct: 90 },
+  { id: "regionale",   label: "COMPETITIVO REGIONALE",    sublabel: "Top 15%",        color: "#60A5FA", textColor: "#000", minPct: 85 },
+  { id: "advanced",    label: "AVANZATO",                 sublabel: "Top 25%",        color: "#A78BFA", textColor: "#fff", minPct: 75 },
+  { id: "macinatore",  label: "MACINATORE DI KM",         sublabel: "Top 40%",        color: "#F472B6", textColor: "#000", minPct: 60 },
+  { id: "warrior",     label: "GUERRIERO DELLA DOMENICA", sublabel: "Top 60%",        color: "#FB923C", textColor: "#fff", minPct: 40 },
+  { id: "finisher",    label: "FINISHER",                 sublabel: "Resto del campo",color: "#9CA3AF", textColor: "#000", minPct: 0  },
 ];
-
-// Base benchmarks — Open Male, competitive Italian context (FIDAL + ENDU 2022-2024)
-const BASE_BENCHMARKS_M: Record<DistKey, Record<string, number>> = {
-  "3K":  { podio: 555,   elite: 585,   competitive: 660,   advanced: 780,  warrior: 960  },
-  "5K":  { podio: 930,   elite: 990,   competitive: 1140,  advanced: 1350, warrior: 1680 },
-  "10K": { podio: 1860,  elite: 2010,  competitive: 2280,  advanced: 2640, warrior: 3240 },
-  "HM":  { podio: 4440,  elite: 4680,  competitive: 5340,  advanced: 6180, warrior: 7500 },
-  "M":   { podio: 10080, elite: 10500, competitive: 12000, advanced: 13680,warrior: 16200 },
-};
-
-// Female benchmarks (~12-15% slower, FIDAL master data)
-const BASE_BENCHMARKS_F: Record<DistKey, Record<string, number>> = {
-  "3K":  { podio: 630,   elite: 675,   competitive: 765,   advanced: 900,  warrior: 1110 },
-  "5K":  { podio: 1080,  elite: 1140,  competitive: 1320,  advanced: 1560, warrior: 1920 },
-  "10K": { podio: 2160,  elite: 2340,  competitive: 2640,  advanced: 3060, warrior: 3720 },
-  "HM":  { podio: 5040,  elite: 5400,  competitive: 6120,  advanced: 7080, warrior: 8520 },
-  "M":   { podio: 11400, elite: 12000, competitive: 13560, advanced: 15540,warrior: 18300 },
-};
 
 // Competitive distribution (FIDAL + tesserati) — log-normal, σ=0.22
 const DIST_PARAMS: Record<Sex, Record<DistKey, { mu: number; sigma: number }>> = {
@@ -282,12 +269,15 @@ function getAllPopTier(pct: number) {
   return ALL_POP_TIERS[ALL_POP_TIERS.length - 1];
 }
 
-function getAdjustedBenchmarks(dist: DistKey, sex: Sex, age: number): Record<string, number> {
-  const base = sex === "M" ? BASE_BENCHMARKS_M[dist] : BASE_BENCHMARKS_F[dist];
-  const factor = getWavaFactor(sex, age);
+// Soglia d'ingresso di ogni tier dalla stessa log-normale dei percentili —
+// così la tabella è sempre coerente con tier e "Prossimo Tier".
+// Per FINISHER (minPct 0) si mostra la soglia del tier sopra come limite ">".
+function getTierBenchmarks(dist: DistKey, sex: Sex): Record<string, number> {
+  const { mu, sigma } = DIST_PARAMS[sex][dist];
   const result: Record<string, number> = {};
-  for (const [k, v] of Object.entries(base)) {
-    result[k] = Math.round(v / factor);
+  for (const tier of TIERS) {
+    const pct = tier.minPct > 0 ? tier.minPct : 40;
+    result[tier.id] = Math.round(Math.exp(probit(1 - pct / 100) * sigma + mu));
   }
   return result;
 }
@@ -493,8 +483,8 @@ function DistanceRankCard({ dist, userSec, sex, age }: {
               -{formatTime(Math.round(Math.max(gapSec, 0)))}
             </div>
           ) : (
-            <div className="mt-1 text-lg font-black leading-none" style={{ fontFamily: MONO, color: "#FFD700" }}>
-              PODIO
+            <div className="mt-1 text-lg font-black leading-none" style={{ fontFamily: MONO, color: "#F5F5F4" }}>
+              MAX
             </div>
           )}
         </div>
@@ -595,22 +585,21 @@ function MultiDistRadar({ userTimes, sex }: {
 }
 
 // Tabella comparativa tier — tutti i PB
-function ComparativeTierTable({ userTimes, sex, age }: {
+function ComparativeTierTable({ userTimes, sex }: {
   userTimes: Partial<Record<DistKey, number>>;
   sex: Sex;
-  age: number;
 }) {
   const activeDists = DISTANCES.filter(d => !!userTimes[d.key]);
   if (activeDists.length === 0) return null;
 
-  const tierKeys = ["podio", "elite", "competitive", "advanced", "warrior"] as const;
+  const tierKeys = TIERS.map(t => t.id);
 
   return (
     <div className={CARD + " !p-0 overflow-hidden"}>
       <div className="px-6 pt-6 pb-5">
         <CardHeader
           title="Tabella Tier"
-          subtitle="Soglie età-aggiustate · tutti i tuoi PB"
+          subtitle="10 livelli · soglie campo open · log-normale FIDAL"
           icon={Award}
         />
       </div>
@@ -663,7 +652,8 @@ function ComparativeTierTable({ userTimes, sex, age }: {
                     </div>
                   </td>
                   {activeDists.map(d => {
-                    const benchmark = getAdjustedBenchmarks(d.key, sex, age)[tkey];
+                    const benchmark = getTierBenchmarks(d.key, sex)[tkey];
+                    const isFinisher = tkey === "finisher";
                     const userSec = userTimes[d.key]!;
                     const beaten = userSec <= benchmark;
                     const gap = userSec - benchmark;
@@ -674,11 +664,11 @@ function ComparativeTierTable({ userTimes, sex, age }: {
                         style={{ background: isCurrentTier ? `${tier.color}10` : "transparent" }}>
                         <div className="text-[11px] font-black tabular-nums"
                           style={{ color: isCurrentTier ? tier.color : "rgba(255,255,255,0.55)" }}>
-                          {formatTime(benchmark)}
+                          {isFinisher ? `>${formatTime(benchmark)}` : formatTime(benchmark)}
                         </div>
                         <div className="text-[8px] mt-0.5 font-bold"
                           style={{ color: isCurrentTier ? tier.color : beaten ? "#22D3EE" : "rgba(255,255,255,0.25)" }}>
-                          {isCurrentTier ? "SEI QUI" : beaten ? `+${formatTime(Math.abs(gap))}` : `-${formatTime(Math.abs(gap))}`}
+                          {isCurrentTier ? "SEI QUI" : isFinisher ? "·" : beaten ? `+${formatTime(Math.abs(gap))}` : `-${formatTime(Math.abs(gap))}`}
                         </div>
                       </td>
                     );
@@ -772,6 +762,174 @@ function RiegelScouting({ userTimes, sex, fidalCat }: {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PACE ROADMAP — sec/km da guadagnare per ogni tier/percentile target
+// ─────────────────────────────────────────────────────────────────────────────
+
+function PaceRoadmap({ heroStats, userTimes, sex }: {
+  heroStats: { dist: DistKey; pct: number } | null;
+  userTimes: Partial<Record<DistKey, number>>;
+  sex: Sex;
+}) {
+  const [filled, setFilled] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setFilled(true), 350);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (!heroStats) return null;
+  const dist = heroStats.dist;
+  const userSec = userTimes[dist];
+  if (!userSec) return null;
+  const distMeters = DISTANCES.find(d => d.key === dist)!.meters;
+  const kmDist = distMeters / 1000;
+  const currentPct = heroStats.pct;
+  const currentPaceSec = userSec / kmDist;
+
+  const MILESTONE_DEFS: Array<{ pct: number; label: string; color: string; sublabel?: string }> = [
+    { pct: 60,   label: "MACINATORE DI KM",      color: "#F472B6", sublabel: "Top 40%" },
+    { pct: 75,   label: "AVANZATO",              color: "#A78BFA", sublabel: "Top 25%" },
+    { pct: 85,   label: "COMPETITIVO REGIONALE", color: "#60A5FA", sublabel: "Top 15%" },
+    { pct: 90,   label: "COMPETITIVO NAZIONALE", color: "#22D3EE", sublabel: "Top 10%" },
+    { pct: 92,   label: "92° Percentile",        color: "#22D3EE" },
+    { pct: 93,   label: "93° Percentile",        color: "#22D3EE" },
+    { pct: 94,   label: "94° Percentile",        color: "#22D3EE" },
+    { pct: 95,   label: "CACCIATORE DI PODI",    color: "#00FFAA", sublabel: "Top 5%" },
+    { pct: 97,   label: "ELITE AMATORIALE",      color: "#C0FF00", sublabel: "Top 3%" },
+    { pct: 99,   label: "PODIO CATEGORIA",       color: "#FFD700", sublabel: "Top 1%" },
+    { pct: 99.5, label: "FUORICLASSE",           color: "#F5F5F4", sublabel: "Top 0.5%" },
+  ];
+
+  const milestones = MILESTONE_DEFS
+    .filter(m => m.pct > currentPct - 0.4)
+    .map(m => {
+      const { mu, sigma } = DIST_PARAMS[sex][dist];
+      const z = probit(1 - m.pct / 100);
+      const targetSec = Math.exp(z * sigma + mu);
+      const totalGapSec = Math.max(0, userSec - targetSec);
+      const paceGapPerKm = totalGapSec / kmDist;
+      const targetPaceSec = targetSec / kmDist;
+      return { ...m, totalGapSec, paceGapPerKm, targetPaceSec };
+    });
+
+  if (milestones.length === 0) return null;
+  const maxGap = Math.max(...milestones.map(m => m.paceGapPerKm), 1);
+
+  const fmtPace = (sec: number) => {
+    const t = Math.round(sec);
+    const m = Math.floor(t / 60);
+    const s = t % 60;
+    return `${m}:${String(s).padStart(2, "0")}/km`;
+  };
+
+  const fmtDelta = (sec: number) => {
+    const s = Math.round(sec);
+    if (s < 1)  return "≈0″/km";
+    if (s < 60) return `-${s}″/km`;
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return r === 0 ? `-${m}′/km` : `-${m}′${String(r).padStart(2, "0")}″/km`;
+  };
+
+  const barGradient = (m: typeof milestones[0]) => {
+    if (m.pct >= 99.5) return "linear-gradient(90deg, #FFD700, #F5F5F4)";
+    if (m.pct >= 99) return "linear-gradient(90deg, #C0FF00, #FFD700)";
+    if (m.pct >= 97) return "linear-gradient(90deg, #22D3EE, #C0FF00)";
+    return m.color;
+  };
+
+  return (
+    <div className={CARD}>
+      <CardHeader
+        title="Roadmap Pace"
+        subtitle={`Sec/km da guadagnare · ${dist} · pace ora ${fmtPace(currentPaceSec)}`}
+        icon={TrendingUp}
+      />
+
+      {/* Current baseline */}
+      <div className="mb-5 pb-4 border-b border-white/[0.07] flex items-center gap-3">
+        <div className="w-[92px] flex-shrink-0">
+          <div className="text-[8px] font-black tracking-[0.18em] uppercase text-[#C0FF00]">SEI QUI</div>
+          <div className="text-[9px] text-gray-500 mt-0.5">{Math.round(currentPct)}° percentile</div>
+        </div>
+        <div className="flex-1 relative h-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#C0FF00] shadow-[0_0_10px_#C0FF00] absolute -top-0.5 left-0 animate-pulse" />
+        </div>
+        <div className="w-[88px] text-right flex-shrink-0">
+          <div className="text-[11px] font-black tabular-nums text-[#C0FF00]" style={{ fontFamily: MONO }}>
+            {fmtPace(currentPaceSec)}
+          </div>
+          <div className="text-[9px] text-gray-600 mt-0.5">pace attuale</div>
+        </div>
+      </div>
+
+      {/* Milestone rows */}
+      <div className="space-y-4">
+        {milestones.map((m, i) => {
+          const barPct = (m.paceGapPerKm / maxGap) * 100;
+          return (
+            <div key={m.pct} className="flex items-center gap-3">
+              <div className="w-[92px] flex-shrink-0">
+                {m.sublabel ? (
+                  <>
+                    <div className="text-[8px] font-black tracking-[0.1em] uppercase leading-tight"
+                      style={{ color: m.color }}>
+                      {m.label.split(" ").slice(0, 2).join(" ")}
+                    </div>
+                    {m.label.split(" ").length > 2 && (
+                      <div className="text-[8px] font-black tracking-[0.1em] uppercase leading-tight"
+                        style={{ color: m.color }}>
+                        {m.label.split(" ").slice(2).join(" ")}
+                      </div>
+                    )}
+                    <div className="text-[8px] text-gray-600 mt-0.5">{m.sublabel}</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-[13px] font-black tabular-nums leading-none"
+                      style={{ fontFamily: MONO, color: m.color }}>
+                      {m.pct}<span className="text-[9px] text-gray-500 ml-0.5">°</span>
+                    </div>
+                    <div className="text-[8px] text-gray-600 mt-0.5">percentile</div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-700 ease-out"
+                  style={{
+                    width: filled ? `${barPct}%` : "0%",
+                    background: barGradient(m),
+                    boxShadow: filled ? `0 0 8px ${m.color}55` : "none",
+                    transitionDelay: `${i * 70}ms`,
+                  }}
+                />
+              </div>
+
+              <div className="w-[88px] text-right flex-shrink-0">
+                <div className="text-[11px] font-black tabular-nums" style={{ fontFamily: MONO, color: m.color }}>
+                  {fmtDelta(m.paceGapPerKm)}
+                </div>
+                <div className="text-[9px] text-gray-600 tabular-nums mt-0.5" style={{ fontFamily: MONO }}>
+                  {fmtPace(m.targetPaceSec)}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-5 pt-4 border-t border-white/[0.05] flex gap-2.5 items-start">
+        <div className="w-1 h-1 rounded-full bg-gray-700 mt-1.5 flex-shrink-0" />
+        <p className="text-[9px] leading-relaxed text-gray-600">
+          Delta cumulativo dal PB attuale · log-normale campo competitivo FIDAL · σ=0.22 · {dist}
+        </p>
+      </div>
     </div>
   );
 }
@@ -1028,8 +1186,8 @@ export function RankingView() {
               {heroStats && !heroNextTier && (
                 <div className={CARD + " text-center"}>
                   <Zap className="w-6 h-6 mx-auto text-[#FFD700]" />
-                  <div className="mt-2 text-sm font-black uppercase tracking-widest text-[#FFD700]">
-                    Livello massimo — sei al podio
+                  <div className="mt-2 text-sm font-black uppercase tracking-widest text-[#F5F5F4]">
+                    Livello massimo — Fuoriclasse
                   </div>
                 </div>
               )}
@@ -1093,7 +1251,12 @@ export function RankingView() {
 
               {/* Tabella comparativa */}
               {activeDists.length >= 2 && (
-                <ComparativeTierTable userTimes={activeTimes} sex={sex} age={age} />
+                <ComparativeTierTable userTimes={activeTimes} sex={sex} />
+              )}
+
+              {/* Roadmap Pace */}
+              {heroStats && (
+                <PaceRoadmap heroStats={heroStats} userTimes={userTimes} sex={sex} />
               )}
 
               {/* Scouting Riegel */}

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-10T18:02:50.400Z",
+  "generated_at": "2026-06-10T18:36:20.510Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2374,9 +2374,9 @@
         "react",
         "recharts"
       ],
-      "hash": "105efcadcea1b4d28a474a6a2eacfa18a71132b63e2f72b68e966065040fdc55",
-      "last_modified": "2026-06-10T18:02:50.401Z",
-      "size_bytes": 49445
+      "hash": "4a178e41dd3d76f5048492ac01999667adf1194b5d958e71ad5706c41cf35957",
+      "last_modified": "2026-06-10T18:36:20.511Z",
+      "size_bytes": 56988
     },
     {
       "path": "src/components/RecentActivities.tsx",
