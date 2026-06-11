@@ -78,6 +78,22 @@ function runStartHour(run: Run): number | null {
   return null;
 }
 
+// All hours covered by the run (start → start+duration). A 07:25→07:47 run
+// covers hours [7, 8]: averaging them (≈20.6°C) is what the runner felt,
+// while the 07:00 snapshot alone (19.9°C) can sit just under the 20°C hot
+// threshold and wrongly drop the run from the list.
+function runCoveredHours(run: Run, startHour: number): number[] {
+  const s = run.start_date_local;
+  const minutes =
+    typeof s === 'string' && s.length >= 16 ? parseInt(s.slice(14, 16), 10) : 0;
+  const startMin = startHour * 60 + (Number.isFinite(minutes) ? minutes : 0);
+  const endMin = startMin + Math.max(0, run.duration_minutes ?? 0);
+  const endHour = Math.min(23, Math.floor(endMin / 60));
+  const hours: number[] = [];
+  for (let h = startHour; h <= endHour; h += 1) hours.push(h);
+  return hours.length ? hours : [startHour];
+}
+
 function inferRunHour(name?: string | null): { hour: number; label: string } {
   const text = (name ?? '').toLowerCase();
   if (text.includes('night')) return { hour: 22, label: 'stima notte · 22:00' };
@@ -134,24 +150,37 @@ async function fetchWeatherForRun(run: Run): Promise<WeatherSnapshot | null> {
       const humidities: Array<number | null> = json?.hourly?.relative_humidity_2m ?? [];
       const apparentTemps: Array<number | null> = json?.hourly?.apparent_temperature ?? [];
       const winds: Array<number | null> = json?.hourly?.wind_speed_10m ?? [];
-      const targetHour = String(hour).padStart(2, '0');
-      // Match the run's date AND hour (forecast returns many days).
-      let index = times.findIndex((value) => value.startsWith(`${run.date}T${targetHour}:00`));
-      if (index < 0) index = times.findIndex((value) => value.startsWith(run.date)); // any hour that day
-      if (index < 0 && !useForecast) index = Math.min(Math.max(hour, 0), times.length - 1);
+      // Average over ALL hours covered by the run (start..end), not a single
+      // start-hour snapshot: at dawn the temperature climbs fast and the
+      // snapshot can read 1-2°C colder than what the runner actually felt.
+      const coveredHours = realHour != null ? runCoveredHours(run, realHour) : [hour];
+      const wantedPrefixes = coveredHours.map(
+        (h) => `${run.date}T${String(h).padStart(2, '0')}:00`,
+      );
+      let indices = times
+        .map((value, i) => (wantedPrefixes.some((p) => value.startsWith(p)) ? i : -1))
+        .filter((i) => i >= 0);
+      if (!indices.length) {
+        const anyDay = times.findIndex((value) => value.startsWith(run.date)); // any hour that day
+        if (anyDay >= 0) indices = [anyDay];
+        else if (!useForecast) indices = [Math.min(Math.max(hour, 0), times.length - 1)];
+      }
+      const avgOf = (arr: Array<number | null>): number | null => {
+        const vals = indices.map((i) => arr[i]).filter((v): v is number => v != null);
+        return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+      };
       // The device-recorded temperature (from the watch/Strava) is the ground
       // truth for that exact moment — prefer it over the modelled value at a
       // guessed hour, which can sit just under a threshold (e.g. 20.2°C at 07:00
       // when the run was actually 22°C at 08:15).
       const measuredTemp =
         typeof run.temperature === 'number' && run.temperature > -50 ? run.temperature : null;
-      if (index < 0 && measuredTemp == null) return null;
-      const idx = index < 0 ? 0 : index;
+      if (!indices.length && measuredTemp == null) return null;
       return {
-        temperature: measuredTemp ?? temperatures[idx] ?? null,
-        humidity: humidities[idx] ?? null,
-        apparent: apparentTemps[idx] ?? measuredTemp ?? null,
-        wind: winds[idx] ?? null,
+        temperature: measuredTemp ?? avgOf(temperatures),
+        humidity: avgOf(humidities),
+        apparent: avgOf(apparentTemps) ?? measuredTemp,
+        wind: avgOf(winds),
         estimatedHour: hour,
         estimatedLabel: measuredTemp != null ? `${label} · temp reale del dispositivo` : label,
         source: (measuredTemp != null ? 'run-fallback' : useForecast ? 'forecast' : 'archive') as

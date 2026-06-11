@@ -1456,6 +1456,13 @@ async def strava_sync():
             if best_intervals:
                 run_doc.update(best_intervals)
             run_doc = _normalise_run_quality_fields(run_doc)
+            # Meteo persistito (Open-Meteo, media ore coperte dalla corsa):
+            # senza, il VDOT estivo resta non corretto per il caldo e la corsa
+            # non compare in Clima & Ritmo. Non-fatale.
+            try:
+                run_doc.update(await _run_weather_fields(run_doc))
+            except Exception as e:
+                print(f"[weather-enrich] {strava_id}: {e}")
 
             await db.runs.update_one(
                 {"strava_id": strava_id},
@@ -3914,17 +3921,47 @@ def _vdot_from_run(r: dict, max_hr: int = 190, resting_hr: int = 50) -> Optional
     return max(candidates) if candidates else None
 
 def _run_cardiac_drift_pct(run: dict) -> Optional[float]:
-    """HR decoupling between first and second half of a run (% drift).
+    """Pa:HR decoupling between first and second half of a run (% drift).
 
-    High positive drift (HR climbing while pace held) means the effort was not
-    a clean steady state — heat, dehydration, or fatigue inflated HR late in the
-    run. Such a run's pace/HR relationship is a poor basis for a VDOT estimate.
-    Returns None when splits lack HR data.
+    Pace-adjusted (effort = HR x pace_sec, proportional to HR/speed): real
+    cardiac drift is HR climbing AT THE SAME pace (heat, dehydration, fatigue).
+    An intentional negative split raises HR because pace drops — that is NOT
+    drift and must not be penalised (e.g. tempo progressivo 4:23 -> 4:15 with
+    HR 147 -> 159 = ~3% decoupling, not 8% raw-HR drift). Falls back to raw HR
+    drift when splits carry no usable pace. Returns None without HR data.
     """
     splits = [s for s in (run.get("splits") or []) if _coerce_float(s.get("hr"))]
     if len(splits) < 4:
         return None
     half = len(splits) // 2
+
+    def _split_pace_sec(s: dict) -> Optional[float]:
+        p = s.get("pace")
+        if isinstance(p, str) and ":" in p:
+            try:
+                m, sec = p.split(":")[:2]
+                return int(m) * 60 + int(sec)
+            except (TypeError, ValueError):
+                pass
+        elapsed = _coerce_float(s.get("elapsed_time"))
+        dist = _coerce_float(s.get("distance"))
+        if elapsed and dist and dist > 0:
+            return elapsed / (dist / 1000.0)
+        return None
+
+    def _half_effort(rows: list) -> Optional[float]:
+        vals = []
+        for s in rows:
+            hr = _coerce_float(s.get("hr"))
+            pace = _split_pace_sec(s)
+            if hr and pace:
+                vals.append(hr * pace)
+        return sum(vals) / len(vals) if vals else None
+
+    e1 = _half_effort(splits[:half])
+    e2 = _half_effort(splits[half:])
+    if e1 and e2 and e1 > 0:
+        return (e2 - e1) / e1 * 100.0
 
     def _avg_hr(rows: list) -> Optional[float]:
         vals = [_coerce_float(s.get("hr")) for s in rows if _coerce_float(s.get("hr"))]
@@ -5100,7 +5137,9 @@ def _build_vdot_chart(
     if want_threshold:
         threshold_detail = []
         for p in detail:
-            threshold = _pace_at_vo2_pct(p.get("vdot"), 0.88)
+            # 0.81 = T sostenibile ~1h, stessa base del Passo Soglia dashboard
+            # (0.88 Daniels classico mostrava 4:10 vs 4:32 dashboard, mismatch)
+            threshold = _pace_at_vo2_pct(p.get("vdot"), 0.81)
             threshold_detail.append({
                 "date": p["date"],
                 "threshold_pace": round(threshold, 1) if threshold else None,
@@ -8417,6 +8456,83 @@ async def _fetch_run_weather(lat, lng, date_str, hour_start=None, hour_end=None)
         "source": "forecast" if use_forecast else "archive",
         "hours_used": sorted(hours_wanted),
     }
+
+
+async def _run_weather_fields(run_doc: dict) -> dict:
+    """Meteo Open-Meteo persistito sul run: temperature / humidity / weather.
+
+    Media oraria sulle ore coperte dalla corsa (start..end da start_date_local
+    + durata), stessa logica del sub-20 eval. Abilita: correzione caldo nel
+    VDOT (_environmental_pace_adjustment), niente penalita confidenza "caldo
+    estivo non correggibile", e vista Clima & Ritmo senza fetch client-side.
+    Non-fatale: ritorna {} se mancano posizione/data o l'API e' giu'.
+    """
+    latlng = run_doc.get("start_latlng") or []
+    lat = latlng[0] if len(latlng) >= 2 else None
+    lng = latlng[1] if len(latlng) >= 2 else None
+    date_str = run_doc.get("date")
+    if lat is None or lng is None or not date_str:
+        return {}
+    sdl = run_doc.get("start_date_local") or ""
+    hh = int(sdl[11:13]) if len(sdl) >= 13 and sdl[11:13].isdigit() else None
+    mm = int(sdl[14:16]) if len(sdl) >= 16 and sdl[14:16].isdigit() else 0
+    dur_min = float(run_doc.get("duration_minutes") or 0)
+    hour_start = hour_end = None
+    if hh is not None:
+        start_min = hh * 60 + mm
+        hour_start = start_min // 60
+        hour_end = min(23, int(start_min + dur_min) // 60)
+    w = await _fetch_run_weather(lat, lng, date_str, hour_start, hour_end)
+    if not w or w.get("temp_c") is None:
+        return {}
+    return {
+        "temperature": round(w["temp_c"], 1),
+        "humidity": round(w["humidity"]) if w.get("humidity") is not None else None,
+        "weather": {
+            "temp_c": round(w["temp_c"], 1),
+            "humidity": round(w["humidity"], 1) if w.get("humidity") is not None else None,
+            "apparent": round(w["apparent_c"], 1) if w.get("apparent_c") is not None else None,
+            "source": w.get("source"),
+            "hours_used": w.get("hours_used"),
+        },
+    }
+
+
+@app.post("/api/weather/backfill")
+async def backfill_run_weather(limit: int = 60):
+    """Arricchisce di meteo i run che ne sono privi (recenti prima).
+
+    Idempotente: salta i run con temperature gia' valorizzata. Batch limitato
+    per restare nei rate limit Open-Meteo e nei timeout request Render.
+    Invalida le cache analytics/DNA cosi' VDOT e previsioni si ricalcolano
+    con la correzione caldo attiva.
+    """
+    athlete_id = await _get_athlete_id()
+    q: dict = {
+        "$or": [{"temperature": {"$exists": False}}, {"temperature": None}],
+        "start_latlng.1": {"$exists": True},
+        "is_treadmill": {"$ne": True},
+    }
+    if athlete_id:
+        q["athlete_id"] = athlete_id
+    limit = max(1, min(200, int(limit)))
+    runs = await db.runs.find(q).sort("date", -1).to_list(limit)
+    enriched, failed = 0, 0
+    for r in runs:
+        try:
+            fields = await _run_weather_fields(r)
+        except Exception as e:
+            print(f"[weather-backfill] {r.get('date')}: {e}")
+            fields = {}
+        if fields:
+            await db.runs.update_one({"_id": r["_id"]}, {"$set": fields})
+            enriched += 1
+        else:
+            failed += 1
+    if athlete_id and enriched:
+        await _invalidate_analytics_cache(athlete_id)
+        await _invalidate_runner_dna_cache(athlete_id)
+    return {"ok": True, "scanned": len(runs), "enriched": enriched, "no_data": failed}
 
 
 def _sub20_suggest_pct(avg_raw, target, reps_done, reps_prescribed, rep_paces) -> Optional[int]:
