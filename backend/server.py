@@ -684,7 +684,10 @@ async def strava_exchange_code(request: Request):
 
 
 @app.delete("/api/strava/connection")
-async def strava_disconnect(athlete_id: Optional[int] = Query(None)):
+async def strava_disconnect(
+    athlete_id: Optional[int] = Query(None),
+    force: bool = Query(False),
+):
     tokens = await db.strava_tokens.find_one({"athlete_id": athlete_id}) if athlete_id else await _get_active_strava_token()
     if not tokens:
         connections = await _strava_connections_payload()
@@ -692,6 +695,7 @@ async def strava_disconnect(athlete_id: Optional[int] = Query(None)):
         return {
             "ok": True,
             "revoked": False,
+            "removed": False,
             "connected": bool(active),
             "connections": connections,
             "active_athlete_id": active.get("athlete_id") if active else None,
@@ -714,21 +718,32 @@ async def strava_disconnect(athlete_id: Optional[int] = Query(None)):
             revoke_ok = 200 <= resp.status_code < 300
             if not revoke_ok:
                 revoke_error = resp.text
+        else:
+            revoke_error = "missing_access_token"
     except Exception as e:
         revoke_error = str(e)
 
-    delete_q = {"athlete_id": athlete_id} if athlete_id else {"_id": tokens["_id"]}
-    await db.strava_tokens.delete_many(delete_q)
-    if was_active:
-        next_token = await db.strava_tokens.find_one(sort=[("_id", -1)])
-        if next_token:
-            await db.strava_tokens.update_one({"_id": next_token["_id"]}, {"$set": {"active": True}})
+    # Rimuovi il token locale SOLO se Strava ha revocato l'autorizzazione,
+    # oppure se il chiamante forza esplicitamente (force=true). Altrimenti lo
+    # slot atleta resterebbe occupato lato Strava senza più alcun token per
+    # ritentare la deautorizzazione: meglio tenerlo tracciato e riprovabile.
+    removed = False
+    if revoke_ok or force:
+        delete_q = {"athlete_id": athlete_id} if athlete_id else {"_id": tokens["_id"]}
+        await db.strava_tokens.delete_many(delete_q)
+        removed = True
+        if was_active:
+            next_token = await db.strava_tokens.find_one(sort=[("_id", -1)])
+            if next_token:
+                await db.strava_tokens.update_one({"_id": next_token["_id"]}, {"$set": {"active": True}})
 
     active = await _get_active_strava_token()
 
     return {
         "ok": True,
         "revoked": revoke_ok,
+        "removed": removed,
+        "forced": bool(force and not revoke_ok and removed),
         "connected": bool(active),
         "athlete_id": athlete_id,
         "active_athlete_id": active.get("athlete_id") if active else None,

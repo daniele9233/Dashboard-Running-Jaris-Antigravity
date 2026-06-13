@@ -231,6 +231,10 @@ export interface StravaStatus {
 export interface StravaDisconnectResponse {
   ok: boolean;
   revoked: boolean;
+  /** true se il token locale è stato effettivamente rimosso dal DB */
+  removed?: boolean;
+  /** true se rimosso via force=true senza che Strava abbia revocato */
+  forced?: boolean;
   connected: boolean;
   athlete_id?: number | null;
   active_athlete_id?: number | null;
@@ -254,8 +258,13 @@ export const setActiveStravaAthlete = (athleteId: number) =>
 
 export const syncStrava = () => api.post('/api/strava/sync');
 
-export const disconnectStrava = (athleteId?: number | null) =>
-  api.delete<StravaDisconnectResponse>(`/api/strava/connection${athleteId ? `?athlete_id=${athleteId}` : ''}`);
+export const disconnectStrava = (athleteId?: number | null, force = false) => {
+  const params = new URLSearchParams();
+  if (athleteId) params.set('athlete_id', String(athleteId));
+  if (force) params.set('force', 'true');
+  const qs = params.toString();
+  return api.delete<StravaDisconnectResponse>(`/api/strava/connection${qs ? `?${qs}` : ''}`);
+};
 
 export const exchangeStravaCode = (code: string) =>
   api.post('/api/strava/exchange-code', { code });

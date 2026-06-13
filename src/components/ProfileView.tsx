@@ -760,13 +760,13 @@ export function ProfileView() {
     }
   };
 
-  const handleStravaDisconnect = async (athleteId?: number | null) => {
-    if (!window.confirm("Scollegare questo atleta da Strava? Le corse gia importate restano nel database.")) return;
+  const handleStravaDisconnect = async (athleteId?: number | null, force = false) => {
+    if (!force && !window.confirm("Scollegare questo atleta da Strava? Le corse gia importate restano nel database.")) return;
 
     setDisconnecting(true);
     setSyncResult(null);
     try {
-      const res = await disconnectStrava(athleteId);
+      const res = await disconnectStrava(athleteId, force);
       const connections = res.connections ?? [];
       const active = connections.find((connection) => connection.active) ?? null;
       setProfile(null);
@@ -780,11 +780,25 @@ export function ProfileView() {
       if (res.connected) {
         getProfile().then(setProfile).catch(() => setProfile(null));
       }
-      setSyncResult(
-        res.revoked
-          ? "Atleta Strava scollegato."
-          : "Token locale rimosso. Se Strava mostra ancora l'atleta connesso, revoca l'app dalle impostazioni Strava.",
-      );
+
+      if (res.revoked) {
+        setSyncResult("Atleta Strava scollegato.");
+      } else if (res.removed) {
+        setSyncResult("Token rimosso. Se Strava mostra ancora l'atleta connesso, revoca l'app da strava.com/settings/apps.");
+      } else {
+        // Revoca fallita: il token è stato MANTENUTO per non lasciare orfano
+        // lo slot atleta su Strava. Offri la rimozione forzata consapevole.
+        const retry = window.confirm(
+          "Strava non ha revocato l'autorizzazione (token forse scaduto), quindi l'atleta resta collegato.\n\n" +
+          "Vuoi rimuoverlo comunque dall'app? Lo slot su Strava andra liberato revocando l'app da strava.com/settings/apps",
+        );
+        if (retry) {
+          setDisconnecting(false);
+          await handleStravaDisconnect(athleteId, true);
+          return;
+        }
+        setSyncResult("Scollegamento non riuscito: l'atleta resta collegato. Riprova o revoca l'app da Strava.");
+      }
     } catch {
       setSyncResult("Errore durante lo scollegamento di Strava.");
     } finally {
