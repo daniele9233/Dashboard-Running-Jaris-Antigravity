@@ -22,6 +22,7 @@ const RoutesView     = lazy(() => import("./components/RoutesView").then((m) => 
 const ActivitiesView = lazy(() => import("./components/ActivitiesView").then((m) => ({ default: m.ActivitiesView })));
 const RunnerDnaView  = lazy(() => import("./components/RunnerDnaView").then((m) => ({ default: m.RunnerDnaView })));
 const RankingView    = lazy(() => import("./components/RankingView").then((m) => ({ default: m.RankingView })));
+const BadgesView     = lazy(() => import("./components/BadgesView").then((m) => ({ default: m.BadgesView })));
 import { useParams } from "react-router-dom";
 import { exchangeStravaCode, syncStrava, getProfile } from "./api";
 import { invalidateCache, useApi } from "./hooks/useApi";
@@ -75,6 +76,7 @@ function AppContent() {
     { path: "/statistics",  label: t("nav.statistics") },
     { path: "/runner-dna",  label: t("nav.runnerDna")  },
     { path: "/ranking",     label: t("nav.ranking")    },
+    { path: "/badges",      label: t("nav.badges")     },
     { path: "/profile",     label: t("nav.profile")    },
   ];
 
@@ -185,6 +187,7 @@ function AppContent() {
                 <Route path="/runner-dna-v1"    element={<Navigate to="/runner-dna" replace />} />
                 <Route path="/runner-dna-v2"    element={<Navigate to="/runner-dna" replace />} />
                 <Route path="/ranking"          element={<RankingView />} />
+                <Route path="/badges"           element={<BadgesView />} />
                 <Route path="/statistics"       element={<StatisticsView />} />
                 <Route path="/profile"          element={<ProfileView />} />
                 <Route path="/recovery"         element={<ComingSoonView label="Recovery" />} />

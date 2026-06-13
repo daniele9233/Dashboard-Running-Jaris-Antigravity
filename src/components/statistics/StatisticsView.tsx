@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StatsDrift } from './StatsDrift';
-import { BadgesGrid } from '../BadgesGrid';
 import { MainChart } from '../MainChart';
 import { AnaerobicThreshold } from '../AnaerobicThreshold';
 import { FitnessFreshness } from '../FitnessFreshness';
@@ -919,7 +918,6 @@ export function StatisticsView() {
     { id: 'biology',     label: 'Biologia & Futuro',           icon: FlaskConical },
     { id: 'environment', label: 'Clima & Ritmo',               icon: CloudSun },
     { id: 'biologyv2',   label: 'Detraining',                  icon: Dna },
-    { id: 'badges',      label: 'Badge',                       icon: Star },
   ];
 
   const noData = (message = 'Dati reali insufficienti') => (
@@ -2466,18 +2464,6 @@ export function StatisticsView() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <BiologyFutureV2 data={biologyData} profile={profileData ?? null} runs={runs} vdot={vdot} />
             <BiologyFutureLab profile={profileData ?? null} runs={runs} vdot={vdot} />
-          </div>
-        )}
-
-        {activeTab === 'badges' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <BadgesGrid
-              runs={runs}
-              vdot={vdot ?? 0}
-              vdotPeak={vdot ? vdot + 2 : 0}
-              vdotDelta={0}
-              maxHr={dashData?.profile?.max_hr ?? 0}
-            />
           </div>
         )}
 

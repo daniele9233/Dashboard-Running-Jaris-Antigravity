@@ -26,7 +26,9 @@
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
+    "@gsap/react": "^2.1.2",
     "@mapbox/polyline": "^1.2.1",
+    "@rive-app/react-canvas": "^4.29.0",
     "@tailwindcss/vite": "^4.1.14",
     "@turf/turf": "^7.3.4",
     "@types/mapbox-gl": "^3.4.1",

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-11T11:20:51.776Z",
+  "generated_at": "2026-06-13T06:51:37.314Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,9 +14,9 @@
     ]
   },
   "counts": {
-    "files": 147,
+    "files": 164,
     "backend_routes": 62,
-    "frontend_routes": 14,
+    "frontend_routes": 15,
     "api_clients": 60
   },
   "files": [
@@ -1108,9 +1108,9 @@
       "exports": [],
       "routes": [],
       "imports": [],
-      "hash": "2a0b0b00d9e6a531bdd6afcc38e5743cd5fece7d778c8c31edeaff13e27d0486",
-      "last_modified": "2026-04-29T21:07:13.639Z",
-      "size_bytes": 2441
+      "hash": "e5a7270aa8e786d161ac9499c5f2e4fde85de8e3fc8cdda362bdf82ffbce0e00",
+      "last_modified": "2026-06-12T05:25:27.354Z",
+      "size_bytes": 2513
     },
     {
       "path": "PRD.md",
@@ -1593,6 +1593,7 @@
         "/",
         "/activities",
         "/activities/:runId",
+        "/badges",
         "/biometrics",
         "/insights",
         "/profile",
@@ -1618,9 +1619,9 @@
         "react-i18next",
         "react-router-dom"
       ],
-      "hash": "be0aa227be8e5d6070fb9ad022727e3e49f92e73882bc9ae5c87c13a35501e1f",
-      "last_modified": "2026-06-10T12:54:00.924Z",
-      "size_bytes": 10102
+      "hash": "96cee72c178a840e07cebabaaf97bcababdc11df9653609bef41e94daf53d478",
+      "last_modified": "2026-06-11T15:01:29.812Z",
+      "size_bytes": 10350
     },
     {
       "path": "src/components/ActivitiesView.tsx",
@@ -1705,28 +1706,24 @@
       "size_bytes": 15498
     },
     {
-      "path": "src/components/BadgesGrid.tsx",
-      "kind": "frontend-component",
-      "purpose": "React component BadgesGrid.",
+      "path": "src/components/BadgesView.tsx",
+      "kind": "frontend-view",
+      "purpose": "Page/view component for Badges.",
       "touch_when": [
-        "activities",
         "ai",
-        "garmin",
-        "layout",
-        "statistics",
-        "types"
+        "statistics"
       ],
       "exports": [
-        "BadgesGrid"
+        "BadgesView"
       ],
       "routes": [],
       "imports": [
-        "../types/api",
-        "react"
+        "./celebrations/CelebrationStudio",
+        "lucide-react"
       ],
-      "hash": "6f134e8c8d299e63d8dc2804e83f1f590cda0b49d588438885e185600596f9eb",
-      "last_modified": "2026-05-16T19:16:42.103Z",
-      "size_bytes": 4647
+      "hash": "17c60610bb5671cdc0b694bc1b908bbc4a6ce9dc9fb84676a27af10581c656f8",
+      "last_modified": "2026-06-13T06:51:37.314Z",
+      "size_bytes": 1551
     },
     {
       "path": "src/components/CardiacDrift.tsx",
@@ -1754,6 +1751,488 @@
       "hash": "f6d69da1e37503e69423b7ac01413a1fc2f55f5075245504822d7415608049c0",
       "last_modified": "2026-05-16T19:11:16.459Z",
       "size_bytes": 9980
+    },
+    {
+      "path": "src/components/celebrations/CelebrationOverlay.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component CelebrationOverlay.",
+      "touch_when": [
+        "ai",
+        "types"
+      ],
+      "exports": [
+        "CelebrationOverlay"
+      ],
+      "routes": [],
+      "imports": [
+        "./celebrationRegistry",
+        "./gsapSetup",
+        "./RiveLayer",
+        "react",
+        "react-dom"
+      ],
+      "hash": "555e30c3cec6cc8df79ab09aa437a81b009825a93e9358fbe1372854d82bdd35",
+      "last_modified": "2026-06-12T05:37:04.791Z",
+      "size_bytes": 5648
+    },
+    {
+      "path": "src/components/celebrations/celebrationRegistry.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component celebrationRegistry.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "garmin",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "CELEBRATION_GROUPS",
+        "CelebrationDef",
+        "CelebrationGroup",
+        "CELEBRATIONS"
+      ],
+      "routes": [],
+      "imports": [
+        "./scenes",
+        "./scenesClimb",
+        "./scenesDist",
+        "./scenesHabit",
+        "./scenesMoments",
+        "./scenesPace",
+        "./scenesPhysio",
+        "./scenesPodium",
+        "./scenesRace",
+        "./scenesSpeed",
+        "./scenesVolume",
+        "react"
+      ],
+      "hash": "a77dc71dafde26cf3eae6c6c6207e67aca1607857938c4b7f0abe13d9caae793",
+      "last_modified": "2026-06-13T06:24:23.883Z",
+      "size_bytes": 31496
+    },
+    {
+      "path": "src/components/celebrations/CelebrationStudio.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component CelebrationStudio.",
+      "touch_when": [
+        "ai",
+        "layout",
+        "types"
+      ],
+      "exports": [
+        "CelebrationStudio"
+      ],
+      "routes": [],
+      "imports": [
+        "./CelebrationOverlay",
+        "./celebrationRegistry",
+        "lucide-react",
+        "react"
+      ],
+      "hash": "8bda611be61deae52787ab1ee321467412d0b482c8160f27a6f62e08cf8f807b",
+      "last_modified": "2026-06-12T14:58:58.115Z",
+      "size_bytes": 4676
+    },
+    {
+      "path": "src/components/celebrations/gsapSetup.ts",
+      "kind": "frontend-component",
+      "purpose": "React component gsapSetup.",
+      "touch_when": [],
+      "exports": [
+        "prefersReducedMotion"
+      ],
+      "routes": [],
+      "imports": [
+        "@gsap/react",
+        "gsap",
+        "gsap/CustomEase",
+        "gsap/DrawSVGPlugin",
+        "gsap/MotionPathPlugin",
+        "gsap/SplitText"
+      ],
+      "hash": "50800ec2d160053f663f0112d4153e905e138d0bec5bd988628a53e2d7622b1e",
+      "last_modified": "2026-06-12T05:27:19.483Z",
+      "size_bytes": 808
+    },
+    {
+      "path": "src/components/celebrations/RiveLayer.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component RiveLayer.",
+      "touch_when": [],
+      "exports": [
+        "RiveLayer"
+      ],
+      "routes": [],
+      "imports": [
+        "@rive-app/react-canvas"
+      ],
+      "hash": "d2cb799482fa296092b5e29377e2749186fa6e03f259aeac36033edf18764310",
+      "last_modified": "2026-06-12T05:29:56.357Z",
+      "size_bytes": 997
+    },
+    {
+      "path": "src/components/celebrations/scenes.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component scenes.",
+      "touch_when": [
+        "ai",
+        "cadence",
+        "layout",
+        "strava",
+        "types"
+      ],
+      "exports": [
+        "CadenceScene",
+        "LaurelScene",
+        "OdometerScene",
+        "OrbitScene",
+        "PulseScene",
+        "RouteScene",
+        "StopwatchScene",
+        "StreakScene",
+        "SummitScene",
+        "VelocityScene"
+      ],
+      "routes": [],
+      "imports": [
+        "./gsapSetup",
+        "./sceneUtils",
+        "react"
+      ],
+      "hash": "ba7cdc510aa3c70a51b5d769f5ca6c98334a24cb3f23a3c93e0317874b73c3a0",
+      "last_modified": "2026-06-12T15:00:41.879Z",
+      "size_bytes": 31276
+    },
+    {
+      "path": "src/components/celebrations/scenesClimb.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component scenesClimb.",
+      "touch_when": [
+        "ai",
+        "api",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "AltimeterScene",
+        "CablewayScene",
+        "DownhillScene",
+        "EverestScene",
+        "InclineScene",
+        "SineWaveScene",
+        "StrataScene",
+        "TrailScene"
+      ],
+      "routes": [],
+      "imports": [
+        "./gsapSetup",
+        "./sceneUtils",
+        "react"
+      ],
+      "hash": "f7a0a383d403467e037afd62d23167c275d39ff0397c75c238cca1e92a90d5f4",
+      "last_modified": "2026-06-12T15:00:45.466Z",
+      "size_bytes": 16870
+    },
+    {
+      "path": "src/components/celebrations/scenesDist.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component scenesDist.",
+      "touch_when": [
+        "activities",
+        "layout",
+        "types"
+      ],
+      "exports": [
+        "CalorieBurnScene",
+        "FourWeeksScene",
+        "HundredRunsScene",
+        "Month200Scene",
+        "Runs250Scene",
+        "SundayLongScene",
+        "TwentyHoursScene",
+        "TwoThousandScene",
+        "Week80Scene",
+        "YearRingScene"
+      ],
+      "routes": [],
+      "imports": [
+        "./gsapSetup",
+        "./sceneUtils",
+        "react"
+      ],
+      "hash": "c5afd9e5ce3200ee14dbe4cb58b69bfe034810134e097ae000195a99be09d51b",
+      "last_modified": "2026-06-13T06:16:35.547Z",
+      "size_bytes": 17890
+    },
+    {
+      "path": "src/components/celebrations/scenesHabit.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component scenesHabit.",
+      "touch_when": [
+        "ai",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "ChainScene",
+        "HeatScene",
+        "HundredScene",
+        "NightOwlScene",
+        "PerfectCheckScene",
+        "PieWheelScene",
+        "RainRunnerScene",
+        "SnowflakeScene",
+        "SunriseScene",
+        "TripleFlameScene"
+      ],
+      "routes": [],
+      "imports": [
+        "./gsapSetup",
+        "./sceneUtils",
+        "react"
+      ],
+      "hash": "b90ca4e4ef3215ff0fb6c6a66b993d404cc2d501bae237c7c39f78868b50358c",
+      "last_modified": "2026-06-12T14:54:26.101Z",
+      "size_bytes": 20829
+    },
+    {
+      "path": "src/components/celebrations/scenesMoments.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component scenesMoments.",
+      "touch_when": [
+        "types"
+      ],
+      "exports": [
+        "BirthdayScene",
+        "DawnTenScene",
+        "FogScene",
+        "HeatPeakScene",
+        "HumidityScene",
+        "NewYearScene",
+        "TrackOvalScene",
+        "WeekendScene",
+        "WindScene",
+        "YearStreakScene"
+      ],
+      "routes": [],
+      "imports": [
+        "./gsapSetup",
+        "./sceneUtils",
+        "react"
+      ],
+      "hash": "f97047bbb10ee635264f3ca5d184cf2947e82e3e161beeb3d26af645aad368c1",
+      "last_modified": "2026-06-13T06:19:51.370Z",
+      "size_bytes": 19098
+    },
+    {
+      "path": "src/components/celebrations/scenesPace.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component scenesPace.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "types"
+      ],
+      "exports": [
+        "DoubleKScene",
+        "EightHundredScene",
+        "EvenSplitScene",
+        "LocomotiveScene",
+        "MileScene",
+        "SubFourScene",
+        "TempoWaveScene",
+        "ThreeKScene",
+        "UrbanLimitScene",
+        "YassoScene"
+      ],
+      "routes": [],
+      "imports": [
+        "./gsapSetup",
+        "./sceneUtils",
+        "react"
+      ],
+      "hash": "ecf6a988629af2f6c1f8836a4c36303ab2e5d153dd1a355b39ead91a1fa717aa",
+      "last_modified": "2026-06-13T06:15:13.743Z",
+      "size_bytes": 19078
+    },
+    {
+      "path": "src/components/celebrations/scenesPhysio.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component scenesPhysio.",
+      "touch_when": [
+        "ai",
+        "garmin",
+        "types"
+      ],
+      "exports": [
+        "CoolHeartScene",
+        "EfficiencyScene",
+        "FlatlineScene",
+        "GoldIndexScene",
+        "GroundContactScene",
+        "OscillationScene",
+        "PowerBoltScene",
+        "RecoveryDipScene",
+        "SteadyHeartScene",
+        "StrideScene"
+      ],
+      "routes": [],
+      "imports": [
+        "./gsapSetup",
+        "./sceneUtils",
+        "react"
+      ],
+      "hash": "a0c76f9c564a673236ea3c93cf5fdb316b175afd72b8c736a2e020da78c5e801",
+      "last_modified": "2026-06-13T06:18:22.899Z",
+      "size_bytes": 20754
+    },
+    {
+      "path": "src/components/celebrations/scenesPodium.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component scenesPodium.",
+      "touch_when": [
+        "types"
+      ],
+      "exports": [
+        "ArchUnderScene",
+        "BibStackScene",
+        "CrownClockScene",
+        "GantryScene",
+        "GrowthScene",
+        "HalfRecordScene",
+        "MetronomeGateScene",
+        "PodiumScene",
+        "RingGoalScene",
+        "TripleBibScene"
+      ],
+      "routes": [],
+      "imports": [
+        "./gsapSetup",
+        "./sceneUtils",
+        "react"
+      ],
+      "hash": "2e2b6111e802c32fc025a0c6170498293702584d6df6d4d3098c194502020fe9",
+      "last_modified": "2026-06-13T06:21:21.287Z",
+      "size_bytes": 19714
+    },
+    {
+      "path": "src/components/celebrations/scenesRace.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component scenesRace.",
+      "touch_when": [
+        "ai",
+        "garmin",
+        "types"
+      ],
+      "exports": [
+        "BibPinScene",
+        "EngineWingsScene",
+        "GateOpenScene",
+        "LaserCrownScene",
+        "LoadRingScene",
+        "PhoenixScene",
+        "PhotoFinishScene",
+        "RankClimbScene",
+        "StopClockScene",
+        "TierUpScene",
+        "TripleStarsScene",
+        "TrophyBuildScene"
+      ],
+      "routes": [],
+      "imports": [
+        "./gsapSetup",
+        "./sceneUtils",
+        "react"
+      ],
+      "hash": "75b5b44007450e1a893b4c426e94192dfd2ac62292a15f5da70665e6815cd88e",
+      "last_modified": "2026-06-12T14:56:38.724Z",
+      "size_bytes": 26965
+    },
+    {
+      "path": "src/components/celebrations/scenesSpeed.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component scenesSpeed.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "BarrierBreakScene",
+        "GaugeScene",
+        "LaunchScene",
+        "NegativeSplitScene",
+        "RepLadderScene",
+        "RocketFinishScene",
+        "SplitWatchScene",
+        "StaircaseScene",
+        "StampLapsScene",
+        "TrackLapScene"
+      ],
+      "routes": [],
+      "imports": [
+        "./gsapSetup",
+        "./sceneUtils",
+        "react"
+      ],
+      "hash": "60b01bef79751e6359a610dd97da15905ac1b3102caccb12d16efab49855b002",
+      "last_modified": "2026-06-12T14:51:17.642Z",
+      "size_bytes": 20416
+    },
+    {
+      "path": "src/components/celebrations/scenesVolume.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component scenesVolume.",
+      "touch_when": [
+        "layout",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "ArchScene",
+        "CalendarWaveScene",
+        "DoubleDayScene",
+        "FinishTapeScene",
+        "HourglassScene",
+        "MilestoneScene",
+        "OverflowScene",
+        "TallyScene",
+        "ThousandScene",
+        "WeekBarsScene"
+      ],
+      "routes": [],
+      "imports": [
+        "./gsapSetup",
+        "./sceneUtils",
+        "react"
+      ],
+      "hash": "0c75d6f17129f2e2eb079bd6594575872748cf9e79064e070272f55a4f4b4d51",
+      "last_modified": "2026-06-12T14:49:37.064Z",
+      "size_bytes": 20389
+    },
+    {
+      "path": "src/components/celebrations/sceneUtils.ts",
+      "kind": "frontend-component",
+      "purpose": "React component sceneUtils.",
+      "touch_when": [
+        "ai",
+        "types"
+      ],
+      "exports": [
+        "finish",
+        "MONO",
+        "SceneProps"
+      ],
+      "routes": [],
+      "imports": [
+        "./gsapSetup"
+      ],
+      "hash": "9a1a97362ebedd9e48eb4ead9d43c6ef635dd9f580b1828820b7f26564ff9da0",
+      "last_modified": "2026-06-12T14:47:41.461Z",
+      "size_bytes": 404
     },
     {
       "path": "src/components/dashboard/widgetRegistry.ts",
@@ -2933,7 +3412,6 @@
         "../../types/api",
         "../../utils/cadence",
         "../AnaerobicThreshold",
-        "../BadgesGrid",
         "../FitnessFreshness",
         "../GridCard",
         "../MainChart",
@@ -2953,9 +3431,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "f6ffa93cdd107ef02467a28d0cf6beacbbb3768af17e353f2b1d6d4d2dc052f9",
-      "last_modified": "2026-05-21T13:06:52.277Z",
-      "size_bytes": 125005
+      "hash": "2f1a658dd6fd298ec3e3559d7fb3fd44ed3b36d39ff6d2aa92a4ece727d7c17b",
+      "last_modified": "2026-06-11T15:02:09.462Z",
+      "size_bytes": 124499
     },
     {
       "path": "src/components/statistics/StatsCalc.tsx",
@@ -3498,9 +3976,9 @@
       ],
       "routes": [],
       "imports": [],
-      "hash": "86de17e7329816e66632e1e9b562c58ad6e384e01fd5ee10e4a0938725e1c164",
-      "last_modified": "2026-06-08T06:08:46.425Z",
-      "size_bytes": 19465
+      "hash": "2d070e6124e7b1315202be7921d5b68a6d7c3a3f727cea5b295e3750cccf3b9b",
+      "last_modified": "2026-06-11T15:01:39.521Z",
+      "size_bytes": 18873
     },
     {
       "path": "src/index.css",
@@ -4361,85 +4839,91 @@
       "path": "*",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 193
+      "line": 196
     },
     {
       "path": "/",
       "element": "DashboardView",
       "file": "src/App.tsx",
-      "line": 180
+      "line": 182
     },
     {
       "path": "/activities",
       "element": "ActivitiesView",
       "file": "src/App.tsx",
-      "line": 181
+      "line": 183
     },
     {
       "path": "/activities/:runId",
       "element": "RoutesViewWrapper",
       "file": "src/App.tsx",
-      "line": 182
+      "line": 184
+    },
+    {
+      "path": "/badges",
+      "element": "BadgesView",
+      "file": "src/App.tsx",
+      "line": 190
     },
     {
       "path": "/biometrics",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 191
+      "line": 194
     },
     {
       "path": "/insights",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 192
+      "line": 195
     },
     {
       "path": "/profile",
       "element": "ProfileView",
       "file": "src/App.tsx",
-      "line": 189
+      "line": 192
     },
     {
       "path": "/ranking",
       "element": "RankingView",
       "file": "src/App.tsx",
-      "line": 187
+      "line": 189
     },
     {
       "path": "/recovery",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 190
+      "line": 193
     },
     {
       "path": "/runner-dna",
       "element": "RunnerDnaView",
       "file": "src/App.tsx",
-      "line": 184
+      "line": 186
     },
     {
       "path": "/runner-dna-v1",
       "element": "Navigate",
       "file": "src/App.tsx",
-      "line": 185
+      "line": 187
     },
     {
       "path": "/runner-dna-v2",
       "element": "Navigate",
       "file": "src/App.tsx",
-      "line": 186
+      "line": 188
     },
     {
       "path": "/statistics",
       "element": "StatisticsView",
       "file": "src/App.tsx",
-      "line": 188
+      "line": 191
     },
     {
       "path": "/training",
       "element": "TrainingView",
       "file": "src/App.tsx",
-      "line": 183
+      "line": 185
     }
   ],
   "api_clients": [
