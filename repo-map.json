@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-13T07:15:16.761Z",
+  "generated_at": "2026-06-13T16:03:20.158Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 164,
+    "files": 166,
     "backend_routes": 62,
     "frontend_routes": 15,
     "api_clients": 60
@@ -1753,11 +1753,32 @@
       "size_bytes": 9980
     },
     {
+      "path": "src/components/celebrations/CelebrationContent.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component CelebrationContent.",
+      "touch_when": [
+        "ai",
+        "types"
+      ],
+      "exports": [
+        "CelebrationContent"
+      ],
+      "routes": [],
+      "imports": [
+        "./celebrationRegistry",
+        "./gsapSetup",
+        "./RiveLayer",
+        "react"
+      ],
+      "hash": "7fa659db9f6d101268e9a70837f689b590a4f3ea35830d7d4542e3125500312e",
+      "last_modified": "2026-06-13T14:58:19.133Z",
+      "size_bytes": 3575
+    },
+    {
       "path": "src/components/celebrations/CelebrationOverlay.tsx",
       "kind": "frontend-component",
       "purpose": "React component CelebrationOverlay.",
       "touch_when": [
-        "ai",
         "types"
       ],
       "exports": [
@@ -1765,15 +1786,15 @@
       ],
       "routes": [],
       "imports": [
+        "./CelebrationContent",
         "./celebrationRegistry",
         "./gsapSetup",
-        "./RiveLayer",
         "react",
         "react-dom"
       ],
-      "hash": "555e30c3cec6cc8df79ab09aa437a81b009825a93e9358fbe1372854d82bdd35",
-      "last_modified": "2026-06-12T05:37:04.791Z",
-      "size_bytes": 5648
+      "hash": "fb2725ad20d9e6a83e7526122ab01ac293de588d7e27ea605056c4e3e1762ab1",
+      "last_modified": "2026-06-13T14:58:36.448Z",
+      "size_bytes": 2912
     },
     {
       "path": "src/components/celebrations/celebrationRegistry.tsx",
@@ -1828,12 +1849,13 @@
       "imports": [
         "./CelebrationOverlay",
         "./celebrationRegistry",
+        "./MultiCelebrationOverlay",
         "lucide-react",
         "react"
       ],
-      "hash": "8bda611be61deae52787ab1ee321467412d0b482c8160f27a6f62e08cf8f807b",
-      "last_modified": "2026-06-12T14:58:58.115Z",
-      "size_bytes": 4676
+      "hash": "77cbb480b895f9ad7fa6c3da44a26502ea27a61c426f633b68e6c0d2833c301b",
+      "last_modified": "2026-06-13T14:59:27.546Z",
+      "size_bytes": 7362
     },
     {
       "path": "src/components/celebrations/gsapSetup.ts",
@@ -1855,6 +1877,29 @@
       "hash": "50800ec2d160053f663f0112d4153e905e138d0bec5bd988628a53e2d7622b1e",
       "last_modified": "2026-06-12T05:27:19.483Z",
       "size_bytes": 808
+    },
+    {
+      "path": "src/components/celebrations/MultiCelebrationOverlay.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component MultiCelebrationOverlay.",
+      "touch_when": [
+        "ai",
+        "types"
+      ],
+      "exports": [
+        "MultiCelebrationOverlay"
+      ],
+      "routes": [],
+      "imports": [
+        "./CelebrationContent",
+        "./celebrationRegistry",
+        "./gsapSetup",
+        "react",
+        "react-dom"
+      ],
+      "hash": "caab2f0becfe14b2db0d1be936b1271e177cff7902b110498307757cf8aefc3e",
+      "last_modified": "2026-06-13T16:03:20.159Z",
+      "size_bytes": 5584
     },
     {
       "path": "src/components/celebrations/RiveLayer.tsx",

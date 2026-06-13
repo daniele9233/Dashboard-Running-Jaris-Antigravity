@@ -1,21 +1,27 @@
 import { useMemo, useState } from "react";
-import { Trophy, Play } from "lucide-react";
+import { Trophy, Play, Layers } from "lucide-react";
 import {
   CELEBRATIONS, CELEBRATION_GROUPS,
   type CelebrationDef, type CelebrationGroup,
 } from "./celebrationRegistry";
 import { CelebrationOverlay } from "./CelebrationOverlay";
+import { MultiCelebrationOverlay } from "./MultiCelebrationOverlay";
 
 /**
- * Celebration Studio — vetrina dei 60 stili di celebrazione traguardi,
+ * Celebration Studio — vetrina dei 100 stili di celebrazione traguardi,
  * filtrabile per gruppo. Click su una card → overlay full-screen con la
  * celebrazione completa (scena GSAP + chrome). Serve a scegliere gli stili
  * da agganciare alla detection reale dei record.
+ *
+ * Include il simulatore di SBLOCCO SIMULTANEO: se una corsa fa scattare 2-3
+ * traguardi insieme, il MultiCelebrationOverlay li mostra in un unico momento.
  */
 export function CelebrationStudio() {
   const [active, setActive] = useState<CelebrationDef | null>(null);
   const [runId, setRunId] = useState(0);
   const [group, setGroup] = useState<CelebrationGroup | "TUTTI">("TUTTI");
+  const [multi, setMulti] = useState<CelebrationDef[] | null>(null);
+  const [multiRun, setMultiRun] = useState(0);
 
   const visible = useMemo(
     () => (group === "TUTTI" ? CELEBRATIONS : CELEBRATIONS.filter((c) => c.group === group)),
@@ -25,6 +31,22 @@ export function CelebrationStudio() {
   const play = (def: CelebrationDef) => {
     setActive(def);
     setRunId((n) => n + 1);
+  };
+
+  // Pesca `count` traguardi distinti a caso → simula uno sblocco multiplo.
+  // Vengono ordinati dalla categoria più importante alla meno (mostrati così).
+  const GROUP_PRIORITY: Record<CelebrationGroup, number> = {
+    GARE: 6, CLASSICI: 5, VELOCITÀ: 4, FISIOLOGIA: 3, VOLUME: 2, SALITE: 1, COSTANZA: 0,
+  };
+  const simulateMulti = (count: number) => {
+    const pool = [...CELEBRATIONS];
+    const chosen: CelebrationDef[] = [];
+    for (let i = 0; i < count && pool.length; i++) {
+      chosen.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    }
+    chosen.sort((a, b) => GROUP_PRIORITY[b.group] - GROUP_PRIORITY[a.group]);
+    setMulti(chosen);
+    setMultiRun((n) => n + 1);
   };
 
   return (
@@ -40,6 +62,33 @@ export function CelebrationStudio() {
         Celebrazioni per i tuoi traguardi di corsa — GSAP timeline, DrawSVG, MotionPath, SplitText.
         Clicca per vedere la celebrazione a schermo intero.
       </p>
+
+      {/* Simulatore sblocco simultaneo */}
+      <div className="rounded-2xl border border-[#C0FF00]/20 bg-[#C0FF00]/[0.04] p-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <Layers className="w-4 h-4 text-[#C0FF00] shrink-0" />
+          <div className="min-w-0">
+            <div className="text-[11px] font-black tracking-[0.18em] uppercase text-white">Sblocco simultaneo</div>
+            <div className="text-[10px] text-gray-500 leading-snug">Se una corsa fa scattare più traguardi, ognuno prende lo schermo e parte da solo, uno dopo l'altro.</div>
+          </div>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => simulateMulti(2)}
+            className="px-3.5 py-2 rounded-xl border border-[#C0FF00]/40 bg-[#C0FF00]/10 text-[#C0FF00] text-[10px] font-black tracking-[0.18em] uppercase hover:bg-[#C0FF00]/20 transition-colors"
+          >
+            Simula 2 badge
+          </button>
+          <button
+            type="button"
+            onClick={() => simulateMulti(3)}
+            className="px-3.5 py-2 rounded-xl border border-[#C0FF00]/40 bg-[#C0FF00]/10 text-[#C0FF00] text-[10px] font-black tracking-[0.18em] uppercase hover:bg-[#C0FF00]/20 transition-colors"
+          >
+            Simula 3 badge
+          </button>
+        </div>
+      </div>
 
       {/* Filtro gruppi */}
       <div className="flex flex-wrap gap-2 mb-6">
@@ -102,6 +151,14 @@ export function CelebrationStudio() {
           runId={runId}
           onReplay={() => setRunId((n) => n + 1)}
           onClose={() => setActive(null)}
+        />
+      )}
+
+      {multi && multi.length > 0 && (
+        <MultiCelebrationOverlay
+          defs={multi}
+          runId={multiRun}
+          onClose={() => setMulti(null)}
         />
       )}
     </section>
