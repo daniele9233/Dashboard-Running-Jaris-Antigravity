@@ -3,6 +3,7 @@
  * Advanced data-viz with neon accents, glow effects, radial gauges
  */
 import React, { useState, useRef } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -986,7 +987,7 @@ function FitnessEvolutionGrid({ cards }: { cards: FitnessEvolutionCardData[] }) 
 function V2Header({
   icon: Icon, title, subtitle, tooltip, onExpand,
 }: {
-  icon: React.ElementType; title: string; subtitle?: string;
+  icon: LucideIcon; title: string; subtitle?: string;
   tooltip?: { title: string; lines: string[] };
   onExpand?: () => void;
 }) {

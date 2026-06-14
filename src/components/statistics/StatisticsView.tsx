@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import type { LucideIcon } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 import { StatsDrift } from './StatsDrift';
 import { MainChart } from '../MainChart';
@@ -227,7 +228,7 @@ function CardHeader({
   onExpand,
   variant = 'default',
 }: {
-  icon: React.ElementType;
+  icon: LucideIcon;
   iconColor: string;
   title: string;
   subtitle?: string;

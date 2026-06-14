@@ -1,4 +1,5 @@
 import React from 'react';
+import type { LucideIcon } from "lucide-react";
 import { motion } from 'motion/react';
 import { Activity, AlertTriangle, Sparkles, TrendingDown } from 'lucide-react';
 import type { Profile, Run } from '../types/api';
@@ -48,7 +49,7 @@ export function DetrainingWidget({ profile, runs, vdot, base5kSec: base5kSecProp
   const fVo2Loss = (1 - fPoint.vo2Pct) * 100;
 
   // State classification.
-  let state: { label: string; color: string; sub: string; icon: React.ElementType };
+  let state: { label: string; color: string; sub: string; icon: LucideIcon };
   if (days <= 2) {
     state = { label: 'RECUPERO', color: GREEN, sub: 'Fatica residua dissipa', icon: Sparkles };
   } else if (days <= 5) {

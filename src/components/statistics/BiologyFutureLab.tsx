@@ -1,4 +1,5 @@
 import React from 'react';
+import type { LucideIcon } from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -87,7 +88,7 @@ function CardHeader({
   subtitle,
   accent = ACCENT,
 }: {
-  icon: React.ElementType;
+  icon: LucideIcon;
   title: string;
   subtitle?: string;
   accent?: string;

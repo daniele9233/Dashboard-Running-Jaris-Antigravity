@@ -1,4 +1,5 @@
 import React from 'react';
+import type { LucideIcon } from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -293,7 +294,7 @@ function SectionTitle({
   title,
   text,
 }: {
-  icon: React.ElementType;
+  icon: LucideIcon;
   eyebrow: string;
   title: string;
   text?: string;
@@ -389,7 +390,7 @@ const PRED_GREEN = '#22C55E';
 const PRED_PINK = '#EC4899';
 const PRED_BLUE = '#6366F1';
 
-const TIMELINE_EVENTS: { day: number; title: string; body: string; color: string; icon: React.ElementType }[] = [
+const TIMELINE_EVENTS: { day: number; title: string; body: string; color: string; icon: LucideIcon }[] = [
   { day: 1, title: '"Mi sento ancora forte"', body: 'Il glicogeno e ancora pieno. Sensazioni intatte. Plasma cala leggermente ma hematocrit compensa: nessuna perdita reale (Mujika 2010).', color: CYAN, icon: Heart },
   { day: 3, title: 'Taper attivo', body: 'PV -8%, fatica residua dissipata, glicogeno super-compensa. La performance puo essere uguale o leggermente superiore al baseline. Questo e il principio del taper pre-gara.', color: PRED_GREEN, icon: Brain },
   { day: 7, title: 'Picco taper', body: 'Bosquet 2007 (meta-analisi 27 studi): 8-14gg di taper migliorano la performance del +1.96% in media. Il sistema nervoso e riposato, soglia ancora intatta.', color: PRED_GREEN, icon: TrendingUp },
