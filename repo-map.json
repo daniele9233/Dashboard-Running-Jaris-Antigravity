@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-14T07:00:08.213Z",
+  "generated_at": "2026-06-14T16:12:30.727Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,9 +14,9 @@
     ]
   },
   "counts": {
-    "files": 172,
+    "files": 168,
     "backend_routes": 64,
-    "frontend_routes": 18,
+    "frontend_routes": 15,
     "api_clients": 62
   },
   "files": [
@@ -1599,9 +1599,6 @@
         "/activities/:runId",
         "/badges",
         "/biometrics",
-        "/gamification-v1",
-        "/gamification-v2",
-        "/gamification-v3",
         "/insights",
         "/profile",
         "/ranking",
@@ -1627,9 +1624,9 @@
         "react-i18next",
         "react-router-dom"
       ],
-      "hash": "6da485c919fa76c410bd762fd0a550602fc7ff5a30d4bc55bf364ee2bb3fcd63",
-      "last_modified": "2026-06-14T07:00:08.213Z",
-      "size_bytes": 11483
+      "hash": "ec3cef8c07f13797c47b901debc6e410e109fe90ece26cbc4d00cb1c4b1da7eb",
+      "last_modified": "2026-06-14T16:12:30.728Z",
+      "size_bytes": 10658
     },
     {
       "path": "src/components/ActivitiesView.tsx",
@@ -2696,119 +2693,6 @@
       "hash": "4adb9578b81db4e4037d6a276462dead665b095e10b51c82dde408432023c975",
       "last_modified": "2026-05-16T19:22:49.897Z",
       "size_bytes": 19020
-    },
-    {
-      "path": "src/components/gamification/GamificationV1.tsx",
-      "kind": "frontend-component",
-      "purpose": "React component GamificationV1.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "layout",
-        "statistics",
-        "types"
-      ],
-      "exports": [
-        "GamificationV1"
-      ],
-      "routes": [],
-      "imports": [
-        "../../api",
-        "../../hooks/apiCacheKeys",
-        "../../hooks/useApi",
-        "../../types/api",
-        "./runStats",
-        "lucide-react",
-        "react"
-      ],
-      "hash": "9f94cf13215d955a869176a116cbb61e998b1e0a13ed8dc6036a90ed2b173ffb",
-      "last_modified": "2026-06-14T06:57:29.632Z",
-      "size_bytes": 10051
-    },
-    {
-      "path": "src/components/gamification/GamificationV2.tsx",
-      "kind": "frontend-component",
-      "purpose": "React component GamificationV2.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "layout",
-        "statistics",
-        "training",
-        "types"
-      ],
-      "exports": [
-        "GamificationV2"
-      ],
-      "routes": [],
-      "imports": [
-        "../../api",
-        "../../hooks/apiCacheKeys",
-        "../../hooks/useApi",
-        "../../types/api",
-        "./runStats",
-        "lucide-react",
-        "react"
-      ],
-      "hash": "e51c7d9049d44010745248c2bdffad09e2dd9ef5d554a6b7ba1b40b0a5712f66",
-      "last_modified": "2026-06-14T06:58:23.133Z",
-      "size_bytes": 8879
-    },
-    {
-      "path": "src/components/gamification/GamificationV3.tsx",
-      "kind": "frontend-component",
-      "purpose": "React component GamificationV3.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "layout",
-        "statistics",
-        "types"
-      ],
-      "exports": [
-        "GamificationV3"
-      ],
-      "routes": [],
-      "imports": [
-        "../../api",
-        "../../hooks/apiCacheKeys",
-        "../../hooks/useApi",
-        "../../types/api",
-        "./runStats",
-        "lucide-react",
-        "react"
-      ],
-      "hash": "685ec26a24b361150bcece32a3d5775592cf8365a679876495296e7fea1455ea",
-      "last_modified": "2026-06-14T06:59:35.878Z",
-      "size_bytes": 8522
-    },
-    {
-      "path": "src/components/gamification/runStats.ts",
-      "kind": "frontend-component",
-      "purpose": "React component runStats.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "cadence",
-        "statistics",
-        "types"
-      ],
-      "exports": [
-        "computeStats",
-        "fmtPace",
-        "GamiAttrs",
-        "GamiStats",
-        "RecentXp",
-        "runXp"
-      ],
-      "routes": [],
-      "imports": [
-        "../../types/api",
-        "../celebrations/badgeRules"
-      ],
-      "hash": "5ef4c0dabca1e137614b8c752c484990b8dc10f03d6b1b62110b81c309a5aaad",
-      "last_modified": "2026-06-14T06:56:40.702Z",
-      "size_bytes": 5007
     },
     {
       "path": "src/components/GridCard.tsx",
@@ -5079,109 +4963,91 @@
       "path": "*",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 210
+      "line": 201
     },
     {
       "path": "/",
       "element": "DashboardView",
       "file": "src/App.tsx",
-      "line": 193
+      "line": 187
     },
     {
       "path": "/activities",
       "element": "ActivitiesView",
       "file": "src/App.tsx",
-      "line": 194
+      "line": 188
     },
     {
       "path": "/activities/:runId",
       "element": "RoutesViewWrapper",
       "file": "src/App.tsx",
-      "line": 195
+      "line": 189
     },
     {
       "path": "/badges",
       "element": "BadgesView",
       "file": "src/App.tsx",
-      "line": 201
+      "line": 195
     },
     {
       "path": "/biometrics",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 208
-    },
-    {
-      "path": "/gamification-v1",
-      "element": "GamificationV1",
-      "file": "src/App.tsx",
-      "line": 202
-    },
-    {
-      "path": "/gamification-v2",
-      "element": "GamificationV2",
-      "file": "src/App.tsx",
-      "line": 203
-    },
-    {
-      "path": "/gamification-v3",
-      "element": "GamificationV3",
-      "file": "src/App.tsx",
-      "line": 204
+      "line": 199
     },
     {
       "path": "/insights",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 209
+      "line": 200
     },
     {
       "path": "/profile",
       "element": "ProfileView",
       "file": "src/App.tsx",
-      "line": 206
+      "line": 197
     },
     {
       "path": "/ranking",
       "element": "RankingView",
       "file": "src/App.tsx",
-      "line": 200
+      "line": 194
     },
     {
       "path": "/recovery",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 207
+      "line": 198
     },
     {
       "path": "/runner-dna",
       "element": "RunnerDnaView",
       "file": "src/App.tsx",
-      "line": 197
+      "line": 191
     },
     {
       "path": "/runner-dna-v1",
       "element": "Navigate",
       "file": "src/App.tsx",
-      "line": 198
+      "line": 192
     },
     {
       "path": "/runner-dna-v2",
       "element": "Navigate",
       "file": "src/App.tsx",
-      "line": 199
+      "line": 193
     },
     {
       "path": "/statistics",
       "element": "StatisticsView",
       "file": "src/App.tsx",
-      "line": 205
+      "line": 196
     },
     {
       "path": "/training",
       "element": "TrainingView",
       "file": "src/App.tsx",
-      "line": 196
+      "line": 190
     }
   ],
   "api_clients": [
