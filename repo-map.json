@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-14T19:25:04.569Z",
+  "generated_at": "2026-06-14T19:53:45.606Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 173,
+    "files": 172,
     "backend_routes": 64,
     "frontend_routes": 18,
     "api_clients": 62
@@ -1110,8 +1110,8 @@
       "exports": [],
       "routes": [],
       "imports": [],
-      "hash": "2c2b8cdb0711305ba32a47a7b322fbe8acda2b1b74c879d6ed0e77dc8b09e01b",
-      "last_modified": "2026-06-14T16:23:56.738Z",
+      "hash": "610868d984092fbbd24743437da88a7016c43f79b2148a1cfe82d8e9d48c7dff",
+      "last_modified": "2026-06-14T19:51:50.272Z",
       "size_bytes": 2587
     },
     {
@@ -2767,6 +2767,8 @@
       "touch_when": [
         "activities",
         "ai",
+        "layout",
+        "map",
         "statistics",
         "types"
       ],
@@ -2781,16 +2783,13 @@
         "../../types/api",
         "../celebrations/gsapSetup",
         "./gamiData",
-        "./globe3d",
-        "@react-three/drei",
-        "@react-three/fiber",
         "lucide-react",
         "react",
-        "three"
+        "react-map-gl/mapbox"
       ],
-      "hash": "c25fa4184c4f50e636550722b97cc634cad96039c652b18338ff13d3098f60d7",
-      "last_modified": "2026-06-14T19:24:03.069Z",
-      "size_bytes": 7230
+      "hash": "75d14c79ca1d27632cf81739036dd4bffeac113d21afa648aa2974a2f5e3ab62",
+      "last_modified": "2026-06-14T19:52:55.799Z",
+      "size_bytes": 8337
     },
     {
       "path": "src/components/gamification/GamificationV3.tsx",
@@ -2800,6 +2799,7 @@
         "activities",
         "ai",
         "layout",
+        "map",
         "statistics",
         "types"
       ],
@@ -2814,43 +2814,14 @@
         "../../types/api",
         "../celebrations/gsapSetup",
         "./gamiData",
-        "./globe3d",
-        "@react-three/fiber",
         "lucide-react",
+        "maplibre-gl",
         "react",
-        "three"
+        "react-map-gl/maplibre"
       ],
-      "hash": "158d1d9c129a0c0ce4e6ccbb70429b72046f3a7fe284a2ec8d43d2a23455494d",
-      "last_modified": "2026-06-14T19:25:04.569Z",
-      "size_bytes": 7438
-    },
-    {
-      "path": "src/components/gamification/globe3d.tsx",
-      "kind": "frontend-component",
-      "purpose": "React component globe3d.",
-      "touch_when": [
-        "ai",
-        "map",
-        "types"
-      ],
-      "exports": [
-        "Atmosphere",
-        "CityNodes",
-        "CurrentPin",
-        "FullRoute",
-        "JourneyArc",
-        "latLngToVec3",
-        "useJourney"
-      ],
-      "routes": [],
-      "imports": [
-        "./gamiData",
-        "react",
-        "three"
-      ],
-      "hash": "f146ab6b3fb64cda8d92a55b1ad3ee53c5c4004547f80282e9a99331e0a10f9c",
-      "last_modified": "2026-06-14T19:23:06.729Z",
-      "size_bytes": 4822
+      "hash": "f81db28a07d38f1edb567940a79d394eff458c930413260975b7bd6e3eeb54a0",
+      "last_modified": "2026-06-14T19:53:45.607Z",
+      "size_bytes": 8597
     },
     {
       "path": "src/components/GridCard.tsx",
