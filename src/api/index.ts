@@ -269,6 +269,19 @@ export const disconnectStrava = (athleteId?: number | null, force = false) => {
 export const exchangeStravaCode = (code: string) =>
   api.post('/api/strava/exchange-code', { code });
 
+// ─── BADGES STATE ────────────────────────────────────────────────────────────
+export interface BadgeUnlock { at: string }
+export interface BadgeState {
+  activated: boolean;
+  activated_at: string | null;
+  baseline_run_ids: string[];
+  baseline: Record<string, unknown>;
+  unlocked: Record<string, BadgeUnlock>;
+}
+export const getBadgeState = () => api.get<BadgeState>('/api/badges/state');
+export const saveBadgeState = (state: BadgeState) =>
+  api.put<BadgeState>('/api/badges/state', state);
+
 // ─── WEEKLY REPORT ───────────────────────────────────────────────────────────
 export const getWeeklyReport = () => api.get<unknown>('/api/weekly-report');
 

@@ -28,6 +28,7 @@ import { exchangeStravaCode, syncStrava, getProfile } from "./api";
 import { invalidateCache, useApi } from "./hooks/useApi";
 import { API_CACHE } from "./hooks/apiCacheKeys";
 import { useServerEvents } from "./hooks/useServerEvents";
+import { BadgeProvider, useBadges } from "./components/celebrations/BadgeProvider";
 
 /** Iniziali da nome utente: "Daniele Pasco" → "DP". Fallback "ML". */
 function deriveInitials(name?: string | null): string {
@@ -69,6 +70,8 @@ function AppContent() {
   // auto-invalida le cache. Niente F5 dopo sync.
   useServerEvents();
 
+  const { evaluateAfterSync } = useBadges();
+
   const NAV_ITEMS = [
     { path: "/",            label: t("nav.dashboard")  },
     { path: "/training",    label: t("nav.training")   },
@@ -99,6 +102,8 @@ function AppContent() {
           invalidateCache(API_CACHE.HEATMAP);
           invalidateCache(API_CACHE.SUPERCOMPENSATION);
           navigate("/activities");
+          // Valuta i badge sui run appena sincronizzati (post-baseline)
+          evaluateAfterSync().catch(() => {});
         })
         .catch((err) => console.error("Strava sync failed:", err));
     }
@@ -208,7 +213,9 @@ export default function App() {
   return (
     <LayoutProvider>
       <JarvisProvider>
-        <AppContent />
+        <BadgeProvider>
+          <AppContent />
+        </BadgeProvider>
       </JarvisProvider>
     </LayoutProvider>
   );

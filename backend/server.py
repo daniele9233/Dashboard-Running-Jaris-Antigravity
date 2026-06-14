@@ -781,6 +781,49 @@ async def _refresh_token_if_needed(tokens: dict) -> dict:
     return tokens
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+#  BADGES — stato sblocchi (store single-tenant; la valutazione è lato frontend)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_BADGE_STATE_DEFAULT = {
+    "activated": False,
+    "activated_at": None,
+    "baseline_run_ids": [],
+    "baseline": {},
+    "unlocked": {},
+}
+
+
+@app.get("/api/badges/state")
+async def get_badge_state():
+    """Stato badge: baseline d'attivazione + mappa degli sblocchi.
+    Single-tenant: un solo documento. Il frontend calcola gli sblocchi e
+    persiste qui (no storico: la baseline congela ciò che era già raggiunto)."""
+    doc = await db.badge_state.find_one(sort=[("_id", -1)])
+    if not doc:
+        return dict(_BADGE_STATE_DEFAULT)
+    doc.pop("_id", None)
+    return {**_BADGE_STATE_DEFAULT, **doc}
+
+
+@app.put("/api/badges/state")
+async def put_badge_state(request: Request):
+    body = await request.json()
+    state = {
+        "activated": bool(body.get("activated", True)),
+        "activated_at": body.get("activated_at"),
+        "baseline_run_ids": list(body.get("baseline_run_ids", [])),
+        "baseline": dict(body.get("baseline", {})),
+        "unlocked": dict(body.get("unlocked", {})),
+    }
+    existing = await db.badge_state.find_one(sort=[("_id", -1)])
+    if existing:
+        await db.badge_state.update_one({"_id": existing["_id"]}, {"$set": state})
+    else:
+        await db.badge_state.insert_one(state)
+    return {"ok": True, **state}
+
+
 async def _compute_fitness_freshness(athlete_id: str, max_hr_profile: int = 190, resting_hr: int = 50):
     """Calcola CTL/ATL/TSB da tutte le corse usando TRIMP metodo Lucia (2003).
 

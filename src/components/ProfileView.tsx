@@ -20,6 +20,7 @@ import {
   type StravaStatus,
 } from "../api";
 import { useJarvisContext } from "../context/JarvisContext";
+import { useBadges } from "./celebrations/BadgeProvider";
 import type { Profile, BestEffort, Run } from "../types/api";
 
 // ─── POLYLINE DECODER ────────────────────────────────────────────────────────
@@ -610,6 +611,7 @@ export function ProfileView() {
   const [recordCelebration, setRecordCelebration] = useState<PersonalRecordCelebration | null>(null);
   const lastCelebratedRecordKey = useRef<string | null>(null);
   const { enabled: jarvisEnabled, setEnabled: setJarvisEnabled } = useJarvisContext();
+  const { evaluateAfterSync } = useBadges();
 
   const activeProfile = profile ?? profileData;
   const lastRun = useMemo(() => {
@@ -727,6 +729,8 @@ export function ProfileView() {
           ? `${synced} corse sincronizzate!`
           : "Sync completato: nessuna nuova corsa trovata."
       );
+      // Valuta i badge sui run appena sincronizzati → celebra i nuovi sblocchi
+      evaluateAfterSync().catch(() => {});
     } catch (err) {
       const message = err instanceof Error ? err.message.replace(/^\d+:\s*/, "") : "";
       setSyncResult(message || "Errore nella sincronizzazione. Connetti prima Strava.");
