@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-15T11:14:12.807Z",
+  "generated_at": "2026-06-15T16:16:00.639Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 171,
+    "files": 172,
     "backend_routes": 64,
     "frontend_routes": 16,
     "api_clients": 62
@@ -2752,6 +2752,7 @@
         "map",
         "statistics",
         "strava",
+        "training",
         "types"
       ],
       "exports": [
@@ -2765,14 +2766,46 @@
         "../../types/api",
         "../celebrations/gsapSetup",
         "./gamiData",
+        "./leveling",
         "@mapbox/polyline",
         "lucide-react",
         "react",
         "react-map-gl/mapbox"
       ],
-      "hash": "a4fd8358ce0818ea03a1a6aea63921f7bc5e77a099549a5e11ece651c8183625",
-      "last_modified": "2026-06-15T06:13:35.517Z",
-      "size_bytes": 13162
+      "hash": "ba6835607a9ddf4b736f3a0e0304edfa0dccc8bc2a6668b2d9812ca12add3c65",
+      "last_modified": "2026-06-15T16:13:26.407Z",
+      "size_bytes": 18704
+    },
+    {
+      "path": "src/components/gamification/leveling.ts",
+      "kind": "frontend-component",
+      "purpose": "React component leveling.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "profile",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "Axis",
+        "baseRunXp",
+        "computeLeveling",
+        "Goal",
+        "GOALS",
+        "levelFromXp",
+        "Leveling",
+        "proximity",
+        "RUN_LABELS",
+        "xpForLevel"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api"
+      ],
+      "hash": "e519c1f6dcd2af2f99a0daf37002cafd0b3bfe8dc8c5c63ebb29e3adf608717a",
+      "last_modified": "2026-06-15T16:16:00.639Z",
+      "size_bytes": 8149
     },
     {
       "path": "src/components/GridCard.tsx",
