@@ -136,6 +136,38 @@ export function positionAtKm(km: number): { lat: number; lng: number; fromIdx: n
   return { lat: last.lat, lng: last.lng, fromIdx: stops.length - 1 };
 }
 
+// ─── Modalità EQUATORE ────────────────────────────────────────────────────────
+
+/** Viaggio lungo l'equatore: parte da lng 0 verso est. */
+export function equatorJourney(totalKm: number) {
+  const f = (totalKm % EARTH_CIRCUMFERENCE) / EARTH_CIRCUMFERENCE;
+  const endLng = f * 360;
+  const steps = Math.max(2, Math.round(endLng / 2));
+  const lit: [number, number][] = [];
+  for (let i = 0; i <= steps; i++) lit.push([(endLng * i) / steps, 0]);
+  const full: [number, number][] = [];
+  for (let l = -180; l <= 180; l += 3) full.push([l, 0]);
+  const curLng = ((endLng + 180) % 360) - 180;
+  return { lit, full, curLng, lat: 0, pct: f * 100, lap: Math.floor(totalKm / EARTH_CIRCUMFERENCE) };
+}
+
+// ─── Posizione su una polilinea con distanze cumulative ───────────────────────
+
+export interface CumRoute { distance: number; coords: [number, number][]; cum: number[] }
+
+/** Interpola lng/lat e l'indice raggiunto su una rotta `cum` al chilometro `km`. */
+export function positionOnCum(route: CumRoute, km: number): { lng: number; lat: number; idx: number } {
+  const k = Math.max(0, Math.min(km, route.distance));
+  const { coords, cum } = route;
+  let lo = 0, hi = cum.length - 1;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (cum[mid] < k) lo = mid + 1; else hi = mid; }
+  const i = Math.max(1, lo);
+  const seg = cum[i] - cum[i - 1] || 1;
+  const f = (k - cum[i - 1]) / seg;
+  const a = coords[i - 1], b = coords[i];
+  return { lng: a[0] + (b[0] - a[0]) * f, lat: a[1] + (b[1] - a[1]) * f, idx: i };
+}
+
 /** Polilinea densificata (per il rendering) fino a `uptoKm` (o intera rotta). */
 export function routeLine(uptoKm: number | null): [number, number][] {
   const { stops } = buildRoute(uptoKm ?? Infinity);

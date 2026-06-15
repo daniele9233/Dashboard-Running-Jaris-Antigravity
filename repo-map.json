@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-14T19:53:45.606Z",
+  "generated_at": "2026-06-15T06:20:33.914Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 172,
+    "files": 173,
     "backend_routes": 64,
     "frontend_routes": 18,
     "api_clients": 62
@@ -1166,6 +1166,18 @@
       "hash": "940b7ebad07651d028a33642dd5e4c0f70942453e1a187a51d8557d2031b6e91",
       "last_modified": "2026-04-06T21:03:45.557Z",
       "size_bytes": 2866
+    },
+    {
+      "path": "public/italy-route.json",
+      "kind": "public-asset",
+      "purpose": "public-asset italy-route.json.",
+      "touch_when": [],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "e1046c9ec888a09460aaed4f1f70b81a05634554000ffa52f403ca175f842fa4",
+      "last_modified": "2026-06-15T06:10:18.736Z",
+      "size_bytes": 106431
     },
     {
       "path": "README.md",
@@ -2711,11 +2723,14 @@
         "buildRoute",
         "City",
         "computeGamiStats",
+        "CumRoute",
         "EARTH_CIRCUMFERENCE",
+        "equatorJourney",
         "GamiStats",
         "greatCircle",
         "haversine",
         "positionAtKm",
+        "positionOnCum",
         "routeLine",
         "RouteStop"
       ],
@@ -2724,9 +2739,9 @@
         "../../types/api",
         "../celebrations/badgeRules"
       ],
-      "hash": "7481d090d8653aea2770d27a31938e826a2aa8742c525e820908556c22331891",
-      "last_modified": "2026-06-14T16:25:12.534Z",
-      "size_bytes": 7022
+      "hash": "aad6096d2c724a9b0cd06a9d78aee8a3393fa6b9828431d7c8e6e361082221cd",
+      "last_modified": "2026-06-15T06:11:54.170Z",
+      "size_bytes": 8706
     },
     {
       "path": "src/components/gamification/GamificationV1.tsx",
@@ -2738,6 +2753,7 @@
         "layout",
         "map",
         "statistics",
+        "strava",
         "types"
       ],
       "exports": [
@@ -2751,14 +2767,14 @@
         "../../types/api",
         "../celebrations/gsapSetup",
         "./gamiData",
+        "@mapbox/polyline",
         "lucide-react",
-        "maplibre-gl",
         "react",
-        "react-map-gl/maplibre"
+        "react-map-gl/mapbox"
       ],
-      "hash": "eedd28f96ae69b7137de579ee7e45ef7bf721f569f54711d21ed807a26d0ad8b",
-      "last_modified": "2026-06-14T16:26:42.414Z",
-      "size_bytes": 9079
+      "hash": "a4fd8358ce0818ea03a1a6aea63921f7bc5e77a099549a5e11ece651c8183625",
+      "last_modified": "2026-06-15T06:13:35.517Z",
+      "size_bytes": 13162
     },
     {
       "path": "src/components/gamification/GamificationV2.tsx",
@@ -2767,9 +2783,7 @@
       "touch_when": [
         "activities",
         "ai",
-        "layout",
         "map",
-        "statistics",
         "types"
       ],
       "exports": [
@@ -2782,14 +2796,13 @@
         "../../hooks/useApi",
         "../../types/api",
         "../celebrations/gsapSetup",
-        "./gamiData",
         "lucide-react",
         "react",
         "react-map-gl/mapbox"
       ],
-      "hash": "75d14c79ca1d27632cf81739036dd4bffeac113d21afa648aa2974a2f5e3ab62",
-      "last_modified": "2026-06-14T19:52:55.799Z",
-      "size_bytes": 8337
+      "hash": "e3d331abdbb013c433e6ceb9d12612570c1a5576a1c9e6e00c1821f6a1f3552b",
+      "last_modified": "2026-06-15T06:20:33.914Z",
+      "size_bytes": 7837
     },
     {
       "path": "src/components/gamification/GamificationV3.tsx",
@@ -2800,7 +2813,7 @@
         "ai",
         "layout",
         "map",
-        "statistics",
+        "strava",
         "types"
       ],
       "exports": [
@@ -2813,15 +2826,14 @@
         "../../hooks/useApi",
         "../../types/api",
         "../celebrations/gsapSetup",
-        "./gamiData",
+        "@mapbox/polyline",
         "lucide-react",
-        "maplibre-gl",
         "react",
-        "react-map-gl/maplibre"
+        "react-map-gl/mapbox"
       ],
-      "hash": "f81db28a07d38f1edb567940a79d394eff458c930413260975b7bd6e3eeb54a0",
-      "last_modified": "2026-06-14T19:53:45.607Z",
-      "size_bytes": 8597
+      "hash": "ff584fcf2330ba9adcf7d5dd9bb51675b5e2a393b9144a7e110923309e2c81b7",
+      "last_modified": "2026-06-15T06:16:23.717Z",
+      "size_bytes": 5381
     },
     {
       "path": "src/components/GridCard.tsx",
