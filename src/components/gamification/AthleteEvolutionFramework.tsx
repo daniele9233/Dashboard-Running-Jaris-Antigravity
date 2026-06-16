@@ -304,12 +304,21 @@ function Goals({ sys, focusId, setFocus }: { sys: LevelSystem; focusId: string |
   const focus = sys.goals.find((g) => g.id === focusId) ?? null;
   return (
     <section className="mt-7 aef-rise">
-      <SectionTitle icon={Target} hint={`${sys.goalsAchieved}/${sys.goals.length} alla tua portata · forma ~VDOT ${sys.currentVdot}`}>Obiettivi</SectionTitle>
-      {focus && <FocusCard g={focus} totalXp={sys.totalXp} onClear={() => setFocus(focus.id)} />}
-      {!focus && <p className="mb-2.5 text-[10px] text-gray-600 px-0.5">Tocca un obiettivo per fissarlo come <b className="text-gray-400">focus</b> e tenerlo d'occhio.</p>}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-        {sys.goals.map((g) => <GoalCard key={g.id} g={g} active={g.id === focusId} onClick={() => setFocus(g.id)} />)}
-      </div>
+      <SectionTitle icon={Target} hint={`${sys.goals.length} da raggiungere · ${sys.goalsAchieved} conquistati · ~VDOT ${sys.currentVdot}`}>Obiettivi da Raggiungere</SectionTitle>
+      {sys.goals.length === 0 ? (
+        <Panel className="p-6 text-center">
+          <div className="text-sm font-black text-[#10B981]">🏆 Hai conquistato tutti i {sys.goalsAchieved} obiettivi!</div>
+          <div className="text-[11px] text-gray-500 mt-1">Forma stimata ~VDOT {sys.currentVdot} — alza l'asticella con nuovi traguardi</div>
+        </Panel>
+      ) : (
+        <>
+          {focus && <FocusCard g={focus} totalXp={sys.totalXp} onClear={() => setFocus(focus.id)} />}
+          {!focus && <p className="mb-2.5 text-[10px] text-gray-600 px-0.5">Tocca un obiettivo per fissarlo come <b className="text-gray-400">focus</b> e tenerlo d'occhio.</p>}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            {sys.goals.map((g) => <GoalCard key={g.id} g={g} active={g.id === focusId} onClick={() => setFocus(g.id)} />)}
+          </div>
+        </>
+      )}
     </section>
   );
 }

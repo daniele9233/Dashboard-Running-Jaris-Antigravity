@@ -211,10 +211,11 @@ export function computeLevelSystem(runsIn: Run[], _profile: Profile | null): Lev
   });
   const nextReward = tiers.find((t) => t.state === "locked") ?? null;
 
-  // obiettivi (livello/XP stimati dalla forma attuale)
+  // obiettivi: mostra SOLO quelli ancora da raggiungere (esclude quelli già alla portata)
   const currentVdot = estimateVdot(runs);
-  const goals = buildGoals(currentVdot, level, totalXp);
-  const goalsAchieved = goals.filter((g) => g.achieved).length;
+  const allGoals = buildGoals(currentVdot, level, totalXp);
+  const goalsAchieved = allGoals.filter((g) => g.achieved).length;
+  const goals = allGoals.filter((g) => !g.achieved);
 
   // 100 livelli
   const levels: LevelNode[] = [];
