@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-16T03:45:50.806Z",
+  "generated_at": "2026-06-16T04:24:10.412Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2716,8 +2716,8 @@
         "ai",
         "layout",
         "profile",
+        "statistics",
         "strava",
-        "training",
         "types"
       ],
       "exports": [
@@ -2731,9 +2731,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "23652ce99c7077be88b39ac92af5c097c1ce08608e9b1290535339f14388b0ef",
-      "last_modified": "2026-06-15T17:04:39.345Z",
-      "size_bytes": 24329
+      "hash": "b91f6f3c0427272e37c63695d912b57aef7b7270e8e8045ee0da93a787fea512",
+      "last_modified": "2026-06-16T04:24:10.413Z",
+      "size_bytes": 15450
     },
     {
       "path": "src/components/gamification/evolutionEngine.ts",
@@ -2742,41 +2742,28 @@
       "touch_when": [
         "activities",
         "ai",
-        "cadence",
-        "garmin",
-        "map",
         "profile",
         "statistics",
-        "strava",
-        "training",
         "types"
       ],
       "exports": [
-        "Achievement",
-        "AnalystLine",
-        "Archetype",
-        "CATEGORIES",
-        "CatKey",
-        "CatMeta",
-        "CatState",
-        "computeEvolution",
-        "DetrainAxis",
-        "EvolutionState",
-        "FormPoint",
-        "GoalState",
+        "computeLevelSystem",
+        "cumXpForLevel",
         "levelFromXp",
-        "PeakMonth",
-        "PeakRun",
-        "PeakWeek",
-        "xpForLevel"
+        "LevelNode",
+        "LevelSystem",
+        "levelTitle",
+        "MAX_LEVEL",
+        "RecentRun",
+        "TierState"
       ],
       "routes": [],
       "imports": [
         "../../types/api"
       ],
-      "hash": "aa3af0ef3fe5115880f1e038f6e7664d9d5b775df39d5297c840feb0246d801a",
-      "last_modified": "2026-06-16T03:45:50.807Z",
-      "size_bytes": 40625
+      "hash": "d1104dcdbc986da3a7e766b4a710ab891a80e701de96956c792b1d6adf2a6ae2",
+      "last_modified": "2026-06-16T04:23:03.462Z",
+      "size_bytes": 9527
     },
     {
       "path": "src/components/gamification/gamiData.ts",
