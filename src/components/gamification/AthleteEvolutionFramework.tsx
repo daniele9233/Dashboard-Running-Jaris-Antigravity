@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { gsap } from "../celebrations/gsapSetup";
 import type { Run, Profile } from "../../types/api";
-import { computeLevelSystem, type LevelSystem, type TierState, type LevelNode } from "./evolutionEngine";
+import { computeLevelSystem, type LevelSystem, type TierState, type LevelNode, type GoalState } from "./evolutionEngine";
 
 const MONO = "'JetBrains Mono', monospace";
 const ICONS: Record<string, LucideIcon> = { Footprints, Sparkles, Flame, Zap, Medal, Award, Target, Trophy, Gem, Crown };
@@ -44,6 +44,7 @@ export function AthleteEvolutionFramework({ runs, profile }: { runs: Run[]; prof
       <Hero sys={sys} />
       <TierTrack sys={sys} trackRef={trackRef} />
       <LevelGrid sys={sys} />
+      <Goals sys={sys} />
       <RecentRuns sys={sys} />
       <p className="mt-8 text-center text-[9px] tracking-widest uppercase text-gray-700">
         Ogni corsa frutta XP in base a durata · intensità · qualità — bonus per personal best e gare
@@ -210,6 +211,44 @@ function LevelGrid({ sys }: { sys: LevelSystem }) {
         </div>
       </Panel>
     </section>
+  );
+}
+
+// ── OBIETTIVI (livello/XP stimati per raggiungerli) ───────────────────────────
+const GOAL_COLOR: Record<string, string> = { "5K": "#C0FF00", "10K": "#22D3EE", "Mezza": "#FB923C", "Maratona": "#E879F9" };
+function Goals({ sys }: { sys: LevelSystem }) {
+  return (
+    <section className="mt-7 aef-rise">
+      <SectionTitle icon={Target} hint={`${sys.goalsAchieved}/${sys.goals.length} alla tua portata · forma ~VDOT ${sys.currentVdot}`}>Obiettivi</SectionTitle>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+        {sys.goals.map((g) => <GoalCard key={g.id} g={g} />)}
+      </div>
+    </section>
+  );
+}
+function GoalCard({ g }: { g: GoalState }) {
+  const col = GOAL_COLOR[g.group] ?? "#22D3EE";
+  return (
+    <Panel className="p-3.5" style={{ borderColor: g.achieved ? "#10B98155" : "rgba(255,255,255,0.1)" }}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="px-1.5 py-0.5 rounded text-[8px] font-black tracking-wide uppercase shrink-0" style={{ background: `${col}22`, color: col }}>{g.group}</span>
+          <span className="text-[13px] font-black text-white/90 truncate">{g.label}</span>
+        </div>
+        {g.achieved
+          ? <span className="flex items-center gap-1 text-[10px] font-black uppercase shrink-0" style={{ color: "#10B981" }}><Check className="w-3.5 h-3.5" />Alla portata</span>
+          : <span className="text-[11px] font-black tabular-nums shrink-0" style={{ fontFamily: MONO, color: col }}>≈ Lv {g.recLevel}</span>}
+      </div>
+      <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mb-1.5">
+        <div className="h-full rounded-full" style={{ width: `${g.progress}%`, background: g.achieved ? "#10B981" : `linear-gradient(90deg, ${col}, #C0FF00)` }} />
+      </div>
+      <div className="flex items-center justify-between text-[9px]" style={{ fontFamily: MONO }}>
+        <span className="text-gray-500">previsto ora {g.predicted} <span style={{ color: g.achieved ? "#10B981" : "#94A3B8" }}>({g.gapLabel})</span></span>
+        {g.achieved
+          ? <span className="text-[#10B981] font-bold">raggiunto · Lv ~{g.recLevel}</span>
+          : <span className="font-black" style={{ color: "#C0FF00" }}>mancano {g.xpGap.toLocaleString("it-IT")} XP</span>}
+      </div>
+    </Panel>
   );
 }
 

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-16T04:24:10.412Z",
+  "generated_at": "2026-06-16T04:47:50.342Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2731,9 +2731,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "b91f6f3c0427272e37c63695d912b57aef7b7270e8e8045ee0da93a787fea512",
-      "last_modified": "2026-06-16T04:24:10.413Z",
-      "size_bytes": 15450
+      "hash": "45903292c8826201fbe2aedb1584bba6da3b6b9db3ff1b0cfe5ccffceddebf1d",
+      "last_modified": "2026-06-16T04:47:50.343Z",
+      "size_bytes": 17916
     },
     {
       "path": "src/components/gamification/evolutionEngine.ts",
@@ -2749,6 +2749,7 @@
       "exports": [
         "computeLevelSystem",
         "cumXpForLevel",
+        "GoalState",
         "levelFromXp",
         "LevelNode",
         "LevelSystem",
@@ -2761,9 +2762,9 @@
       "imports": [
         "../../types/api"
       ],
-      "hash": "d1104dcdbc986da3a7e766b4a710ab891a80e701de96956c792b1d6adf2a6ae2",
-      "last_modified": "2026-06-16T04:23:03.462Z",
-      "size_bytes": 9527
+      "hash": "0f7d027d5125bcfcb7a118e568452f1639d93ce655ce356ae1e63f32b51090ad",
+      "last_modified": "2026-06-16T04:47:15.345Z",
+      "size_bytes": 14398
     },
     {
       "path": "src/components/gamification/gamiData.ts",

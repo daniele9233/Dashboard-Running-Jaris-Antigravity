@@ -39,6 +39,84 @@ const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
 const tierIdxOf = (level: number) => clamp(Math.floor((level - 1) / 10), 0, 9);
 export const levelTitle = (level: number) => `${TIER_DEFS[tierIdxOf(level)].name} ${ROMAN[(level - 1) % 10]}`;
 
+// ── VDOT (Daniels) — usato SOLO per stimare la difficoltà degli obiettivi ──────
+function vdotFrom(distM: number, timeSec: number): number {
+  const t = timeSec / 60; const v = distM / t;
+  const vo2 = -4.60 + 0.182258 * v + 0.000104 * v * v;
+  const pct = 0.8 + 0.1894393 * Math.exp(-0.012778 * t) + 0.2989558 * Math.exp(-0.1932605 * t);
+  return vo2 / pct;
+}
+/** Tempo (sec) previsto su una distanza dato un VDOT. */
+function predictSec(distM: number, vdot: number): number {
+  let lo = 0.5, hi = 360;
+  for (let i = 0; i < 60; i++) { const mid = (lo + hi) / 2; if (vdotFrom(distM, mid * 60) > vdot) lo = mid; else hi = mid; }
+  return ((lo + hi) / 2) * 60;
+}
+/** VDOT corrente stimato dal miglior effort reale (corse ≥3 km). */
+function estimateVdot(runs: Run[]): number {
+  let best = 0;
+  for (const r of runs) {
+    if (r.is_treadmill) continue;
+    const ps = paceToSec(r.avg_pace); const dist = r.distance_km || 0;
+    if (!ps || dist < 3 || dist > 25) continue;
+    best = Math.max(best, vdotFrom(dist * 1000, ps * dist));
+  }
+  return best ? clamp(best, 25, 80) : 38;
+}
+const fmtClock = (sec: number): string => {
+  sec = Math.max(0, Math.round(sec));
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
+};
+
+// ── 20 obiettivi (distanza · tempo) ───────────────────────────────────────────
+interface GoalDef { id: string; group: string; label: string; m: number; sec: number }
+const GOAL_DEFS: GoalDef[] = [
+  { id: "5k-30",  group: "5K", label: "5K Sub 30'", m: 5000, sec: 1800 },
+  { id: "5k-25",  group: "5K", label: "5K Sub 25'", m: 5000, sec: 1500 },
+  { id: "5k-22",  group: "5K", label: "5K Sub 22'", m: 5000, sec: 1320 },
+  { id: "5k-20",  group: "5K", label: "5K Sub 20'", m: 5000, sec: 1200 },
+  { id: "5k-18",  group: "5K", label: "5K Sub 18'", m: 5000, sec: 1080 },
+  { id: "10k-55", group: "10K", label: "10K Sub 55'", m: 10000, sec: 3300 },
+  { id: "10k-50", group: "10K", label: "10K Sub 50'", m: 10000, sec: 3000 },
+  { id: "10k-45", group: "10K", label: "10K Sub 45'", m: 10000, sec: 2700 },
+  { id: "10k-42", group: "10K", label: "10K Sub 42'", m: 10000, sec: 2520 },
+  { id: "10k-40", group: "10K", label: "10K Sub 40'", m: 10000, sec: 2400 },
+  { id: "10k-38", group: "10K", label: "10K Sub 38'", m: 10000, sec: 2280 },
+  { id: "hm-200", group: "Mezza", label: "Mezza Sub 2:00", m: 21097, sec: 7200 },
+  { id: "hm-150", group: "Mezza", label: "Mezza Sub 1:50", m: 21097, sec: 6600 },
+  { id: "hm-145", group: "Mezza", label: "Mezza Sub 1:45", m: 21097, sec: 6300 },
+  { id: "hm-140", group: "Mezza", label: "Mezza Sub 1:40", m: 21097, sec: 6000 },
+  { id: "hm-135", group: "Mezza", label: "Mezza Sub 1:35", m: 21097, sec: 5700 },
+  { id: "hm-130", group: "Mezza", label: "Mezza Sub 1:30", m: 21097, sec: 5400 },
+  { id: "fm-400", group: "Maratona", label: "Maratona Sub 4:00", m: 42195, sec: 14400 },
+  { id: "fm-330", group: "Maratona", label: "Maratona Sub 3:30", m: 42195, sec: 12600 },
+  { id: "fm-300", group: "Maratona", label: "Maratona Sub 3:00", m: 42195, sec: 10800 },
+];
+const GOAL_SLOPE = 3.5; // livelli stimati per punto di VDOT oltre la forma attuale
+
+export interface GoalState {
+  id: string; group: string; label: string; reqVdot: number; recLevel: number;
+  xpReq: number; xpGap: number; achieved: boolean; predicted: string; gapLabel: string; progress: number;
+}
+
+function buildGoals(currentVdot: number, currentLevel: number, totalXp: number): GoalState[] {
+  return GOAL_DEFS.map((g) => {
+    const reqVdot = vdotFrom(g.m, g.sec);
+    const achieved = currentVdot >= reqVdot;
+    const recLevel = clamp(Math.round(currentLevel + (reqVdot - currentVdot) * GOAL_SLOPE), 1, MAX_LEVEL);
+    const xpReq = cumXpForLevel(recLevel);
+    const xpGap = Math.max(0, xpReq - totalXp);
+    const predicted = predictSec(g.m, currentVdot);
+    const gap = predicted - g.sec;
+    return {
+      id: g.id, group: g.group, label: g.label, reqVdot: Math.round(reqVdot * 10) / 10, recLevel, xpReq, xpGap,
+      achieved, predicted: fmtClock(predicted), gapLabel: (gap <= 0 ? "−" : "+") + fmtClock(Math.abs(gap)),
+      progress: achieved ? 100 : clamp(Math.round((totalXp / Math.max(1, xpReq)) * 100), 1, 99),
+    };
+  }).sort((a, b) => a.reqVdot - b.reqVdot);
+}
+
 // ══ TIPI ESPORTATI ════════════════════════════════════════════════════════════
 
 export interface TierState {
@@ -54,6 +132,7 @@ export interface LevelSystem {
   totalXp: number; level: number; maxLevel: number; title: string; tierIdx: number; tier: TierState;
   levelFloor: number; levelCeil: number; intoLevel: number; spanLevel: number; pct: number; xpToNext: number; maxed: boolean;
   tiers: TierState[]; levels: LevelNode[]; nextReward: TierState | null;
+  goals: GoalState[]; goalsAchieved: number; currentVdot: number;
   recent: RecentRun[];
   stats: { totalKm: number; totalRuns: number; totalHours: number };
 }
@@ -101,7 +180,7 @@ const EMPTY: LevelSystem = {
   ok: false, totalXp: 0, level: 1, maxLevel: MAX_LEVEL, title: levelTitle(1), tierIdx: 0,
   tier: { idx: 0, ...TIER_DEFS[0], levelStart: 1, levelEnd: 10, xpStart: 0, state: "current", unlockedLevels: 0 },
   levelFloor: 0, levelCeil: cumXpForLevel(2), intoLevel: 0, spanLevel: cumXpForLevel(2), pct: 0, xpToNext: cumXpForLevel(2), maxed: false,
-  tiers: [], levels: [], nextReward: null, recent: [], stats: { totalKm: 0, totalRuns: 0, totalHours: 0 },
+  tiers: [], levels: [], nextReward: null, goals: [], goalsAchieved: 0, currentVdot: 0, recent: [], stats: { totalKm: 0, totalRuns: 0, totalHours: 0 },
 };
 
 export function computeLevelSystem(runsIn: Run[], _profile: Profile | null): LevelSystem {
@@ -132,6 +211,11 @@ export function computeLevelSystem(runsIn: Run[], _profile: Profile | null): Lev
   });
   const nextReward = tiers.find((t) => t.state === "locked") ?? null;
 
+  // obiettivi (livello/XP stimati dalla forma attuale)
+  const currentVdot = estimateVdot(runs);
+  const goals = buildGoals(currentVdot, level, totalXp);
+  const goalsAchieved = goals.filter((g) => g.achieved).length;
+
   // 100 livelli
   const levels: LevelNode[] = [];
   for (let n = 1; n <= MAX_LEVEL; n++) {
@@ -149,7 +233,7 @@ export function computeLevelSystem(runsIn: Run[], _profile: Profile | null): Lev
   return {
     ok: true, totalXp, level, maxLevel: MAX_LEVEL, title: levelTitle(level), tierIdx, tier: tiers[tierIdx],
     levelFloor, levelCeil, intoLevel, spanLevel, pct, xpToNext, maxed,
-    tiers, levels, nextReward, recent,
+    tiers, levels, nextReward, goals, goalsAchieved, currentVdot: Math.round(currentVdot * 10) / 10, recent,
     stats: { totalKm: Math.round(totalKm), totalRuns: runs.length, totalHours: Math.round(totalMin / 60) },
   };
 }
