@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-15T16:16:00.639Z",
+  "generated_at": "2026-06-16T03:45:50.806Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 172,
+    "files": 173,
     "backend_routes": 64,
     "frontend_routes": 16,
     "api_clients": 62
@@ -2708,6 +2708,77 @@
       "size_bytes": 19020
     },
     {
+      "path": "src/components/gamification/AthleteEvolutionFramework.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component AthleteEvolutionFramework.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "layout",
+        "profile",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "AthleteEvolutionFramework"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "../celebrations/gsapSetup",
+        "./evolutionEngine",
+        "lucide-react",
+        "react"
+      ],
+      "hash": "23652ce99c7077be88b39ac92af5c097c1ce08608e9b1290535339f14388b0ef",
+      "last_modified": "2026-06-15T17:04:39.345Z",
+      "size_bytes": 24329
+    },
+    {
+      "path": "src/components/gamification/evolutionEngine.ts",
+      "kind": "frontend-component",
+      "purpose": "React component evolutionEngine.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "garmin",
+        "map",
+        "profile",
+        "statistics",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "Achievement",
+        "AnalystLine",
+        "Archetype",
+        "CATEGORIES",
+        "CatKey",
+        "CatMeta",
+        "CatState",
+        "computeEvolution",
+        "DetrainAxis",
+        "EvolutionState",
+        "FormPoint",
+        "GoalState",
+        "levelFromXp",
+        "PeakMonth",
+        "PeakRun",
+        "PeakWeek",
+        "xpForLevel"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api"
+      ],
+      "hash": "aa3af0ef3fe5115880f1e038f6e7664d9d5b775df39d5297c840feb0246d801a",
+      "last_modified": "2026-06-16T03:45:50.807Z",
+      "size_bytes": 40625
+    },
+    {
       "path": "src/components/gamification/gamiData.ts",
       "kind": "frontend-component",
       "purpose": "React component gamiData.",
@@ -2750,9 +2821,8 @@
         "ai",
         "layout",
         "map",
+        "profile",
         "statistics",
-        "strava",
-        "training",
         "types"
       ],
       "exports": [
@@ -2765,47 +2835,15 @@
         "../../hooks/useApi",
         "../../types/api",
         "../celebrations/gsapSetup",
+        "./AthleteEvolutionFramework",
         "./gamiData",
-        "./leveling",
-        "@mapbox/polyline",
         "lucide-react",
         "react",
         "react-map-gl/mapbox"
       ],
-      "hash": "ba6835607a9ddf4b736f3a0e0304edfa0dccc8bc2a6668b2d9812ca12add3c65",
-      "last_modified": "2026-06-15T16:13:26.407Z",
-      "size_bytes": 18704
-    },
-    {
-      "path": "src/components/gamification/leveling.ts",
-      "kind": "frontend-component",
-      "purpose": "React component leveling.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "profile",
-        "training",
-        "types"
-      ],
-      "exports": [
-        "Axis",
-        "baseRunXp",
-        "computeLeveling",
-        "Goal",
-        "GOALS",
-        "levelFromXp",
-        "Leveling",
-        "proximity",
-        "RUN_LABELS",
-        "xpForLevel"
-      ],
-      "routes": [],
-      "imports": [
-        "../../types/api"
-      ],
-      "hash": "e519c1f6dcd2af2f99a0daf37002cafd0b3bfe8dc8c5c63ebb29e3adf608717a",
-      "last_modified": "2026-06-15T16:16:00.639Z",
-      "size_bytes": 8149
+      "hash": "7c74f8b9c8adcf12a24701fc884b7e383cf546d630222e97fa56887f8c2cf6fc",
+      "last_modified": "2026-06-15T17:06:28.782Z",
+      "size_bytes": 9640
     },
     {
       "path": "src/components/GridCard.tsx",
