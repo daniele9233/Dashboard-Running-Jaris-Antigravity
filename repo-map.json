@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-16T04:47:50.342Z",
+  "generated_at": "2026-06-16T04:59:23.748Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2731,9 +2731,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "45903292c8826201fbe2aedb1584bba6da3b6b9db3ff1b0cfe5ccffceddebf1d",
-      "last_modified": "2026-06-16T04:47:50.343Z",
-      "size_bytes": 17916
+      "hash": "7fd18eef3c8df9e80d8cc768dc8f49f9ba6356c0375ef6d1ff6bdec950c506a3",
+      "last_modified": "2026-06-16T04:59:23.748Z",
+      "size_bytes": 27424
     },
     {
       "path": "src/components/gamification/evolutionEngine.ts",

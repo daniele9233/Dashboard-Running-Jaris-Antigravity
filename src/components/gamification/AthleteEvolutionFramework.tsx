@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Footprints, Sparkles, Flame, Zap, Medal, Award, Target, Trophy, Gem, Crown,
-  Lock, Check, ChevronRight, Dna, TrendingUp, Activity, type LucideIcon,
+  Lock, Check, ChevronRight, Dna, TrendingUp, Activity, Star, X, type LucideIcon,
 } from "lucide-react";
 import { gsap } from "../celebrations/gsapSetup";
 import type { Run, Profile } from "../../types/api";
@@ -15,10 +15,37 @@ function Panel({ children, className = "", style }: { children: React.ReactNode;
   return <div className={`rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl ${className}`} style={style}>{children}</div>;
 }
 
+const LEVEL_KEY = "aef-last-level";
+const FOCUS_KEY = "aef-focus-goal";
+
 export function AthleteEvolutionFramework({ runs, profile }: { runs: Run[]; profile: Profile | null }) {
   const sys = useMemo(() => computeLevelSystem(runs, profile), [runs, profile]);
   const rootRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+
+  const [focusId, setFocusId] = useState<string | null>(null);
+  const [levelUp, setLevelUp] = useState<{ from: number; to: number; title: string; newTier: TierState | null } | null>(null);
+  useEffect(() => { setFocusId(localStorage.getItem(FOCUS_KEY)); }, []);
+  const setFocus = (id: string) => { const next = focusId === id ? null : id; setFocusId(next); if (next) localStorage.setItem(FOCUS_KEY, next); else localStorage.removeItem(FOCUS_KEY); };
+
+  // LEVEL UP: festeggia se il livello è salito rispetto all'ultimo visto.
+  // La baseline è catturata a stato/ref così la scrittura su localStorage non
+  // "avvelena" la lettura (StrictMode double-mount in dev).
+  const [storedLevel] = useState<number | null>(() => {
+    const raw = localStorage.getItem(LEVEL_KEY); const n = Number(raw);
+    return raw == null || Number.isNaN(n) ? null : n;
+  });
+  const baselineRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (!sys.ok) return;
+    const prev = baselineRef.current === undefined ? storedLevel : baselineRef.current;
+    if (prev != null && sys.level > prev) {
+      const crossedTier = Math.floor((sys.level - 1) / 10) > Math.floor((prev - 1) / 10);
+      setLevelUp({ from: prev, to: sys.level, title: sys.title, newTier: crossedTier ? sys.tier : null });
+    }
+    baselineRef.current = sys.level;
+    localStorage.setItem(LEVEL_KEY, String(sys.level));
+  }, [sys.ok, sys.level]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const c = gsap.context(() => {
@@ -44,11 +71,68 @@ export function AthleteEvolutionFramework({ runs, profile }: { runs: Run[]; prof
       <Hero sys={sys} />
       <TierTrack sys={sys} trackRef={trackRef} />
       <LevelGrid sys={sys} />
-      <Goals sys={sys} />
+      <Goals sys={sys} focusId={focusId} setFocus={setFocus} />
       <RecentRuns sys={sys} />
       <p className="mt-8 text-center text-[9px] tracking-widest uppercase text-gray-700">
         Ogni corsa frutta XP in base a durata · intensità · qualità — bonus per personal best e gare
       </p>
+      {levelUp && <LevelUpOverlay info={levelUp} tier={sys.tier} onClose={() => setLevelUp(null)} />}
+    </div>
+  );
+}
+
+// ── OVERLAY "LEVEL UP!" ───────────────────────────────────────────────────────
+function LevelUpOverlay({ info, tier, onClose }: { info: { from: number; to: number; title: string; newTier: TierState | null }; tier: TierState; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const col = (info.newTier ?? tier).color;
+  const TierIcon = ICONS[(info.newTier ?? tier).icon] ?? Star;
+  const sparks = useMemo(() => Array.from({ length: 18 }, (_, i) => i), []);
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.timeline()
+        .from(".lu-card", { scale: 0.6, opacity: 0, duration: 0.5, ease: "back.out(1.8)" })
+        .from(".lu-title", { y: -16, opacity: 0, duration: 0.4 }, "-=0.2")
+        .from(".lu-badge", { scale: 0, opacity: 0, duration: 0.5, ease: "back.out(2)" }, "-=0.15")
+        .from(".lu-num", { scale: 0.3, opacity: 0, duration: 0.5, ease: "back.out(2.2)" }, "-=0.2")
+        .from(".lu-spark", { scale: 0, opacity: 1, x: 0, y: 0, duration: 0.9, stagger: 0.025, ease: "power2.out" }, "-=0.4");
+      gsap.to(".lu-rays", { rotate: 360, duration: 22, repeat: -1, ease: "none" });
+    }, ref);
+    const t = window.setTimeout(onClose, 7000);
+    return () => { window.clearTimeout(t); ctx.revert(); };
+  }, [info.from, info.to, onClose]);
+
+  return (
+    <div ref={ref} className="fixed inset-0 z-[100] grid place-items-center" onClick={onClose} style={{ background: "rgba(0,0,0,0.82)", backdropFilter: "blur(6px)" }}>
+      <div className="lu-card relative w-[340px] max-w-[88vw] rounded-3xl border p-7 text-center overflow-hidden"
+        onClick={(e) => e.stopPropagation()} style={{ borderColor: col + "66", background: `radial-gradient(120% 120% at 50% 0%, ${col}26, rgba(10,10,12,0.96))` }}>
+        <button type="button" onClick={onClose} className="absolute top-3 right-3 text-gray-500 hover:text-white"><X className="w-4 h-4" /></button>
+        {/* raggi rotanti */}
+        <div className="lu-rays absolute left-1/2 top-[120px] -translate-x-1/2 -translate-y-1/2 w-[420px] h-[420px] pointer-events-none opacity-40"
+          style={{ background: `repeating-conic-gradient(${col}22 0deg 12deg, transparent 12deg 24deg)`, maskImage: "radial-gradient(circle, #000 35%, transparent 70%)", WebkitMaskImage: "radial-gradient(circle, #000 35%, transparent 70%)" }} />
+        {/* scintille */}
+        {sparks.map((i) => {
+          const a = (i / sparks.length) * Math.PI * 2, R = 120;
+          return <span key={i} className="lu-spark absolute w-1.5 h-1.5 rounded-full" style={{ left: "50%", top: "120px", background: col, transform: `translate(${Math.cos(a) * R}px, ${Math.sin(a) * R}px)`, boxShadow: `0 0 8px ${col}` }} />;
+        })}
+
+        <div className="lu-title relative text-[13px] font-black tracking-[0.4em] uppercase mb-1" style={{ color: col }}>Level Up!</div>
+        <div className="relative grid place-items-center mb-3">
+          <div className="lu-badge grid place-items-center w-20 h-20 rounded-2xl mb-2" style={{ background: `${col}1f`, border: `2px solid ${col}` }}>
+            <TierIcon className="w-10 h-10" style={{ color: col }} />
+          </div>
+          <div className="flex items-end gap-1.5">
+            <span className="text-[11px] text-gray-500 font-black mb-2">Lv {info.from} →</span>
+            <span className="lu-num text-6xl font-black tabular-nums leading-none" style={{ fontFamily: MONO, color: col }}>{info.to}</span>
+          </div>
+          <div className="text-base font-black uppercase tracking-wider mt-1" style={{ color: col }}>{info.title}</div>
+        </div>
+        {info.newTier && (
+          <div className="relative inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-3" style={{ background: `${col}22`, color: col }}>
+            <Sparkles className="w-3 h-3" />Nuovo grado · {info.newTier.name}
+          </div>
+        )}
+        <button type="button" onClick={onClose} className="relative w-full mt-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-transform hover:scale-[1.02]" style={{ background: col, color: "#0a0a0c" }}>Continua</button>
+      </div>
     </div>
   );
 }
@@ -216,22 +300,68 @@ function LevelGrid({ sys }: { sys: LevelSystem }) {
 
 // ── OBIETTIVI (livello/XP stimati per raggiungerli) ───────────────────────────
 const GOAL_COLOR: Record<string, string> = { "5K": "#C0FF00", "10K": "#22D3EE", "Mezza": "#FB923C", "Maratona": "#E879F9" };
-function Goals({ sys }: { sys: LevelSystem }) {
+function Goals({ sys, focusId, setFocus }: { sys: LevelSystem; focusId: string | null; setFocus: (id: string) => void }) {
+  const focus = sys.goals.find((g) => g.id === focusId) ?? null;
   return (
     <section className="mt-7 aef-rise">
       <SectionTitle icon={Target} hint={`${sys.goalsAchieved}/${sys.goals.length} alla tua portata · forma ~VDOT ${sys.currentVdot}`}>Obiettivi</SectionTitle>
+      {focus && <FocusCard g={focus} totalXp={sys.totalXp} onClear={() => setFocus(focus.id)} />}
+      {!focus && <p className="mb-2.5 text-[10px] text-gray-600 px-0.5">Tocca un obiettivo per fissarlo come <b className="text-gray-400">focus</b> e tenerlo d'occhio.</p>}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-        {sys.goals.map((g) => <GoalCard key={g.id} g={g} />)}
+        {sys.goals.map((g) => <GoalCard key={g.id} g={g} active={g.id === focusId} onClick={() => setFocus(g.id)} />)}
       </div>
     </section>
   );
 }
-function GoalCard({ g }: { g: GoalState }) {
+
+function FocusCard({ g, totalXp, onClear }: { g: GoalState; totalXp: number; onClear: () => void }) {
   const col = GOAL_COLOR[g.group] ?? "#22D3EE";
   return (
-    <Panel className="p-3.5" style={{ borderColor: g.achieved ? "#10B98155" : "rgba(255,255,255,0.1)" }}>
+    <Panel className="p-4 md:p-5 mb-3 relative overflow-hidden" style={{ borderColor: col + "66", background: `radial-gradient(120% 140% at 100% 0%, ${col}1f, transparent 55%), rgba(255,255,255,0.03)` }}>
+      <button type="button" onClick={onClear} title="Rimuovi focus" className="absolute top-3 right-3 text-gray-500 hover:text-white"><X className="w-4 h-4" /></button>
+      <div className="flex items-center gap-2 mb-3">
+        <Star className="w-4 h-4" style={{ color: col }} fill={col} />
+        <span className="text-[10px] font-black tracking-[0.3em] uppercase" style={{ color: col }}>Obiettivo Focus</span>
+      </div>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-black tracking-wide uppercase" style={{ background: `${col}22`, color: col }}>{g.group}</span>
+            <span className="text-xl font-black text-white">{g.label}</span>
+          </div>
+          <div className="text-[10px] text-gray-500 mt-1" style={{ fontFamily: MONO }}>previsto ora {g.predicted} <span style={{ color: g.achieved ? "#10B981" : "#94A3B8" }}>({g.gapLabel} dal target)</span></div>
+        </div>
+        <div className="text-right">
+          {g.achieved ? (
+            <>
+              <div className="flex items-center gap-1.5 justify-end text-lg font-black" style={{ color: "#10B981" }}><Check className="w-5 h-5" />Raggiunto</div>
+              <div className="text-[10px] text-gray-500">già alla tua portata</div>
+            </>
+          ) : (
+            <>
+              <div className="text-3xl font-black tabular-nums leading-none" style={{ fontFamily: MONO, color: "#C0FF00" }}>{g.xpGap.toLocaleString("it-IT")}</div>
+              <div className="text-[10px] font-black uppercase tracking-wider" style={{ color: "#C0FF00" }}>XP mancanti · ≈ Lv {g.recLevel}</div>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="mt-3 h-2.5 rounded-full bg-white/10 overflow-hidden">
+        <div className="h-full rounded-full" style={{ width: `${g.progress}%`, background: g.achieved ? "#10B981" : `linear-gradient(90deg, ${col}, #C0FF00)` }} />
+      </div>
+      {!g.achieved && <div className="mt-1.5 text-right text-[9px] text-gray-600" style={{ fontFamily: MONO }}>{totalXp.toLocaleString("it-IT")} / {g.xpReq.toLocaleString("it-IT")} XP · {g.progress}%</div>}
+    </Panel>
+  );
+}
+
+function GoalCard({ g, active, onClick }: { g: GoalState; active: boolean; onClick: () => void }) {
+  const col = GOAL_COLOR[g.group] ?? "#22D3EE";
+  return (
+    <button type="button" onClick={onClick}
+      className="text-left rounded-2xl border bg-white/[0.03] backdrop-blur-xl p-3.5 transition-all hover:bg-white/[0.05] hover:scale-[1.01]"
+      style={{ borderColor: active ? col : g.achieved ? "#10B98155" : "rgba(255,255,255,0.1)", boxShadow: active ? `0 0 0 1px ${col}, 0 0 18px ${col}44` : "none" }}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 min-w-0">
+          {active && <Star className="w-3.5 h-3.5 shrink-0" style={{ color: col }} fill={col} />}
           <span className="px-1.5 py-0.5 rounded text-[8px] font-black tracking-wide uppercase shrink-0" style={{ background: `${col}22`, color: col }}>{g.group}</span>
           <span className="text-[13px] font-black text-white/90 truncate">{g.label}</span>
         </div>
@@ -248,7 +378,7 @@ function GoalCard({ g }: { g: GoalState }) {
           ? <span className="text-[#10B981] font-bold">raggiunto · Lv ~{g.recLevel}</span>
           : <span className="font-black" style={{ color: "#C0FF00" }}>mancano {g.xpGap.toLocaleString("it-IT")} XP</span>}
       </div>
-    </Panel>
+    </button>
   );
 }
 
