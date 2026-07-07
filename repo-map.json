@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-06-16T05:20:23.651Z",
+  "generated_at": "2026-07-07T04:53:03.374Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -448,6 +448,7 @@
         "ai",
         "api",
         "layout",
+        "profile",
         "strava"
       ],
       "exports": [
@@ -464,9 +465,9 @@
         "fastapi.responses",
         "typing"
       ],
-      "hash": "074feac4bf8cd360c5466d33df2225ba71bf9020782d5555bca9d1bb0848171e",
-      "last_modified": "2026-05-17T17:59:49.038Z",
-      "size_bytes": 2175
+      "hash": "11ca3cdc08de5a74820465a88ad71b7a51f6824d4cf26a16be3f94fd8e24dc3b",
+      "last_modified": "2026-07-07T04:53:03.374Z",
+      "size_bytes": 2347
     },
     {
       "path": "backend/server.py",

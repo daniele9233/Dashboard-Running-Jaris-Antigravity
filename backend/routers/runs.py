@@ -31,7 +31,9 @@ async def get_runs(
     # Exclude heavy fields (streams) from list endpoint to save memory
     projection = {"streams": 0}
     cursor = db.runs.find(q, projection).sort("date", -1)
-    runs = await cursor.to_list(length=500)
+    # length=None → tutte le corse (niente cap a 500: il totale corse/km su Profile
+    # e i calcoli di gamification/statistiche devono riflettere l'intera cronologia)
+    runs = await cursor.to_list(length=None)
     runs = [normalise_run_quality_fields(dict(run)) for run in runs]
     return {"runs": oids(runs)}
 
