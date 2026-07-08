@@ -208,6 +208,7 @@ export function RunnerDnaView() {
   const strengths = model.diagnostics.strengths.slice(0, 3);
   const weaknesses = model.diagnostics.weaknesses.slice(0, 3);
   const priorities = model.diagnostics.priorities.slice(0, 3);
+  const unlockPlan = model.diagnostics.unlockPlan;
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#0A0A0A] text-white p-4 md:p-6 lg:p-10 min-h-0 custom-scrollbar">
@@ -319,16 +320,45 @@ export function RunnerDnaView() {
                 <div className="text-[10px] font-black tracking-widest uppercase text-[#C0FF00] mb-3">
                   Come sbloccarlo
                 </div>
-                <div className="space-y-2.5">
-                  {priorities.map((item, index) => (
-                    <div key={item} className="flex gap-3 items-start rounded-xl bg-white/[0.03] border border-white/[0.05] px-3.5 py-2.5">
-                      <span className="text-base font-black tabular-nums text-[#C0FF00] leading-5" style={{ fontFamily: MONO }}>
-                        0{index + 1}
-                      </span>
-                      <p className="text-[11px] leading-5 text-gray-300">{humanizeCoachText(item)}</p>
+                {unlockPlan ? (
+                  <>
+                    {/* ETA: quando arrivi al tetto se segui il piano */}
+                    <div className="mb-3 rounded-xl border border-[#C0FF00]/25 bg-[#C0FF00]/[0.06] px-3.5 py-2.5">
+                      <div className="text-[9px] font-black tracking-[0.2em] uppercase text-gray-500">Traguardo stimato</div>
+                      <div className="text-[12px] font-black text-white mt-0.5">
+                        VDOT {unlockPlan.targetVdot.toFixed(1)} in{" "}
+                        <span className="text-[#C0FF00]">{unlockPlan.etaWeeksMin}-{unlockPlan.etaWeeksMax} settimane</span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 mt-0.5" style={{ fontFamily: MONO }}>
+                        ≈ {unlockPlan.etaLabel} · seguendo il piano qui sotto
+                      </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="space-y-2.5">
+                      {unlockPlan.steps.map((step, index) => (
+                        <div key={step.title} className="flex gap-3 items-start rounded-xl bg-white/[0.03] border border-white/[0.05] px-3.5 py-2.5">
+                          <span className="text-base font-black tabular-nums text-[#C0FF00] leading-5" style={{ fontFamily: MONO }}>
+                            0{index + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-[11px] font-black leading-4 text-white">{step.title}</p>
+                            <p className="text-[11px] leading-5 text-gray-400 mt-1">{step.detail}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-2.5">
+                    {priorities.map((item, index) => (
+                      <div key={item} className="flex gap-3 items-start rounded-xl bg-white/[0.03] border border-white/[0.05] px-3.5 py-2.5">
+                        <span className="text-base font-black tabular-nums text-[#C0FF00] leading-5" style={{ fontFamily: MONO }}>
+                          0{index + 1}
+                        </span>
+                        <p className="text-[11px] leading-5 text-gray-300">{humanizeCoachText(item)}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -94,11 +94,14 @@ const GOAL_DEFS: GoalDef[] = [
   { id: "5k-30",  group: "5K", label: "5K Sub 30'", m: 5000, sec: 1800 },
   { id: "5k-25",  group: "5K", label: "5K Sub 25'", m: 5000, sec: 1500 },
   { id: "5k-22",  group: "5K", label: "5K Sub 22'", m: 5000, sec: 1320 },
+  { id: "5k-21",  group: "5K", label: "5K Sub 21'", m: 5000, sec: 1260 },
   { id: "5k-20",  group: "5K", label: "5K Sub 20'", m: 5000, sec: 1200 },
+  { id: "5k-19",  group: "5K", label: "5K Sub 19'", m: 5000, sec: 1140 },
   { id: "5k-18",  group: "5K", label: "5K Sub 18'", m: 5000, sec: 1080 },
   { id: "10k-55", group: "10K", label: "10K Sub 55'", m: 10000, sec: 3300 },
   { id: "10k-50", group: "10K", label: "10K Sub 50'", m: 10000, sec: 3000 },
   { id: "10k-45", group: "10K", label: "10K Sub 45'", m: 10000, sec: 2700 },
+  { id: "10k-43", group: "10K", label: "10K Sub 43'", m: 10000, sec: 2580 },
   { id: "10k-42", group: "10K", label: "10K Sub 42'", m: 10000, sec: 2520 },
   { id: "10k-40", group: "10K", label: "10K Sub 40'", m: 10000, sec: 2400 },
   { id: "10k-38", group: "10K", label: "10K Sub 38'", m: 10000, sec: 2280 },
@@ -116,8 +119,12 @@ const GOAL_SLOPE = 3.5; // livelli stimati per punto di VDOT oltre la forma attu
 
 export interface GoalState {
   id: string; group: string; label: string; reqVdot: number; recLevel: number;
-  xpReq: number; xpGap: number; achieved: boolean; predicted: string; gapLabel: string; progress: number;
+  xpReq: number; xpGap: number; achieved: boolean; predicted: string; predictedHot: string;
+  gapLabel: string; progress: number;
 }
+
+// Condizioni estive tipiche di Roma (banda 20-30°C): ~27°C, 60% umidità.
+const HOT_TEMP_C = 27, HOT_HUMIDITY = 60;
 
 function buildGoals(currentVdot: number, currentLevel: number, totalXp: number): GoalState[] {
   return GOAL_DEFS.map((g) => {
@@ -127,10 +134,12 @@ function buildGoals(currentVdot: number, currentLevel: number, totalXp: number):
     const xpReq = cumXpForLevel(recLevel);
     const xpGap = Math.max(0, xpReq - totalXp);
     const predicted = predictSec(g.m, currentVdot);
+    const predictedHot = predicted * (1 + heatSlowdownFrac(HOT_TEMP_C, HOT_HUMIDITY, g.m / 1000));
     const gap = predicted - g.sec;
     return {
       id: g.id, group: g.group, label: g.label, reqVdot: Math.round(reqVdot * 10) / 10, recLevel, xpReq, xpGap,
-      achieved, predicted: fmtClock(predicted), gapLabel: (gap <= 0 ? "−" : "+") + fmtClock(Math.abs(gap)),
+      achieved, predicted: fmtClock(predicted), predictedHot: fmtClock(predictedHot),
+      gapLabel: (gap <= 0 ? "−" : "+") + fmtClock(Math.abs(gap)),
       progress: achieved ? 100 : clamp(Math.round((totalXp / Math.max(1, xpReq)) * 100), 1, 99),
     };
   }).sort((a, b) => a.reqVdot - b.reqVdot);
@@ -261,11 +270,11 @@ export function computeLevelSystem(runsIn: Run[], _profile: Profile | null): Lev
   });
   const nextReward = tiers.find((t) => t.state === "locked") ?? null;
 
-  // obiettivi: mostra SOLO quelli ancora da raggiungere (esclude quelli già alla portata)
+  // obiettivi: TUTTI visibili — quelli già alla portata restano in lista con la
+  // spunta verde (nasconderli faceva "sparire" 5K Sub 20, 10K Sub 42, ecc.)
   const currentVdot = estimateVdot(runs);
-  const allGoals = buildGoals(currentVdot, level, totalXp);
-  const goalsAchieved = allGoals.filter((g) => g.achieved).length;
-  const goals = allGoals.filter((g) => !g.achieved);
+  const goals = buildGoals(currentVdot, level, totalXp);
+  const goalsAchieved = goals.filter((g) => g.achieved).length;
 
   // 100 livelli
   const levels: LevelNode[] = [];

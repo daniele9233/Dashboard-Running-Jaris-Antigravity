@@ -306,7 +306,7 @@ function Goals({ sys, focusId, setFocus }: { sys: LevelSystem; focusId: string |
     <section className="mt-7 aef-rise">
       <SectionTitle icon={Target} hint={`${sys.goals.length} da raggiungere · ${sys.goalsAchieved} conquistati · ~VDOT ${sys.currentVdot}`}>Obiettivi · a temperatura ideale</SectionTitle>
       <p className="mb-2.5 -mt-1 text-[10px] text-gray-600 px-0.5">
-        🌡️ Stime a <b className="text-gray-400">temperatura ideale (fresco)</b>: il VDOT è normalizzato per il caldo, quindi riflette il tuo potenziale. Con 25-35°C i tempi reali di oggi sono più lenti di qualche sec/km.
+        Ogni obiettivo mostra due tempi previsti: ❄️ a <b className="text-gray-400">temperatura ideale</b> (fresco, VDOT normalizzato per il caldo) e ☀️ con <b className="text-gray-400">20-30°C</b> (l'estate di Roma). Il target si conquista al fresco: col caldo aggiungi i secondi che vedi.
       </p>
       {sys.goals.length === 0 ? (
         <Panel className="p-6 text-center">
@@ -341,7 +341,9 @@ function FocusCard({ g, totalXp, onClear }: { g: GoalState; totalXp: number; onC
             <span className="px-1.5 py-0.5 rounded text-[9px] font-black tracking-wide uppercase" style={{ background: `${col}22`, color: col }}>{g.group}</span>
             <span className="text-xl font-black text-white">{g.label}</span>
           </div>
-          <div className="text-[10px] text-gray-500 mt-1" style={{ fontFamily: MONO }}>previsto ora {g.predicted} <span style={{ color: g.achieved ? "#10B981" : "#94A3B8" }}>({g.gapLabel} dal target)</span></div>
+          <div className="text-[10px] text-gray-500 mt-1" style={{ fontFamily: MONO }}>
+            ❄️ ideale {g.predicted} <span style={{ color: g.achieved ? "#10B981" : "#94A3B8" }}>({g.gapLabel} dal target)</span> · ☀️ con 20-30°C ~{g.predictedHot}
+          </div>
         </div>
         <div className="text-right">
           {g.achieved ? (
@@ -385,7 +387,7 @@ function GoalCard({ g, active, onClick }: { g: GoalState; active: boolean; onCli
         <div className="h-full rounded-full" style={{ width: `${g.progress}%`, background: g.achieved ? "#10B981" : `linear-gradient(90deg, ${col}, #C0FF00)` }} />
       </div>
       <div className="flex items-center justify-between text-[9px]" style={{ fontFamily: MONO }}>
-        <span className="text-gray-500">previsto ora {g.predicted} <span style={{ color: g.achieved ? "#10B981" : "#94A3B8" }}>({g.gapLabel})</span></span>
+        <span className="text-gray-500">❄️ {g.predicted} <span style={{ color: g.achieved ? "#10B981" : "#94A3B8" }}>({g.gapLabel})</span> · ☀️ 20-30° ~{g.predictedHot}</span>
         {g.achieved
           ? <span className="text-[#10B981] font-bold">raggiunto · Lv ~{g.recLevel}</span>
           : <span className="font-black" style={{ color: "#C0FF00" }}>mancano {g.xpGap.toLocaleString("it-IT")} XP</span>}

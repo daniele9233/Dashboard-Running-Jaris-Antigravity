@@ -53,6 +53,16 @@ export type RunnerDnaEvolutionPoint = {
   readiness: number | null;
 };
 
+export type RunnerDnaUnlockStep = { title: string; detail: string };
+export type RunnerDnaUnlockPlan = {
+  gain: number;
+  targetVdot: number;
+  etaWeeksMin: number;
+  etaWeeksMax: number;
+  etaLabel: string;
+  steps: RunnerDnaUnlockStep[];
+};
+
 export type RunnerDnaUiModel = {
   base: {
     name: string;
@@ -109,6 +119,7 @@ export type RunnerDnaUiModel = {
     strengths: string[];
     weaknesses: string[];
     priorities: string[];
+    unlockPlan: RunnerDnaUnlockPlan | null;
   };
   freshness: {
     lastRunDate: string | null;
@@ -663,6 +674,24 @@ export function buildRunnerDnaUiModel(
   const weaknesses = Array.isArray(diagnostics.weaknesses) ? diagnostics.weaknesses : Array.isArray(aiCoach.gaps) ? aiCoach.gaps : [];
   const priorities = Array.isArray(diagnostics.priorities) ? diagnostics.priorities : [];
 
+  // Piano di sblocco dettagliato (km/sedute/ritmi + ETA) dal backend.
+  const rawUnlock = asRecord(diagnostics.unlock_plan);
+  const unlockSteps = Array.isArray(rawUnlock.steps)
+    ? (rawUnlock.steps as Array<Record<string, unknown>>)
+        .map((s) => ({ title: firstString(s?.title) ?? "", detail: firstString(s?.detail) ?? "" }))
+        .filter((s) => s.title || s.detail)
+    : [];
+  const unlockPlan: RunnerDnaUnlockPlan | null = unlockSteps.length
+    ? {
+        gain: firstNumber(rawUnlock.gain) ?? 0,
+        targetVdot: firstNumber(rawUnlock.target_vdot) ?? 0,
+        etaWeeksMin: firstNumber(rawUnlock.eta_weeks_min) ?? 0,
+        etaWeeksMax: firstNumber(rawUnlock.eta_weeks_max) ?? 0,
+        etaLabel: firstString(rawUnlock.eta_label) ?? "",
+        steps: unlockSteps,
+      }
+    : null;
+
   const baseLevel = firstString(profileInput?.level, dnaProfile.level, profileInput?.race_goal) ?? "N/D";
   const profileType = firstString(dnaProfile.type, rank.name) ?? rank.name;
   const description = firstString(dnaProfile.archetype_description, rank.description) ?? rank.description;
@@ -734,6 +763,7 @@ export function buildRunnerDnaUiModel(
       strengths: strengths.length ? strengths : items.slice(0, 3).map((item) => `${item.label}: ${item.insight}`),
       weaknesses: weaknesses.length ? weaknesses : items.slice(-2).map((item) => `${item.label}: ${item.description}`),
       priorities: priorities.length ? priorities : [unlockMessage],
+      unlockPlan,
     },
     freshness: {
       lastRunDate: firstString(freshness.last_run_date),

@@ -5156,7 +5156,18 @@ def _build_vdot_chart(
     resolution: str,
     only_chart: Optional[str] = None,
     resting_hr: int = 50,
+    anchor_vdot: Optional[float] = None,
+    threshold_frac: float = 0.81,
 ) -> tuple[Optional[dict], Optional[dict], Optional[dict]]:
+    """Trend VDOT / soglia / gare.
+
+    anchor_vdot: VDOT ATTIVO canonico (field-test aware, stesso di /api/vdot/
+    paces e della dashboard). La serie mensile viene calibrata così che
+    l'ultimo punto coincida con quel valore — prima il "Passo Soglia Latest"
+    e il VDOT del grafico divergevano dai numeri mostrati in dashboard.
+    threshold_frac: frazione VO2max usata per il passo soglia, la STESSA della
+    dashboard (0.88 con field test attivo, 0.81 sustainable senza).
+    """
     want_all = only_chart is None
     want_vdot = want_all or only_chart == "vo2_vdot_trend"
     want_threshold = want_all or only_chart == "threshold_progression"
@@ -5203,6 +5214,23 @@ def _build_vdot_chart(
     detail = [p for p in (_bucket_point(key, group) for key, group in sorted(buckets.items())) if p]
     card = [p for p in (_bucket_point(key, group) for key, group in sorted(month_buckets.items())) if p]
     current = _calc_vdot(runs, max_hr, resting_hr=resting_hr)
+
+    # ── Calibrazione sull'anchor canonico ────────────────────────────────────
+    # Scala la serie così che l'ultimo bucket = VDOT attivo (dashboard). Il
+    # rapporto è clampato: la forma storica resta, il livello si allinea.
+    if anchor_vdot:
+        last_bucket = card[-1].get("vdot") if card else (detail[-1].get("vdot") if detail else None)
+        scale = 1.0
+        if last_bucket:
+            scale = max(0.85, min(1.15, float(anchor_vdot) / float(last_bucket)))
+        if scale != 1.0:
+            for series in (detail, card):
+                for p in series:
+                    for f in ("vdot", "vo2max", "best_session_vdot", "avg_session_vdot"):
+                        if p.get(f):
+                            p[f] = round(min(p[f] * scale, 65.0), 1)
+        current = round(float(anchor_vdot), 1)
+
     vdot_chart = None
     if want_vdot:
         vdot_chart = _chart("vo2_vdot_trend", "VO2 Max / VDOT Trend", "VDOT", {"current": current}, card, detail, {"current_vdot": current}, len(detail))
@@ -5211,9 +5239,9 @@ def _build_vdot_chart(
     if want_threshold:
         threshold_detail = []
         for p in detail:
-            # 0.81 = T sostenibile ~1h, stessa base del Passo Soglia dashboard
-            # (0.88 Daniels classico mostrava 4:10 vs 4:32 dashboard, mismatch)
-            threshold = _pace_at_vo2_pct(p.get("vdot"), 0.81)
+            # Stessa frazione della dashboard (0.88 field test / 0.81 senza):
+            # sui bucket calibrati l'ultimo punto coincide col Passo Soglia.
+            threshold = _pace_at_vo2_pct(p.get("vdot"), threshold_frac)
             threshold_detail.append({
                 "date": p["date"],
                 "threshold_pace": round(threshold, 1) if threshold else None,
@@ -5579,7 +5607,13 @@ async def get_pro_analytics(
         vdot_chart_ids = {"vo2_vdot_trend", "threshold_progression", "race_evolution"}
         if not chart or chart in vdot_chart_ids:
             only_vdot_chart = chart if chart in vdot_chart_ids else None
-            vdot_chart, threshold_chart, race_chart = _build_vdot_chart(runs, max_hr, resolved_resolution, only_vdot_chart, resting_hr=resting_hr)
+            # VDOT attivo canonico (field-test aware) + stessa frazione soglia
+            # della dashboard: allinea questi grafici ai valori mostrati altrove.
+            active_vdot, from_ft = await _get_active_vdot(athlete_id, runs, max_hr, resting_hr)
+            vdot_chart, threshold_chart, race_chart = _build_vdot_chart(
+                runs, max_hr, resolved_resolution, only_vdot_chart, resting_hr=resting_hr,
+                anchor_vdot=active_vdot, threshold_frac=0.88 if from_ft else 0.81,
+            )
             vdot_charts = {}
             if vdot_chart:
                 vdot_charts["vo2_vdot_trend"] = vdot_chart
@@ -7476,6 +7510,99 @@ def _build_runner_dna_diagnostics(
     }
 
 
+def _build_unlock_plan(
+    vdot_current: float,
+    vdot_ceiling: float,
+    weekly_km: float,
+    freq: float,
+    easy_pct: int,
+) -> dict:
+    """Piano CONCRETO per sbloccare il margine VDOT: km, sedute, ritmi, ETA.
+
+    Ritmi da Daniels (frazione di VO2max → velocità). Progressione volume +8%/
+    settimana con scarico ogni 4ª. ETA dal tasso realistico di crescita VDOT
+    per un amatore che allena bene: ~0.10-0.20 punti/settimana.
+    """
+    def _pace_at(pct: float) -> Optional[int]:
+        vo2 = vdot_current * pct
+        disc = 0.182258 ** 2 + 4 * 0.000104 * (vo2 + 4.60)
+        if disc < 0:
+            return None
+        v = (-0.182258 + math.sqrt(disc)) / (2 * 0.000104)
+        return int(round(1000 / (v / 60))) if v > 0 else None
+
+    def _fmt(sec: Optional[int]) -> str:
+        return f"{sec // 60}:{sec % 60:02d}" if sec else "—"
+
+    gain = max(0.0, round(vdot_ceiling - vdot_current, 1))
+    t_pace = _pace_at(0.88)          # soglia (~1h race pace)
+    i_pace = _pace_at(0.98)          # VO2max / ~5K
+    e_lo, e_hi = _pace_at(0.72), _pace_at(0.62)  # forbice del facile
+
+    cur_km = max(15.0, weekly_km or 20.0)
+    target_km = int(min(58, max(cur_km + 8, round(cur_km * 1.35 / 5) * 5)))
+    # settimane per arrivare al volume target a +8%/sett + 1 scarico ogni 4
+    grow_weeks = 0
+    k = cur_km
+    while k < target_km and grow_weeks < 20:
+        k *= 1.08
+        grow_weeks += 1
+    grow_weeks += grow_weeks // 3  # scarichi
+
+    # ETA sul VDOT: 0.10-0.20 punti/settimana → forbice
+    eta_min = max(4, int(round(gain / 0.20)))
+    eta_max = min(52, max(eta_min + 2, int(round(gain / 0.10))))
+    today = dt.date.today()
+    d_min = today + dt.timedelta(weeks=eta_min)
+    d_max = today + dt.timedelta(weeks=eta_max)
+    MONTHS_IT = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"]
+    eta_label = f"{MONTHS_IT[d_min.month - 1]} {d_min.year} – {MONTHS_IT[d_max.month - 1]} {d_max.year}"
+
+    steps = [
+        {
+            "title": f"Volume: da ~{int(round(cur_km))} a {target_km} km/sett",
+            "detail": (
+                f"Aggiungi ~8% a settimana ({int(round(cur_km))} → {int(round(cur_km * 1.08))} → "
+                f"{int(round(cur_km * 1.08 ** 2))} km…), con 1 settimana di scarico (−25%) ogni 4. "
+                f"A questo ritmo arrivi a {target_km} km/sett in ~{grow_weeks} settimane. "
+                f"Distribuisci su {max(3, int(round(freq)))}-{max(4, int(round(freq)) + 1)} uscite."
+            ),
+        },
+        {
+            "title": f"Soglia: 1 seduta/sett a {_fmt(t_pace)}/km",
+            "detail": (
+                f"Parti da 2×10′ a ritmo soglia ({_fmt(t_pace)}/km, sforzo 'comodo-duro' tenibile ~1h) "
+                f"con 2′ di recupero, e allunga di 2-3′ a settimana fino a 30-35′ totali "
+                f"(es. 3×12′ o 25-30′ continui). È la seduta che sposta di più il VDOT."
+            ),
+        },
+        {
+            "title": f"Facile davvero facile: {_fmt(e_lo)}-{_fmt(e_hi)}/km",
+            "detail": (
+                f"Tutte le uscite non di qualità a {_fmt(e_lo)}-{_fmt(e_hi)}/km (conversazione piena). "
+                f"Oggi sei al {easy_pct}% del tempo in Z1/Z2: portalo ad almeno il 75% "
+                f"per assorbire il volume senza accumulare fatica."
+            ),
+        },
+        {
+            "title": f"Qualità VO2: ogni 7-10 giorni a {_fmt(i_pace)}/km",
+            "detail": (
+                f"Alterna 5×1000 a {_fmt(i_pace)}/km (recupero 2′ jog) e un progressivo corto "
+                f"(8 km con gli ultimi 2 a {_fmt(t_pace)}/km). Una sola di queste a settimana: "
+                f"la qualità funziona solo se il resto è davvero facile."
+            ),
+        },
+    ]
+    return {
+        "gain": gain,
+        "target_vdot": round(vdot_ceiling, 1),
+        "eta_weeks_min": eta_min,
+        "eta_weeks_max": eta_max,
+        "eta_label": eta_label,
+        "steps": steps,
+    }
+
+
 @app.get("/api/runner-dna")
 async def get_runner_dna():
     """Dynamic athletic profile from Strava plus authoritative Garmin CSV telemetry."""
@@ -7673,6 +7800,25 @@ async def get_runner_dna():
         freq=freq,
         ctl=ctl,
         tsb=tsb,
+    )
+    # Piano di sblocco dettagliato (km, sedute, ritmi, ETA) dal volume recente.
+    try:
+        km_cutoff = (dt.date.today() - dt.timedelta(days=28)).isoformat()
+        recent_km = sum(
+            float(r.get("distance_km") or 0)
+            for r in runs
+            if str(r.get("date", ""))[:10] >= km_cutoff
+        )
+        weekly_km_recent = recent_km / 4.0
+    except Exception:
+        weekly_km_recent = 0.0
+    easy_pct_now = int(zone_dist.get("z1", 0) + zone_dist.get("z2", 0))
+    diagnostics["unlock_plan"] = _build_unlock_plan(
+        vdot_current=vdot_current,
+        vdot_ceiling=vdot_ceiling,
+        weekly_km=weekly_km_recent,
+        freq=freq,
+        easy_pct=easy_pct_now,
     )
     ai_data["strengths"] = diagnostics["strengths"]
     ai_data["gaps"] = diagnostics["weaknesses"]
