@@ -16,7 +16,7 @@ export function ChartFullscreenModal({
   onClose,
   title,
   subtitle,
-  accent = '#D4FF00',
+  accent = '#C0FF00',
   children,
   details,
 }: ChartFullscreenModalProps) {
@@ -71,7 +71,7 @@ export function ChartExpandButton({
     <button
       type="button"
       onClick={onClick}
-      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#2A2A2A] text-[#555] hover:text-[#D4FF00]"
+      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#2A2A2A] text-[#555] hover:text-[#C0FF00]"
       title={title}
       aria-label={title}
     >

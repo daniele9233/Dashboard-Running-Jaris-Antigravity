@@ -81,7 +81,7 @@ import {
 
 const ResponsiveGrid = WidthProvider(Responsive);
 
-const PRO_ACCENT = '#D4FF00';
+const PRO_ACCENT = '#C0FF00';
 const PRO_PANEL = '#0E0E0E';
 const PRO_BORDER = '#1E1E1E';
 const PRO_BORDER_STRONG = '#2A2A2A';
@@ -1183,7 +1183,7 @@ export function StatisticsView() {
                               <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{kpi.label}</p>
                               <div className="flex items-baseline gap-2">
                                 <span className="text-3xl font-black italic">{kpi.value}</span>
-                                <span className={`text-xs font-bold ${kpi.trendUp ? 'text-[#D4FF00]' : 'text-[#F43F5E]'}`}>{kpi.trend}</span>
+                                <span className={`text-xs font-bold ${kpi.trendUp ? 'text-[#C0FF00]' : 'text-[#F43F5E]'}`}>{kpi.trend}</span>
                               </div>
                             </div>
                             <div className="p-3 rounded-xl bg-[#0D0D0D] border border-[#1E1E1E]" style={{ color: kpi.color }}>
@@ -1306,7 +1306,7 @@ export function StatisticsView() {
                          <span className="text-3xl font-black italic">{kpi.value}</span>
                          <span
                            className={`text-xs font-bold flex items-center ${
-                             kpi.trendUp ? 'text-[#D4FF00]' : 'text-[#F43F5E]'
+                             kpi.trendUp ? 'text-[#C0FF00]' : 'text-[#F43F5E]'
                            }`}
                          >
                            {kpi.trendUp ? '↑' : '↓'} {kpi.trend}

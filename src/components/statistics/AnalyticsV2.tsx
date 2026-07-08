@@ -30,8 +30,8 @@ const USER_THRESHOLD_HR = 163;
 // ─────────────────────────────────────────────────────────────
 // CONSTANTS
 // ─────────────────────────────────────────────────────────────
-const NEON = '#D4FF00';
-const NEON_DIM = 'rgba(212,255,0,0.15)';
+const NEON = '#C0FF00';
+const NEON_DIM = 'rgba(192,255,0,0.15)';
 const CARD_BG = '#0E0E0E';
 const CARD_BORDER = '#1E1E1E';
 const GRID_COLOR = '#1E1E1E';
@@ -163,7 +163,7 @@ function SemiGauge({
       <div className="text-center -mt-1">
         <div className="text-[10px] font-black text-[#555] uppercase tracking-[0.2em]">{label}</div>
         {trend !== undefined && (
-          <div className={`text-xs font-black mt-0.5 ${trend >= 0 ? 'text-[#D4FF00]' : 'text-[#F43F5E]'}`}>
+          <div className={`text-xs font-black mt-0.5 ${trend >= 0 ? 'text-[#C0FF00]' : 'text-[#F43F5E]'}`}>
             {trend >= 0 ? '▲' : '▼'} {Math.abs(trend)}
           </div>
         )}
@@ -1002,7 +1002,7 @@ function V2Header({
       </div>
       <div className="flex items-center gap-1 shrink-0">
         {onExpand && (
-          <button onClick={onExpand} className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#2A2A2A] text-[#555] hover:text-[#D4FF00]">
+          <button onClick={onExpand} className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#2A2A2A] text-[#555] hover:text-[#C0FF00]">
             <Maximize2 size={15} />
           </button>
         )}
@@ -1930,7 +1930,7 @@ export function AnalyticsV2({
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
            {/* Anaerobic Threshold Trend — left column */}
            <div
-              className="xl:col-span-2 rounded-[3px] p-6 flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_246px] gap-6 relative group overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+              className="xl:col-span-2 rounded-2xl p-6 flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_246px] gap-6 relative group overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
               style={{
                 minHeight: 402,
                 borderLeft: `3px solid ${NEON}`,
@@ -1955,7 +1955,7 @@ export function AnalyticsV2({
                     </span>
                     <button
                       onClick={() => openExpandedChart('threshold_progression', setAtExpanded)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#2A2A2A] text-[#555] hover:text-[#D4FF00]"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#2A2A2A] text-[#555] hover:text-[#C0FF00]"
                       title="Espandi"
                     >
                       <Maximize2 size={15} />
@@ -2011,7 +2011,7 @@ export function AnalyticsV2({
               </div>
 
               <div className="grid grid-rows-2 gap-5 min-h-[312px]">
-                <div className="bg-[#242424] border-l-2 p-6 flex flex-col justify-center relative rounded-[2px]" style={{ borderLeftColor: NEON }}>
+                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] border-l-2 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex flex-col justify-center relative" style={{ borderLeftColor: NEON }}>
                   <div className="absolute right-4 top-4 w-9 h-9 rounded-[8px] bg-[#2D350A] flex items-center justify-center">
                     <Timer className="w-4 h-4" style={{ color: NEON }} />
                   </div>
@@ -2030,7 +2030,7 @@ export function AnalyticsV2({
                   </div>
                 </div>
 
-                <div className="bg-[#242424] border-l-2 p-6 flex flex-col justify-center relative rounded-[2px]" style={{ borderLeftColor: '#FF4B93' }}>
+                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] border-l-2 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex flex-col justify-center relative" style={{ borderLeftColor: '#FF4B93' }}>
                   <div className="absolute right-4 top-4 w-9 h-9 rounded-[8px] bg-[#3A202D] flex items-center justify-center">
                     <Heart className="w-4 h-4 fill-[#FF4B93]" style={{ color: '#FF4B93' }} />
                   </div>

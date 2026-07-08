@@ -36,7 +36,7 @@ import {
   type PaceProjection,
 } from '../../utils/detrainingModel';
 
-const ACCENT = '#D4FF00';
+const ACCENT = '#C0FF00';
 const PANEL = '#0E0E0E';
 const BORDER = '#1E1E1E';
 const BORDER_STRONG = '#2A2A2A';
@@ -234,7 +234,7 @@ export function BiologyFutureLab({ profile, runs, vdot }: Props) {
       <Card accent={ACCENT}>
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           <div className="xl:col-span-7">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#D4FF00]/25 bg-[#D4FF00]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: ACCENT }}>
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#C0FF00]/25 bg-[#C0FF00]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: ACCENT }}>
               <FlaskConical className="w-3.5 h-3.5" />
               REFERTO DETRAINING
             </div>
@@ -530,7 +530,7 @@ export function BiologyFutureLab({ profile, runs, vdot }: Props) {
             </div>
           ))}
         </div>
-        <div className="mt-5 rounded-xl backdrop-blur-2xl border border-[#D4FF00]/20 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 flex gap-3">
+        <div className="mt-5 rounded-xl backdrop-blur-2xl border border-[#C0FF00]/20 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 flex gap-3">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: ACCENT }} />
           <p className="text-[12px] font-semibold text-gray-300 leading-relaxed">
             Il ratio aumenta con eta sopra 35a e con basso storico. Il tuo ratio personale e
