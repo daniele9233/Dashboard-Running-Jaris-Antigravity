@@ -160,7 +160,41 @@ const TAPER_AND_RACE: Session[] = [
   mk("2026-09-20", "Domenica", "intervals", { title: "🏁 GARA 5K · sub 20:00", dist: 5, pace: "4:00", desc: "GIORNO GARA. Riscaldamento 15′ + 4 allunghi. Strategia a negativo: 4:01-4:02 il 1° km (MAI più veloce), 4:00 nei km centrali, dal 4° km svuota tutto. Split ideale 4:02/4:00/4:00/3:59/a tutta = 19:5x. Con 12-16°C il tuo motore vale sub-20. Se la giornata è calda/umida (>22°C) sposta di qualche giorno: il fresco vale 3-5 sec/km, non regalarli." }),
 ];
 
+// Piano "base", ancorato alla partenza di default (Martedì della settimana 1).
 export const SUB20_SESSIONS: Session[] = [...buildWeeks(), ...TAPER_AND_RACE];
+
+// ── Partenza scelta dall'utente ──────────────────────────────────────────────
+// Il piano è agganciato al MARTEDÌ della settimana 1. L'utente può spostare la
+// partenza: si trasla l'intero calendario di un multiplo di 7 giorni, così i
+// giorni Mar/Gio/Sab/Dom (e i nomi) restano coerenti e la gara resta di domenica.
+
+export const SUB20_DEFAULT_START = SUB20_META.startDate; // "2026-07-14" (un martedì)
+
+function daysBetween(a: string, b: string): number {
+  const [ay, am, ad] = a.split("-").map(Number);
+  const [by, bm, bd] = b.split("-").map(Number);
+  return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86_400_000);
+}
+
+/** Primo Martedì ≥ della data passata (per agganciare la partenza a un martedì). */
+export function snapToStartTuesday(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dow = new Date(y, m - 1, d).getDay(); // 0=Dom … 2=Mar
+  return addDays(iso, (2 - dow + 7) % 7);
+}
+
+/** Ricostruisce il piano spostato a una nuova partenza (deve essere un martedì). */
+export function buildSub20Sessions(startTuesday?: string | null): Session[] {
+  const start = startTuesday || SUB20_DEFAULT_START;
+  const delta = daysBetween(SUB20_DEFAULT_START, start);
+  if (delta === 0) return SUB20_SESSIONS;
+  return SUB20_SESSIONS.map((s) => ({ ...s, date: addDays(s.date, delta) }));
+}
+
+/** Data della gara (domenica dell'ultima settimana) per una data partenza. */
+export function sub20RaceDate(startTuesday?: string | null): string {
+  return addDays(startTuesday || SUB20_DEFAULT_START, (SUB20_META.weeks - 1) * 7 + 5);
+}
 
 // Legenda del calendario in modalità Sub-20
 export const SUB20_LEGEND: { color: string; label: string; opacity?: number }[] = [

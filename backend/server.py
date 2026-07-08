@@ -8947,9 +8947,10 @@ async def sub20_evaluate_session(payload: dict = Body(...)):
 # ── Stato sedute piano Sub-20 (effettuato / fallito) — persistente su DB ──────
 @app.get("/api/sub20/status")
 async def get_sub20_status():
-    """Esiti + RPE segnati dall'utente:
-    statuses = { 'YYYY-MM-DD': 'done' | 'failed' }
-    rpe      = { 'YYYY-MM-DD': 'facile' | 'giusto' | 'duro' }
+    """Esiti + RPE + partenza del piano scelti dall'utente:
+    statuses   = { 'YYYY-MM-DD': 'done' | 'failed' }
+    rpe        = { 'YYYY-MM-DD': 'facile' | 'giusto' | 'duro' }
+    start_date = 'YYYY-MM-DD' (martedì settimana 1) | None → default lato client
     L'RPE alimenta l'auto-adattamento del piano (motore lato client).
     """
     athlete_id = await _get_athlete_id()
@@ -8957,39 +8958,54 @@ async def get_sub20_status():
     return {
         "statuses": (doc or {}).get("statuses", {}),
         "rpe": (doc or {}).get("rpe", {}),
+        "start_date": (doc or {}).get("start_date"),
     }
 
 
 @app.put("/api/sub20/status")
 async def set_sub20_status(payload: dict = Body(...)):
-    """Segna/azzera l'esito e/o l'RPE di una seduta.
+    """Aggiorna esito, RPE e/o data di partenza del piano.
 
     Chiavi indipendenti (si aggiorna solo ciò che è presente nel payload):
-      status ∈ {'done','failed'} — null/altro per togliere
-      rpe    ∈ {'facile','giusto','duro'} — null/altro per togliere
+      status     ∈ {'done','failed'} — null/altro per togliere (richiede 'date')
+      rpe        ∈ {'facile','giusto','duro'} — null/altro per togliere (richiede 'date')
+      start_date = 'YYYY-MM-DD' — null/altro per tornare al default
     """
     athlete_id = await _get_athlete_id()
-    date = str(payload.get("date") or "")[:10]
-    if not date or len(date) != 10:
-        return JSONResponse({"error": "bad_date"}, status_code=400)
     q = {"athlete_id": athlete_id}
-    if "status" in payload:
-        status = payload.get("status")
-        if status in ("done", "failed"):
-            await db.sub20_status.update_one(q, {"$set": {f"statuses.{date}": status}}, upsert=True)
+
+    # start_date è config del piano, indipendente dalle sedute.
+    if "start_date" in payload:
+        sd = payload.get("start_date")
+        if isinstance(sd, str) and len(sd) == 10:
+            await db.sub20_status.update_one(q, {"$set": {"start_date": sd}}, upsert=True)
         else:
-            await db.sub20_status.update_one(q, {"$unset": {f"statuses.{date}": ""}}, upsert=True)
-    if "rpe" in payload:
-        rpe = payload.get("rpe")
-        if rpe in ("facile", "giusto", "duro"):
-            await db.sub20_status.update_one(q, {"$set": {f"rpe.{date}": rpe}}, upsert=True)
-        else:
-            await db.sub20_status.update_one(q, {"$unset": {f"rpe.{date}": ""}}, upsert=True)
+            await db.sub20_status.update_one(q, {"$unset": {"start_date": ""}}, upsert=True)
+
+    # status / rpe sono per-seduta e richiedono una data valida.
+    if "status" in payload or "rpe" in payload:
+        date = str(payload.get("date") or "")[:10]
+        if not date or len(date) != 10:
+            return JSONResponse({"error": "bad_date"}, status_code=400)
+        if "status" in payload:
+            status = payload.get("status")
+            if status in ("done", "failed"):
+                await db.sub20_status.update_one(q, {"$set": {f"statuses.{date}": status}}, upsert=True)
+            else:
+                await db.sub20_status.update_one(q, {"$unset": {f"statuses.{date}": ""}}, upsert=True)
+        if "rpe" in payload:
+            rpe = payload.get("rpe")
+            if rpe in ("facile", "giusto", "duro"):
+                await db.sub20_status.update_one(q, {"$set": {f"rpe.{date}": rpe}}, upsert=True)
+            else:
+                await db.sub20_status.update_one(q, {"$unset": {f"rpe.{date}": ""}}, upsert=True)
+
     doc = await db.sub20_status.find_one(q)
     return {
         "ok": True,
         "statuses": (doc or {}).get("statuses", {}),
         "rpe": (doc or {}).get("rpe", {}),
+        "start_date": (doc or {}).get("start_date"),
     }
 
 

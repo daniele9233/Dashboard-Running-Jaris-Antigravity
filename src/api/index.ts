@@ -411,6 +411,7 @@ export type Sub20RpeLevel = 'facile' | 'giusto' | 'duro';
 export interface Sub20StatusResponse {
   statuses: Record<string, Sub20SessionStatus>;
   rpe?: Record<string, Sub20RpeLevel>;
+  start_date?: string | null;
   ok?: boolean;
 }
 export const getSub20Status = () => api.get<Sub20StatusResponse>('/api/sub20/status');
@@ -418,6 +419,9 @@ export const putSub20Status = (date: string, status: Sub20SessionStatus | null) 
   api.put<Sub20StatusResponse>('/api/sub20/status', { date, status });
 export const putSub20Rpe = (date: string, rpe: Sub20RpeLevel | null) =>
   api.put<Sub20StatusResponse>('/api/sub20/status', { date, rpe });
+// Data di partenza del piano (martedì settimana 1); null → torna al default.
+export const putSub20StartDate = (startDate: string | null) =>
+  api.put<Sub20StatusResponse>('/api/sub20/status', { start_date: startDate });
 
 // ─── JARVIS ──────────────────────────────────────────────────────────────────
 import type { JarvisResponse } from '../types/jarvis';

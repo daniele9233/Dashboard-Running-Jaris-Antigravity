@@ -4,11 +4,14 @@ import { useApi, invalidateCache } from "../hooks/useApi";
 import { API_CACHE } from "../hooks/apiCacheKeys";
 import {
   getTrainingPlan, generateTrainingPlan, adaptTrainingPlan, evaluateTest,
-  getSub20Status, putSub20Status, putSub20Rpe,
+  getSub20Status, putSub20Status, putSub20Rpe, putSub20StartDate,
   type Sub20StatusResponse, type Sub20SessionStatus, type Sub20RpeLevel,
 } from "../api";
 import type { Session, TrainingPlanResponse, AdaptAdaptation } from "../types/api";
-import { SUB20_SESSIONS, SUB20_META, SUB20_LEGEND, computeSub20Adaptations } from "../data/sub20Plan";
+import {
+  SUB20_META, SUB20_LEGEND, SUB20_DEFAULT_START,
+  buildSub20Sessions, computeSub20Adaptations, snapToStartTuesday, sub20RaceDate,
+} from "../data/sub20Plan";
 
 const SESSION_COLORS: Record<string, string> = {
   easy:      "#8B5CF6",
@@ -47,6 +50,12 @@ function toDisplay(session: Session | undefined): SessionDisplay | null {
   if (session.target_distance_km) details.push(`${session.target_distance_km} km`);
   if (session.target_pace) details.push(`${session.target_pace}/km`);
   return { color, title: session.title, details, completed: session.completed, description: session.description };
+}
+
+/** Data ISO → "mar 14 lug" (locale IT), senza sfasamenti di fuso. */
+function fmtItShort(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" });
 }
 
 // ─── Generate Plan Modal ─────────────────────────────────────────────────────
@@ -1117,6 +1126,8 @@ export function TrainingGrid() {
   const [showModal, setShowModal] = useState(false);
   const [showAdaptModal, setShowAdaptModal] = useState(false);
   const [showSub20, setShowSub20] = useState(false);
+  // Data di partenza del piano Sub-20 (martedì settimana 1), scelta dall'utente.
+  const [sub20StartDate, setSub20StartDate] = useState<string>(SUB20_DEFAULT_START);
 
   const goToDay = (date: Date, fromView: 'Week' | 'Month' | 'Year') => {
     setCurrentDate(date);
@@ -1142,12 +1153,13 @@ export function TrainingGrid() {
     return map;
   }, [planData]);
 
-  // Piano Sub-20 statico (dal PDF) — stesso calendario, dataset diverso.
+  // Piano Sub-20 — costruito rispetto alla partenza scelta dall'utente.
+  const sub20Sessions = useMemo(() => buildSub20Sessions(sub20StartDate), [sub20StartDate]);
   const sub20Map = useMemo(() => {
     const map: Record<string, Session> = {};
-    for (const s of SUB20_SESSIONS) map[s.date] = s;
+    for (const s of sub20Sessions) map[s.date] = s;
     return map;
-  }, []);
+  }, [sub20Sessions]);
 
   const getSession = (year: number, month: number, day: number): Session | undefined => {
     const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -1161,12 +1173,12 @@ export function TrainingGrid() {
     return sessionMap[key];
   };
 
-  // Entrando nel piano Sub-20, salta al suo inizio (giugno 2026, vista Mese).
+  // Entrando nel piano Sub-20, salta alla settimana di partenza (vista Mese).
   const toggleSub20 = () => {
     setShowSub20((v) => {
       const nv = !v;
       if (nv) {
-        const [y, m, d] = SUB20_META.startDate.split("-").map(Number);
+        const [y, m, d] = sub20StartDate.split("-").map(Number);
         setCurrentDate(new Date(y, m - 1, d));
         setView("Month");
       }
@@ -1179,6 +1191,7 @@ export function TrainingGrid() {
   const [sub20Status, setSub20StatusLocal] = useState<Record<string, Sub20SessionStatus>>({});
   useEffect(() => {
     if (sub20StatusData?.statuses) setSub20StatusLocal(sub20StatusData.statuses);
+    if (sub20StatusData?.start_date) setSub20StartDate(sub20StatusData.start_date);
   }, [sub20StatusData]);
 
   const keyOf = (year: number, month: number, day: number) =>
@@ -1209,8 +1222,8 @@ export function TrainingGrid() {
 
   // Ritmi ricalcolati dallo storico RPE: per tipo, graduale, ±3 sec/km (tetto ±6).
   const sub20AdaptMap = useMemo(
-    () => (showSub20 ? computeSub20Adaptations(SUB20_SESSIONS, sub20Rpe, sub20Status) : {}),
-    [showSub20, sub20Rpe, sub20Status],
+    () => (showSub20 ? computeSub20Adaptations(sub20Sessions, sub20Rpe, sub20Status) : {}),
+    [showSub20, sub20Sessions, sub20Rpe, sub20Status],
   );
 
   const sub20RpeOf = (date: string): Sub20RpeLevel | undefined =>
@@ -1228,6 +1241,24 @@ export function TrainingGrid() {
       invalidateCache("sub20-status");
     } catch {
       /* l'ottimistico resta; ritenta al prossimo click */
+    }
+  }, []);
+
+  // Cambio della partenza del piano: aggancia al primo martedì ≥ data scelta,
+  // salta il calendario alla nuova settimana 1 e salva su DB.
+  const changeSub20Start = useCallback(async (picked: string) => {
+    if (!picked || picked.length !== 10) return;
+    const tue = snapToStartTuesday(picked);
+    setSub20StartDate(tue);
+    const [y, m, d] = tue.split("-").map(Number);
+    setCurrentDate(new Date(y, m - 1, d));
+    setView("Month");
+    try {
+      const res = await putSub20StartDate(tue);
+      if (res?.start_date) setSub20StartDate(res.start_date);
+      invalidateCache("sub20-status");
+    } catch {
+      /* l'ottimistico resta */
     }
   }, []);
 
@@ -1647,12 +1678,27 @@ export function TrainingGrid() {
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-white">Training Menu</h1>
           {showSub20 ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-gray-400 bg-[#1E1E1E] border border-[#2A2A2A] px-3 py-1 rounded-full">
                 {SUB20_META.weeks} sett. · {SUB20_META.phase}
               </span>
               <span className="text-xs text-[#C0FF00] bg-[#C0FF00]/10 border border-[#C0FF00]/20 px-3 py-1 rounded-full">
                 🎯 {SUB20_META.goalRace} in {SUB20_META.goalTime}
+              </span>
+              <label
+                className="text-xs text-gray-300 bg-[#1E1E1E] border border-[#2A2A2A] px-3 py-1 rounded-full flex items-center gap-1.5 cursor-pointer hover:border-[#C0FF00]/40 transition-colors"
+                title="Scegli il giorno di partenza: il piano si aggancia al primo martedì ≥ data scelta"
+              >
+                🗓️ Inizio
+                <input
+                  type="date"
+                  value={sub20StartDate}
+                  onChange={(e) => changeSub20Start(e.target.value)}
+                  className="bg-transparent text-[#C0FF00] outline-none cursor-pointer [color-scheme:dark]"
+                />
+              </label>
+              <span className="text-xs text-gray-400 bg-[#1E1E1E] border border-[#2A2A2A] px-3 py-1 rounded-full">
+                🏁 Gara {fmtItShort(sub20RaceDate(sub20StartDate))}
               </span>
             </div>
           ) : hasPlan && (() => {
