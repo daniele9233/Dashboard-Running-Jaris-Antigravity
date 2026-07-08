@@ -8947,27 +8947,50 @@ async def sub20_evaluate_session(payload: dict = Body(...)):
 # ── Stato sedute piano Sub-20 (effettuato / fallito) — persistente su DB ──────
 @app.get("/api/sub20/status")
 async def get_sub20_status():
-    """Mappa { 'YYYY-MM-DD': 'done' | 'failed' } degli esiti segnati dall'utente."""
+    """Esiti + RPE segnati dall'utente:
+    statuses = { 'YYYY-MM-DD': 'done' | 'failed' }
+    rpe      = { 'YYYY-MM-DD': 'facile' | 'giusto' | 'duro' }
+    L'RPE alimenta l'auto-adattamento del piano (motore lato client).
+    """
     athlete_id = await _get_athlete_id()
     doc = await db.sub20_status.find_one({"athlete_id": athlete_id})
-    return {"statuses": (doc or {}).get("statuses", {})}
+    return {
+        "statuses": (doc or {}).get("statuses", {}),
+        "rpe": (doc or {}).get("rpe", {}),
+    }
 
 
 @app.put("/api/sub20/status")
 async def set_sub20_status(payload: dict = Body(...)):
-    """Segna/azzera l'esito di una seduta. status ∈ {'done','failed'} o null per togliere."""
+    """Segna/azzera l'esito e/o l'RPE di una seduta.
+
+    Chiavi indipendenti (si aggiorna solo ciò che è presente nel payload):
+      status ∈ {'done','failed'} — null/altro per togliere
+      rpe    ∈ {'facile','giusto','duro'} — null/altro per togliere
+    """
     athlete_id = await _get_athlete_id()
     date = str(payload.get("date") or "")[:10]
-    status = payload.get("status")
     if not date or len(date) != 10:
         return JSONResponse({"error": "bad_date"}, status_code=400)
     q = {"athlete_id": athlete_id}
-    if status in ("done", "failed"):
-        await db.sub20_status.update_one(q, {"$set": {f"statuses.{date}": status}}, upsert=True)
-    else:
-        await db.sub20_status.update_one(q, {"$unset": {f"statuses.{date}": ""}}, upsert=True)
+    if "status" in payload:
+        status = payload.get("status")
+        if status in ("done", "failed"):
+            await db.sub20_status.update_one(q, {"$set": {f"statuses.{date}": status}}, upsert=True)
+        else:
+            await db.sub20_status.update_one(q, {"$unset": {f"statuses.{date}": ""}}, upsert=True)
+    if "rpe" in payload:
+        rpe = payload.get("rpe")
+        if rpe in ("facile", "giusto", "duro"):
+            await db.sub20_status.update_one(q, {"$set": {f"rpe.{date}": rpe}}, upsert=True)
+        else:
+            await db.sub20_status.update_one(q, {"$unset": {f"rpe.{date}": ""}}, upsert=True)
     doc = await db.sub20_status.find_one(q)
-    return {"ok": True, "statuses": (doc or {}).get("statuses", {})}
+    return {
+        "ok": True,
+        "statuses": (doc or {}).get("statuses", {}),
+        "rpe": (doc or {}).get("rpe", {}),
+    }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

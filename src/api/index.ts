@@ -404,15 +404,20 @@ export const evaluateSub20Session = (body: {
   manual_humidity?: number;
 }) => api.post<Sub20EvalResult>('/api/sub20/evaluate-session', body);
 
-// Esiti sedute Sub-20 (effettuato / fallito) — persistenti su DB
+// Esiti sedute Sub-20 (effettuato / fallito) + RPE — persistenti su DB.
+// L'RPE (facile/giusto/duro) alimenta l'auto-adattamento del piano.
 export type Sub20SessionStatus = 'done' | 'failed';
+export type Sub20RpeLevel = 'facile' | 'giusto' | 'duro';
 export interface Sub20StatusResponse {
   statuses: Record<string, Sub20SessionStatus>;
+  rpe?: Record<string, Sub20RpeLevel>;
   ok?: boolean;
 }
 export const getSub20Status = () => api.get<Sub20StatusResponse>('/api/sub20/status');
 export const putSub20Status = (date: string, status: Sub20SessionStatus | null) =>
   api.put<Sub20StatusResponse>('/api/sub20/status', { date, status });
+export const putSub20Rpe = (date: string, rpe: Sub20RpeLevel | null) =>
+  api.put<Sub20StatusResponse>('/api/sub20/status', { date, rpe });
 
 // ─── JARVIS ──────────────────────────────────────────────────────────────────
 import type { JarvisResponse } from '../types/jarvis';

@@ -4,10 +4,11 @@ import { useApi, invalidateCache } from "../hooks/useApi";
 import { API_CACHE } from "../hooks/apiCacheKeys";
 import {
   getTrainingPlan, generateTrainingPlan, adaptTrainingPlan, evaluateTest,
-  getSub20Status, putSub20Status, type Sub20StatusResponse, type Sub20SessionStatus,
+  getSub20Status, putSub20Status, putSub20Rpe,
+  type Sub20StatusResponse, type Sub20SessionStatus, type Sub20RpeLevel,
 } from "../api";
 import type { Session, TrainingPlanResponse, AdaptAdaptation } from "../types/api";
-import { SUB20_SESSIONS, SUB20_META, SUB20_LEGEND } from "../data/sub20Plan";
+import { SUB20_SESSIONS, SUB20_META, SUB20_LEGEND, computeSub20Adaptations } from "../data/sub20Plan";
 
 const SESSION_COLORS: Record<string, string> = {
   easy:      "#8B5CF6",
@@ -1150,7 +1151,14 @@ export function TrainingGrid() {
 
   const getSession = (year: number, month: number, day: number): Session | undefined => {
     const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return (showSub20 ? sub20Map : sessionMap)[key];
+    if (showSub20) {
+      const base = sub20Map[key];
+      if (!base) return undefined;
+      // Applica il ritmo adattato dall'RPE (se diverso dal base).
+      const a = sub20AdaptMap[key];
+      return a && a.pace && a.pace !== base.target_pace ? { ...base, target_pace: a.pace } : base;
+    }
+    return sessionMap[key];
   };
 
   // Entrando nel piano Sub-20, salta al suo inizio (giugno 2026, vista Mese).
@@ -1187,6 +1195,36 @@ export function TrainingGrid() {
     try {
       const res = await putSub20Status(date, status);
       if (res?.statuses) setSub20StatusLocal(res.statuses);
+      invalidateCache("sub20-status");
+    } catch {
+      /* l'ottimistico resta; ritenta al prossimo click */
+    }
+  }, []);
+
+  // ── RPE + auto-adattamento del piano (persistente su DB) ──
+  const [sub20Rpe, setSub20RpeLocal] = useState<Record<string, Sub20RpeLevel>>({});
+  useEffect(() => {
+    if (sub20StatusData?.rpe) setSub20RpeLocal(sub20StatusData.rpe);
+  }, [sub20StatusData]);
+
+  // Ritmi ricalcolati dallo storico RPE: per tipo, graduale, ±3 sec/km (tetto ±6).
+  const sub20AdaptMap = useMemo(
+    () => (showSub20 ? computeSub20Adaptations(SUB20_SESSIONS, sub20Rpe, sub20Status) : {}),
+    [showSub20, sub20Rpe, sub20Status],
+  );
+
+  const sub20RpeOf = (date: string): Sub20RpeLevel | undefined =>
+    showSub20 ? sub20Rpe[date] : undefined;
+
+  const markSub20Rpe = useCallback(async (date: string, rpe: Sub20RpeLevel | null) => {
+    setSub20RpeLocal((prev) => {
+      const next = { ...prev };
+      if (rpe) next[date] = rpe; else delete next[date];
+      return next;
+    });
+    try {
+      const res = await putSub20Rpe(date, rpe);
+      if (res?.rpe) setSub20RpeLocal(res.rpe);
       invalidateCache("sub20-status");
     } catch {
       /* l'ottimistico resta; ritenta al prossimo click */
@@ -1358,6 +1396,8 @@ export function TrainingGrid() {
     const st = sub20StatusOf(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
     const done = st === 'done' || (!showSub20 && display?.completed);
     const failed = st === 'failed';
+    const rpeVal = sub20RpeOf(dayKey);
+    const adaptInfo = showSub20 ? sub20AdaptMap[dayKey] : undefined;
 
     return (
       <div className="h-full flex items-start justify-center pt-10">
@@ -1423,6 +1463,42 @@ export function TrainingGrid() {
                   <p className="text-[11px] text-gray-600 mt-2.5">
                     Salvato sul database, permanente. Ritocca lo stesso pulsante per annullare.
                   </p>
+                </div>
+              )}
+
+              {/* RPE — quanto è stata dura? Alimenta l'auto-adattamento (solo Sub-20) */}
+              {showSub20 && (
+                <div className="mb-6 pb-6 border-b border-[#2A2A2A]">
+                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Com'è andata? (RPE)</div>
+                  <div className="flex gap-3">
+                    {([
+                      ['facile', '😌 Facile', '#10B981'],
+                      ['giusto', '👍 Giusto', '#F59E0B'],
+                      ['duro', '🥵 Troppo duro', '#EF4444'],
+                    ] as const).map(([val, label, col]) => {
+                      const active = rpeVal === val;
+                      return (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => markSub20Rpe(dayKey, active ? null : val)}
+                          className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-bold border transition-colors ${active ? 'text-black' : 'text-gray-300 hover:bg-white/5'}`}
+                          style={active ? { background: col, borderColor: col } : { background: 'transparent', borderColor: '#2A2A2A' }}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {adaptInfo && adaptInfo.offsetSec !== 0 ? (
+                    <p className="text-[11px] mt-2.5 font-medium" style={{ color: adaptInfo.offsetSec < 0 ? '#EF4444' : '#10B981' }}>
+                      ⚙️ Piano adattato: {adaptInfo.basePace} → {adaptInfo.pace}/km · {adaptInfo.reason}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-gray-600 mt-2.5">
+                      Segna lo sforzo: due qualità dello stesso tipo “facili” di fila e il ritmo si fa più veloce; due “dure/fallite” e si alleggerisce (±3 sec/km, max ±6).
+                    </p>
+                  )}
                 </div>
               )}
 
