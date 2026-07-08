@@ -164,11 +164,20 @@ const TAPER_AND_RACE: Session[] = [
 export const SUB20_SESSIONS: Session[] = [...buildWeeks(), ...TAPER_AND_RACE];
 
 // ── Partenza scelta dall'utente ──────────────────────────────────────────────
-// Il piano è agganciato al MARTEDÌ della settimana 1. L'utente può spostare la
-// partenza: si trasla l'intero calendario di un multiplo di 7 giorni, così i
-// giorni Mar/Gio/Sab/Dom (e i nomi) restano coerenti e la gara resta di domenica.
+// L'utente sceglie ESATTAMENTE il giorno di partenza (la prima seduta cade su
+// quella data). Si trasla l'intero calendario del delta di giorni e si
+// ricalcolano i nomi dei giorni dalle date reali, così restano sempre corretti.
+// La spaziatura relativa fra le sedute (2-2-1 giorni) resta identica al piano.
 
-export const SUB20_DEFAULT_START = SUB20_META.startDate; // "2026-07-14" (un martedì)
+export const SUB20_DEFAULT_START = SUB20_META.startDate; // "2026-07-14"
+// Giorni fra la prima seduta e la gara (9 settimane + weekend finale = 68).
+const SUB20_RACE_OFFSET_DAYS = (SUB20_META.weeks - 1) * 7 + 5;
+
+const IT_DAYS = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"];
+function itDayName(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return IT_DAYS[new Date(y, m - 1, d).getDay()];
+}
 
 function daysBetween(a: string, b: string): number {
   const [ay, am, ad] = a.split("-").map(Number);
@@ -176,24 +185,20 @@ function daysBetween(a: string, b: string): number {
   return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86_400_000);
 }
 
-/** Primo Martedì ≥ della data passata (per agganciare la partenza a un martedì). */
-export function snapToStartTuesday(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  const dow = new Date(y, m - 1, d).getDay(); // 0=Dom … 2=Mar
-  return addDays(iso, (2 - dow + 7) % 7);
-}
-
-/** Ricostruisce il piano spostato a una nuova partenza (deve essere un martedì). */
-export function buildSub20Sessions(startTuesday?: string | null): Session[] {
-  const start = startTuesday || SUB20_DEFAULT_START;
+/** Ricostruisce il piano a partire ESATTAMENTE dalla data scelta (prima seduta). */
+export function buildSub20Sessions(startDate?: string | null): Session[] {
+  const start = startDate || SUB20_DEFAULT_START;
   const delta = daysBetween(SUB20_DEFAULT_START, start);
   if (delta === 0) return SUB20_SESSIONS;
-  return SUB20_SESSIONS.map((s) => ({ ...s, date: addDays(s.date, delta) }));
+  return SUB20_SESSIONS.map((s) => {
+    const date = addDays(s.date, delta);
+    return { ...s, date, day: itDayName(date) };
+  });
 }
 
-/** Data della gara (domenica dell'ultima settimana) per una data partenza. */
-export function sub20RaceDate(startTuesday?: string | null): string {
-  return addDays(startTuesday || SUB20_DEFAULT_START, (SUB20_META.weeks - 1) * 7 + 5);
+/** Data della gara (ultima seduta) per una data partenza. */
+export function sub20RaceDate(startDate?: string | null): string {
+  return addDays(startDate || SUB20_DEFAULT_START, SUB20_RACE_OFFSET_DAYS);
 }
 
 // Legenda del calendario in modalità Sub-20

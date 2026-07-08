@@ -10,7 +10,7 @@ import {
 import type { Session, TrainingPlanResponse, AdaptAdaptation } from "../types/api";
 import {
   SUB20_META, SUB20_LEGEND, SUB20_DEFAULT_START,
-  buildSub20Sessions, computeSub20Adaptations, snapToStartTuesday, sub20RaceDate,
+  buildSub20Sessions, computeSub20Adaptations, sub20RaceDate,
 } from "../data/sub20Plan";
 
 const SESSION_COLORS: Record<string, string> = {
@@ -1126,8 +1126,10 @@ export function TrainingGrid() {
   const [showModal, setShowModal] = useState(false);
   const [showAdaptModal, setShowAdaptModal] = useState(false);
   const [showSub20, setShowSub20] = useState(false);
-  // Data di partenza del piano Sub-20 (martedì settimana 1), scelta dall'utente.
+  // Data di partenza del piano Sub-20 (prima seduta), scelta dall'utente.
   const [sub20StartDate, setSub20StartDate] = useState<string>(SUB20_DEFAULT_START);
+  // Bozza dal date-picker: si applica solo premendo "Ricalcola piano".
+  const [sub20StartDraft, setSub20StartDraft] = useState<string>(SUB20_DEFAULT_START);
 
   const goToDay = (date: Date, fromView: 'Week' | 'Month' | 'Year') => {
     setCurrentDate(date);
@@ -1191,7 +1193,10 @@ export function TrainingGrid() {
   const [sub20Status, setSub20StatusLocal] = useState<Record<string, Sub20SessionStatus>>({});
   useEffect(() => {
     if (sub20StatusData?.statuses) setSub20StatusLocal(sub20StatusData.statuses);
-    if (sub20StatusData?.start_date) setSub20StartDate(sub20StatusData.start_date);
+    if (sub20StatusData?.start_date) {
+      setSub20StartDate(sub20StatusData.start_date);
+      setSub20StartDraft(sub20StatusData.start_date);
+    }
   }, [sub20StatusData]);
 
   const keyOf = (year: number, month: number, day: number) =>
@@ -1244,23 +1249,23 @@ export function TrainingGrid() {
     }
   }, []);
 
-  // Cambio della partenza del piano: aggancia al primo martedì ≥ data scelta,
-  // salta il calendario alla nuova settimana 1 e salva su DB.
-  const changeSub20Start = useCallback(async (picked: string) => {
+  // "Ricalcola piano": il piano parte ESATTAMENTE dalla data scelta, il
+  // calendario salta a quel giorno e la scelta si salva su DB.
+  const recalcSub20FromDraft = useCallback(async () => {
+    const picked = sub20StartDraft;
     if (!picked || picked.length !== 10) return;
-    const tue = snapToStartTuesday(picked);
-    setSub20StartDate(tue);
-    const [y, m, d] = tue.split("-").map(Number);
+    setSub20StartDate(picked);
+    const [y, m, d] = picked.split("-").map(Number);
     setCurrentDate(new Date(y, m - 1, d));
     setView("Month");
     try {
-      const res = await putSub20StartDate(tue);
+      const res = await putSub20StartDate(picked);
       if (res?.start_date) setSub20StartDate(res.start_date);
       invalidateCache("sub20-status");
     } catch {
       /* l'ottimistico resta */
     }
-  }, []);
+  }, [sub20StartDraft]);
 
   const next = () => {
     const d = new Date(currentDate);
@@ -1687,16 +1692,29 @@ export function TrainingGrid() {
               </span>
               <label
                 className="text-xs text-gray-300 bg-[#1E1E1E] border border-[#2A2A2A] px-3 py-1 rounded-full flex items-center gap-1.5 cursor-pointer hover:border-[#C0FF00]/40 transition-colors"
-                title="Scegli il giorno di partenza: il piano si aggancia al primo martedì ≥ data scelta"
+                title="Scegli il giorno di partenza, poi premi Ricalcola piano"
               >
                 🗓️ Inizio
                 <input
                   type="date"
-                  value={sub20StartDate}
-                  onChange={(e) => changeSub20Start(e.target.value)}
+                  value={sub20StartDraft}
+                  onChange={(e) => setSub20StartDraft(e.target.value)}
                   className="bg-transparent text-[#C0FF00] outline-none cursor-pointer [color-scheme:dark]"
                 />
               </label>
+              <button
+                type="button"
+                onClick={recalcSub20FromDraft}
+                disabled={sub20StartDraft === sub20StartDate}
+                className={`text-xs font-bold px-3 py-1 rounded-full border transition-colors ${
+                  sub20StartDraft === sub20StartDate
+                    ? "text-gray-600 border-[#2A2A2A] cursor-default"
+                    : "text-black bg-[#C0FF00] border-[#C0FF00] hover:brightness-110"
+                }`}
+                title="Ricostruisci il piano dalla data scelta"
+              >
+                ↻ Ricalcola piano
+              </button>
               <span className="text-xs text-gray-400 bg-[#1E1E1E] border border-[#2A2A2A] px-3 py-1 rounded-full">
                 🏁 Gara {fmtItShort(sub20RaceDate(sub20StartDate))}
               </span>
