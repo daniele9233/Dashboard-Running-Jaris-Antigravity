@@ -9010,6 +9010,37 @@ async def set_sub20_status(payload: dict = Body(...)):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  CONQUISTA D'ITALIA — regioni conquistate (gamification)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/conquests")
+async def get_conquests():
+    """Elenco degli id-regione conquistati dall'utente."""
+    athlete_id = await _get_athlete_id()
+    doc = await db.conquests.find_one({"athlete_id": athlete_id})
+    return {"conquered": (doc or {}).get("conquered", [])}
+
+
+@app.put("/api/conquests")
+async def set_conquests(payload: dict = Body(...)):
+    """Conquista o rilascia una regione. action ∈ {'conquer','release'}."""
+    athlete_id = await _get_athlete_id()
+    region = str(payload.get("region") or "").strip()[:40]
+    action = payload.get("action")
+    if not region:
+        return JSONResponse({"error": "bad_region"}, status_code=400)
+    q = {"athlete_id": athlete_id}
+    if action == "conquer":
+        await db.conquests.update_one(q, {"$addToSet": {"conquered": region}}, upsert=True)
+    elif action == "release":
+        await db.conquests.update_one(q, {"$pull": {"conquered": region}}, upsert=True)
+    else:
+        return JSONResponse({"error": "bad_action"}, status_code=400)
+    doc = await db.conquests.find_one(q)
+    return {"ok": True, "conquered": (doc or {}).get("conquered", [])}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  GARMIN CONNECT — Running Dynamics via FIT download
 # ═══════════════════════════════════════════════════════════════════════════════
 

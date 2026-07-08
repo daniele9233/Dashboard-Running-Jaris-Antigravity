@@ -423,6 +423,15 @@ export const putSub20Rpe = (date: string, rpe: Sub20RpeLevel | null) =>
 export const putSub20StartDate = (startDate: string | null) =>
   api.put<Sub20StatusResponse>('/api/sub20/status', { start_date: startDate });
 
+// ─── CONQUISTA D'ITALIA (gamification) ───────────────────────────────────────
+export interface ConquestsResponse {
+  conquered: string[];
+  ok?: boolean;
+}
+export const getConquests = () => api.get<ConquestsResponse>('/api/conquests');
+export const putConquest = (region: string, action: 'conquer' | 'release') =>
+  api.put<ConquestsResponse>('/api/conquests', { region, action });
+
 // ─── JARVIS ──────────────────────────────────────────────────────────────────
 import type { JarvisResponse } from '../types/jarvis';
 export const jarvisChat = (transcript: string) =>

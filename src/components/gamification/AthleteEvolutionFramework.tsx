@@ -304,7 +304,10 @@ function Goals({ sys, focusId, setFocus }: { sys: LevelSystem; focusId: string |
   const focus = sys.goals.find((g) => g.id === focusId) ?? null;
   return (
     <section className="mt-7 aef-rise">
-      <SectionTitle icon={Target} hint={`${sys.goals.length} da raggiungere · ${sys.goalsAchieved} conquistati · ~VDOT ${sys.currentVdot}`}>Obiettivi da Raggiungere</SectionTitle>
+      <SectionTitle icon={Target} hint={`${sys.goals.length} da raggiungere · ${sys.goalsAchieved} conquistati · ~VDOT ${sys.currentVdot}`}>Obiettivi · a temperatura ideale</SectionTitle>
+      <p className="mb-2.5 -mt-1 text-[10px] text-gray-600 px-0.5">
+        🌡️ Stime a <b className="text-gray-400">temperatura ideale (fresco)</b>: il VDOT è normalizzato per il caldo, quindi riflette il tuo potenziale. Con 25-35°C i tempi reali di oggi sono più lenti di qualche sec/km.
+      </p>
       {sys.goals.length === 0 ? (
         <Panel className="p-6 text-center">
           <div className="text-sm font-black text-[#10B981]">🏆 Hai conquistato tutti i {sys.goalsAchieved} obiettivi!</div>

@@ -52,14 +52,33 @@ function predictSec(distM: number, vdot: number): number {
   for (let i = 0; i < 60; i++) { const mid = (lo + hi) / 2; if (vdotFrom(distM, mid * 60) > vdot) lo = mid; else hi = mid; }
   return ((lo + hi) / 2) * 60;
 }
-/** VDOT corrente stimato dal miglior effort reale (corse ≥3 km). */
+// ── Modello caldo (identico al backend): temperatura apparente + heat slowdown ─
+function apparentTempC(tempC: number, humidity: number | null): number {
+  if (humidity == null || tempC <= 20) return tempC;
+  return tempC + (Math.max(0, humidity - 50) / 100) * (tempC - 20) * 0.7;
+}
+/** Frazione di rallentamento vs un ottimo a ~12°C, scalata sulla distanza. */
+function heatSlowdownFrac(tempC: number | null | undefined, humidity: number | null, distKm: number): number {
+  if (tempC == null) return 0;
+  const apparent = apparentTempC(tempC, humidity);
+  const excess = Math.max(0, apparent - 12);
+  const d = Math.max(5, Math.min(42.2, distKm));
+  const coef = 0.0035 + ((d - 5) / (42.2 - 5)) * (0.008 - 0.0035);
+  return excess * coef;
+}
+
+/** VDOT corrente stimato dal miglior effort reale (corse ≥3 km), NORMALIZZATO
+ *  per il caldo: ogni prova è riportata all'equivalente a temperatura ideale,
+ *  così il valore riflette il POTENZIALE (fresco) e non è schiacciato dall'estate. */
 function estimateVdot(runs: Run[]): number {
   let best = 0;
   for (const r of runs) {
     if (r.is_treadmill) continue;
     const ps = paceToSec(r.avg_pace); const dist = r.distance_km || 0;
     if (!ps || dist < 3 || dist > 25) continue;
-    best = Math.max(best, vdotFrom(dist * 1000, ps * dist));
+    const frac = heatSlowdownFrac(r.temperature, null, dist);
+    const coolPaceSec = ps / (1 + frac); // prova riportata al fresco (più veloce)
+    best = Math.max(best, vdotFrom(dist * 1000, coolPaceSec * dist));
   }
   return best ? clamp(best, 25, 80) : 38;
 }
@@ -165,12 +184,42 @@ function pbIds(runs: Run[]): Set<string> {
   return ids;
 }
 
-function runXp(r: Run, isPB: boolean): number {
+/** Passo migliore sostenuto (sec/km, corse ≥3 km) — riferimento per stimare
+ *  l'intensità quando manca la frequenza cardiaca. */
+function bestSustainedPaceSec(runs: Run[]): number | null {
+  let best: number | null = null;
+  for (const r of runs) {
+    if (r.is_treadmill) continue;
+    const ps = paceToSec(r.avg_pace);
+    if (ps && (r.distance_km || 0) >= 3) best = best == null ? ps : Math.min(best, ps);
+  }
+  return best;
+}
+
+/** Intensità ∈ [0.5, 1]: FC% se disponibile (gold standard); altrimenti stima
+ *  dal passo relativo al proprio migliore; altrimenti fallback sul tipo seduta. */
+function intensityOf(r: Run, bestPaceSec: number | null): number {
+  if (r.avg_hr_pct) return clamp(r.avg_hr_pct / 100, 0.5, 1);
+  const ps = paceToSec(r.avg_pace);
+  if (ps && bestPaceSec && ps > 0) {
+    const ratio = bestPaceSec / ps; // 1 = al proprio meglio, <1 = più lento
+    return clamp(0.65 + (ratio - 0.75) * 1.2, 0.5, 1);
+  }
+  return TYPE_INT[(r.run_type ?? "easy").toLowerCase()] ?? 0.7;
+}
+
+/** XP per corsa — bilanciato volume + intensità. La durata conta (i lunghi
+ *  restano premianti), ma l'intensità pesa in modo non lineare (i²·⁵-ish) così
+ *  una prova dura e corta non è più schiacciata da un lento lungo. */
+function runXp(r: Run, isPB: boolean, bestPaceSec: number | null): number {
   const dur = r.duration_minutes || 0, dist = r.distance_km || 0;
-  const intensity = r.avg_hr_pct ? clamp(r.avg_hr_pct / 100, 0.5, 1) : (TYPE_INT[(r.run_type ?? "easy").toLowerCase()] ?? 0.7);
+  const i = intensityOf(r, bestPaceSec);
   const isRace = (r.run_type ?? "").toLowerCase() === "race" || !!r.event;
-  let xp = dur * (0.6 + intensity) + dist * 2.5;
-  if (isRace) xp += 80; else if (isPB) xp += 60; else if (intensity >= 0.85 && dur >= 20) xp += 20;
+  let xp = dur * (0.5 + 1.3 * Math.pow(i, 1.5)) + dist * 1.7;
+  if (isRace) xp += 100;
+  else if (isPB) xp += 70;
+  else if (i >= 0.85 && dur >= 15) xp += 30;
+  else if (i >= 0.78 && dur >= 15) xp += 15;
   return Math.max(1, Math.round(xp));
 }
 
@@ -188,8 +237,9 @@ export function computeLevelSystem(runsIn: Run[], _profile: Profile | null): Lev
   if (runs.length === 0) return EMPTY;
 
   const pb = pbIds(runs);
+  const bestPaceSec = bestSustainedPaceSec(runs);
   let totalXp = 0, totalKm = 0, totalMin = 0;
-  for (const r of runs) { totalXp += runXp(r, pb.has(r.id)); totalKm += r.distance_km || 0; totalMin += r.duration_minutes || 0; }
+  for (const r of runs) { totalXp += runXp(r, pb.has(r.id), bestPaceSec); totalKm += r.distance_km || 0; totalMin += r.duration_minutes || 0; }
   totalXp = Math.round(totalXp);
 
   const level = levelFromXp(totalXp);
@@ -228,7 +278,7 @@ export function computeLevelSystem(runsIn: Run[], _profile: Profile | null): Lev
   // ultime corse → XP guadagnati (gratificazione post-sync)
   const recent: RecentRun[] = [...runs].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8).map((r) => {
     const isRace = (r.run_type ?? "").toLowerCase() === "race" || !!r.event;
-    return { date: r.date.slice(0, 10), name: r.name ?? "Corsa", type: (r.run_type ?? "easy").toLowerCase(), km: Math.round((r.distance_km || 0) * 10) / 10, xp: runXp(r, pb.has(r.id)), isPB: pb.has(r.id), isRace };
+    return { date: r.date.slice(0, 10), name: r.name ?? "Corsa", type: (r.run_type ?? "easy").toLowerCase(), km: Math.round((r.distance_km || 0) * 10) / 10, xp: runXp(r, pb.has(r.id), bestPaceSec), isPB: pb.has(r.id), isRace };
   });
 
   return {
