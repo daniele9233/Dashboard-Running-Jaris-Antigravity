@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Dna, RefreshCcw, BrainCircuit, Medal, TrendingUp, Footprints, ChevronRight } from "lucide-react";
 import { useRunnerDnaUiModel } from "../hooks/useRunnerDnaUiModel";
 import { RANK_RULES } from "../utils/runnerDnaModel";
@@ -160,6 +161,7 @@ function CardStatRow({ abbr, label, score, color, delay }: {
 
 // ─── MAIN ────────────────────────────────────────────────────────────────────
 export function RunnerDnaView() {
+  const { t } = useTranslation();
   const { model, loading, refreshing, error, regenerate } = useRunnerDnaUiModel();
 
   if (loading || refreshing) return <LoadingView />;
@@ -221,7 +223,7 @@ export function RunnerDnaView() {
               Runner <span className="text-[#C0FF00]">DNA</span>
             </h1>
             <p className="text-gray-600 text-[10px] font-black tracking-[0.3em] uppercase mt-2">
-              Carta atleta · scouting report
+              {t("sections.runnerDnaSubtitle")}
             </p>
           </div>
           <button
@@ -230,7 +232,7 @@ export function RunnerDnaView() {
             className="flex items-center gap-2 px-5 py-3 bg-[#0D0D0D] border border-[#1E1E1E] rounded-2xl text-[10px] font-black tracking-widest uppercase text-gray-400 hover:text-[#C0FF00] hover:border-[#C0FF00]/30 transition-all shadow-2xl disabled:opacity-40 self-start lg:self-auto"
           >
             <RefreshCcw className="w-4 h-4" />
-            Rigenera carta
+            {t("sections.runnerDnaRegen")}
           </button>
         </div>
 

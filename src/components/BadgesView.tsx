@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Medal, Lock, Play } from "lucide-react";
 import { CelebrationStudio } from "./celebrations/CelebrationStudio";
 import { useBadges } from "./celebrations/BadgeProvider";
@@ -13,14 +14,16 @@ import { isAutoDetectable } from "./celebrations/badgeRules";
  * Celebration Studio come simulatore per provare le animazioni.
  */
 
-function fmtDate(iso?: string): string {
+function fmtDate(iso: string | undefined, locale: string): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" });
+  return d.toLocaleDateString(locale === "en" ? "en-GB" : "it-IT", { day: "2-digit", month: "short", year: "numeric" });
 }
 
 export function BadgesView() {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language;
   const { state, unlockedIds, replay } = useBadges();
   const total = CELEBRATIONS.length;
   const got = unlockedIds.size;
@@ -33,15 +36,15 @@ export function BadgesView() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter text-white uppercase italic">
-              I Miei <span className="text-[#C0FF00]">Badge</span>
+              {t("badges.title1")} <span className="text-[#C0FF00]">{t("badges.title2")}</span>
             </h1>
             <p className="text-gray-600 text-[10px] font-black tracking-[0.3em] uppercase mt-2">
-              Si sbloccano dopo ogni sync, in base alle tue corse
+              {t("badges.subtitle")}
             </p>
           </div>
           <div className="flex items-center gap-2 text-gray-500">
             <Medal className="w-5 h-5 text-[#C0FF00]" />
-            <span className="text-[10px] font-black tracking-[0.25em] uppercase">Hall of Fame</span>
+            <span className="text-[10px] font-black tracking-[0.25em] uppercase">{t("badges.hallOfFame")}</span>
           </div>
         </div>
 
@@ -53,11 +56,11 @@ export function BadgesView() {
                 <span className="text-5xl md:text-6xl font-black text-[#C0FF00] tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{got}</span>
                 <span className="text-2xl font-black text-gray-600">/ {total}</span>
               </div>
-              <div className="text-[10px] font-black tracking-[0.3em] uppercase text-gray-500 mt-1">Traguardi sbloccati</div>
+              <div className="text-[10px] font-black tracking-[0.3em] uppercase text-gray-500 mt-1">{t("badges.unlockedCount")}</div>
             </div>
             <div className="text-right">
               <div className="text-3xl font-black text-white tabular-nums">{pct}%</div>
-              <div className="text-[9px] font-black tracking-[0.2em] uppercase text-gray-600">completato</div>
+              <div className="text-[9px] font-black tracking-[0.2em] uppercase text-gray-600">{t("badges.completed")}</div>
             </div>
           </div>
           <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
@@ -65,7 +68,7 @@ export function BadgesView() {
           </div>
           {got === 0 && (
             <p className="text-[11px] text-gray-500 mt-4 leading-relaxed">
-              Ancora nessun badge: si parte da zero (le corse passate non contano). Fai una corsa, premi <span className="text-[#C0FF00] font-bold">Sincronizza</span> sul profilo e i traguardi raggiunti compariranno qui con la loro celebrazione.
+              {t("badges.emptyState")}
             </p>
           )}
         </div>
@@ -107,7 +110,7 @@ export function BadgesView() {
                           {def.title}
                         </div>
                         <div className="text-[9px] text-gray-500 mt-1.5">
-                          {at ? `Sbloccato ${fmtDate(at)}` : "Sbloccato"}
+                          {at ? t("badges.unlockedOn", { date: fmtDate(at, locale) }) : t("badges.unlocked")}
                         </div>
                       </button>
                     );
@@ -117,7 +120,7 @@ export function BadgesView() {
                     <div
                       key={def.id}
                       className="relative rounded-2xl border border-white/[0.06] bg-white/[0.015] p-4 overflow-hidden opacity-60"
-                      title={isAutoDetectable(def.id) ? def.mechanic : "Non ancora agganciato alla rilevazione automatica"}
+                      title={isAutoDetectable(def.id) ? def.mechanic : t("badges.notAutoDetect")}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="w-2 h-2 rounded-full bg-gray-700" />
@@ -138,7 +141,7 @@ export function BadgesView() {
         {/* ── SIMULATORE (dev) ── */}
         <div className="pt-2">
           <p className="text-[9px] font-black tracking-[0.3em] uppercase text-gray-700 mb-2 px-1">
-            Simulatore animazioni · solo per anteprima
+            {t("badges.simulatorNote")}
           </p>
           <CelebrationStudio />
         </div>

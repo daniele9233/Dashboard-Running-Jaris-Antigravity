@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Map, { Source, Layer, Marker } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { gsap } from "../celebrations/gsapSetup";
@@ -51,6 +52,7 @@ function EquatorMode({ totalKm }: { totalKm: number }) {
 type RegionCalc = { id: string; region: string; capital: string; lat: number; lng: number; cost: number };
 
 function ItaliaMode({ totalKm, conquered, onToggle }: { totalKm: number; conquered: Set<string>; onToggle: (id: string, conquer: boolean) => void }) {
+  const { t } = useTranslation();
   const regions = useMemo<RegionCalc[]>(
     () => ITALY_REGIONS.map((r) => ({ ...r, cost: regionCostKm(r) })).sort((a, b) => a.cost - b.cost),
     [],
@@ -99,19 +101,19 @@ function ItaliaMode({ totalKm, conquered, onToggle }: { totalKm: number; conquer
           <Swords className="w-5 h-5 text-[#C0FF00]" />
           <h1 className="text-lg font-black tracking-tight uppercase italic text-white">Conquista d'<span className="text-[#C0FF00]">Italia</span></h1>
         </div>
-        <div className="text-[9px] font-black tracking-[0.3em] uppercase text-gray-500 mb-1">Km disponibili</div>
+        <div className="text-[9px] font-black tracking-[0.3em] uppercase text-gray-500 mb-1">{t("gami.kmAvailable")}</div>
         <div className="flex items-baseline gap-2">
           <span className="text-4xl font-black tabular-nums text-white" style={{ fontFamily: MONO }}>{Math.round(available).toLocaleString("it-IT")}</span>
           <span className="text-sm text-gray-500">km</span>
         </div>
         <div className="text-[10px] text-gray-600 mt-1" style={{ fontFamily: MONO }}>
-          {Math.round(totalKm).toLocaleString("it-IT")} percorsi − {Math.round(spent).toLocaleString("it-IT")} spesi
+          {t("gami.traveledSpent", { traveled: Math.round(totalKm).toLocaleString("it-IT"), spent: Math.round(spent).toLocaleString("it-IT") })}
         </div>
         <div className="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
           <div className="h-full rounded-full" style={{ width: `${(nConq / regions.length) * 100}%`, background: `linear-gradient(90deg, ${GOLD}, ${LIT})` }} />
         </div>
         <div className="flex items-center justify-between mt-1.5 text-[10px]">
-          <span className="text-gray-500">regioni conquistate</span>
+          <span className="text-gray-500">{t("gami.regionsConquered")}</span>
           <span className="font-black tabular-nums" style={{ fontFamily: MONO, color: LIT }}>{nConq}/{regions.length}</span>
         </div>
       </div>
@@ -119,8 +121,8 @@ function ItaliaMode({ totalKm, conquered, onToggle }: { totalKm: number; conquer
       {/* TABELLA regioni — conquista / rilascia */}
       <div className="absolute top-20 right-4 z-10 w-[300px] max-w-[84vw] rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl overflow-hidden flex flex-col" style={{ maxHeight: "calc(100vh - 140px)" }}>
         <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between shrink-0">
-          <span className="text-[10px] font-black tracking-[0.2em] uppercase text-white/90">Regioni</span>
-          <span className="text-[9px] text-gray-500 uppercase tracking-widest">costo · da Roma</span>
+          <span className="text-[10px] font-black tracking-[0.2em] uppercase text-white/90">{t("gami.regions")}</span>
+          <span className="text-[9px] text-gray-500 uppercase tracking-widest">{t("gami.costFromRome")}</span>
         </div>
         <div className="overflow-y-auto">
           {regions.map((r) => {
@@ -134,16 +136,16 @@ function ItaliaMode({ totalKm, conquered, onToggle }: { totalKm: number; conquer
                   <div className="text-[9px] text-gray-500" style={{ fontFamily: MONO }}>{r.capital} · {r.cost.toLocaleString("it-IT")} km</div>
                 </div>
                 {st === "home" ? (
-                  <span className="text-[9px] font-black uppercase tracking-wide px-2 py-1 rounded-md shrink-0" style={{ color: GOLD, background: GOLD + "1f" }}>🏠 Base</span>
+                  <span className="text-[9px] font-black uppercase tracking-wide px-2 py-1 rounded-md shrink-0" style={{ color: GOLD, background: GOLD + "1f" }}>🏠 {t("gami.base")}</span>
                 ) : st === "conquered" ? (
                   <button type="button" onClick={() => onToggle(r.id, false)} title="Rilascia"
                     className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wide px-2 py-1 rounded-md shrink-0 transition-colors hover:bg-white/10" style={{ color: LIT, background: LIT + "1f" }}>
-                    <Check className="w-3 h-3" />Presa
+                    <Check className="w-3 h-3" />{t("gami.taken")}
                   </button>
                 ) : st === "affordable" ? (
                   <button type="button" onClick={() => onToggle(r.id, true)}
                     className="text-[9px] font-black uppercase tracking-wide px-2.5 py-1 rounded-md shrink-0 text-black transition-transform hover:scale-105" style={{ background: LIT }}>
-                    Conquista
+                    {t("gami.conquer")}
                   </button>
                 ) : (
                   <span className="flex items-center gap-1 text-[9px] font-black tabular-nums px-2 py-1 rounded-md shrink-0 text-gray-500 bg-white/5" style={{ fontFamily: MONO }} title={`Ti mancano ${deficit} km`}>
@@ -159,13 +161,14 @@ function ItaliaMode({ totalKm, conquered, onToggle }: { totalKm: number; conquer
   );
 }
 
-const MODES: { id: Mode; label: string; icon: typeof Globe2 }[] = [
-  { id: "evolution", label: "Athlete Evolution", icon: Dna },
-  { id: "equatore", label: "Equatore", icon: Globe2 },
-  { id: "italia", label: "Conquista Italia", icon: MapIcon },
+const MODES: { id: Mode; labelKey: string; icon: typeof Globe2 }[] = [
+  { id: "evolution", labelKey: "gami.modeEvolution", icon: Dna },
+  { id: "equatore", labelKey: "gami.modeEquator", icon: Globe2 },
+  { id: "italia", labelKey: "gami.modeConquest", icon: MapIcon },
 ];
 
 export function GamificationV1() {
+  const { t } = useTranslation();
   const { data } = useApi<RunsResponse>(getRuns, { cacheKey: API_CACHE.RUNS });
   const { data: profile } = useApi<Profile>(getProfile, { cacheKey: API_CACHE.PROFILE });
   const runs = useMemo(() => data?.runs ?? [], [data]);
@@ -208,11 +211,11 @@ export function GamificationV1() {
                 <Globe2 className="w-5 h-5 text-[#22D3EE]" />
                 <h1 className="text-lg font-black tracking-tight uppercase italic text-white">Lungo l'<span className="text-[#22D3EE]">Equatore</span></h1>
               </div>
-              <div className="text-[9px] font-black tracking-[0.3em] uppercase text-gray-500 mb-1">Distanza percorsa</div>
+              <div className="text-[9px] font-black tracking-[0.3em] uppercase text-gray-500 mb-1">{t("gami.distanceTraveled")}</div>
               <div className="flex items-baseline gap-2"><span className="text-4xl font-black tabular-nums text-white" style={{ fontFamily: MONO }}>{Math.round(s.totalKm).toLocaleString("it-IT")}</span><span className="text-sm text-gray-500">km</span></div>
               <div className="mt-3 h-2 rounded-full bg-white/10 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${Math.min(100, eq.pct)}%`, background: `linear-gradient(90deg, ${LIT}, #22D3EE)` }} /></div>
               <div className="flex items-center justify-between mt-1.5 text-[10px]">
-                <span className="text-gray-500">giro del pianeta</span>
+                <span className="text-gray-500">{t("gami.planetLap")}</span>
                 <span className="font-black tabular-nums" style={{ fontFamily: MONO, color: LIT }}>{eq.pct.toFixed(2)}%</span>
               </div>
             </div>
@@ -227,7 +230,7 @@ export function GamificationV1() {
           return (
             <button key={m.id} type="button" onClick={() => setMode(m.id)}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-black tracking-[0.12em] uppercase transition-colors ${sel ? "bg-[#C0FF00]/15 text-[#C0FF00]" : "text-gray-400 hover:text-white"}`}>
-              <Icon className="w-3.5 h-3.5" />{m.label}
+              <Icon className="w-3.5 h-3.5" />{t(m.labelKey)}
             </button>
           );
         })}

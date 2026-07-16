@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer, Trophy, XCircle } from "lucide-react";
 import { useApi, invalidateCache } from "../hooks/useApi";
 import { API_CACHE } from "../hooks/apiCacheKeys";
@@ -1120,6 +1121,7 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function TrainingGrid() {
+  const { t } = useTranslation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'Day' | 'Week' | 'Month' | 'Year'>('Year');
   const [previousView, setPreviousView] = useState<'Week' | 'Month' | 'Year' | null>(null);
@@ -1681,7 +1683,7 @@ export function TrainingGrid() {
       {/* Header */}
       <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-white">Training Menu</h1>
+          <h1 className="text-2xl font-bold text-white">{t("sections.trainingMenu")}</h1>
           {showSub20 ? (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-gray-400 bg-[#1E1E1E] border border-[#2A2A2A] px-3 py-1 rounded-full">
