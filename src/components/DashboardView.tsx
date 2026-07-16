@@ -76,7 +76,7 @@ export function DashboardView() {
   const { data: insightData } = useApi<{ insight: string | null }>(getDashboardInsight, { cacheKey: API_CACHE.DASHBOARD_INSIGHT });
 
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { layouts, onLayoutChange, resetLayout, hiddenKeys, hideWidget, restoreWidget } = useLayout();
   const [openAddMenu, setOpenAddMenu] = useState(false);
   const addMenuRef = useRef<HTMLDivElement>(null);
@@ -351,7 +351,7 @@ export function DashboardView() {
                     onClick={() => setOpenAddMenu((v) => !v)}
                     disabled={hiddenMeta.length === 0}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[#666] hover:text-[#C0FF00] hover:border-[#C0FF00]/30 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-[#666] disabled:hover:border-white/[0.06] text-[10px] font-black tracking-widest transition-colors"
-                    title="Ripristina widget nascosti"
+                    title={t("dashboard.restoreHiddenWidgets")}
                   >
                     <Plus size={12} />
                     AGGIUNGI WIDGET
@@ -388,7 +388,7 @@ export function DashboardView() {
                     if (confirm("Ripristinare il layout predefinito?")) resetLayout();
                   }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[#666] hover:text-[#C0FF00] hover:border-[#C0FF00]/30 text-[10px] font-black tracking-widest transition-colors"
-                  title="Ripristina posizioni widget"
+                  title={t("dashboard.restoreWidgetPositions")}
                 >
                   <RotateCcw size={12} />
                   RESET LAYOUT
@@ -492,10 +492,10 @@ export function DashboardView() {
               <div className="flex flex-col gap-4 w-full md:min-w-[180px] md:w-auto">
                 <div>
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">Il tuo serbatoio</span>
+                    <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">{t("dashboard.fuelTitle")}</span>
                     <span className="text-[#C0FF00]/70 text-[9px] font-black tracking-widest">TSB</span>
                   </div>
-                  <div className="text-[#555] text-[9px] font-semibold italic mb-1">quanto sei fresco oggi</div>
+                  <div className="text-[#555] text-[9px] font-semibold italic mb-1">{t("dashboard.fuelSub")}</div>
                   <div className="text-xl font-black whitespace-nowrap" style={{ color: tsbMeta.color }}>
                     <span className="mr-1.5 font-mono tabular-nums">{tsbValue}</span>{tsbMeta.label}
                   </div>
@@ -503,10 +503,10 @@ export function DashboardView() {
                 </div>
                 <div>
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">Potenza attuale</span>
+                    <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">{t("dashboard.powerTitle")}</span>
                     <span className="text-[#C0FF00]/70 text-[9px] font-black tracking-widest">EFF</span>
                   </div>
-                  <div className="text-[#555] text-[9px] font-semibold italic mb-1">efficienza cuore vs ritmo</div>
+                  <div className="text-[#555] text-[9px] font-semibold italic mb-1">{t("dashboard.powerSub")}</div>
                   <div className="text-white text-xl font-black whitespace-nowrap">
                     <span className="mr-1.5 font-mono tabular-nums">{effValue}</span>{effMeta.label}
                   </div>
@@ -518,10 +518,10 @@ export function DashboardView() {
               <div className="flex flex-col gap-4 w-full md:min-w-[180px] md:w-auto">
                 <div>
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">Il tuo motore</span>
+                    <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">{t("dashboard.engineTitle")}</span>
                     <span className="text-[#C0FF00]/70 text-[9px] font-black tracking-widest">CTL</span>
                   </div>
-                  <div className="text-[#555] text-[9px] font-semibold italic mb-1">fitness media 42 giorni</div>
+                  <div className="text-[#555] text-[9px] font-semibold italic mb-1">{t("dashboard.engineSub")}</div>
                   <div className="text-white text-xl font-black whitespace-nowrap">
                     <span className="mr-1.5 font-mono tabular-nums">{ctlValue}</span>{ctlMeta.label}
                   </div>
@@ -529,10 +529,10 @@ export function DashboardView() {
                 </div>
                 <div>
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">Lavoro svolto</span>
+                    <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">{t("dashboard.workTitle")}</span>
                     <span className="text-[#C0FF00]/70 text-[9px] font-black tracking-widest">ATL</span>
                   </div>
-                  <div className="text-[#555] text-[9px] font-semibold italic mb-1">carico ultimi 7 giorni</div>
+                  <div className="text-[#555] text-[9px] font-semibold italic mb-1">{t("dashboard.workSub")}</div>
                   <div className="text-white text-xl font-black whitespace-nowrap">
                     <span className="mr-1.5 font-mono tabular-nums">{atlValue}</span>{atlMeta.label}
                   </div>
@@ -589,7 +589,7 @@ export function DashboardView() {
             <div className="h-full rounded-[24px] p-6 flex flex-col backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
             <div className="flex items-center gap-2 mb-3">
               <Target className="text-[#C0FF00]" size={14} />
-              <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest">PREVISIONE GARA</span>
+              <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">{t("dashboard.racePrediction")}</span>
             </div>
 
             {/* Selettore clima: temperatura + umidità */}
@@ -1095,15 +1095,15 @@ export function DashboardView() {
                       </div>
                       <div className="grid grid-cols-2 gap-2 md:contents text-xs">
                         <div className="text-[#A0A0A0] text-xs md:text-sm">
-                          <span className="md:hidden text-[#666] text-[9px] font-black tracking-widest uppercase block">Data</span>
-                          {new Date(run.date).toLocaleDateString("en", { day: "numeric", month: "short" })}
+                          <span className="md:hidden text-[#666] text-[9px] font-black tracking-widest uppercase block">{t("dashboard.date")}</span>
+                          {new Date(run.date).toLocaleDateString(i18n.language === "en" ? "en-GB" : "it-IT", { day: "numeric", month: "short" })}
                         </div>
                         <div className="text-white font-black text-xs md:text-sm">
-                          <span className="md:hidden text-[#666] text-[9px] font-black tracking-widest uppercase block">Durata</span>
+                          <span className="md:hidden text-[#666] text-[9px] font-black tracking-widest uppercase block">{t("dashboard.duration")}</span>
                           {formatDuration(run.duration_minutes)}
                         </div>
                         <div className="text-[#A0A0A0] text-xs md:text-sm">
-                          <span className="md:hidden text-[#666] text-[9px] font-black tracking-widest uppercase block">Passo</span>
+                          <span className="md:hidden text-[#666] text-[9px] font-black tracking-widest uppercase block">{t("dashboard.pace")}</span>
                           {run.avg_pace}/km
                         </div>
                         <div className="text-xs font-black md:text-xs" style={{ color: teColor }}>
