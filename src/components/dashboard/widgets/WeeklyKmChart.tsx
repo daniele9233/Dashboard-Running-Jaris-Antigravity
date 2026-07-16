@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { Footprints, Pencil } from "lucide-react";
 import type { Run } from "../../../types/api";
 import { useApi, invalidateCache } from "../../../hooks/useApi";
@@ -15,8 +15,24 @@ import { getWeeklyGoal, putWeeklyGoal, type WeeklyGoalResponse } from "../../../
 const GOAL_KEY = "weekly-km-goal";
 const DEFAULT_GOAL = 40;
 const DAY_LETTERS = ["L", "M", "M", "G", "V", "S", "D"];
+const DAY_SHORT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 const LIME = "#C0FF00";
 const CYAN = "#22D3EE";
+
+// Tooltip settimanale: mostra "Gio · 13 km" al passaggio del mouse.
+const WeekTooltip = ({ active, payload }: {
+  active?: boolean;
+  payload?: Array<{ payload: { short: string; km: number } }>;
+}) => {
+  if (!active || !payload?.length) return null;
+  const { short, km } = payload[0].payload;
+  return (
+    <div className="rounded-lg border border-white/10 bg-[#0A0A0A]/95 px-3 py-1.5 shadow-xl">
+      <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">{short}</div>
+      <div className="text-sm font-black tabular-nums" style={{ color: LIME }}>{km} km</div>
+    </div>
+  );
+};
 
 const toLocal = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -80,7 +96,7 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
       d.setDate(monday.getDate() + i);
       const ds = toLocal(d);
       const km = runs.filter(r => r.date?.slice(0, 10) === ds).reduce((s, r) => s + (r.distance_km || 0), 0);
-      return { letter: DAY_LETTERS[i], km: Math.round(km * 10) / 10, isToday: ds === todayStr };
+      return { letter: DAY_LETTERS[i], short: DAY_SHORT[i], km: Math.round(km * 10) / 10, isToday: ds === todayStr };
     });
     let totalMin = 0, totalElev = 0;
     for (const r of runs) {
@@ -227,25 +243,46 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
             </div>
           </div>
 
-          {/* Barre giornaliere lun→dom */}
+          {/* Grafico volume giornaliero lun→dom — hover mostra i km */}
           <div>
-            <div className="flex items-end justify-between gap-1.5 h-14">
-              {week.days.map((d, i) => (
-                <div key={i} className="flex-1 flex flex-col justify-end items-center h-full">
-                  <div
-                    className="w-full rounded-t-[3px] transition-all duration-500"
-                    style={{
-                      height: `${Math.max(d.km > 0 ? 8 : 3, (d.km / week.maxKm) * 100)}%`,
-                      background: d.km > 0 ? LIME : "rgba(255,255,255,0.08)",
-                      opacity: d.km > 0 ? (d.isToday ? 1 : 0.55) : 1,
-                      boxShadow: d.isToday && d.km > 0 ? `0 0 10px ${LIME}88` : "none",
+            <div className="h-16 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={week.days} margin={{ top: 6, right: 4, left: 4, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="wk-area" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={LIME} stopOpacity={0.35} />
+                      <stop offset="100%" stopColor={LIME} stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="letter" hide />
+                  <YAxis hide domain={[0, (max: number) => Math.max(max * 1.15, 1)]} />
+                  <Tooltip content={<WeekTooltip />} cursor={{ stroke: "rgba(255,255,255,0.15)", strokeWidth: 1 }} />
+                  <Area
+                    type="monotone"
+                    dataKey="km"
+                    stroke={LIME}
+                    strokeWidth={2}
+                    fill="url(#wk-area)"
+                    isAnimationActive={false}
+                    dot={(props: { cx?: number; cy?: number; payload?: { isToday: boolean; km: number } }) => {
+                      const { cx, cy, payload } = props;
+                      if (cx == null || cy == null || !payload || payload.km <= 0) return <g key={`${cx}-${cy}`} />;
+                      const today = payload.isToday;
+                      return (
+                        <circle
+                          key={`${cx}-${cy}`}
+                          cx={cx} cy={cy} r={today ? 4 : 3}
+                          fill={today ? LIME : "#0A0A0A"} stroke={LIME} strokeWidth={2}
+                          style={today ? { filter: `drop-shadow(0 0 5px ${LIME})` } : undefined}
+                        />
+                      );
                     }}
-                    title={`${d.km} km`}
+                    activeDot={{ r: 5, fill: LIME, stroke: "#0A0A0A", strokeWidth: 2 }}
                   />
-                </div>
-              ))}
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-            <div className="flex justify-between gap-1.5 mt-1.5">
+            <div className="flex justify-between gap-1.5 mt-1">
               {week.days.map((d, i) => (
                 <div key={i} className="flex-1 text-center leading-none">
                   <span className="text-[10px] font-black" style={{ color: d.isToday ? LIME : "#5A5A5A" }}>{d.letter}</span>
@@ -264,6 +301,7 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
               <Tooltip
                 cursor={{ fill: "rgba(255,255,255,0.05)" }}
                 contentStyle={{ backgroundColor: "#111", border: "1px solid #333", borderRadius: "12px", color: "#fff" }}
+                formatter={(v: number) => [`${v} km`, "Volume"]}
               />
               <Bar dataKey="km" fill="#C0FF00" radius={[4, 4, 0, 0]} />
             </BarChart>
