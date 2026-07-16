@@ -1767,7 +1767,7 @@ export function AnalyticsV2({
         <V2Header
           icon={Activity}
           title={t("statistics.performanceManagementChart")}
-          subtitle="Fitness (CTL) · Fatigue (ATL) · Form (TSB) — 90 giorni"
+          subtitle={t('statsCards.pmcSub')}
           onExpand={() => openExpandedChart('fitness_freshness', setPmcExpanded)}
           tooltip={{
             title: 'PMC — BANISTER MODEL',
@@ -1820,8 +1820,8 @@ export function AnalyticsV2({
        <V2Card>
          <V2Header
            icon={Zap}
-           title="Gara Previsioni"
-           subtitle="Stima prestazioni gara basata su VDOT — 12 mesi"
+           title={t('statsCards.racePredictions')}
+           subtitle={t('statsCards.racePredictionsSub')}
            onExpand={() => openExpandedChart('threshold_progression', setAtExpanded)}
            tooltip={{
              title: 'PREVISIONI GARA',
@@ -1939,9 +1939,9 @@ export function AnalyticsV2({
                 <div className="min-w-0 flex flex-col">
                 <div className="flex items-start justify-between gap-4 mb-5">
                   <div>
-                     <h3 className="text-[15px] md:text-base font-black tracking-wider uppercase italic text-[#E7E7E7] leading-none">Progressione Temporale</h3>
+                     <h3 className="text-[15px] md:text-base font-black tracking-wider uppercase italic text-[#E7E7E7] leading-none">{t('statsCards.progressioneTemporale')}</h3>
                      <p className="text-[9px] font-black uppercase tracking-widest mt-2 text-[#787878]">
-                       Passo vs FC (last 12 sessions)
+                       {t('statsCards.progressioneTemporaleSub')}
                     </p>
                   </div>
                   <div className="hidden sm:flex items-center gap-5 pr-8 text-[9px] font-black uppercase tracking-widest text-[#3A3A3A]">
@@ -2016,7 +2016,7 @@ export function AnalyticsV2({
                     <Timer className="w-4 h-4" style={{ color: NEON }} />
                   </div>
                   <div className="text-[10px] uppercase tracking-widest font-black text-[#A6A6A6]">
-                    Passo Soglia <span className="ml-2" style={{ color: NEON }}>Latest</span>
+                    {t('statsCards.thresholdPaceLatest')} <span className="ml-2" style={{ color: NEON }}>Latest</span>
                   </div>
                   <div className="flex items-baseline mt-3">
                     <span className="text-[52px] leading-none italic font-black" style={{ color: NEON }}>
@@ -2035,7 +2035,7 @@ export function AnalyticsV2({
                     <Heart className="w-4 h-4 fill-[#FF4B93]" style={{ color: '#FF4B93' }} />
                   </div>
                   <div className="text-[10px] uppercase tracking-widest font-black text-[#A6A6A6]">
-                    FC Soglia <span className="ml-2 text-[#FF4B93]">Riferimento</span>
+                    {t('statsCards.thresholdHrRef')} <span className="ml-2 text-[#FF4B93]">Riferimento</span>
                   </div>
                   <div className="flex items-baseline mt-3">
                     <span className="text-[52px] leading-none italic font-black text-[#FF4B93]">
@@ -2059,8 +2059,8 @@ export function AnalyticsV2({
            <V2Card>
              <V2Header
                icon={Zap}
-               title="VO₂ Max / VDOT Trend"
-               subtitle="Storico 12 mesi — stima Jack Daniels"
+               title={t('statsCards.vdotTrend')}
+               subtitle={t('statsCards.vdotTrendSub')}
               onExpand={() => openExpandedChart('vo2_vdot_trend', setVdotV2Expanded)}
                tooltip={{
                  title: 'VO₂MAX / VDOT TREND',
@@ -2186,7 +2186,7 @@ export function AnalyticsV2({
         <V2Card className="col-span-3 flex flex-col items-center justify-center">
           <V2Header
             icon={Heart}
-            title="Soglia AT"
+            title={t('statsCards.thresholdAT')}
             tooltip={{
               title: 'SOGLIA ANAEROBICA',
               lines: [
@@ -2336,7 +2336,7 @@ export function AnalyticsV2({
           <V2Header
             icon={Timer}
             title={t("statistics.timeInZones")}
-            subtitle="Distribuzione tempo per zona FC"
+            subtitle={t('statsCards.paceZonesSub')}
             onExpand={() => openExpandedChart('pace_zones', setZonesExpanded)}
             tooltip={{
               title: 'DISTRIBUZIONE ZONE FC',
@@ -2421,7 +2421,7 @@ export function AnalyticsV2({
       <V2Card>
         <V2Header
           icon={Footprints}
-          title="GCT vs Cadence"
+          title={t('statsCards.gctVsCadence')}
           subtitle={`Tempo Contatto Suolo (ms) vs Cadenza (spm) · ${scatterData.length} corse`}
           onExpand={() => openExpandedChart('gct_cadence', setGctExpanded)}
           tooltip={{
