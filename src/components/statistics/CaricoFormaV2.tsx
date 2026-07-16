@@ -746,10 +746,20 @@ function CaricoKmChart({ runs }: { runs: Run[] }) {
 
   const stats = useMemo(() => {
     const days = KM_RANGE_DAYS[period];
-    const cutoffMs = days ? Date.now() - days * 86400000 : null;
+    // 7d = settimana di CALENDARIO da lunedì (non ultimi 7 giorni rolling).
+    let cutoffMs: number | null;
+    if (period === "7d") {
+      const now = new Date();
+      const m = new Date(now);
+      m.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1));
+      m.setHours(0, 0, 0, 0);
+      cutoffMs = m.getTime();
+    } else {
+      cutoffMs = days ? Date.now() - days * 86400000 : null;
+    }
     const pr = runs.filter(r => cutoffMs ? new Date(r.date).getTime() >= cutoffMs : true);
     const totalKm = pr.reduce((s, r) => s + r.distance_km, 0);
-    const weeks = days ? days / 7 : (pr.length ? (new Date().getTime() - new Date(pr[0].date).getTime()) / (7 * 86400000) : 1);
+    const weeks = period === "7d" ? 1 : (days ? days / 7 : (pr.length ? (new Date().getTime() - new Date(pr[0].date).getTime()) / (7 * 86400000) : 1));
     const nonZero = chartData.filter(d => CAT_DEFS.some(c => (d[c.key] as number) > 0));
     const avgKmBar = nonZero.length
       ? nonZero.reduce((s, d) => s + CAT_DEFS.reduce((a, c) => a + (d[c.key] as number), 0), 0) / nonZero.length
@@ -764,7 +774,7 @@ function CaricoKmChart({ runs }: { runs: Run[] }) {
   }, [runs, period, chartData]);
 
   const periodLabel =
-    period === "7d" ? "ultimi 7 giorni"
+    period === "7d" ? "questa settimana (lun→dom)"
     : period === "30d" ? "ultimi 30 giorni"
     : period === "90d" ? "ultimi 90 giorni"
     : "tutto";

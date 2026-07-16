@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { Footprints } from "lucide-react";
+import { Footprints, Pencil } from "lucide-react";
 import type { Run } from "../../../types/api";
 import { useApi, invalidateCache } from "../../../hooks/useApi";
 import { getWeeklyGoal, putWeeklyGoal, type WeeklyGoalResponse } from "../../../api";
@@ -159,11 +159,11 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
           {/* Hero: totale / obiettivo + anello */}
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <div className="flex items-baseline gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-4xl font-black tabular-nums leading-none" style={{ color: LIME }}>{week.totalKm}</span>
-                <span className="text-lg font-black text-gray-500 leading-none flex items-baseline gap-1">
-                  /
-                  {editing ? (
+                <span className="text-lg font-black text-gray-500 leading-none">/</span>
+                {editing ? (
+                  <span className="flex items-baseline gap-1 text-lg font-black text-gray-500">
                     <input
                       type="number"
                       inputMode="numeric"
@@ -172,21 +172,24 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
                       onChange={(e) => setDraft(e.target.value)}
                       onBlur={saveGoal}
                       onKeyDown={(e) => { if (e.key === "Enter") saveGoal(); if (e.key === "Escape") setEditing(false); }}
-                      className="w-14 bg-transparent border-b border-[#C0FF00]/50 text-center text-[#C0FF00] outline-none tabular-nums"
+                      className="w-14 bg-transparent border-b-2 border-[#C0FF00] text-center text-[#C0FF00] outline-none tabular-nums"
                     />
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => { setDraft(String(goal)); setEditing(true); }}
-                      title={t("dashboard.setWeeklyGoal")}
-                      className="text-white/80 hover:text-[#C0FF00] underline decoration-dotted underline-offset-4 transition-colors tabular-nums"
-                    >
-                      {goal}
-                    </button>
-                  )}
-                  <span className="text-sm">km</span>
-                </span>
+                    <span className="text-sm">km</span>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setDraft(String(goal)); setEditing(true); }}
+                    title={t("dashboard.setWeeklyGoal")}
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[#C0FF00]/10 border border-[#C0FF00]/30 text-[#C0FF00] hover:bg-[#C0FF00]/20 transition-colors"
+                  >
+                    <span className="text-lg font-black tabular-nums leading-none">{goal}</span>
+                    <span className="text-xs font-black">km</span>
+                    <Pencil className="w-3 h-3 opacity-80" />
+                  </button>
+                )}
               </div>
+              <div className="text-[9px] font-black tracking-widest uppercase text-gray-600 mt-1">{t("dashboard.weeklyGoal")}</div>
               <div className="text-[10px] font-bold mt-1" style={{ color: pct >= 100 ? LIME : "#8A8A8A" }}>
                 {pct >= 100 ? t("dashboard.goalReached") : `${t("dashboard.toGo", { km: remaining })} · ${pct}%`}
               </div>
@@ -233,7 +236,9 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
                     className="w-full rounded-t-[3px] transition-all duration-500"
                     style={{
                       height: `${Math.max(d.km > 0 ? 8 : 3, (d.km / week.maxKm) * 100)}%`,
-                      background: d.isToday ? LIME : d.km > 0 ? CYAN : "rgba(255,255,255,0.08)",
+                      background: d.km > 0 ? LIME : "rgba(255,255,255,0.08)",
+                      opacity: d.km > 0 ? (d.isToday ? 1 : 0.55) : 1,
+                      boxShadow: d.isToday && d.km > 0 ? `0 0 10px ${LIME}88` : "none",
                     }}
                     title={`${d.km} km`}
                   />
