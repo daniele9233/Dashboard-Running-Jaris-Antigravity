@@ -596,6 +596,7 @@ function RaceReadinessRadarCard({
   limiter: string;
   advice: string;
 }) {
+  const { t } = useTranslation();
   const center = 105;
   const radius = 72;
   const axisCount = Math.max(axes.length, 1);
@@ -618,8 +619,8 @@ function RaceReadinessRadarCard({
     <V2Card accent={NEON}>
       <V2Header
         icon={Radar}
-        title="Race Readiness Radar"
-        subtitle="Velocita - soglia - endurance - consistenza - freschezza"
+        title={t('statsCards.raceReadinessRadar')}
+        subtitle={t('statsCards.raceReadinessRadarSub')}
         tooltip={{
           title: 'RACE READINESS',
           lines: [
@@ -714,12 +715,13 @@ function RaceForecastLab({
   limiter: string;
   advice: string;
 }) {
+  const { t } = useTranslation();
   return (
     <V2Card className="xl:col-span-2" accent={NEON}>
       <V2Header
         icon={Target}
-        title="Race Forecast Lab"
-        subtitle="Affidabilita previsioni e distanza piu pronta oggi"
+        title={t('statsCards.raceForecastLab')}
+        subtitle={t('statsCards.raceForecastLabSub')}
         tooltip={{
           title: 'RACE FORECAST LAB',
           lines: [
@@ -943,6 +945,7 @@ function FitnessEvolutionCard({
 }
 
 function FitnessEvolutionGrid({ cards }: { cards: FitnessEvolutionCardData[] }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [ranges, setRanges] = useState<Record<string, EvolutionRange>>({});
   const rangeFor = (title: string) => ranges[title] ?? '6M';
@@ -974,8 +977,8 @@ function FitnessEvolutionGrid({ cards }: { cards: FitnessEvolutionCardData[] }) 
       <ChartFullscreenModal
         open={expanded}
         onClose={() => setExpanded(false)}
-        title="Performance Evolution"
-        subtitle="Previsioni gara nel tempo — range sincronizzati"
+        title={t('statsCards.performanceEvolution')}
+        subtitle={t('statsCards.performanceEvolutionSub')}
         accent={NEON}
       >
         {renderCards(true)}
@@ -1956,7 +1959,7 @@ export function AnalyticsV2({
                     <button
                       onClick={() => openExpandedChart('threshold_progression', setAtExpanded)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#2A2A2A] text-[#555] hover:text-[#C0FF00]"
-                      title="Espandi"
+                      title={t('statsCards.expand')}
                     >
                       <Maximize2 size={15} />
                     </button>
