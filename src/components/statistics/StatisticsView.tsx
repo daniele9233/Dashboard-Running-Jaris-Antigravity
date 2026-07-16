@@ -913,15 +913,15 @@ export function StatisticsView() {
 
 
   const tabs = [
-    { id: 'analytics-cf-v2', label: 'Carico & Forma',          icon: BarChart3  },
-    { id: 'analyticsv2',    label: 'Potenziale & Progressi',   icon: Radar },
-    { id: 'analyticsv3', label: 'Biomeccanica & Efficienza',   icon: Activity },
-    { id: 'biology',     label: 'Biologia & Futuro',           icon: FlaskConical },
-    { id: 'environment', label: 'Clima & Ritmo',               icon: CloudSun },
-    { id: 'biologyv2',   label: 'Detraining',                  icon: Dna },
+    { id: 'analytics-cf-v2', label: t('statsTabs.loadForm'),          icon: BarChart3  },
+    { id: 'analyticsv2',    label: t('statsTabs.potentialProgress'),  icon: Radar },
+    { id: 'analyticsv3', label: t('statsTabs.biomechanics'),          icon: Activity },
+    { id: 'biology',     label: t('statsTabs.biologyFuture'),         icon: FlaskConical },
+    { id: 'environment', label: t('statsTabs.climatePace'),           icon: CloudSun },
+    { id: 'biologyv2',   label: t('statsTabs.detraining'),            icon: Dna },
   ];
 
-  const noData = (message = 'Dati reali insufficienti') => (
+  const noData = (message = t('statsTabs.insufficientData')) => (
     <div className="h-full min-h-[180px] flex items-center justify-center text-gray-600 text-sm font-bold uppercase tracking-widest text-center px-6">
       {message}
     </div>

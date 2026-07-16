@@ -373,6 +373,16 @@ export const translations = {
       taken: "Presa",
       conquer: "Conquista",
     },
+    // ── Statistics tab labels
+    statsTabs: {
+      loadForm: "Carico & Forma",
+      potentialProgress: "Potenziale & Progressi",
+      biomechanics: "Biomeccanica & Efficienza",
+      biologyFuture: "Biologia & Futuro",
+      climatePace: "Clima & Ritmo",
+      detraining: "Detraining",
+      insufficientData: "Dati reali insufficienti",
+    },
   },
   en: {
     nav: {
@@ -730,6 +740,15 @@ export const translations = {
       base: "Base",
       taken: "Taken",
       conquer: "Conquer",
+    },
+    statsTabs: {
+      loadForm: "Load & Form",
+      potentialProgress: "Potential & Progress",
+      biomechanics: "Biomechanics & Efficiency",
+      biologyFuture: "Biology & Future",
+      climatePace: "Climate & Pace",
+      detraining: "Detraining",
+      insufficientData: "Not enough real data",
     },
   },
 } as const;
