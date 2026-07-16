@@ -1,8 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Footprints } from "lucide-react";
 import type { Run } from "../../../types/api";
+import { useApi, invalidateCache } from "../../../hooks/useApi";
+import { getWeeklyGoal, putWeeklyGoal, type WeeklyGoalResponse } from "../../../api";
 
 /**
  * WeeklyKmChart — riepilogo settimanale (lun→dom) con obiettivo km inseribile
@@ -38,7 +40,8 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
   const { t } = useTranslation();
   const [chartPeriod, setChartPeriod] = useState<'7d' | 'month' | 'year'>('7d');
 
-  // ── Obiettivo km settimanale (persistente su localStorage) ──
+  // ── Obiettivo km settimanale (sincronizzato su DB, cache localStorage) ──
+  const { data: goalData } = useApi<WeeklyGoalResponse>(getWeeklyGoal, { cacheKey: "weekly-goal" });
   const [goal, setGoal] = useState<number>(() => {
     const raw = typeof window !== "undefined" ? localStorage.getItem(GOAL_KEY) : null;
     const n = raw ? parseFloat(raw) : NaN;
@@ -46,12 +49,24 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
   });
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(goal));
+  // Il valore dal DB è la fonte di verità: aggiorna quando arriva.
+  useEffect(() => {
+    const g = goalData?.weekly_km_goal;
+    if (typeof g === "number" && g > 0) {
+      setGoal(g);
+      if (typeof window !== "undefined") localStorage.setItem(GOAL_KEY, String(g));
+    }
+  }, [goalData]);
+
   const saveGoal = () => {
     const n = parseFloat(draft.replace(",", "."));
     if (Number.isFinite(n) && n > 0) {
       const v = Math.min(300, Math.round(n));
       setGoal(v);
       if (typeof window !== "undefined") localStorage.setItem(GOAL_KEY, String(v));
+      putWeeklyGoal(v)
+        .then(() => invalidateCache("weekly-goal"))
+        .catch(() => { /* l'ottimistico + cache locale restano */ });
     }
     setEditing(false);
   };

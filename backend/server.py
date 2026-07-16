@@ -9187,6 +9187,33 @@ async def set_conquests(payload: dict = Body(...)):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  IMPOSTAZIONI UTENTE — obiettivo km settimanale (sincronizzato su DB)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/user/weekly-goal")
+async def get_weekly_goal():
+    """Obiettivo km settimanale scelto dall'utente (None → default lato client)."""
+    athlete_id = await _get_athlete_id()
+    doc = await db.user_settings.find_one({"athlete_id": athlete_id})
+    return {"weekly_km_goal": (doc or {}).get("weekly_km_goal")}
+
+
+@app.put("/api/user/weekly-goal")
+async def set_weekly_goal(payload: dict = Body(...)):
+    """Salva l'obiettivo km settimanale (1-300)."""
+    athlete_id = await _get_athlete_id()
+    try:
+        g = float(payload.get("weekly_km_goal"))
+    except (TypeError, ValueError):
+        return JSONResponse({"error": "bad_goal"}, status_code=400)
+    g = max(1.0, min(300.0, round(g)))
+    await db.user_settings.update_one(
+        {"athlete_id": athlete_id}, {"$set": {"weekly_km_goal": g}}, upsert=True
+    )
+    return {"ok": True, "weekly_km_goal": g}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  GARMIN CONNECT — Running Dynamics via FIT download
 # ═══════════════════════════════════════════════════════════════════════════════
 

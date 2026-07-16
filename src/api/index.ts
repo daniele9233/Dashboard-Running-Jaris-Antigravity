@@ -432,6 +432,15 @@ export const getConquests = () => api.get<ConquestsResponse>('/api/conquests');
 export const putConquest = (region: string, action: 'conquer' | 'release') =>
   api.put<ConquestsResponse>('/api/conquests', { region, action });
 
+// ─── Obiettivo km settimanale (sincronizzato su DB) ──────────────────────────
+export interface WeeklyGoalResponse {
+  weekly_km_goal: number | null;
+  ok?: boolean;
+}
+export const getWeeklyGoal = () => api.get<WeeklyGoalResponse>('/api/user/weekly-goal');
+export const putWeeklyGoal = (goal: number) =>
+  api.put<WeeklyGoalResponse>('/api/user/weekly-goal', { weekly_km_goal: goal });
+
 // ─── JARVIS ──────────────────────────────────────────────────────────────────
 import type { JarvisResponse } from '../types/jarvis';
 export const jarvisChat = (transcript: string) =>
