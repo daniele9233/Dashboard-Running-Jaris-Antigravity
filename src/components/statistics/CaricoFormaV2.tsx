@@ -668,14 +668,27 @@ function CaricoKmChart({ runs }: { runs: Run[] }) {
     const toLocal = (d: Date) =>
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const now = new Date();
+    // Settimane di CALENDARIO lun→dom: lunedì della settimana di `now`.
+    const mondayOf = (ref: Date) => {
+      const dow = ref.getDay();
+      const m = new Date(ref);
+      m.setDate(ref.getDate() - (dow === 0 ? 6 : dow - 1));
+      m.setHours(0, 0, 0, 0);
+      return m;
+    };
+    // Domenica (fine) della settimana corrente — ancora per i bucket settimanali.
+    const weekAnchorSunday = new Date(mondayOf(now));
+    weekAnchorSunday.setDate(weekAnchorSunday.getDate() + 6);
+    weekAnchorSunday.setHours(23, 59, 59, 999);
     const days = KM_RANGE_DAYS[period];
     const cutoffMs = days ? Date.now() - days * 86400000 : null;
 
     if (period === "7d") {
-      // Per 7d: 7 barre giornaliere
+      // Per 7d: la settimana corrente lun→dom (7 barre giornaliere)
+      const monday = mondayOf(now);
       return Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(now);
-        d.setDate(now.getDate() - (6 - i));
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
         const label = d.toLocaleDateString("it", { weekday: "short" }).slice(0, 3).toUpperCase();
         return buildKmEntry(label, runs.filter(r => r.date.slice(0, 10) === toLocal(d)));
       });
@@ -683,9 +696,8 @@ function CaricoKmChart({ runs }: { runs: Run[] }) {
       // Per 30d: barre settimanali (ultimi 30 giorni → ~4-5 settimane)
       const weeks = 5;
       return Array.from({ length: weeks }, (_, i) => {
-        const weekEnd = new Date(now);
-        weekEnd.setDate(now.getDate() - (weeks - 1 - i) * 7);
-        weekEnd.setHours(23, 59, 59, 999);
+        const weekEnd = new Date(weekAnchorSunday);
+        weekEnd.setDate(weekAnchorSunday.getDate() - (weeks - 1 - i) * 7);
         const weekStart = new Date(weekEnd);
         weekStart.setDate(weekEnd.getDate() - 6);
         weekStart.setHours(0, 0, 0, 0);
@@ -699,9 +711,8 @@ function CaricoKmChart({ runs }: { runs: Run[] }) {
       // Per 90d: barre settimanali (13 settimane)
       const weeks = 13;
       return Array.from({ length: weeks }, (_, i) => {
-        const weekEnd = new Date(now);
-        weekEnd.setDate(now.getDate() - (weeks - 1 - i) * 7);
-        weekEnd.setHours(23, 59, 59, 999);
+        const weekEnd = new Date(weekAnchorSunday);
+        weekEnd.setDate(weekAnchorSunday.getDate() - (weeks - 1 - i) * 7);
         const weekStart = new Date(weekEnd);
         weekStart.setDate(weekEnd.getDate() - 6);
         weekStart.setHours(0, 0, 0, 0);

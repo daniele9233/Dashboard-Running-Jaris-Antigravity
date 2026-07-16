@@ -153,6 +153,13 @@ export const translations = {
       zones: "Zone",
       restoreHiddenWidgets: "Ripristina widget nascosti",
       restoreWidgetPositions: "Ripristina posizioni widget",
+      thisWeek: "Questa Settimana",
+      weeklyGoal: "obiettivo settimanale",
+      setWeeklyGoal: "Imposta obiettivo km settimanale",
+      weekTime: "Tempo",
+      weekElevation: "Dislivello",
+      goalReached: "Obiettivo raggiunto! 🎉",
+      toGo: "mancano {{km}} km",
     },
     // ── Training
     training: {
@@ -556,6 +563,13 @@ export const translations = {
       zones: "Zones",
       restoreHiddenWidgets: "Restore hidden widgets",
       restoreWidgetPositions: "Restore widget positions",
+      thisWeek: "This Week",
+      weeklyGoal: "weekly goal",
+      setWeeklyGoal: "Set weekly km goal",
+      weekTime: "Time",
+      weekElevation: "Elevation",
+      goalReached: "Goal reached! 🎉",
+      toGo: "{{km}} km to go",
     },
     training: {
       weeklyPlan: "Weekly Plan",

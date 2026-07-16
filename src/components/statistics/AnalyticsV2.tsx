@@ -1684,7 +1684,8 @@ export function AnalyticsV2({
     const longRuns = recent90.filter(({ run }) => (run.distance_km ?? 0) >= 14).length;
     const weekKeys = new Set(recent56.map(({ date }) => {
       const weekStart = new Date(date);
-      weekStart.setDate(date.getDate() - date.getDay());
+      // settimana lun→dom: lunedì = ancora della settimana
+      weekStart.setDate(date.getDate() - ((date.getDay() + 6) % 7));
       return `${weekStart.getFullYear()}-${weekStart.getMonth()}-${weekStart.getDate()}`;
     }));
 
