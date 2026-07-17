@@ -18,7 +18,6 @@ const DashboardView  = lazy(() => import("./components/DashboardView").then((m) 
 const TrainingView   = lazy(() => import("./components/TrainingView").then((m) => ({ default: m.TrainingView })));
 const ProfileView    = lazy(() => import("./components/ProfileView").then((m) => ({ default: m.ProfileView })));
 const StatisticsView = lazy(() => import("./components/statistics/StatisticsView").then((m) => ({ default: m.StatisticsView })));
-const StatisticsV2View = lazy(() => import("./components/statisticsv2/StatisticsV2View").then((m) => ({ default: m.StatisticsV2View })));
 const RoutesView     = lazy(() => import("./components/RoutesView").then((m) => ({ default: m.RoutesView })));
 const ActivitiesView = lazy(() => import("./components/ActivitiesView").then((m) => ({ default: m.ActivitiesView })));
 const RunnerDnaView  = lazy(() => import("./components/RunnerDnaView").then((m) => ({ default: m.RunnerDnaView })));
@@ -79,7 +78,6 @@ function AppContent() {
     { path: "/training",    label: t("nav.training")   },
     { path: "/activities",  label: t("nav.activities") },
     { path: "/statistics",  label: t("nav.statistics") },
-    { path: "/statisticsv2", label: t("nav.statisticsV2") },
     { path: "/runner-dna",  label: t("nav.runnerDna")  },
     { path: "/ranking",     label: t("nav.ranking")    },
     { path: "/badges",      label: t("nav.badges")     },
@@ -199,7 +197,6 @@ function AppContent() {
                 <Route path="/badges"           element={<BadgesView />} />
                 <Route path="/gamification-v1"  element={<GamificationV1 />} />
                 <Route path="/statistics"       element={<StatisticsView />} />
-                <Route path="/statisticsv2"     element={<StatisticsV2View />} />
                 <Route path="/profile"          element={<ProfileView />} />
                 <Route path="/recovery"         element={<ComingSoonView label="Recovery" />} />
                 <Route path="/biometrics"       element={<ComingSoonView label="Biometrics" />} />
