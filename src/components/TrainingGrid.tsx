@@ -1133,7 +1133,7 @@ export function TrainingGrid() {
   // Data di partenza del piano Sub-20 (prima seduta), scelta dall'utente.
   const [sub20StartDate, setSub20StartDate] = useState<string>(SUB20_DEFAULT_START);
   // Bozza dal date-picker: si applica solo premendo "Ricalcola piano".
-  const [, setSub20StartDraft] = useState<string>(SUB20_DEFAULT_START);
+  const [sub20StartDraft, setSub20StartDraft] = useState<string>(SUB20_DEFAULT_START);
 
   const goToDay = (date: Date, fromView: 'Week' | 'Month' | 'Year') => {
     setCurrentDate(date);
