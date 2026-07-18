@@ -2031,161 +2031,126 @@ def _build_vdot_progression(current: float, target: float, weeks_total: int,
     return progression
 
 
-def _tp_quality_session(phase: str, goal: str, dist_km: float,
+def _tp_ripetute_session(phase: str, goal: str, dist_km: float,
                          paces: dict, week_vdot: float,
-                         target_time_str: str = "") -> tuple:
-    """Return (type, title, description, pace) for the weekly quality session.
+                         target_time_str: str = "", week_number: int = 1,
+                         heat_extra_sec: int = 0, temp_note: str = "") -> tuple:
+    """Seduta RIPETUTE del martedì. Sempre su percorso pianeggiante (mai salite).
 
-    Sessions are designed per Daniels' phase philosophy:
-    - Base: only easy running, build aerobic enzymes + capillaries
-    - Sviluppo: tempo/threshold work, raise lactate turnpoint
-    - Intensità: VO2max intervals, raise aerobic ceiling
-    - Specifico: race-pace practice, neuromuscular + psychological
-    - Taper/Gara: reduced volume, maintain sharpness
+    Alterna settimana per settimana:
+    - settimane dispari → ripetute classiche VDOT, fase-specifiche (Daniels)
+    - settimane pari    → Protocollo Norvegese 4×4 (Helgerud et al. 2007):
+      4×4 min @ 90–95% FCmax con 3 min recupero — +7.2% VO₂max in 8 settimane.
+
+    I ritmi nel dict `paces` sono già adattati alla temperatura attesa;
+    `heat_extra_sec` serve solo a correggere il ritmo gara calcolato qui.
     """
     ep = paces.get("easy") or "6:00"
-    mp = paces.get("marathon") or "5:20"
     tp = paces.get("threshold") or "5:00"
     ip = paces.get("interval") or "4:30"
     rp = paces.get("repetition") or "4:10"
     race_dist = RACE_DISTANCES.get(goal, 5.0)
-    # Race finish TIME (for context) and the per-km race PACE (the real target).
-    race_pace = _vdot_to_race_time(week_vdot, race_dist)
-    _race_secs = _vdot_to_race_seconds(week_vdot, race_dist)
-    daniels_race_pace_km = _format_secs(int(round(_race_secs / race_dist))) if _race_secs else tp
-    # Race-pace sessions train the GOAL pace the athlete is building toward
-    # (target_time / distance), not the optimistic pure-Daniels pace. This is
-    # what a coach prescribes in the Specific phase and matches the runner's
-    # own plan. Falls back to the Daniels pace when no goal time is set.
+    # Ritmo gara = tempo obiettivo / distanza (fallback: Daniels dal VDOT),
+    # corretto per il caldo come gli altri ritmi di qualità.
     _goal_min = _parse_time_str(target_time_str) if target_time_str else None
-    goal_race_pace_km = (
-        _format_secs(int(round(_goal_min * 60 / race_dist)))
-        if _goal_min and _goal_min > 0 else None
-    )
-    race_pace_km = goal_race_pace_km or daniels_race_pace_km
+    if _goal_min and _goal_min > 0:
+        race_pace_km = _format_secs(int(round(_goal_min * 60 / race_dist)) + heat_extra_sec)
+    else:
+        _race_secs = _vdot_to_race_seconds(week_vdot, race_dist)
+        race_pace_km = _format_secs(int(round(_race_secs / race_dist)) + heat_extra_sec) if _race_secs else tp
+
+    # Ritmo norvegese: 90–95% FCmax ≈ a metà tra soglia e I-pace
+    _tps, _ips = _tp_pace_secs(tp), _tp_pace_secs(ip)
+    npace = _format_secs((_tps + _ips) // 2) if _tps and _ips else ip
+
+    if phase in ("Taper", "Gara"):
+        n = 4 if phase == "Taper" else 3
+        return ("intervals", "Ripetute Sciolte Pre-Gara",
+                f"2 km warm-up @ {ep}/km · {n}×200 m @ {rp}/km con recupero completo · "
+                f"1 km defaticamento. Solo reattività, zero fatica accumulata. "
+                f"Percorso pianeggiante.{temp_note}", rp)
+
+    if week_number % 2 == 0:
+        return ("intervals", "Norvegese 4×4",
+                f"10 min riscaldamento @ {ep}/km · 4×4 min @ 90–95% FCmax (≈{npace}/km) "
+                f"con 3 min recupero in corsa blanda · 10 min defaticamento. "
+                f"Protocollo Helgerud 2007: +7% VO₂max in 8 settimane. Col caldo guida "
+                f"con la frequenza cardiaca, non col passo. Percorso pianeggiante.{temp_note}", npace)
 
     if phase == "Base Aerobica":
-        if int(dist_km * 10) % 3 == 0:
-            return ("easy", "Fartlek Collinare",
-                    f"Corsa facile {round(dist_km, 1)} km @ {ep}/km su percorso ondulato. "
-                    f"Aumenta leggermente lo sforzo sulle salite (passo {mp}/km) e recupera in discesa. "
-                    f"Obiettivo: forza muscolare e condizionamento aerobico.", ep)
-        return ("easy", "Corsa Aerobica Progressiva",
-                f"Corsa a ritmo conversazionale con ultimi 2 km leggermente più veloci. "
-                f"Passo {ep}/km → chiudi a passo {mp}/km. Sforzo 4–5/10. "
-                f"Obiettivo: costruire base mitocondriale e capillare.", ep)
+        return ("intervals", "Ripetute Brevi Introduttive",
+                f"2 km warm-up @ {ep}/km · 8×300 m @ {rp}/km con 90 s recupero camminando · "
+                f"2 km defaticamento. Reattività e tecnica senza stress metabolico. "
+                f"Percorso pianeggiante.{temp_note}", rp)
 
     if phase == "Sviluppo":
-        if goal in ("Marathon", "Half Marathon"):
-            return ("tempo", "Corsa a Soglia Continua",
-                    f"15 min warm-up @ {ep}/km · 25 min continui @ {tp}/km (soglia lattacida ~88% VO₂max) · "
-                    f"10 min defaticamento. VDOT settimana: {week_vdot}.", tp)
-        
-        # 5K e 10K includono corse in salita per la potenza
-        if int(dist_km * 10) % 2 == 0:
-            return ("intervals", "Ripetute Medie in Salita",
-                    f"2 km warm-up · 8×60 s in salita (pendenza 6–8%) a sforzo equivalente a {ip}/km · "
-                    f"Recupero passo gara in discesa · 2 km defaticamento. Potenzia la forza specifica.", ip)
-        
-        return ("tempo", "Tempo Run",
-                f"2 km warm-up · 20 min continui @ {tp}/km (soglia ~88% VO₂max) · "
-                f"2 km defaticamento. VDOT settimana: {week_vdot}.", tp)
+        return ("intervals", "Ripetute 600 m",
+                f"2 km warm-up @ {ep}/km · 6×600 m @ {ip}/km con 90 s jog · "
+                f"2 km defaticamento. Sviluppo della potenza aerobica. VDOT {week_vdot}. "
+                f"Percorso pianeggiante.{temp_note}", ip)
 
     if phase.startswith("Intensit"):
-        if goal == "5K":
-            return ("intervals", "VO₂max 400 m",
-                    f"2 km warm-up · 12×400 m @ {ip}/km (95–100% VO₂max) con 90 s jog recupero · "
-                    f"2 km defaticamento. VDOT target: {week_vdot}.", ip)
-        if goal == "10K":
-            return ("intervals", "VO₂max 800 m",
-                    f"2 km warm-up · 6×800 m @ {ip}/km (95–100% VO₂max) con 2 min jog · "
-                    f"2 km defaticamento. VDOT target: {week_vdot}.", ip)
-        if goal == "Half Marathon":
-            return ("intervals", "Cruise Intervals",
-                    f"2 km warm-up · 4×1600 m @ {tp}/km (~88% VO₂max) con 60 s recupero · "
-                    f"2 km defaticamento. VDOT target: {week_vdot}.", tp)
-        return ("intervals", "Marathon VO₂max",
-                f"2 km warm-up · 5×1000 m @ {ip}/km con 3 min jog · "
-                f"2 km defaticamento. VDOT target: {week_vdot}.", ip)
+        reps = {"5K": "5×1000 m", "10K": "6×1000 m", "Half Marathon": "5×1200 m",
+                "Marathon": "5×1000 m"}.get(goal, "5×1000 m")
+        return ("intervals", f"Ripetute {reps.split('×')[1]}",
+                f"2 km warm-up @ {ep}/km · {reps} @ {ip}/km (95–100% VO₂max) con 2½ min jog · "
+                f"2 km defaticamento. Massimo stimolo VO₂max. VDOT {week_vdot}. "
+                f"Percorso pianeggiante.{temp_note}", ip)
 
-    if phase == "Specifico":
-        finish = f" (gara ~{race_pace})" if race_pace else ""
-        if goal == "5K":
-            return ("intervals", "Race Pace 5K",
-                    f"2 km warm-up · 3×1600 m a ritmo gara 5K {race_pace_km}/km{finish} con 2 min recupero · "
-                    f"2 km defaticamento. Simulazione dello sforzo gara.", race_pace_km)
-        if goal == "10K":
-            return ("intervals", "Race Pace 10K",
-                    f"2 km warm-up · 4×2000 m a ritmo gara 10K {race_pace_km}/km{finish} con 90 s recupero · "
-                    f"2 km defaticamento. Abituarsi al ritmo gara.", race_pace_km)
-        if goal == "Half Marathon":
-            km_spec = round(min(dist_km, 14), 1)
-            return ("tempo", "Race Pace HM",
-                    f"2 km warm-up · {km_spec} km continui a ritmo gara HM {race_pace_km}/km{finish} · "
-                    f"2 km defaticamento.", race_pace_km)
-        mp_km = round(min(dist_km, 25), 1)
-        return ("tempo", "Simulazione Maratona",
-                f"2 km warm-up · {mp_km} km a ritmo gara maratona {race_pace_km}/km{finish} · "
-                f"2 km defaticamento.", race_pace_km)
-
-    if phase == "Taper":
-        return ("easy", "Easy + Strides",
-                f"Corsa facile {round(dist_km, 1)} km @ {ep}/km con 4×100 m progressivi finale. "
-                f"Mantieni le gambe reattive, VDOT = {week_vdot}.", ep)
-
-    # Gara
-    return ("easy", "Attivazione Pre-Gara",
-            f"Corsa leggera {round(dist_km, 1)} km @ {ep}/km. Gambe fresche per la gara.", ep)
+    # Specifico: memoria del ritmo gara
+    reps = {"5K": "3×1600 m", "10K": "4×2000 m", "Half Marathon": "3×3000 m",
+            "Marathon": "3×3000 m"}.get(goal, "3×1600 m")
+    return ("intervals", "Ripetute a Ritmo Gara",
+            f"2 km warm-up @ {ep}/km · {reps} @ {race_pace_km}/km (ritmo gara) con 2 min recupero · "
+            f"2 km defaticamento. Adattamento neuromuscolare e mentale al ritmo obiettivo. "
+            f"Percorso pianeggiante.{temp_note}", race_pace_km)
 
 
-def _tp_secondary_quality_session(phase: str, goal: str, dist_km: float,
-                                   paces: dict, week_vdot: float) -> tuple:
-    """Return (type, title, description, pace) for a SECONDARY quality session (Thursday).
+def _tp_soglia_session(phase: str, goal: str, dist_km: float,
+                       paces: dict, week_vdot: float,
+                       temp_note: str = "") -> tuple:
+    """Seduta SOGLIA del giovedì (T-pace ~88% VO₂max). Percorso pianeggiante.
 
-    This session complements the main quality session (Tuesday) without overloading.
-    Daniels' principle: never two hard days in a row, keep it lighter than main session.
+    Complementare alle ripetute del martedì (Daniels: mai due giorni duri
+    consecutivi — Mer è riposo). Il volume di soglia cresce con le fasi.
     """
     ep = paces.get("easy") or "6:00"
-    mp = paces.get("marathon") or "5:20"
     tp = paces.get("threshold") or "5:00"
-    ip = paces.get("interval") or "4:30"
-    rp = paces.get("repetition") or "4:10"
 
     if phase == "Base Aerobica":
-        # Base phase: progressive run with some pickups, not truly "quality"
-        return ("easy", "Corsa Progressiva + Allunghi",
-                f"Corsa facile {round(dist_km, 1)} km @ {ep}/km. Ultimi 3 km più veloci (passo {mp}/km) "
-                f"+ 4×80 m progressivi finali. Obiettivo: mantenere reattività delle gambe senza stress.", ep)
+        return ("tempo", "Soglia Introduttiva",
+                f"2 km warm-up @ {ep}/km · 2×8 min @ {tp}/km con 2 min recupero jog · "
+                f"2 km defaticamento. Primo contatto col ritmo soglia. "
+                f"Percorso pianeggiante.{temp_note}", tp)
 
     if phase == "Sviluppo":
-        # Short tempo intervals at slightly above threshold — builds speed endurance
-        return ("tempo", "Tempo Intervals Corti",
-                f"2 km warm-up @ {ep}/km · 3×6 min @ {tp}/km (soglia) con 2 min recupero jog · "
-                f"2 km defaticamento. Totale 20 min di lavoro di soglia. VDOT: {week_vdot}.", tp)
+        return ("tempo", "Tempo Run 20 min",
+                f"2 km warm-up @ {ep}/km · 20 min continui @ {tp}/km (soglia ~88% VO₂max) · "
+                f"2 km defaticamento. Alza il turnpoint del lattato. VDOT {week_vdot}. "
+                f"Percorso pianeggiante.{temp_note}", tp)
 
     if phase.startswith("Intensit"):
-        # Short VO2max intervals — quick, sharp, not exhausting
-        return ("intervals", "Ripetute Brevi VO₂max",
-                f"2 km warm-up @ {ep}/km · 8×400 m @ {ip}/km con 60 s jog recupero · "
-                f"2 km defaticamento. Obiettivo: stimolare il massimo consumo d'ossigeno. VDOT: {week_vdot}.", ip)
+        return ("tempo", "Cruise Intervals 2×12 min",
+                f"2 km warm-up @ {ep}/km · 2×12 min @ {tp}/km con 2 min recupero jog · "
+                f"2 km defaticamento. Volume di soglia mantenendo la qualità. VDOT {week_vdot}. "
+                f"Percorso pianeggiante.{temp_note}", tp)
 
     if phase == "Specifico":
-        # Race pace intervals — shorter than main session, focus on form
-        race_pace = _vdot_to_race_time(week_vdot, RACE_DISTANCES.get(goal, 5.0))
-        rp_str = race_pace or tp
-        return ("intervals", "Race Pace Intervals",
-                f"2 km warm-up @ {ep}/km · 4×800 m a ritmo gara (target {rp_str}) con 90 s recupero · "
-                f"2 km defaticamento. Lavoro sulla tecnica e memoria del ritmo gara. VDOT: {week_vdot}.", ip)
+        km_ct = {"5K": 4, "10K": 6, "Half Marathon": 8, "Marathon": 10}.get(goal, 5)
+        return ("tempo", f"Tempo Specifico {km_ct} km",
+                f"2 km warm-up @ {ep}/km · {km_ct} km continui @ {tp}/km · "
+                f"2 km defaticamento. Tenuta di ritmo nella fase specifica. "
+                f"Percorso pianeggiante.{temp_note}", tp)
 
     if phase == "Taper":
-        # Light strides only — keep legs sharp, no fatigue
-        return ("easy", "Easy + 4×100 m Strides",
-                f"Corsa facile {round(dist_km, 1)} km @ {ep}/km con 4×100 m progressivi. "
-                f"Gambe fresche in vista della gara. VDOT = {week_vdot}.", ep)
+        return ("tempo", "Soglia Breve",
+                f"2 km warm-up @ {ep}/km · 12 min @ {tp}/km · 1 km defaticamento. "
+                f"Mantieni l'intensità, taglia il volume (Mujika & Padilla 2003).{temp_note}", tp)
 
-    # Gara week: minimal activation
-    return ("easy", "Activazione Leggera",
-            f"Corsa leggera {round(dist_km, 1)} km @ {ep}/km. No allunghi — conserva energie per la gara.", ep)
+    # Gara
+    return ("tempo", "Attivazione Soglia",
+            f"15 min facili @ {ep}/km con 8 min @ {tp}/km inseriti. "
+            f"Gambe pronte, zero fatica per la gara.{temp_note}", tp)
 
 
 def _tp_strength_exercises(phase: str, day_type: str, week_in_phase: int = 0) -> list:
@@ -2264,8 +2229,8 @@ def _tp_strength_exercises(phase: str, day_type: str, week_in_phase: int = 0) ->
          "note": "Caviglie rigide, contatto minimo. Carica ciclo stiramento-accorciamento. Base di tutto."},
         {"name": "Single Leg Hops sul posto", "sets": 3, "reps": "10/lato",
          "note": "Forza reattiva unilaterale. Stiffness caviglia specifica per la corsa."},
-        {"name": "Sprint in Salita 6-8%", "sets": 6, "reps": "10 s",
-         "note": "Recupero 90 s camminata. Potenza neuromuscolare a basso impatto articolare."},
+        {"name": "Sprint in Piano 60 m", "sets": 6, "reps": "60 m",
+         "note": "Recupero 90 s camminata. Potenza neuromuscolare su percorso piano (niente salite)."},
     ]
 
     # ── Plyometrics MEDIA intensità — Fase SVILUPPO ───────────────────────────
@@ -2277,8 +2242,8 @@ def _tp_strength_exercises(phase: str, day_type: str, week_in_phase: int = 0) ->
          "note": "Forza reattiva orizzontale. Ampiezza falcata. Recupero 3 min completo."},
         {"name": "Single Leg Hops in avanti", "sets": 3, "reps": "8/lato",
          "note": "Potenza propulsiva unilaterale specifica per la corsa."},
-        {"name": "Sprint in Salita 6-8%", "sets": 8, "reps": "15 s",
-         "note": "Recupero 2 min. Forma perfetta. Frequenza elevata."},
+        {"name": "Sprint in Piano 80 m", "sets": 8, "reps": "80 m",
+         "note": "Recupero 2 min. Forma perfetta, frequenza elevata. Percorso piano."},
     ]
 
     # ── Plyometrics ALTA intensità — Fase INTENSITÀ ───────────────────────────
@@ -2292,16 +2257,16 @@ def _tp_strength_exercises(phase: str, day_type: str, week_in_phase: int = 0) ->
          "note": "Potenza reattiva unilaterale massima. Contatto terra < 200 ms."},
         {"name": "Bounding progressivo", "sets": 4, "reps": "40 m",
          "note": "Massima spinta + frequenza di falcata. Simula sforzo neuromuscolare di gara."},
-        {"name": "Sprint in Salita 8%", "sets": 6, "reps": "20 s",
-         "note": "Recupero 3 min completo. Potenza massima, forma impeccabile."},
+        {"name": "Sprint in Piano 100 m", "sets": 6, "reps": "100 m",
+         "note": "Recupero 3 min completo. Potenza massima, forma impeccabile. Percorso piano."},
     ]
 
     # ── Plyometrics TAPER — attivazione pre-gara ──────────────────────────────
     plyo_activation = [
         {"name": "Pogo Jumps", "sets": 2, "reps": "15 rip",
          "note": "Priming neuromuscolare. Mantiene stiffness senza accumulare fatica."},
-        {"name": "Sprint in Salita", "sets": 4, "reps": "8 s",
-         "note": "Attivazione SNC pre-gara. Recupero completo tra le ripetizioni."},
+        {"name": "Sprint Brevi in Piano", "sets": 4, "reps": "50 m",
+         "note": "Attivazione SNC pre-gara. Recupero completo tra le ripetizioni. Percorso piano."},
     ]
 
     # ── Assegnazione per fase e tipo giornata ─────────────────────────────────
@@ -2361,39 +2326,36 @@ def _tp_strength_exercises(phase: str, day_type: str, week_in_phase: int = 0) ->
 
 def _tp_build_sessions(week_start, week_km: float, phase: str, goal: str,
                        paces: dict, week_vdot: float, plan_mode: str = "balanced",
-                       target_time_str: str = "") -> list:
-    """Build 7-day session list for a training week."""
+                       target_time_str: str = "", week_number: int = 1,
+                       expected_temp_c: Optional[float] = None,
+                       heat_extra_sec: int = 0) -> list:
+    """Build 7-day session list for a training week.
+
+    Struttura FISSA a 4 sedute (mai corse in salita, tutto pianeggiante):
+    - Lun: lento (easy)
+    - Mar: ripetute — alternate col Protocollo Norvegese 4×4 (settimane pari)
+    - Gio: soglia (tempo)
+    - Sab: lento lungo
+    Mer/Ven/Dom: riposo + forza. I ritmi in `paces` sono già adattati alla
+    temperatura attesa del mese (`expected_temp_c` / `heat_extra_sec`).
+    """
     from datetime import timedelta
     day_names = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
     ep = paces.get("easy") or "6:00"
 
-    # Day layout depends on goal distance (more sessions for longer races)
-    if plan_mode == "conservative":
-        if goal == "5K":
-            dist_map = {0: 0.25, 1: 0.30, 5: 0.45}
-        elif goal == "10K":
-            dist_map = {0: 0.24, 1: 0.26, 3: 0.18, 5: 0.32}
-        elif goal == "Half Marathon":
-            dist_map = {0: 0.20, 1: 0.20, 3: 0.15, 5: 0.45}
-        else:
-            dist_map = {0: 0.18, 1: 0.16, 2: 0.12, 3: 0.14, 5: 0.40}
-    elif plan_mode == "aggressive":
-        if goal == "5K":
-            dist_map = {0: 0.18, 1: 0.25, 2: 0.12, 3: 0.18, 5: 0.27}
-        elif goal == "10K":
-            dist_map = {0: 0.17, 1: 0.22, 2: 0.13, 3: 0.18, 4: 0.10, 5: 0.20}
-        elif goal == "Half Marathon":
-            dist_map = {0: 0.16, 1: 0.18, 2: 0.12, 3: 0.16, 4: 0.08, 5: 0.30}
-        else:
-            dist_map = {0: 0.14, 1: 0.14, 2: 0.12, 3: 0.14, 4: 0.12, 5: 0.34}
-    elif goal == "5K":
-        dist_map = {0: 0.20, 1: 0.25, 3: 0.20, 5: 0.35}
-    elif goal == "10K":
-        dist_map = {0: 0.20, 1: 0.22, 2: 0.13, 3: 0.18, 5: 0.27}
-    elif goal == "Half Marathon":
-        dist_map = {0: 0.18, 1: 0.18, 2: 0.12, 3: 0.17, 5: 0.35}
-    else:  # Marathon
-        dist_map = {0: 0.16, 1: 0.14, 2: 0.12, 3: 0.14, 4: 0.10, 5: 0.34}
+    # Ripartizione km sui 4 giorni: più peso al lungo per le distanze lunghe
+    dist_maps = {
+        "5K":            {0: 0.22, 1: 0.24, 3: 0.22, 5: 0.32},
+        "10K":           {0: 0.21, 1: 0.23, 3: 0.21, 5: 0.35},
+        "Half Marathon": {0: 0.19, 1: 0.21, 3: 0.20, 5: 0.40},
+        "Marathon":      {0: 0.18, 1: 0.20, 3: 0.20, 5: 0.42},
+    }
+    dist_map = dist_maps.get(goal, dist_maps["10K"])
+
+    temp_note = ""
+    if expected_temp_c is not None and heat_extra_sec >= 4:
+        temp_note = (f" ☀️ ~{round(expected_temp_c)}°C attesi nel periodo: ritmi già adattati "
+                     f"(+{heat_extra_sec} s/km sulle qualità). Preferisci le ore fresche e idratati.")
 
     sessions = []
     for day_offset in range(7):
@@ -2421,18 +2383,22 @@ def _tp_build_sessions(week_start, week_km: float, phase: str, goal: str,
 
         dist_km = round(week_km * dist_map[day_offset], 1)
 
-        if day_offset == 1:  # Tuesday = MAIN quality session
-            s_type, title, desc, pace = _tp_quality_session(phase, goal, dist_km, paces, week_vdot, target_time_str)
-        elif day_offset == 3 and plan_mode != "conservative":  # Thursday = SECONDARY quality session (shorter intervals/tempo)
-            s_type, title, desc, pace = _tp_secondary_quality_session(phase, goal, dist_km, paces, week_vdot)
-        elif day_offset == 5:  # Saturday = long run
-            s_type, title, pace = "long", "Corsa Lunga", ep
-            desc = (f"Corsa lunga {dist_km} km a passo {ep}/km. Sforzo 5–6/10. "
-                    f"Costruisci resistenza aerobica e fibre lente (tipo I). Idratazione costante.")
-        else:
-            s_type, title, pace = "easy", "Corsa Facile", ep
-            desc = (f"Corsa facile {dist_km} km a passo {ep}/km. "
-                    f"Sforzo percepito 3–4/10. Frequenza cardiaca Z1–Z2.")
+        if day_offset == 1:  # Martedì = RIPETUTE (alternate col Norvegese 4×4)
+            s_type, title, desc, pace = _tp_ripetute_session(
+                phase, goal, dist_km, paces, week_vdot, target_time_str,
+                week_number, heat_extra_sec, temp_note)
+        elif day_offset == 3:  # Giovedì = SOGLIA
+            s_type, title, desc, pace = _tp_soglia_session(phase, goal, dist_km, paces, week_vdot, temp_note)
+        elif day_offset == 5:  # Sabato = LENTO LUNGO
+            s_type, title, pace = "long", "Lento Lungo", ep
+            hydro = " Col caldo: idratazione ogni 20 min." if heat_extra_sec >= 6 else " Idratazione costante."
+            desc = (f"Lento lungo {dist_km} km a passo {ep}/km. Sforzo 5–6/10, percorso pianeggiante. "
+                    f"Costruisci resistenza aerobica e fibre lente (tipo I).{hydro}")
+        else:  # Lunedì = LENTO
+            s_type, title, pace = "easy", "Lento", ep
+            desc = (f"Corsa lenta {dist_km} km a passo {ep}/km. "
+                    f"Sforzo percepito 3–4/10, FC Z1–Z2. Percorso pianeggiante, "
+                    f"recupero attivo tra le sedute di qualità.")
 
         try:
             pp = pace.split(":")
@@ -2540,14 +2506,105 @@ def _calibrate_plan_volume(goal_race: str, profile_max_weekly_km: float,
     return round(cap, 1), round(start_km, 1)
 
 
+# ── Temperatura attesa e adattamento ritmi al caldo ──────────────────────────
+# Climatologia di Roma nelle ore tipiche di corsa (fallback quando lo storico
+# dell'atleta non ha abbastanza campioni meteo per quel mese).
+ROME_MONTH_TEMP_C = [9.0, 10.0, 13.0, 16.0, 20.0, 25.0, 28.0, 28.0, 24.0, 19.0, 13.0, 10.0]
+
+
+def _tp_pace_secs(p) -> Optional[int]:
+    """'4:30' → 270 secondi (None se non parsabile)."""
+    try:
+        mm, ss = str(p).split(":")
+        v = int(mm) * 60 + int(ss)
+        return v if v > 0 else None
+    except Exception:
+        return None
+
+
+def _tp_month_temps_from_runs(runs) -> dict:
+    """Mediana della temperatura per mese dallo storico corse dell'atleta.
+
+    Usa apparent_temperature (feels-like) quando disponibile: è ciò che conta
+    per la termoregolazione. Serve ≥3 campioni/mese, altrimenti il mese usa
+    la climatologia di Roma.
+    """
+    by_month: dict = {}
+    for r in runs or []:
+        t = r.get("apparent_temperature")
+        if t is None:
+            t = r.get("temperature")
+        try:
+            t = float(t)
+        except (TypeError, ValueError):
+            continue
+        if not (-15.0 <= t <= 45.0):
+            continue
+        try:
+            m = int(str(r.get("date", ""))[5:7])
+        except ValueError:
+            continue
+        if 1 <= m <= 12:
+            by_month.setdefault(m, []).append(t)
+    out: dict = {}
+    for m, vals in by_month.items():
+        if len(vals) >= 3:
+            vals.sort()
+            out[m] = round(vals[len(vals) // 2], 1)
+    return out
+
+
+def _tp_expected_temp(month: int, month_temps: Optional[dict] = None) -> float:
+    if month_temps and month in month_temps:
+        return float(month_temps[month])
+    return ROME_MONTH_TEMP_C[max(1, min(12, month)) - 1]
+
+
+def _tp_heat_extra_sec(temp_c: Optional[float]) -> int:
+    """Secondi/km extra sui ritmi di qualità per il caldo.
+
+    Modello a tratti (Ely et al. 2007 + pratica coaching): nessun effetto ≤15°C;
+    +1.2 s/km/°C fino a 22°C; +1.8 s/km/°C tra 22–28°C; +2.5 s/km/°C oltre.
+    Es: 25°C → ~+14 s/km (5×1000 @ 3:55 diventa @ ~4:09); 30°C → ~+24 s/km.
+    """
+    if temp_c is None or temp_c <= 15.0:
+        return 0
+    extra = (min(temp_c, 22.0) - 15.0) * 1.2
+    if temp_c > 22.0:
+        extra += (min(temp_c, 28.0) - 22.0) * 1.8
+    if temp_c > 28.0:
+        extra += (temp_c - 28.0) * 2.5
+    return int(round(extra))
+
+
+def _tp_apply_heat_to_paces(paces: dict, extra_sec: int) -> dict:
+    """Applica la correzione caldo: piena sulle qualità, ~60% sui ritmi lenti."""
+    if extra_sec <= 0:
+        return dict(paces)
+    out: dict = {}
+    for k, v in (paces or {}).items():
+        s = _tp_pace_secs(v)
+        if s is None:
+            out[k] = v
+            continue
+        shift = extra_sec if k in ("interval", "repetition", "threshold", "marathon") else int(round(extra_sec * 0.6))
+        out[k] = _format_secs(s + shift)
+    return out
+
+
 def _generate_plan_weeks(goal_race: str, weeks_total: int, max_weekly_km: float,
                           current_vdot: float, target_vdot: float,
                           athlete_id, target_time_str: str,
                           start_date_str: str = None,
                           plan_mode: str = "balanced",
                           history_context: Optional[dict] = None,
-                          start_weekly_km: Optional[float] = None) -> list:
-    """Generate goal-driven periodized plan with weekly VDOT progression."""
+                          start_weekly_km: Optional[float] = None,
+                          month_temps: Optional[dict] = None) -> list:
+    """Generate goal-driven periodized plan with weekly VDOT progression.
+
+    `month_temps`: mediana °C per mese dallo storico dell'atleta — ogni
+    settimana i ritmi vengono adattati alla temperatura attesa del periodo.
+    """
     from datetime import date, timedelta
 
     weeks_total = max(8, min(int(weeks_total), 32))
@@ -2634,7 +2691,20 @@ def _generate_plan_weeks(goal_race: str, weeks_total: int, max_weekly_km: float,
             week_start = current_date
             week_end = current_date + timedelta(days=6)
 
-            sessions = _tp_build_sessions(week_start, week_km, phase_name, goal_race, paces, wv, plan_mode, target_time_str)
+            # Temperatura attesa della settimana → adattamento ritmi al caldo
+            exp_temp = _tp_expected_temp((week_start + timedelta(days=3)).month, month_temps)
+            heat_extra = _tp_heat_extra_sec(exp_temp)
+            paces = _tp_apply_heat_to_paces(paces, heat_extra)
+
+            sessions = _tp_build_sessions(
+                week_start, week_km, phase_name, goal_race, paces, wv,
+                plan_mode, target_time_str, week_number=week_number,
+                expected_temp_c=exp_temp, heat_extra_sec=heat_extra)
+
+            phase_desc = phase_descs.get(phase_name, "")
+            if week_number == 1:
+                phase_desc += (f" Si parte da {week_km} km/settimana, calibrati sul tuo volume recente; "
+                               f"progressione ≤10% a settimana (regola del 10%).")
 
             weeks.append({
                 "athlete_id": athlete_id,
@@ -2642,9 +2712,11 @@ def _generate_plan_weeks(goal_race: str, weeks_total: int, max_weekly_km: float,
                 "week_start": week_start.isoformat(),
                 "week_end": week_end.isoformat(),
                 "phase": phase_name,
-                "phase_description": phase_descs.get(phase_name, ""),
+                "phase_description": phase_desc,
                 "target_km": week_km,
                 "target_vdot": wv,
+                "expected_temp_c": round(exp_temp, 1),
+                "heat_pace_adj_sec": heat_extra,
                 "is_recovery_week": is_recovery,
                 "sessions": sessions,
                 "goal_race": goal_race,
@@ -2816,6 +2888,8 @@ async def generate_training_plan(request: Request):
 
     # ── Generate the plan ────────────────────────────────────────────────────
     max_weekly_km, start_weekly_km = _calibrate_plan_volume(goal_race, max_weekly_km, history_context)
+    # Climatologia personale: mediana °C per mese dalle corse reali dell'atleta
+    month_temps = _tp_month_temps_from_runs(all_runs)
     weeks = _generate_plan_weeks(
         goal_race, suggested_weeks, max_weekly_km,
         current_vdot, effective_target_vdot, athlete_id, target_time_str,
@@ -2823,6 +2897,7 @@ async def generate_training_plan(request: Request):
         plan_mode=plan_mode,
         history_context=history_context,
         start_weekly_km=start_weekly_km,
+        month_temps=month_temps,
     )
 
     await db.training_plan.delete_many(q)
@@ -2859,6 +2934,8 @@ async def generate_training_plan(request: Request):
         "ok": True,
         "dry_run": False,
         "weeks_generated": len(weeks),
+        "start_weekly_km": start_weekly_km,
+        "peak_weekly_km": max_weekly_km,
         "current_vdot": current_vdot,
         "target_vdot": effective_target_vdot,
         "peak_vdot": peak_vdot,

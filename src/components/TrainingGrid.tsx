@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer, Trophy, XCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer, XCircle } from "lucide-react";
 import { useApi, invalidateCache } from "../hooks/useApi";
 import { API_CACHE } from "../hooks/apiCacheKeys";
 import {
@@ -10,7 +10,7 @@ import {
 } from "../api";
 import type { Session, TrainingPlanResponse, AdaptAdaptation } from "../types/api";
 import {
-  SUB20_META, SUB20_LEGEND, SUB20_DEFAULT_START,
+  SUB20_LEGEND, SUB20_DEFAULT_START,
   buildSub20Sessions, computeSub20Adaptations, sub20RaceDate,
 } from "../data/sub20Plan";
 
@@ -1127,11 +1127,13 @@ export function TrainingGrid() {
   const [previousView, setPreviousView] = useState<'Week' | 'Month' | 'Year' | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showAdaptModal, setShowAdaptModal] = useState(false);
-  const [showSub20, setShowSub20] = useState(false);
+  // Piano Sub-20: la UI è disattivata (resta solo "Genera Piano"), ma la
+  // macchina interna rimane per riattivarla in futuro.
+  const [showSub20] = useState(false);
   // Data di partenza del piano Sub-20 (prima seduta), scelta dall'utente.
   const [sub20StartDate, setSub20StartDate] = useState<string>(SUB20_DEFAULT_START);
   // Bozza dal date-picker: si applica solo premendo "Ricalcola piano".
-  const [sub20StartDraft, setSub20StartDraft] = useState<string>(SUB20_DEFAULT_START);
+  const [, setSub20StartDraft] = useState<string>(SUB20_DEFAULT_START);
 
   const goToDay = (date: Date, fromView: 'Week' | 'Month' | 'Year') => {
     setCurrentDate(date);
@@ -1175,19 +1177,6 @@ export function TrainingGrid() {
       return a && a.pace && a.pace !== base.target_pace ? { ...base, target_pace: a.pace } : base;
     }
     return sessionMap[key];
-  };
-
-  // Entrando nel piano Sub-20, salta alla settimana di partenza (vista Mese).
-  const toggleSub20 = () => {
-    setShowSub20((v) => {
-      const nv = !v;
-      if (nv) {
-        const [y, m, d] = sub20StartDate.split("-").map(Number);
-        setCurrentDate(new Date(y, m - 1, d));
-        setView("Month");
-      }
-      return nv;
-    });
   };
 
   // ── Esiti sedute Sub-20 (persistenti su DB) ──
@@ -1684,83 +1673,17 @@ export function TrainingGrid() {
       <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-white">{t("sections.trainingMenu")}</h1>
-          {showSub20 ? (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-gray-400 bg-[#1E1E1E] border border-[#2A2A2A] px-3 py-1 rounded-full">
-                {SUB20_META.weeks} sett. · {SUB20_META.phase}
-              </span>
-              <span className="text-xs text-[#C0FF00] bg-[#C0FF00]/10 border border-[#C0FF00]/20 px-3 py-1 rounded-full">
-                🎯 {SUB20_META.goalRace} in {SUB20_META.goalTime}
-              </span>
-              <label
-                className="text-xs text-gray-300 bg-[#1E1E1E] border border-[#2A2A2A] px-3 py-1 rounded-full flex items-center gap-1.5 cursor-pointer hover:border-[#C0FF00]/40 transition-colors"
-                title="Scegli il giorno di partenza, poi premi Ricalcola piano"
-              >
-                🗓️ Inizio
-                <input
-                  type="date"
-                  value={sub20StartDraft}
-                  onChange={(e) => setSub20StartDraft(e.target.value)}
-                  className="bg-transparent text-[#C0FF00] outline-none cursor-pointer [color-scheme:dark]"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={recalcSub20FromDraft}
-                disabled={sub20StartDraft === sub20StartDate}
-                className={`text-xs font-bold px-3 py-1 rounded-full border transition-colors ${
-                  sub20StartDraft === sub20StartDate
-                    ? "text-gray-600 border-[#2A2A2A] cursor-default"
-                    : "text-black bg-[#C0FF00] border-[#C0FF00] hover:brightness-110"
-                }`}
-                title="Ricostruisci il piano dalla data scelta"
-              >
-                ↻ Ricalcola piano
-              </button>
-              <span className="text-xs text-gray-400 bg-[#1E1E1E] border border-[#2A2A2A] px-3 py-1 rounded-full">
-                🏁 Gara {fmtItShort(sub20RaceDate(sub20StartDate))}
-              </span>
-            </div>
-          ) : hasPlan && (() => {
-            const firstW = planData!.weeks[0];
-            return (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 bg-[#1E1E1E] border border-[#2A2A2A] px-3 py-1 rounded-full">
-                  {planData!.weeks.length} sett. · {firstW?.phase}
-                </span>
-                {firstW?.goal_race && firstW?.target_time && (
-                  <span className="text-xs text-[#10B981] bg-[#10B981]/10 border border-[#10B981]/20 px-3 py-1 rounded-full">
-                    🎯 {firstW.goal_race} in {firstW.target_time}
-                  </span>
-                )}
-              </div>
-            );
-          })()}
         </div>
 
         <div className="flex items-center gap-4">
           <button
             type="button"
-            onClick={toggleSub20}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-black tracking-wide rounded-lg transition-colors border ${
-              showSub20
-                ? "bg-[#C0FF00] text-black border-[#C0FF00]"
-                : "bg-[#C0FF00]/10 text-[#C0FF00] border-[#C0FF00]/30 hover:bg-[#C0FF00]/20"
-            }`}
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium rounded-lg transition-colors"
           >
-            <Trophy className="w-4 h-4" />
-            kikkoderisoSub20
+            <Sparkles className="w-4 h-4" />
+            Genera Piano
           </button>
-          {!showSub20 && (
-            <button
-              type="button"
-              onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              <Sparkles className="w-4 h-4" />
-              Genera Piano
-            </button>
-          )}
 
           <div className="flex bg-[#1E1E1E] rounded-md border border-[#2A2A2A] p-1">
             {(['Day', 'Week', 'Month', 'Year'] as const).map(v => (
