@@ -486,6 +486,17 @@ interface GenerateResult {
   test_vdot?: number | null;
   plan_mode?: PlanMode | null;
   strategy_options?: StrategyOption[];
+  start_weekly_km?: number;
+  peak_weekly_km?: number;
+  recent_weekly_km?: number;
+  climate?: {
+    city: string;
+    months: { month: number; label: string; temp_c: number; heat_adj_sec: number }[];
+    race_month_label: string;
+    race_temp_c: number;
+    race_heat_adj_sec: number;
+  };
+  race_predictions_expected?: Record<string, string>;
   feasibility: {
     feasible: boolean;
     difficulty: string;
@@ -525,6 +536,18 @@ const TIME_PLACEHOLDERS: Record<string, string> = {
   "Marathon": "es. 4:10:00",
 };
 
+// Basi climatiche selezionabili (devono combaciare con CITY_MONTH_TEMP_C nel backend)
+const CLIMATE_CITIES: { id: string; label: string }[] = [
+  { id: "roma", label: "Roma (default · usa anche il tuo storico)" },
+  { id: "milano", label: "Milano" },
+  { id: "torino", label: "Torino" },
+  { id: "napoli", label: "Napoli" },
+  { id: "bologna", label: "Bologna" },
+  { id: "firenze", label: "Firenze" },
+  { id: "palermo", label: "Palermo" },
+  { id: "cagliari", label: "Cagliari" },
+];
+
 type ModalPhase = 'input' | 'calibration' | 'strategy' | 'done';
 
 function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
@@ -546,6 +569,9 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
   const [calibrationMode, setCalibrationMode] = useState<CalibrationMode>('strava');
   const [testTime, setTestTime] = useState("");
   const [cooperMeters, setCooperMeters] = useState("");
+  // Km/settimana di partenza (vuoto = auto dal volume recente) + base climatica
+  const [startKm, setStartKm] = useState("");
+  const [climateCity, setClimateCity] = useState("roma");
 
   const validateGoal = () => {
     if (!targetTime.trim()) {
@@ -569,13 +595,18 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
     return {};
   };
 
-  const baseParams = () => ({
-    goal_race: goalRace,
-    weeks_to_race: weeksToRace,
-    target_time: targetTime.trim(),
-    start_date: startDate,
-    ...testPayload(),
-  });
+  const baseParams = () => {
+    const km = Number(startKm.replace(",", "."));
+    return {
+      goal_race: goalRace,
+      weeks_to_race: weeksToRace,
+      target_time: targetTime.trim(),
+      start_date: startDate,
+      city: climateCity,
+      ...(startKm.trim() && Number.isFinite(km) && km > 0 ? { start_weekly_km: km } : {}),
+      ...testPayload(),
+    };
+  };
 
   const handleAnalyze = async () => {
     if (!validateGoal()) return;
@@ -761,6 +792,46 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
                   Di default: prossimo lunedì. Puoi scegliere qualsiasi giorno.
                 </p>
               </div>
+
+              {/* Starting weekly km (regola del 10%) */}
+              <div className="mb-5">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">
+                  Km/settimana di partenza
+                </label>
+                <input
+                  type="number"
+                  min={8}
+                  step={1}
+                  value={startKm}
+                  onChange={e => setStartKm(e.target.value)}
+                  placeholder="auto — dal tuo volume recente"
+                  className="w-full bg-[#121212] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white text-lg font-mono placeholder:text-gray-600 focus:border-[#3B82F6] focus:outline-none transition-colors"
+                />
+                <p className="text-[11px] text-gray-600 mt-1.5">
+                  Lascia vuoto per partire dal volume delle tue ultime settimane. Il piano
+                  cresce al massimo del <span className="text-gray-400 font-bold">10% a settimana</span> (regola del 10%).
+                </p>
+              </div>
+
+              {/* Climate base city */}
+              <div className="mb-5">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">
+                  Località · base climatica
+                </label>
+                <select
+                  value={climateCity}
+                  onChange={e => setClimateCity(e.target.value)}
+                  className="w-full bg-[#121212] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white focus:border-[#3B82F6] focus:outline-none transition-colors [color-scheme:dark]"
+                >
+                  {CLIMATE_CITIES.map(c => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-gray-600 mt-1.5">
+                  I ritmi delle sedute si adattano alla temperatura attesa mese per mese
+                  (es. a luglio le ripetute sono più lente che a dicembre, a parità di forma).
+                </p>
+              </div>
             </>
           )}
 
@@ -840,6 +911,7 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
                 <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
                   <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">VDOT attuale</div>
                   <div className="text-2xl font-bold text-white">{result.current_vdot}</div>
+                  <div className="text-[9px] text-gray-600 mt-1">temp. ideale · solo corse ≥5 km</div>
                   {result.test_vdot && <div className="text-[10px] text-[#C0FF00] mt-1">da anchor test</div>}
                 </div>
                 <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
@@ -850,6 +922,36 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
                   <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Gap</div>
                   <div className={`text-2xl font-bold ${feasColor}`}>+{Math.max(0, result.target_vdot - result.current_vdot).toFixed(1)}</div>
                 </div>
+              </div>
+
+              {/* Volume + clima del piano */}
+              <div className="grid grid-cols-2 gap-3">
+                {result.start_weekly_km != null && (
+                  <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+                    <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Volume settimanale</div>
+                    <div className="text-lg font-bold text-white">
+                      {result.start_weekly_km} <span className="text-xs text-gray-500 font-normal">km/sett →</span> {result.peak_weekly_km} <span className="text-xs text-gray-500 font-normal">km picco</span>
+                    </div>
+                    <div className="text-[10px] text-gray-600 mt-1">
+                      recente: {result.recent_weekly_km ?? "—"} km/sett · crescita ≤10%/settimana
+                    </div>
+                  </div>
+                )}
+                {result.climate && (
+                  <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+                    <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">
+                      Clima · {result.climate.city.charAt(0).toUpperCase() + result.climate.city.slice(1)}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {result.climate.months.slice(0, 4).map(m => (
+                        <span key={m.month} className={`text-[10px] px-2 py-0.5 rounded-full border ${m.heat_adj_sec >= 4 ? "text-amber-300 border-amber-500/30 bg-amber-500/10" : "text-gray-400 border-[#2A2A2A]"}`}>
+                          {m.label.slice(0, 3)} {Math.round(m.temp_c)}°{m.heat_adj_sec >= 4 ? ` +${m.heat_adj_sec}s/km` : ""}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="text-[10px] text-gray-600 mt-1.5">ritmi già adattati al caldo atteso</div>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-3 gap-3">
@@ -890,6 +992,7 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
                 <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center">
                   <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">VDOT Attuale</div>
                   <div className="text-3xl font-bold text-white">{result.current_vdot}</div>
+                  <div className="text-[9px] text-gray-600 mt-0.5">temp. ideale · solo corse ≥5 km</div>
                   {result.test_vdot && <div className="text-[9px] text-[#C0FF00] mt-0.5">calibrato da test</div>}
                 </div>
                 <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center">
@@ -976,24 +1079,79 @@ function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: (
                 <p className={`text-xs mt-2 ${feasColor}`}>{result.feasibility.message}</p>
               </div>
 
-              {/* Race predictions */}
+              {/* Volume + clima del piano generato */}
+              {(result.start_weekly_km != null || result.climate) && (
+                <div className="grid grid-cols-2 gap-3">
+                  {result.start_weekly_km != null && (
+                    <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+                      <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Volume settimanale</div>
+                      <div className="text-lg font-bold text-white">
+                        {result.start_weekly_km} <span className="text-xs text-gray-500 font-normal">km/sett →</span> {result.peak_weekly_km} <span className="text-xs text-gray-500 font-normal">km picco</span>
+                      </div>
+                      <div className="text-[10px] text-gray-600 mt-1">
+                        recente: {result.recent_weekly_km ?? "—"} km/sett · regola del 10%
+                      </div>
+                    </div>
+                  )}
+                  {result.climate && (
+                    <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
+                      <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">
+                        Clima · {result.climate.city.charAt(0).toUpperCase() + result.climate.city.slice(1)}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {result.climate.months.slice(0, 5).map(m => (
+                          <span key={m.month} className={`text-[10px] px-2 py-0.5 rounded-full border ${m.heat_adj_sec >= 4 ? "text-amber-300 border-amber-500/30 bg-amber-500/10" : "text-gray-400 border-[#2A2A2A]"}`}>
+                            {m.label.slice(0, 3)} {Math.round(m.temp_c)}°{m.heat_adj_sec >= 4 ? ` +${m.heat_adj_sec}s/km` : ""}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="text-[10px] text-gray-600 mt-1.5">ritmi delle sedute già adattati al caldo</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Race predictions: ideale vs caldo atteso */}
               {Object.keys(result.race_predictions).length > 0 && (
                 <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-                    Previsioni a VDOT {result.target_vdot}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                      Previsioni a VDOT {result.target_vdot}
+                    </div>
+                    {result.climate && result.climate.race_heat_adj_sec >= 4 && (
+                      <span className="text-[10px] text-amber-300">
+                        gara a {result.climate.race_month_label}: ~{Math.round(result.climate.race_temp_c)}°C
+                      </span>
+                    )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {Object.entries(result.race_predictions).map(([dist, time]) => (
-                      <div key={dist} className={`flex justify-between items-center px-3 py-2 rounded-lg ${
-                        dist === goalRace ? 'bg-[#3B82F6]/10 border border-[#3B82F6]/30' : 'bg-[#1E1E1E]'
-                      }`}>
-                        <span className="text-xs text-gray-400">{dist}</span>
-                        <span className={`text-sm font-mono font-bold ${dist === goalRace ? 'text-[#3B82F6]' : 'text-white'}`}>
-                          {time}
-                        </span>
-                      </div>
-                    ))}
+                  <div className="space-y-1.5">
+                    {Object.entries(result.race_predictions).map(([dist, time]) => {
+                      const hot = result.race_predictions_expected?.[dist];
+                      const showHot = hot && hot !== time;
+                      return (
+                        <div key={dist} className={`flex justify-between items-center px-3 py-2 rounded-lg ${
+                          dist === goalRace ? 'bg-[#3B82F6]/10 border border-[#3B82F6]/30' : 'bg-[#1E1E1E]'
+                        }`}>
+                          <span className="text-xs text-gray-400">{dist}</span>
+                          <span className="flex items-baseline gap-2.5">
+                            <span className={`text-sm font-mono font-bold ${dist === goalRace ? 'text-[#3B82F6]' : 'text-white'}`}>
+                              {time}
+                            </span>
+                            {showHot && (
+                              <span className="text-[11px] font-mono text-amber-300" title="previsione al caldo atteso">
+                                ☀️ {hot}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
+                  {result.climate && result.climate.race_heat_adj_sec >= 4 && (
+                    <p className="text-[10px] text-gray-600 mt-2">
+                      Bianco: temperatura ideale (≤15°C). ☀️ Ambra: al caldo atteso (+{result.climate.race_heat_adj_sec} s/km).
+                    </p>
+                  )}
                 </div>
               )}
 

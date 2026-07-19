@@ -73,6 +73,8 @@ export const generateTrainingPlan = (data: {
   test_distance_km?: number;
   test_time?: string;
   start_date?: string;       // ISO date YYYY-MM-DD — user-chosen plan start
+  start_weekly_km?: number;  // km/sett di partenza (vuoto = auto dal volume recente)
+  city?: string;             // base climatica (default "roma") per adattare i ritmi
 }) =>
   api.post<{
     ok: boolean;

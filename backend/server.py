@@ -2511,6 +2511,37 @@ def _calibrate_plan_volume(goal_race: str, profile_max_weekly_km: float,
 # dell'atleta non ha abbastanza campioni meteo per quel mese).
 ROME_MONTH_TEMP_C = [9.0, 10.0, 13.0, 16.0, 20.0, 25.0, 28.0, 28.0, 24.0, 19.0, 13.0, 10.0]
 
+# Basi climatiche selezionabili nel Genera Piano (°C tipici ore di corsa, gen→dic).
+CITY_MONTH_TEMP_C: dict = {
+    "roma":     ROME_MONTH_TEMP_C,
+    "milano":   [4.0, 7.0, 12.0, 15.0, 20.0, 25.0, 27.0, 26.0, 22.0, 16.0, 9.0, 5.0],
+    "torino":   [4.0, 7.0, 12.0, 15.0, 19.0, 24.0, 26.0, 25.0, 21.0, 15.0, 8.0, 5.0],
+    "napoli":   [10.0, 11.0, 13.0, 16.0, 20.0, 25.0, 28.0, 28.0, 24.0, 20.0, 15.0, 11.0],
+    "bologna":  [4.0, 7.0, 12.0, 16.0, 21.0, 26.0, 28.0, 27.0, 22.0, 16.0, 9.0, 5.0],
+    "firenze":  [7.0, 9.0, 12.0, 15.0, 20.0, 25.0, 28.0, 28.0, 23.0, 17.0, 11.0, 8.0],
+    "palermo":  [12.0, 12.0, 14.0, 16.0, 20.0, 24.0, 27.0, 28.0, 25.0, 21.0, 17.0, 13.0],
+    "cagliari": [11.0, 11.0, 13.0, 15.0, 19.0, 24.0, 27.0, 27.0, 24.0, 20.0, 15.0, 12.0],
+}
+ITALIAN_MONTHS = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+                  "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
+
+
+def _predict_race_hot(vdot: float, heat_extra_sec: int) -> dict:
+    """Previsioni gara al caldo atteso: tempo ideale + extra s/km × distanza."""
+    def _fmt(sec: int) -> str:
+        h, rem = divmod(int(sec), 3600)
+        m, s = divmod(rem, 60)
+        return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+    out: dict = {}
+    for label, t in (_predict_race(vdot) or {}).items():
+        d = RACE_DISTANCES.get(label)
+        mins = _parse_time_str(t)
+        if not d or not mins or heat_extra_sec <= 0:
+            out[label] = t
+            continue
+        out[label] = _fmt(round(mins * 60 + heat_extra_sec * d))
+    return out
+
 
 def _tp_pace_secs(p) -> Optional[int]:
     """'4:30' → 270 secondi (None se non parsabile)."""
@@ -2758,6 +2789,8 @@ async def generate_training_plan(request: Request):
     test_distance_km = body.get("test_distance_km") # optional test calibration
     test_time_str = body.get("test_time")            # optional test time
     start_date_str = body.get("start_date") or None  # user-chosen start date (ISO)
+    city = str(body.get("city") or "roma").strip().lower()          # base climatica (default Roma)
+    start_km_override = _coerce_float(body.get("start_weekly_km"))  # km/sett di partenza scelti dall'utente
 
     athlete_id = await _get_athlete_id()
     q = {"athlete_id": athlete_id} if athlete_id else {}
@@ -2798,7 +2831,15 @@ async def generate_training_plan(request: Request):
         db.fitness_freshness.find_one(q, sort=[("date", -1)]),
     )
     dist_km = RACE_DISTANCES.get(goal_race, 5.0)
-    history = _calc_vdot_with_history(all_runs, max_hr, weeks_window=8, goal_dist_km=dist_km, resting_hr=resting_hr)
+    # VDOT del piano: SOLO corse ≥5 km (regola atleta). Le corse brevi con
+    # scaling HR gonfiano la stima (es. 4 km serali → VDOT 58 irreale). Le
+    # prove sono già normalizzate a temperatura ideale in _vdot_from_effort:
+    # il VDOT rappresenta il potenziale al fresco, i ritmi del piano vengono
+    # poi RI-adattati al caldo atteso settimana per settimana.
+    vdot_runs = [r for r in all_runs if (r.get("distance_km") or 0) >= 4.8]
+    if len(vdot_runs) < 2:
+        vdot_runs = all_runs  # fallback nuovi runner con poco storico
+    history = _calc_vdot_with_history(vdot_runs, max_hr, weeks_window=8, goal_dist_km=dist_km, resting_hr=resting_hr)
     history_context = _build_training_history_context(all_runs, history, ff_latest, max_hr=max_hr)
     # current_vdot is ALWAYS the same regardless of goal distance —
     # it's derived from best recent runs (all qualifying distances).
@@ -2863,6 +2904,46 @@ async def generate_training_plan(request: Request):
         m = feasibility.get("suggested_months", 0)
         feasibility["suggested_timeframe"] = f"{w} settimane" if w <= 4 or m < 2 else f"circa {m} mesi ({w} settimane)"
 
+    # ── Volume: partenza dal volume recente (regola del 10%), override utente ─
+    max_weekly_km, start_weekly_km = _calibrate_plan_volume(goal_race, max_weekly_km, history_context)
+    recent_weekly_km = float(history_context.get("weekly_volume_4w", 0) or history.get("weekly_volume") or 0)
+    if start_km_override and start_km_override > 0:
+        start_weekly_km = round(max(8.0, min(float(start_km_override), max_weekly_km)), 1)
+
+    # ── Clima: città scelta (default Roma). Con Roma, la mediana °C mensile
+    # dello storico reale dell'atleta raffina la climatologia.
+    city_table = CITY_MONTH_TEMP_C.get(city) or CITY_MONTH_TEMP_C["roma"]
+    month_temps = {m + 1: float(city_table[m]) for m in range(12)}
+    if city == "roma" or city not in CITY_MONTH_TEMP_C:
+        month_temps.update(_tp_month_temps_from_runs(all_runs))
+
+    # Anteprima clima del periodo di piano + gara (fine piano)
+    try:
+        plan_start = dt.date.fromisoformat(start_date_str) if start_date_str else dt.date.today()
+    except ValueError:
+        plan_start = dt.date.today()
+    climate_months, seen_months = [], set()
+    for wk in range(suggested_weeks):
+        m = (plan_start + dt.timedelta(weeks=wk, days=3)).month
+        if m in seen_months:
+            continue
+        seen_months.add(m)
+        t = _tp_expected_temp(m, month_temps)
+        climate_months.append({"month": m, "label": ITALIAN_MONTHS[m - 1],
+                               "temp_c": round(t, 1), "heat_adj_sec": _tp_heat_extra_sec(t)})
+    race_date_est = plan_start + dt.timedelta(weeks=suggested_weeks)
+    race_temp = _tp_expected_temp(race_date_est.month, month_temps)
+    race_heat_sec = _tp_heat_extra_sec(race_temp)
+    climate_payload = {
+        "city": city,
+        "months": climate_months,
+        "race_month_label": ITALIAN_MONTHS[race_date_est.month - 1],
+        "race_temp_c": round(race_temp, 1),
+        "race_heat_adj_sec": race_heat_sec,
+    }
+    predictions_ideal = _predict_race(effective_target_vdot)
+    predictions_expected = _predict_race_hot(effective_target_vdot, race_heat_sec)
+
     if dry_run:
         return {
             "ok": True,
@@ -2880,16 +2961,18 @@ async def generate_training_plan(request: Request):
             "plan_mode": None,
             "strategy_options": strategy_options,
             "feasibility": feasibility,
-            "race_predictions": _predict_race(effective_target_vdot),
+            "start_weekly_km": start_weekly_km,
+            "peak_weekly_km": max_weekly_km,
+            "recent_weekly_km": round(recent_weekly_km, 1),
+            "climate": climate_payload,
+            "race_predictions": predictions_ideal,
+            "race_predictions_expected": predictions_expected,
             "suggested_weeks": feasibility.get("suggested_weeks"),
             "suggested_months": feasibility.get("suggested_months"),
             "suggested_timeframe": feasibility.get("suggested_timeframe"),
         }
 
     # ── Generate the plan ────────────────────────────────────────────────────
-    max_weekly_km, start_weekly_km = _calibrate_plan_volume(goal_race, max_weekly_km, history_context)
-    # Climatologia personale: mediana °C per mese dalle corse reali dell'atleta
-    month_temps = _tp_month_temps_from_runs(all_runs)
     weeks = _generate_plan_weeks(
         goal_race, suggested_weeks, max_weekly_km,
         current_vdot, effective_target_vdot, athlete_id, target_time_str,
@@ -2914,6 +2997,7 @@ async def generate_training_plan(request: Request):
         "plan_history_context": history_context,
         "plan_start_weekly_km": start_weekly_km,
         "plan_peak_weekly_km": max_weekly_km,
+        "plan_city": city,
         "plan_generated_at": dt.datetime.now().isoformat(),
         "plan_last_auto_adapt": None,
         "plan_last_auto_adapt_run_key": None,
@@ -2936,6 +3020,8 @@ async def generate_training_plan(request: Request):
         "weeks_generated": len(weeks),
         "start_weekly_km": start_weekly_km,
         "peak_weekly_km": max_weekly_km,
+        "recent_weekly_km": round(recent_weekly_km, 1),
+        "climate": climate_payload,
         "current_vdot": current_vdot,
         "target_vdot": effective_target_vdot,
         "peak_vdot": peak_vdot,
@@ -2948,7 +3034,8 @@ async def generate_training_plan(request: Request):
         "plan_mode": plan_mode,
         "strategy_options": strategy_options,
         "feasibility": feasibility,
-        "race_predictions": _predict_race(effective_target_vdot),
+        "race_predictions": predictions_ideal,
+        "race_predictions_expected": predictions_expected,
         "suggested_weeks": feasibility.get("suggested_weeks"),
         "suggested_months": feasibility.get("suggested_months"),
         "suggested_timeframe": feasibility.get("suggested_timeframe"),
