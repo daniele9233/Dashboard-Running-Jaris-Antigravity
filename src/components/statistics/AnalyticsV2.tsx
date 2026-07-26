@@ -2021,18 +2021,23 @@ export function AnalyticsV2({
                   <div className="absolute right-4 top-4 w-9 h-9 rounded-[8px] bg-[#2D350A] flex items-center justify-center">
                     <Timer className="w-4 h-4" style={{ color: NEON }} />
                   </div>
+                  {/* Passo di soglia REALE (da VDOT), non l'ultimo punto della
+                      serie: quella linea è il passo MEDIO per sessione — in
+                      larga parte corse lente — e mostrarlo qui contraddiceva la
+                      FC soglia del pannello accanto (a ~163 bpm il passo è
+                      ~4:14, non ~4:43). */}
                   <div className="text-[10px] uppercase tracking-widest font-black text-[#A6A6A6]">
-                    {t('statsCards.thresholdPaceLatest')} <span className="ml-2" style={{ color: NEON }}>Latest</span>
+                    {t('statsCards.thresholdPaceLatest')}
                   </div>
                   <div className="flex items-baseline mt-3">
                     <span className="text-[52px] leading-none italic font-black" style={{ color: NEON }}>
-                      {atPanel.latest ? formatPaceSecs(atPanel.latest.pace) : '--'}
+                      {atPace}
                     </span>
                     <span className="text-[18px] italic font-black text-[#DADADA] ml-2">/km</span>
                   </div>
                   <div className="text-[10px] uppercase tracking-widest font-black mt-4 text-[#A6A6A6]">
-                    <span style={{ color: NEON }}>{atPanel.paceDelta >= 0 ? '+' : '-'} {formatPaceSecs(Math.abs(atPanel.paceDelta))}</span>
-                    <span className="ml-2">vs avg</span>
+                    <span style={{ color: NEON }}>@ ~{atHr} bpm</span>
+                    <span className="ml-2">{t('statsCards.thresholdHrRef')}</span>
                   </div>
                 </div>
 
