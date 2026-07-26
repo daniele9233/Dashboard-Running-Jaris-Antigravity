@@ -11,6 +11,8 @@ import { AnalyticsV3 } from './AnalyticsV3';
 import { BiologyFutureV2 } from './BiologyFutureV2';
 import { BiologyFutureLab } from './BiologyFutureLab';
 import { EnvironmentalNormalizerView } from './EnvironmentalNormalizerView';
+import { PaceCalculator } from './PaceCalculator';
+import { PeriodComparison } from './PeriodComparison';
 import { AnalyticsV4CadenceSpeedMatrix, AnalyticsV4PaceZoneDistribution } from './AnalyticsV4';
 import { CaricoFormaV2 } from './CaricoFormaV2';
 import { AnalyticsV5BestEffortsProgression, AnalyticsV5EffortMatrix, AnalyticsV5PaceDistributionBell } from './AnalyticsV5';
@@ -57,7 +59,9 @@ import {
   Radar,
   CloudSun,
   Plus,
-  RotateCcw
+  RotateCcw,
+  GitCompare,
+  Calculator,
 } from 'lucide-react';
 import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 import {
@@ -921,6 +925,8 @@ export function StatisticsView() {
     { id: 'biology',     label: t('statsTabs.biologyFuture'),         icon: FlaskConical },
     { id: 'environment', label: t('statsTabs.climatePace'),           icon: CloudSun },
     { id: 'biologyv2',   label: t('statsTabs.detraining'),            icon: Dna },
+    { id: 'pace-calc',   label: 'Calcolatore',                       icon: Calculator },
+    { id: 'period-compare', label: 'Confronto',                       icon: GitCompare },
   ];
 
   const noData = (message = t('statsTabs.insufficientData')) => (
@@ -2467,6 +2473,20 @@ export function StatisticsView() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <BiologyFutureV2 data={biologyData} profile={profileData ?? null} runs={runs} vdot={vdot} />
             <BiologyFutureLab profile={profileData ?? null} runs={runs} vdot={vdot} />
+          </div>
+        )}
+
+        {/* ═══ CALCOLATORE PASSO ═══ */}
+        {activeTab === 'pace-calc' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <PaceCalculator vdot={vdot} />
+          </div>
+        )}
+
+        {/* ═══ CONFRONTO PERIODI ═══ */}
+        {activeTab === 'period-compare' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <PeriodComparison runs={runs} />
           </div>
         )}
 

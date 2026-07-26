@@ -1,5 +1,5 @@
 """
-Runs router (list + detail + splits).
+Runs router (list + detail + splits + weather persistence).
 
 Estratto da server.py (round 8 — #15 god file split continuation).
 
@@ -7,10 +7,12 @@ Endpoints:
 - GET /api/runs                      → lista corse (proietta out streams pesanti)
 - GET /api/runs/{run_id}             → dettaglio singola corsa
 - GET /api/runs/{run_id}/splits      → solo splits di una corsa
+- GET /api/runs/{run_id}/weather     → snapshot meteo salvato
+- POST /api/runs/{run_id}/weather    → salva snapshot meteo
 """
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Body
 from fastapi.responses import JSONResponse
 
 # Layout-resilient imports
@@ -60,3 +62,51 @@ async def get_run_splits(run_id: str, db=Depends(get_db)):
     if not doc:
         return JSONResponse({"error": "not_found"}, status_code=404)
     return {"splits": doc.get("splits", [])}
+
+
+# ─── Weather persistence ─────────────────────────────────────────────────────
+@router.get("/api/runs/{run_id}/weather")
+async def get_run_weather(run_id: str, db=Depends(get_db)):
+    from bson import ObjectId
+
+    doc = await db.run_weather.find_one({"run_id": run_id})
+    if not doc:
+        return JSONResponse({"weather": None}, status_code=200)
+    return {"weather": oid(doc)}
+
+
+@router.post("/api/runs/{run_id}/weather")
+async def post_run_weather(
+    run_id: str,
+    payload: dict = Body(...),
+    db=Depends(get_db),
+):
+    existing = await db.run_weather.find_one({"run_id": run_id})
+    if existing:
+        await db.run_weather.update_one(
+            {"run_id": run_id},
+            {"$set": {
+                "temperature": payload.get("temperature"),
+                "humidity": payload.get("humidity"),
+                "apparent_temperature": payload.get("apparent_temperature"),
+                "dewpoint": payload.get("dewpoint"),
+                "wind_speed": payload.get("wind_speed"),
+                "source": payload.get("source", "manual"),
+                "estimated_hour": payload.get("estimated_hour"),
+                "updated_at": __import__("datetime").datetime.utcnow().isoformat(),
+            }},
+        )
+        return {"ok": True, "updated": True}
+    await db.run_weather.insert_one({
+        "run_id": run_id,
+        "temperature": payload.get("temperature"),
+        "humidity": payload.get("humidity"),
+        "apparent_temperature": payload.get("apparent_temperature"),
+        "dewpoint": payload.get("dewpoint"),
+        "wind_speed": payload.get("wind_speed"),
+        "source": payload.get("source", "manual"),
+        "estimated_hour": payload.get("estimated_hour"),
+        "created_at": __import__("datetime").datetime.utcnow().isoformat(),
+        "updated_at": __import__("datetime").datetime.utcnow().isoformat(),
+    })
+    return {"ok": True, "inserted": True}

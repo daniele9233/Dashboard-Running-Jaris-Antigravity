@@ -39,6 +39,7 @@ import { HRZones } from "./dashboard/widgets/HRZones";
 import { NextOptimalSessionWidget } from "./dashboard/widgets/NextOptimalSessionWidget";
 import { FieldTestWidget } from "./dashboard/widgets/FieldTestWidget";
 import { FieldTestRecalibrationBanner } from "./dashboard/widgets/FieldTestRecalibrationBanner";
+import { WeatherNormalizerWidget } from "./dashboard/widgets/WeatherNormalizerWidget";
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Line, CartesianGrid, Area, ComposedChart } from "recharts";
 import { useApi } from "../hooks/useApi";
@@ -1126,6 +1127,15 @@ export function DashboardView() {
               NESSUNA CORSA RECENTE
             </div>
           )}
+           </GridCard>
+          </div>
+          )}
+
+          {/* ── Impatto Meteo ── */}
+          {!hiddenKeys.includes("weather-normalizer") && (
+          <div key="weather-normalizer">
+           <GridCard disabled={isMobile} onRemove={() => hideWidget("weather-normalizer")}>
+            <WeatherNormalizerWidget runs={runs} />
            </GridCard>
           </div>
           )}

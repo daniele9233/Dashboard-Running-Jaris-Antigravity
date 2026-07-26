@@ -39,6 +39,11 @@ export const getRun = (id: string) => api.get<RunsResponse['runs'][0]>(`/api/run
 
 export const getRunSplits = (id: string) => api.get<unknown>(`/api/runs/${id}/splits`);
 
+export const getRunWeather = (id: string) => api.get<{ weather: Record<string, unknown> | null }>(`/api/runs/${id}/weather`);
+
+export const postRunWeather = (id: string, data: Record<string, unknown>) =>
+  api.post<{ ok: boolean }>(`/api/runs/${id}/weather`, data);
+
 // ─── FIELD TEST (pace-only VDOT benchmark) ───────────────────────────────────
 export const postFieldTest = (data: { distance_km: 3 | 5 | 6; time_seconds: number; date?: string }) =>
   api.post<FieldTest>('/api/field-test', data);

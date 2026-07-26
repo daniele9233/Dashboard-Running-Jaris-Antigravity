@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-26T12:02:28.668Z",
+  "generated_at": "2026-07-26T13:44:30.886Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,10 +14,10 @@
     ]
   },
   "counts": {
-    "files": 177,
+    "files": 182,
     "backend_routes": 68,
     "frontend_routes": 16,
-    "api_clients": 68
+    "api_clients": 70
   },
   "files": [
     {
@@ -44,6 +44,40 @@
       "hash": "74f6a90d1a083d037734fb645ac48709dd5948d143fc63c5667ee75e09ca5451",
       "last_modified": "2026-05-04T10:24:46.928Z",
       "size_bytes": 5075
+    },
+    {
+      "path": ".githooks/post-checkout",
+      "kind": "project-file",
+      "purpose": "project-file post-checkout.",
+      "touch_when": [
+        "ai"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "graphify.watch",
+        "pathlib"
+      ],
+      "hash": "7939421a43808ed02450ffc20119d82bfd8b884c429255c14b085cef17414f9b",
+      "last_modified": "2026-07-26T12:22:46.367Z",
+      "size_bytes": 3351
+    },
+    {
+      "path": ".githooks/post-commit",
+      "kind": "project-file",
+      "purpose": "project-file post-commit.",
+      "touch_when": [
+        "ai"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "graphify.watch",
+        "pathlib"
+      ],
+      "hash": "e4154d410f41507bcc53b94c5abe73f75b7eee089e2ff3e31c3862485c90f77e",
+      "last_modified": "2026-07-26T12:22:46.366Z",
+      "size_bytes": 3776
     },
     {
       "path": ".githooks/pre-commit",
@@ -473,7 +507,9 @@
       "exports": [
         "get_run",
         "get_run_splits",
-        "get_runs"
+        "get_run_weather",
+        "get_runs",
+        "post_run_weather"
       ],
       "routes": [],
       "imports": [
@@ -484,9 +520,9 @@
         "fastapi.responses",
         "typing"
       ],
-      "hash": "11ca3cdc08de5a74820465a88ad71b7a51f6824d4cf26a16be3f94fd8e24dc3b",
-      "last_modified": "2026-07-07T04:53:03.374Z",
-      "size_bytes": 2347
+      "hash": "ea46a89595e8e986ababff3346904cad2c847aa7ff7c455514b0ba08f696d7cf",
+      "last_modified": "2026-07-26T13:44:21.763Z",
+      "size_bytes": 4537
     },
     {
       "path": "backend/server.py",
@@ -1519,6 +1555,7 @@
         "getRunnerDna",
         "getRuns",
         "getRunSplits",
+        "getRunWeather",
         "getStravaAuthUrl",
         "getStravaConnections",
         "getStravaStatus",
@@ -1533,8 +1570,7 @@
         "GridLayoutItem",
         "GridLayouts",
         "importGarminCsv",
-        "jarvisChat",
-        "linkGarminCsv"
+        "jarvisChat"
       ],
       "routes": [
         "DELETE /api/field-test/${id}",
@@ -1566,6 +1602,7 @@
         "GET /api/runs",
         "GET /api/runs/${id}",
         "GET /api/runs/${id}/splits",
+        "GET /api/runs/${id}/weather",
         "GET /api/strava/auth-url",
         "GET /api/strava/connections",
         "GET /api/strava/status",
@@ -1592,6 +1629,7 @@
         "POST /api/garmin/sync?limit=${limit}&force=${force}",
         "POST /api/jarvis/chat",
         "POST /api/recovery-checkin",
+        "POST /api/runs/${id}/weather",
         "POST /api/strava/exchange-code",
         "POST /api/strava/sync",
         "POST /api/sub20/evaluate-session",
@@ -1609,9 +1647,9 @@
         "../types/jarvis",
         "./client"
       ],
-      "hash": "ee44cc047cb2afc801817a911c279e29713badc3b9c4574c54755525db3cde2d",
-      "last_modified": "2026-07-19T05:34:48.023Z",
-      "size_bytes": 21587
+      "hash": "461ec5633c9a6311d12596853832e5a2889297ce00493752a44511c22736545b",
+      "last_modified": "2026-07-26T13:44:30.887Z",
+      "size_bytes": 21859
     },
     {
       "path": "src/App.tsx",
@@ -2401,9 +2439,9 @@
       ],
       "routes": [],
       "imports": [],
-      "hash": "7fba3304504efed0dcd75eefd22c0205a7f88d0ee973cbff23268de391abf850",
-      "last_modified": "2026-05-17T18:05:09.321Z",
-      "size_bytes": 1001
+      "hash": "5f3bdb56fd93d710dbeaab015893f1acd575f6e5edf966fb154bd8052b91a822",
+      "last_modified": "2026-07-26T13:42:46.739Z",
+      "size_bytes": 1059
     },
     {
       "path": "src/components/dashboard/widgets/FieldTestRecalibrationBanner.tsx",
@@ -2549,6 +2587,32 @@
       "size_bytes": 7515
     },
     {
+      "path": "src/components/dashboard/widgets/WeatherNormalizerWidget.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component WeatherNormalizerWidget.",
+      "touch_when": [
+        "activities",
+        "dashboard",
+        "layout",
+        "map",
+        "statistics",
+        "types"
+      ],
+      "exports": [
+        "WeatherNormalizerWidget"
+      ],
+      "routes": [],
+      "imports": [
+        "../../../types/api",
+        "../../statistics/chartTheme",
+        "lucide-react",
+        "react"
+      ],
+      "hash": "cdaf18b720f16bfb4992a4bbfbca8b0485eca3565a7ce2ea7a6fe7bf1a1dcaf9",
+      "last_modified": "2026-07-26T13:43:33.134Z",
+      "size_bytes": 8422
+    },
+    {
       "path": "src/components/dashboard/widgets/WeeklyKmChart.tsx",
       "kind": "frontend-component",
       "purpose": "React component WeeklyKmChart.",
@@ -2574,9 +2638,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "48681b0435f2c26acb262747da05a549329727243d1298c2b1833492ec0bca3b",
-      "last_modified": "2026-07-26T11:02:47.600Z",
-      "size_bytes": 16330
+      "hash": "627622515d8f310f7b3949ee1135ac126aa9e5365be144cd7ba1bfc30a635496",
+      "last_modified": "2026-07-26T12:10:47.477Z",
+      "size_bytes": 16903
     },
     {
       "path": "src/components/DashboardView.tsx",
@@ -2616,6 +2680,7 @@
         "./dashboard/widgets/HRZones",
         "./dashboard/widgets/InfoTooltip",
         "./dashboard/widgets/NextOptimalSessionWidget",
+        "./dashboard/widgets/WeatherNormalizerWidget",
         "./dashboard/widgets/WeeklyKmChart",
         "./DetrainingWidget",
         "./FirstRunOnboarding",
@@ -2629,9 +2694,9 @@
         "react-router-dom",
         "recharts"
       ],
-      "hash": "e4957219703104f3b82466eeec9598d38ed9b1056324d8deea60b713809596d5",
-      "last_modified": "2026-07-26T11:02:35.369Z",
-      "size_bytes": 62038
+      "hash": "69607190f47ab281114e807cbf9092569b7ca2ff8ff5fe6aea264798945dfc30",
+      "last_modified": "2026-07-26T13:43:09.209Z",
+      "size_bytes": 62479
     },
     {
       "path": "src/components/DetrainingWidget.tsx",
@@ -3720,9 +3785,58 @@
         "react",
         "recharts"
       ],
-      "hash": "d66788de35c7869fdd75dc325b58770a30c8d9f60cf4e58d63f5de7d4c71c996",
-      "last_modified": "2026-07-26T11:11:34.105Z",
-      "size_bytes": 39656
+      "hash": "3caf385e7db8f29876cd78d0e0827920059e307858cabe709f4383299381e0a9",
+      "last_modified": "2026-07-26T12:11:03.395Z",
+      "size_bytes": 39926
+    },
+    {
+      "path": "src/components/statistics/PaceCalculator.tsx",
+      "kind": "frontend-statistics-component",
+      "purpose": "React component PaceCalculator.",
+      "touch_when": [
+        "layout",
+        "statistics",
+        "types"
+      ],
+      "exports": [
+        "PaceCalculator"
+      ],
+      "routes": [],
+      "imports": [
+        "./chartTheme",
+        "lucide-react",
+        "react"
+      ],
+      "hash": "576913542ca364d5f20d51ccf861faaee14593b301bdb7f911225090ea10d6ee",
+      "last_modified": "2026-07-26T13:40:57.381Z",
+      "size_bytes": 13908
+    },
+    {
+      "path": "src/components/statistics/PeriodComparison.tsx",
+      "kind": "frontend-statistics-component",
+      "purpose": "React component PeriodComparison.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "garmin",
+        "layout",
+        "statistics",
+        "types"
+      ],
+      "exports": [
+        "PeriodComparison"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "./chartTheme",
+        "lucide-react",
+        "react",
+        "recharts"
+      ],
+      "hash": "243d0bea8f8802fab72bf53babbdf19ad41d654f4dfa37e025d4158ab30d6260",
+      "last_modified": "2026-07-26T13:41:46.720Z",
+      "size_bytes": 14957
     },
     {
       "path": "src/components/statistics/PotenzialProgressiV2.tsx",
@@ -3796,6 +3910,8 @@
         "./ChartFullscreenModal",
         "./chartTheme",
         "./EnvironmentalNormalizerView",
+        "./PaceCalculator",
+        "./PeriodComparison",
         "./StatsDrift",
         "lucide-react",
         "react",
@@ -3803,9 +3919,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "b792aef9a80f5ab2a38f8dc9b89e018b46012187e7a0d689d4f85cc9f988c47c",
-      "last_modified": "2026-07-26T11:10:41.179Z",
-      "size_bytes": 124821
+      "hash": "8536e7ed058c29422f7229a2be3f008d9aaf64162f77a23313b395bdae489bb3",
+      "last_modified": "2026-07-26T13:43:40.447Z",
+      "size_bytes": 125660
     },
     {
       "path": "src/components/statistics/StatsCalc.tsx",
@@ -5585,6 +5701,12 @@
       "file": "src/api/index.ts"
     },
     {
+      "name": "getRunWeather",
+      "method": "GET",
+      "path": "/api/runs/${id}/weather",
+      "file": "src/api/index.ts"
+    },
+    {
       "name": "getStravaAuthUrl",
       "method": "GET",
       "path": "/api/strava/auth-url",
@@ -5678,6 +5800,12 @@
       "name": "postRecoveryCheckin",
       "method": "POST",
       "path": "/api/recovery-checkin",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "postRunWeather",
+      "method": "POST",
+      "path": "/api/runs/${id}/weather",
       "file": "src/api/index.ts"
     },
     {

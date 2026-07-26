@@ -19,4 +19,5 @@ export const WIDGET_REGISTRY: WidgetMeta[] = [
   { key: "training-paces",  label: "Training Paces" },
   { key: "field-test",      label: "Field Test (VDOT Pace-Only)" },
   { key: "session-logs",    label: "Session Logs" },
+  { key: "weather-normalizer", label: "Impatto Meteo" },
 ];
