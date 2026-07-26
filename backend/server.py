@@ -1425,6 +1425,11 @@ async def strava_sync():
                                     "elapsed_time": lp.get("elapsed_time"),
                                     "average_speed": lp.get("average_speed"),
                                     "average_heartrate": lp.get("average_heartrate"),
+                                    # Servono per mostrare i parziali come Strava:
+                                    # FC max del giro e dislivello per il passo
+                                    # corretto per pendenza (PBP/GAP).
+                                    "max_heartrate": lp.get("max_heartrate"),
+                                    "total_elevation_gain": lp.get("total_elevation_gain"),
                                     "lap_index": lp.get("lap_index"),
                                 })
                     except Exception:
@@ -8585,6 +8590,8 @@ async def reclassify_runs(apply: bool = False, fetch_laps: bool = False, laps_li
                                 "elapsed_time": lp.get("elapsed_time"),
                                 "average_speed": lp.get("average_speed"),
                                 "average_heartrate": lp.get("average_heartrate"),
+                                "max_heartrate": lp.get("max_heartrate"),
+                                "total_elevation_gain": lp.get("total_elevation_gain"),
                                 "lap_index": lp.get("lap_index"),
                             } for lp in r.json()]
                             await db.runs.update_one({"_id": run["_id"]}, {"$set": {"laps": laps}})

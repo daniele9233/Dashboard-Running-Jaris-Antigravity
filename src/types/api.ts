@@ -42,6 +42,22 @@ export interface Split {
   elevation_difference: number;
 }
 
+/**
+ * Lap = giro registrato dall'orologio (tasto lap o auto-lap), non lo split
+ * automatico per km. Sulle ripetute è l'unico dato che separa lavoro e
+ * recupero: gli split per km mediano i due e nascondono la seduta.
+ */
+export interface Lap {
+  lap_index: number;
+  distance: number;              // metri
+  moving_time: number;           // secondi (Strava calcola il passo su questo)
+  elapsed_time: number;
+  average_speed: number;         // m/s
+  average_heartrate: number | null;
+  max_heartrate?: number | null;
+  total_elevation_gain?: number | null;  // per il passo corretto per pendenza
+}
+
 export interface PlanFeedback {
   matched: boolean;
   matched_type: string;
@@ -68,6 +84,8 @@ export interface Run {
   avg_cadence_spm?: number | null;
   elevation_gain: number;
   splits: Split[];
+  /** Giri dell'orologio. Presenti solo sul dettaglio corsa, non nella lista. */
+  laps?: Lap[];
   polyline: string | null;
   start_latlng: [number, number] | null;
   plan_feedback: PlanFeedback | null;

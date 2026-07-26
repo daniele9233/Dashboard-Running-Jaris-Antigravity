@@ -57,6 +57,22 @@ function paceToSeconds(pace: string): number {
   return (parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0);
 }
 
+/** Secondi → "m:ss" (o "h:mm:ss"). Arrotonda il totale: mai ":60". */
+function fmtClock(sec: number): string {
+  const total = Math.round(sec);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+/** Secondi/km → "m:ss". I passi molto lenti (recuperi camminati) restano leggibili. */
+function fmtPaceSec(sec: number): string {
+  const total = Math.round(sec);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
 // ── Components ───────────────────────────────────────────────────────────────
 
 const GlassPanel = ({ children, className, title, icon: Icon }: any) => (
@@ -119,6 +135,49 @@ export function RoutesView({ runId }: { runId?: string | null }) {
   }, [run]);
 
   const splits: Split[] = run?.splits ?? [];
+
+  /**
+   * Parziali stile Strava: usa i GIRI dell'orologio quando ci sono, non gli
+   * split automatici per km. Su una seduta di ripetute lo split per km media
+   * lavoro e recupero nello stesso chilometro e la seduta sparisce; il giro
+   * invece separa "1,00 km @ 3:59" da "0,27 km @ 11:03".
+   *
+   * Il passo si calcola su moving_time (come fa Strava), non su elapsed.
+   * PBP = passo corretto per la pendenza (Minetti): +/-1 s/km ogni ~1% di
+   * pendenza; mostrato solo quando il dislivello del giro è noto.
+   */
+  const laps = useMemo(() => {
+    const raw = (run?.laps ?? []).filter((l) => (l.distance ?? 0) > 0 && (l.moving_time ?? 0) > 0);
+    if (raw.length < 2) return [];
+    return raw.map((l, i) => {
+      const km = l.distance / 1000;
+      const paceSec = l.moving_time / km;
+      const gain = l.total_elevation_gain;
+      const gradePct = gain != null && l.distance > 0 ? (gain / l.distance) * 100 : null;
+      // Minetti 2002 semplificato: ~3.3% di costo energetico per punto di pendenza
+      const gapSec = gradePct != null ? paceSec * (1 - Math.max(-0.25, Math.min(0.25, gradePct * 0.033))) : null;
+      return {
+        idx: l.lap_index ?? i + 1,
+        km,
+        movingTime: l.moving_time,
+        paceSec,
+        gapSec,
+        hr: l.average_heartrate != null ? Math.round(l.average_heartrate) : null,
+      };
+    });
+  }, [run]);
+
+  /** Un giro è "lavoro" se è fra i più veloci: sulle ripetute separa rep e recuperi. */
+  const lapWorkThreshold = useMemo(() => {
+    if (laps.length < 3) return null;
+    const paces = laps.map((l) => l.paceSec).sort((a, b) => a - b);
+    const fastest = paces[0];
+    const slowest = paces[paces.length - 1];
+    // Serve un contrasto reale (>25%) per parlare di lavoro/recupero.
+    return slowest / fastest > 1.25 ? fastest + (slowest - fastest) * 0.4 : null;
+  }, [laps]);
+
+  const showLaps = laps.length >= 2;
 
   // Chart data from streams (detailed) or fallback to splits
   const chartData = useMemo(() => {
@@ -478,39 +537,113 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                 </div>
               </div>
 
-              {/* Splits table */}
+              {/* Parziali: giri dell'orologio se presenti, altrimenti split per km */}
               <div className="flex-1 flex flex-col min-h-0">
-                <div className="grid grid-cols-4 text-[8px] font-black uppercase tracking-[0.2em] text-gray-600 mb-4 px-2">
-                  <span>KM</span>
-                  <span>PACE</span>
-                  <span>HR</span>
-                  <span className="text-right">ELEV</span>
-                </div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-1">
-                  {splits.map((split) => (
-                    <button
-                      key={split.km}
-                      onMouseEnter={() => setActiveSplit(split.km)}
-                      onMouseLeave={() => setActiveSplit(null)}
-                      className={cn(
-                        "w-full grid grid-cols-4 items-center p-3 rounded-xl border transition-all group relative overflow-hidden",
-                        activeSplit === split.km
-                          ? "bg-[#C0FF00]/10 border-[#C0FF00]/30"
-                          : "bg-white/5 border-transparent hover:border-white/10"
-                      )}
-                    >
-                      <span className="text-[10px] font-black text-gray-500">{String(split.km).padStart(2, '0')}</span>
-                      <span className="text-xs font-black italic text-white">{split.pace}</span>
-                      <span className="text-xs font-black italic text-rose-400">{split.hr != null ? Math.round(split.hr) : '—'}</span>
-                      <span className="text-xs font-black italic text-amber-400 text-right">
-                        {split.elevation_difference != null ? `${split.elevation_difference > 0 ? '+' : ''}${Math.round(split.elevation_difference)}m` : '—'}
-                      </span>
-                    </button>
-                  ))}
-                  {splits.length === 0 && (
-                    <div className="text-center text-gray-600 text-xs font-bold py-8">No split data</div>
+                <div className="flex items-baseline justify-between mb-3 px-2">
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">
+                    {showLaps ? 'Parziali' : 'Split per km'}
+                  </span>
+                  {showLaps && (
+                    <span className="text-[8px] font-black uppercase tracking-widest text-gray-600">
+                      {laps.length} giri
+                    </span>
                   )}
                 </div>
+
+                {showLaps ? (
+                  <>
+                    <div className="grid grid-cols-[1.6rem_1fr_1fr_1fr_2.2rem] gap-1 text-[8px] font-black uppercase tracking-[0.15em] text-gray-600 mb-2 px-3">
+                      <span>#</span>
+                      <span>Dist</span>
+                      <span>Tempo</span>
+                      <span>Passo</span>
+                      <span className="text-right">FC</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-1">
+                      {laps.map((lap) => {
+                        const isWork = lapWorkThreshold != null && lap.paceSec <= lapWorkThreshold;
+                        return (
+                          <div
+                            key={lap.idx}
+                            onMouseEnter={() => setActiveSplit(lap.idx)}
+                            onMouseLeave={() => setActiveSplit(null)}
+                            className={cn(
+                              "w-full grid grid-cols-[1.6rem_1fr_1fr_1fr_2.2rem] gap-1 items-center px-3 py-2.5 rounded-xl border transition-all",
+                              activeSplit === lap.idx
+                                ? "bg-[#C0FF00]/10 border-[#C0FF00]/30"
+                                : isWork
+                                ? "bg-white/[0.07] border-transparent hover:border-white/10"
+                                : "bg-white/[0.02] border-transparent hover:border-white/10"
+                            )}
+                          >
+                            <span className={cn("text-[10px] font-black tabular-nums", isWork ? "text-[#C0FF00]" : "text-gray-600")}>
+                              {lap.idx}
+                            </span>
+                            <span className="text-[11px] font-bold tabular-nums text-gray-300">
+                              {lap.km.toFixed(2)}<span className="text-[8px] text-gray-600 ml-0.5">km</span>
+                            </span>
+                            <span className="text-[11px] font-bold tabular-nums text-gray-300">
+                              {fmtClock(lap.movingTime)}
+                            </span>
+                            <span className={cn("text-[11px] font-black italic tabular-nums", isWork ? "text-white" : "text-gray-500")}>
+                              {fmtPaceSec(lap.paceSec)}
+                              {lap.gapSec != null && Math.abs(lap.gapSec - lap.paceSec) >= 2 && (
+                                <span className="text-[8px] not-italic font-bold text-amber-400/80 ml-1">
+                                  {fmtPaceSec(lap.gapSec)}
+                                </span>
+                              )}
+                            </span>
+                            <span className="text-[11px] font-bold tabular-nums text-rose-400 text-right">
+                              {lap.hr ?? '—'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {(lapWorkThreshold != null || laps.some((l) => l.gapSec != null)) && (
+                      <p className="text-[8px] text-gray-600 mt-2 px-3 leading-relaxed">
+                        {lapWorkThreshold != null && 'In evidenza i giri di lavoro.'}
+                        {/* Il passo corretto per pendenza richiede il dislivello del
+                            giro: arriva da Strava dalla prossima sincronizzazione. */}
+                        {laps.some((l) => l.gapSec != null) && ' In ambra il passo corretto per pendenza.'}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-4 text-[8px] font-black uppercase tracking-[0.2em] text-gray-600 mb-4 px-2">
+                      <span>KM</span>
+                      <span>PACE</span>
+                      <span>HR</span>
+                      <span className="text-right">ELEV</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-1">
+                      {splits.map((split) => (
+                        <button
+                          key={split.km}
+                          onMouseEnter={() => setActiveSplit(split.km)}
+                          onMouseLeave={() => setActiveSplit(null)}
+                          className={cn(
+                            "w-full grid grid-cols-4 items-center p-3 rounded-xl border transition-all group relative overflow-hidden",
+                            activeSplit === split.km
+                              ? "bg-[#C0FF00]/10 border-[#C0FF00]/30"
+                              : "bg-white/5 border-transparent hover:border-white/10"
+                          )}
+                        >
+                          <span className="text-[10px] font-black text-gray-500">{String(split.km).padStart(2, '0')}</span>
+                          <span className="text-xs font-black italic text-white">{split.pace}</span>
+                          <span className="text-xs font-black italic text-rose-400">{split.hr != null ? Math.round(split.hr) : '—'}</span>
+                          <span className="text-xs font-black italic text-amber-400 text-right">
+                            {split.elevation_difference != null ? `${split.elevation_difference > 0 ? '+' : ''}${Math.round(split.elevation_difference)}m` : '—'}
+                          </span>
+                        </button>
+                      ))}
+                      {splits.length === 0 && (
+                        <div className="text-center text-gray-600 text-xs font-bold py-8">Nessun parziale disponibile</div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             </GlassPanel>
           </div>
