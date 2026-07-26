@@ -160,6 +160,9 @@ export const translations = {
       weekElevation: "Dislivello",
       goalReached: "Obiettivo raggiunto! 🎉",
       toGo: "mancano {{km}} km",
+      weeklyVolume: "Volume Settimanale",
+      totalDistance: "Distanza totale",
+      inProgress: "in corso",
     },
     // ── Training
     training: {
@@ -570,6 +573,9 @@ export const translations = {
       weekElevation: "Elevation",
       goalReached: "Goal reached! 🎉",
       toGo: "{{km}} km to go",
+      weeklyVolume: "Weekly Volume",
+      totalDistance: "Total distance",
+      inProgress: "in progress",
     },
     training: {
       weeklyPlan: "Weekly Plan",

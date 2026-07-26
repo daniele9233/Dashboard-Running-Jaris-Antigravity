@@ -20,6 +20,7 @@ import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal'
 import { cadenceSpmFromRun } from '../../utils/cadence';
 import { computeDrift } from '../../utils/cardiacDrift';
 import { AthletePotentialVector } from './AthletePotentialVector';
+import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from './chartTheme';
 
 /** Soglia anaerobica HR utente — verdict 2026-05 da analisi corsa 4km
  *  (FC ultimo km 162 bpm = 89% maxHr 182, stabilizzata 164 bpm ultimi 200m).
@@ -28,16 +29,18 @@ import { AthletePotentialVector } from './AthletePotentialVector';
 const USER_THRESHOLD_HR = 163;
 
 // ─────────────────────────────────────────────────────────────
-// CONSTANTS
+// CONSTANTS — alias sul tema condiviso (chartTheme.ts).
+// I nomi locali restano per non toccare migliaia di righe di JSX,
+// ma i VALORI ora vengono da un'unica fonte di verità.
 // ─────────────────────────────────────────────────────────────
-const NEON = '#C0FF00';
+const NEON = CHART_SERIES.primary;
 const NEON_DIM = 'rgba(192,255,0,0.15)';
-const CARD_BG = '#0E0E0E';
-const CARD_BORDER = '#1E1E1E';
-const GRID_COLOR = '#1E1E1E';
-const LABEL_COLOR = '#8E8E93';
-const BG_DARK = '#111111';
-const RACE_ORANGE = '#FF5B00';
+const CARD_BG = CHART_SURFACE.panel;
+const CARD_BORDER = CHART_SURFACE.border;
+const GRID_COLOR = CHART_SURFACE.grid;
+const LABEL_COLOR = CHART_TEXT.axis;      // era #8E8E93 → ora contrasto verificato
+const BG_DARK = CHART_SURFACE.panelSoft;
+const RACE_ORANGE = CHART_SERIES.load;    // era #FF5B00 → un solo arancione
 
 // Fallback km marker for drift chart when no run data is available
 /**
@@ -1116,11 +1119,12 @@ function parsePaceDecimal(pace: string): number {
   if (isNaN(m) || isNaN(s)) return 0;
   return m + s / 60;
 }
-// decimal minutes → "M:SS"
+// decimal minutes → "M:SS" (arrotonda il totale: 3.999 → "4:00", mai "3:60")
 function formatPaceStr(dec: number): string {
   if (!dec) return '--';
-  const m = Math.floor(dec);
-  const s = Math.round((dec - m) * 60);
+  const total = Math.round(dec * 60);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
@@ -1334,8 +1338,9 @@ export function AnalyticsV2({
 
   function formatPaceSecs(secs: number): string {
     if (!secs || secs <= 0) return '--';
-    const m = Math.floor(secs / 60);
-    const s = Math.round(secs % 60);
+    const total = Math.round(secs);   // arrotonda il totale: mai ":60"
+    const m = Math.floor(total / 60);
+    const s = total % 60;
     return `${m}:${s.toString().padStart(2, '0')}`;
   }
 
@@ -1456,10 +1461,7 @@ export function AnalyticsV2({
     const velocityMetersPerMinute = (-0.182258 + Math.sqrt(discriminant)) / (2 * 0.000104);
     if (!Number.isFinite(velocityMetersPerMinute) || velocityMetersPerMinute <= 0) return '—';
     const minutesPerKm = 1000 / velocityMetersPerMinute;
-    const m = Math.floor(minutesPerKm);
-    const s = Math.round((minutesPerKm - m) * 60);
-    const carry = s === 60 ? 1 : 0;
-    return `${m + carry}:${String(s === 60 ? 0 : s).padStart(2, '0')}`;
+    return formatPaceStr(minutesPerKm);
   }
 
   function getThresholdDisplay(v: number | null | undefined): string | null {
@@ -2260,11 +2262,7 @@ export function AnalyticsV2({
                   axisLine={false}
                   domain={['dataMin - 0.2', 'dataMax + 0.2']}
                   reversed
-                  tickFormatter={(v) => {
-                    const m = Math.floor(v);
-                    const s = Math.round((v - m) * 60);
-                    return `${m}:${s.toString().padStart(2, '0')}`;
-                  }}
+                  tickFormatter={(v) => formatPaceStr(v)}
                 />
                 <YAxis
                   yAxisId="hr"
@@ -2280,15 +2278,13 @@ export function AnalyticsV2({
                   if (!active || !payload?.length) return null;
                   const d = payload[0]?.payload;
                   if (!d) return null;
-                  const m = Math.floor(d.pace);
-                  const s = Math.round((d.pace - m) * 60);
                   return (
                     <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
                       <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>KM {d.km}</p>
                       <div className="flex items-center gap-2 text-xs mb-0.5">
                         <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: NEON }} />
                         <span className="text-[#777]">Pace:</span>
-                        <span className="text-white font-bold">{m}:{s.toString().padStart(2, '0')} /km</span>
+                        <span className="text-white font-bold">{formatPaceStr(d.pace)} /km</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs">
                         <div className="w-1.5 h-1.5 rounded-full bg-[#F43F5E]" />
@@ -2722,15 +2718,14 @@ export function AnalyticsV2({
                     <XAxis dataKey="month" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} interval="preserveStartEnd" minTickGap={22} tickFormatter={(value) => formatWeekBucketLabel(String(value))} />
                     <YAxis stroke="#555" fontSize={12} tickLine={false} axisLine={false} reversed
                       domain={['dataMin - 0.2', 'dataMax + 0.2']}
-                      tickFormatter={(v) => { const m = Math.floor(v); const s = Math.round((v - m) * 60); return `${m}:${s.toString().padStart(2, '0')}`; }} />
+                      tickFormatter={(v) => formatPaceStr(v)} />
                     <Tooltip content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
                       const { month, pace } = payload[0].payload;
-                      const m = Math.floor(pace); const s = Math.round((pace - m) * 60);
                       return (
                         <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
                           <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: NEON }}>{month}</p>
-                          <p className="text-white font-black text-sm">{m}:{s.toString().padStart(2, '0')} /km</p>
+                          <p className="text-white font-black text-sm">{formatPaceStr(pace)} /km</p>
                         </div>
                       );
                     }} />
@@ -2809,18 +2804,17 @@ export function AnalyticsV2({
                     <XAxis dataKey="km" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} />
                     <YAxis yAxisId="pace" stroke="#555" fontSize={11} tickLine={false} axisLine={false} reversed
                       domain={['dataMin - 0.2', 'dataMax + 0.2']}
-                      tickFormatter={(v) => { const m = Math.floor(v); const s = Math.round((v - m) * 60); return `${m}:${s.toString().padStart(2, '0')}`; }} />
+                      tickFormatter={(v) => formatPaceStr(v)} />
                     <YAxis yAxisId="hr" orientation="right" stroke="#555" fontSize={11} tickLine={false} axisLine={false}
                       domain={['dataMin - 5', 'dataMax + 5']} tickFormatter={(v) => `${v} bpm`} />
                     <Tooltip content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
                       const d = payload[0]?.payload;
                       if (!d) return null;
-                      const m = Math.floor(d.pace); const s = Math.round((d.pace - m) * 60);
                       return (
                         <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
                           <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>KM {d.km}</p>
-                          <div className="flex items-center gap-2 text-xs mb-0.5"><span className="text-[#777]">Pace:</span><span className="text-white font-bold">{m}:{s.toString().padStart(2, '0')} /km</span></div>
+                          <div className="flex items-center gap-2 text-xs mb-0.5"><span className="text-[#777]">Pace:</span><span className="text-white font-bold">{formatPaceStr(d.pace)} /km</span></div>
                           <div className="flex items-center gap-2 text-xs"><span className="text-[#777]">HR:</span><span className="text-white font-bold">{d.hr} bpm</span></div>
                         </div>
                       );

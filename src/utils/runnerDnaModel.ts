@@ -297,8 +297,9 @@ export function paceToSeconds(value: unknown): number | null {
 
 export function secondsToPace(seconds: number | null) {
   if (seconds === null || !Number.isFinite(seconds)) return "N/D";
-  const m = Math.floor(seconds / 60);
-  const s = Math.round(seconds % 60);
+  const total = Math.round(seconds);   // arrotonda il totale: mai ":60"
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${m}:${String(s).padStart(2, "0")}/km`;
 }
 

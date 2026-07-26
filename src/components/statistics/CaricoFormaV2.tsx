@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ScatterChart, Scatter, ZAxis, ReferenceLine } from "recharts";
 import type { FitnessFreshnessPoint, Run, ProAnalyticsChart } from "../../types/api";
+import { CHART_SERIES } from "./chartTheme";
 // WeeklyKmChart non più usato qui — sostituito da CaricoKmChart inline
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
@@ -18,7 +19,7 @@ export interface CaricoFormaV2Props {
 // ─── MAIN MULTI-LINE SVG CHART ────────────────────────────────────────────────
 
 const CHART_LINES = [
-  { key: "ctl" as const, label: "Condizione fisica", short: "Condizione", color: "#F97316", gradId: "v2CtlGrad" },
+  { key: "ctl" as const, label: "Condizione fisica", short: "Condizione", color: CHART_SERIES.load, gradId: "v2CtlGrad" },
   { key: "atl" as const, label: "Affaticamento",     short: "Affatica.",  color: "#F43F5E", gradId: "v2AtlGrad" },
   { key: "tsb" as const, label: "Forma",             short: "Forma",      color: "#C0FF00", gradId: "v2TsbGrad" },
 ] as const;
@@ -200,7 +201,7 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
             {(focus === "all" || focus === "ctl") && (
               <g style={{ opacity: focus === "ctl" ? 1 : 0.7, transition: "opacity .3s" }}>
                 <path d={buildArea("ctl")} fill="url(#v2CtlGrad)" />
-                <path d={buildLine("ctl")} fill="none" stroke="#F97316" strokeWidth={2.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                <path d={buildLine("ctl")} fill="none" stroke={CHART_SERIES.load} strokeWidth={2.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
               </g>
             )}
 
@@ -274,10 +275,10 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
 type ZoneRange = "7d" | "30d" | "90d" | "all";
 
 const ZONE_BINS = [
-  { zone: "Z1", name: "Recupero",  minSec: 390, color: "#60A5FA" },
+  { zone: "Z1", name: "Recupero",  minSec: 390, color: CHART_SERIES.compare },
   { zone: "Z2", name: "Easy",      minSec: 360, color: "#34D399" },
   { zone: "Z3", name: "Steady",    minSec: 330, color: "#C0FF00" },
-  { zone: "Z4", name: "Threshold", minSec: 300, color: "#F59E0B" },
+  { zone: "Z4", name: "Threshold", minSec: 300, color: CHART_SERIES.load },
   { zone: "Z5", name: "Fast",      minSec:   0, color: "#F43F5E" },
 ] as const;
 
@@ -523,8 +524,9 @@ function EffortMatrixCard({ chart }: { chart?: ProAnalyticsChart }) {
 
   const fmtPace = (p: number) => {
     if (!Number.isFinite(p) || p <= 0) return "—";
-    const m = Math.floor(p);
-    const s = Math.round((p - m) * 60);
+    const total = Math.round(p * 60);   // minuti decimali → totale sec: mai ":60"
+    const m = Math.floor(total / 60);
+    const s = total % 60;
     return `${m}:${String(s).padStart(2, "0")}`;
   };
 
@@ -641,8 +643,8 @@ function getRunCategory(runType: string): "easy" | "tempo" | "intervals" | "long
 
 const CAT_DEFS = [
   { key: "easy",      label: "Easy Run",  color: "#34D399" },
-  { key: "tempo",     label: "Tempo",     color: "#60A5FA" },
-  { key: "intervals", label: "Intervals", color: "#F59E0B" },
+  { key: "tempo",     label: "Tempo",     color: CHART_SERIES.compare },
+  { key: "intervals", label: "Intervals", color: CHART_SERIES.load },
   { key: "long",      label: "Long Run",  color: "#C0FF00" },
   { key: "race",      label: "Race",      color: "#F43F5E" },
 ] as const;

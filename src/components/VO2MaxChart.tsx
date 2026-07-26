@@ -87,8 +87,9 @@ function calcTPace(vdot: number): string {
   const vMax = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
   const vT = vMax * 0.88; // T pace velocity
   const paceMin = 1000 / vT;
-  const m = Math.floor(paceMin);
-  const s = Math.round((paceMin % 1) * 60);
+  const total = Math.round(paceMin * 60);   // arrotonda il totale: mai ":60"
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 

@@ -8,12 +8,14 @@ import type { Run } from "../../types/api";
 import { computeDrift, driftLabel } from "../../utils/cardiacDrift";
 import type { DriftResult } from "../../utils/cardiacDrift";
 import { ChartExpandButton, ChartFullscreenModal } from "./ChartFullscreenModal";
+import { CHART_SERIES, CHART_SURFACE } from "./chartTheme";
 
-const DRIFT_NEON = "#C0FF00";
-const DRIFT_CYAN = "#27D3C3";
-const DRIFT_AMBER = "#F59E0B";
-const DRIFT_PINK = "#FF4D8D";
-const DRIFT_PANEL_BORDER = "#20290F";
+// Alias sul tema condiviso (chartTheme.ts).
+const DRIFT_NEON = CHART_SERIES.primary;
+const DRIFT_CYAN = CHART_SERIES.compare;         // era #27D3C3
+const DRIFT_AMBER = CHART_SERIES.load;
+const DRIFT_PINK = CHART_SERIES.risk;            // era #FF4D8D
+const DRIFT_PANEL_BORDER = CHART_SURFACE.border; // era #20290F (verde oliva)
 
 // ─── Single Run Drift ─────────────────────────────────────────────────────────
 

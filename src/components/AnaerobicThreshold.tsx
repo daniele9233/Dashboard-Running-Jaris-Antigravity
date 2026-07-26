@@ -22,8 +22,9 @@ function parsePaceSec(pace: string): number | null {
 }
 
 function fmtPace(sec: number): string {
-  const m = Math.floor(sec / 60);
-  const s = Math.round(sec % 60);
+  const total = Math.round(sec);   // arrotonda il totale: mai ":60"
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
@@ -34,8 +35,8 @@ function calcTPace(vdot: number): string {
   const targetVo2 = vdot * 0.86;
   const discriminant = 0.182258 ** 2 + 4 * 0.000104 * (targetVo2 + 4.60);
   const velocityMpm = (-0.182258 + Math.sqrt(discriminant)) / (2 * 0.000104);
-  const p = 1000 / velocityMpm;
-  return `${Math.floor(p)}:${String(Math.round((p % 1) * 60)).padStart(2, "0")}`;
+  const p = 1000 / velocityMpm;   // minuti/km decimali
+  return fmtPace(p * 60);         // fmtPace arrotonda il totale: mai ":60"
 }
 
 // ─── Month label ────────────────────────────────────────────────────

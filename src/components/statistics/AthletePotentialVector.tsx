@@ -16,12 +16,13 @@ import {
 } from "recharts";
 import { ChevronRight, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { Run, FitnessFreshnessPoint } from "../../types/api";
+import { CHART_SERIES } from "./chartTheme";
 
-// ─── COLORS (site palette) ────────────────────────────────────────────────────
-const NEON = "#C0FF00";
-const AMBER = "#F59E0B";
-const ROSE = "#F43F5E";
-const CYAN = "#06FFA5";
+// ─── COLORS — alias sul tema condiviso (chartTheme.ts) ───────────────────────
+const NEON = CHART_SERIES.primary;
+const AMBER = CHART_SERIES.load;
+const ROSE = CHART_SERIES.risk;
+const CYAN = CHART_SERIES.compare;   // era #06FFA5 (verde acqua, non ciano)
 
 // ─── DISTANCES ───────────────────────────────────────────────────────────────
 const DISTANCES = [
@@ -67,29 +68,32 @@ function predictRaceSec(vdot: number, distanceKm: number): number {
   return Math.round((lo + hi) / 2);
 }
 
+// Nota: si arrotonda sempre il TOTALE dei secondi prima di dividere. Arrotondare
+// il solo resto produce ":60" (es. 239.6 s/km → "3:60" invece di "4:00").
 function fmtTime(secs: number): string {
   if (!secs || secs <= 0) return "—";
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const s = Math.round(secs % 60);
+  const total = Math.round(secs);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
   if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 function fmtPaceFromSec(secs: number, distKm: number): string {
-  const ps = secs / distKm;
-  const m = Math.floor(ps / 60);
-  const s = Math.round(ps % 60);
+  const total = Math.round(secs / distKm);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 function fmtSignedTime(secs: number): string {
   if (!Number.isFinite(secs) || secs === 0) return "0:00";
   const sign = secs < 0 ? "-" : "+";
-  const abs = Math.abs(secs);
-  const h = Math.floor(abs / 3600);
-  const m = Math.floor((abs % 3600) / 60);
-  const s = Math.round(abs % 60);
+  const total = Math.round(Math.abs(secs));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
   if (h > 0) return `${sign}${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   return `${sign}${m}:${String(s).padStart(2, "0")}`;
 }

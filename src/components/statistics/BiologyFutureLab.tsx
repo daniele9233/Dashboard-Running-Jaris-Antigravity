@@ -35,17 +35,19 @@ import {
   type DetrainingSummary,
   type PaceProjection,
 } from '../../utils/detrainingModel';
+import { CHART_SERIES, CHART_SURFACE } from './chartTheme';
 
-const ACCENT = '#C0FF00';
-const PANEL = '#0E0E0E';
-const BORDER = '#1E1E1E';
-const BORDER_STRONG = '#2A2A2A';
-const GRID = '#1E1E1E';
-const CYAN = '#22D3EE';
-const ORANGE = '#F59E0B';
-const PURPLE = '#A78BFA';
-const RED = '#F43F5E';
-const BLUE = '#6366F1';
+// Alias sul tema condiviso (chartTheme.ts).
+const ACCENT = CHART_SERIES.primary;
+const PANEL = CHART_SURFACE.panel;
+const BORDER = CHART_SURFACE.border;
+const BORDER_STRONG = CHART_SURFACE.borderStrong;
+const GRID = CHART_SURFACE.grid;
+const CYAN = CHART_SERIES.compare;
+const ORANGE = CHART_SERIES.load;
+const PURPLE = CHART_SERIES.tertiary;
+const RED = CHART_SERIES.risk;
+const BLUE = CHART_SERIES.projected;
 const TOOLTIP_STYLE = {
   backgroundColor: '#141414',
   border: `1px solid ${BORDER_STRONG}`,

@@ -126,7 +126,7 @@ export function WeeklyStatsPanel({ runs }: WeeklyStatsPanelProps) {
                   <div className="text-[9px] text-[#334155]">
                     {run.duration_minutes < 60
                       ? `${Math.round(run.duration_minutes)}m`
-                      : `${Math.floor(run.duration_minutes / 60)}h${Math.round(run.duration_minutes % 60)}m`}
+                      : `${Math.floor(Math.round(run.duration_minutes) / 60)}h${Math.round(run.duration_minutes) % 60}m`}
                   </div>
                 )}
               </div>

@@ -52,16 +52,18 @@ import {
   projectRaceTime,
   type DetrainingPoint,
 } from '../../utils/detrainingModel';
+import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from './chartTheme';
 
-const ACCENT = '#C0FF00';
-const PANEL = '#0E0E0E';
-const PANEL_SOFT = '#111111';
-const BORDER = '#242424';
-const GRID = '#1F1F1F';
-const TEXT_MUTED = '#7A8599';
-const CYAN = '#22D3EE';
-const ORANGE = '#F97316';
-const PURPLE = '#A78BFA';
+// Alias sul tema condiviso (chartTheme.ts).
+const ACCENT = CHART_SERIES.primary;
+const PANEL = CHART_SURFACE.panel;
+const PANEL_SOFT = CHART_SURFACE.panelSoft;
+const BORDER = CHART_SURFACE.border;      // era #242424
+const GRID = CHART_SURFACE.grid;          // era #1F1F1F
+const TEXT_MUTED = CHART_TEXT.muted;      // era #7A8599
+const CYAN = CHART_SERIES.compare;
+const ORANGE = CHART_SERIES.load;         // era #F97316
+const PURPLE = CHART_SERIES.tertiary;
 
 type AdaptationMeta = {
   key: AdaptationKey;
@@ -385,10 +387,10 @@ export function BiologyFutureV2({
 
 // ─── DETRAINING PREDICTOR ────────────────────────────────────────────────────
 
-const PRED_RED = '#F43F5E';
-const PRED_GREEN = '#22C55E';
-const PRED_PINK = '#EC4899';
-const PRED_BLUE = '#6366F1';
+const PRED_RED = CHART_SERIES.risk;
+const PRED_GREEN = CHART_SERIES.positive;   // era #22C55E
+const PRED_PINK = CHART_SERIES.tertiary;    // era #EC4899
+const PRED_BLUE = CHART_SERIES.projected;
 
 const TIMELINE_EVENTS: { day: number; title: string; body: string; color: string; icon: LucideIcon }[] = [
   { day: 1, title: '"Mi sento ancora forte"', body: 'Il glicogeno e ancora pieno. Sensazioni intatte. Plasma cala leggermente ma hematocrit compensa: nessuna perdita reale (Mujika 2010).', color: CYAN, icon: Heart },

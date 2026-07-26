@@ -36,8 +36,9 @@ interface LiveTelemetry3DMapProps {
 
 function formatPace(seconds: number): string {
   if (!seconds || seconds <= 0 || seconds > 1200) return '--:--';
-  const m = Math.floor(seconds / 60);
-  const s = Math.round(seconds % 60);
+  const total = Math.round(seconds);   // arrotonda il totale: mai ":60"
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 

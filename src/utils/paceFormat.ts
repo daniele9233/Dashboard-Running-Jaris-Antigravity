@@ -19,8 +19,11 @@ export function parsePaceToSecs(pace: string): number {
 /** 342 → "5:42". Returns "--" on non-positive input. */
 export function secsToPaceStr(secs: number): string {
   if (secs <= 0) return '--';
-  const m = Math.floor(secs / 60);
-  const s = Math.round(secs % 60);
+  // Round the TOTAL first: rounding the remainder alone yields ":60"
+  // (239.6 → 3:60 instead of 4:00).
+  const total = Math.round(secs);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
@@ -44,9 +47,11 @@ export function formatDuration(minutes: number): string {
 
 /** 25.42 minutes → "25:25" or "1:23:45". For PB / race time displays. */
 export function fmtPbTime(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = Math.floor(minutes % 60);
-  const s = Math.round((minutes * 60) % 60);
+  // Round to whole seconds first, then split — otherwise 19.999 min → "19:60".
+  const total = Math.round(minutes * 60);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
   if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   return `${m}:${String(s).padStart(2, '0')}`;
 }

@@ -79,8 +79,9 @@ export function FieldTestWidget() {
   };
 
   const fmtPace = (sec: number): string => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
+    const total = Math.round(sec);   // arrotonda il totale: mai ":60" né decimali
+    const m = Math.floor(total / 60);
+    const s = total % 60;
     return `${m}:${String(s).padStart(2, "0")}`;
   };
 

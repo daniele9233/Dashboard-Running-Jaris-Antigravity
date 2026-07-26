@@ -15,11 +15,16 @@ export interface DriftResult {
   splits: { km: number; hr: number; pace: number; paceLabel: string }[];
 }
 
+/**
+ * Colori allineati alla palette dei grafici (components/statistics/chartTheme.ts:
+ * primary / compare / load / risk). Sono ripetuti qui come letterali perché
+ * questo è un modulo puro di utility: non deve dipendere dai componenti.
+ */
 export function driftLabel(d: number): { label: string; color: string } {
   if (d < 3.5) return { label: "Eccellente",    color: "#C0FF00" };
-  if (d < 5.0) return { label: "Buona",         color: "#27D3C3" };
+  if (d < 5.0) return { label: "Buona",         color: "#22D3EE" };
   if (d < 7.5) return { label: "Da migliorare", color: "#F59E0B" };
-  return            { label: "Insufficiente",   color: "#FF4D8D" };
+  return            { label: "Insufficiente",   color: "#F43F5E" };
 }
 
 function parsePaceSec(pace: string): number {
@@ -29,8 +34,9 @@ function parsePaceSec(pace: string): number {
 }
 
 function fmtPace(sec: number): string {
-  const m = Math.floor(sec / 60);
-  const s = Math.round(sec % 60);
+  const total = Math.round(sec);   // arrotonda il totale: mai ":60"
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 

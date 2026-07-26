@@ -246,8 +246,9 @@ function paceToSec(p: string | null): number | null {
   return m ? Number(m[1]) * 60 + Number(m[2]) : null;
 }
 function secToPace(s: number): string {
-  const mm = Math.floor(s / 60);
-  const ss = Math.round(s % 60);
+  const total = Math.round(s);   // arrotonda il totale: mai ":60"
+  const mm = Math.floor(total / 60);
+  const ss = total % 60;
   return `${mm}:${pad(ss)}`;
 }
 

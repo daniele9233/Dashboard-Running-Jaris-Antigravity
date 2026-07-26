@@ -55,17 +55,18 @@ function vdotToPaceMinKm(vdot: number, distanceMeters: number): number {
 }
 
 function fmtPace(v: number): string {
-  const m = Math.floor(v);
-  const s = Math.round((v % 1) * 60);
+  const total = Math.round(v * 60);   // minuti decimali → totale sec: mai ":60"
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 // ─── Tempo gara formattato ────────────────────────────────────────────────────
 function vdotToTime(vdot: number, distanceMeters: number): string {
-  const totalMin = vdotToRaceTimeMin(vdot, distanceMeters);
-  const h = Math.floor(totalMin / 60);
-  const m = Math.floor(totalMin % 60);
-  const s = Math.round((totalMin % 1) * 60);
+  const total = Math.round(vdotToRaceTimeMin(vdot, distanceMeters) * 60);   // mai ":60"
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
   if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   return `${m}:${String(s).padStart(2, "0")}`;
 }
@@ -262,8 +263,7 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
           const timeMin = displayTime ? parseTime(displayTime) : null;
           let paceStr = "—";
           if (timeMin && timeMin > 0) {
-            const p = timeMin / race.distKm;
-            paceStr = `${Math.floor(p)}:${String(Math.round((p % 1) * 60)).padStart(2, "0")}/km`;
+            paceStr = `${fmtPace(timeMin / race.distKm)}/km`;   // fmtPace: mai ":60"
           }
           return (
             <div

@@ -78,18 +78,20 @@ import {
   Label,
   Legend
 } from 'recharts';
+import { CHART_SERIES, CHART_SURFACE } from './chartTheme';
 
 const ResponsiveGrid = WidthProvider(Responsive);
 
-const PRO_ACCENT = '#C0FF00';
-const PRO_PANEL = '#0E0E0E';
-const PRO_BORDER = '#1E1E1E';
-const PRO_BORDER_STRONG = '#2A2A2A';
-const PRO_GRID = '#1E1E1E';
-const PRO_BLUE = '#6366F1';
-const PRO_PURPLE = '#A78BFA';
-const PRO_RED = '#F43F5E';
-const PRO_ORANGE = '#F59E0B';
+// Alias sul tema condiviso (chartTheme.ts): un'unica fonte di verità.
+const PRO_ACCENT = CHART_SERIES.primary;
+const PRO_PANEL = CHART_SURFACE.panel;
+const PRO_BORDER = CHART_SURFACE.border;
+const PRO_BORDER_STRONG = CHART_SURFACE.borderStrong;
+const PRO_GRID = CHART_SURFACE.grid;
+const PRO_BLUE = CHART_SERIES.projected;
+const PRO_PURPLE = CHART_SERIES.tertiary;
+const PRO_RED = CHART_SERIES.risk;
+const PRO_ORANGE = CHART_SERIES.load;
 const PRO_ZONE_COLORS = ['#4A4A4A', '#6366F1', '#8B5CF6', '#A78BFA', PRO_ACCENT];
 const PRO_TOOLTIP_STYLE = {
   backgroundColor: '#141414',

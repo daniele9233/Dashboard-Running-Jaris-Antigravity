@@ -34,6 +34,13 @@ describe('secsToPaceStr', () => {
     expect(secsToPaceStr(342.6)).toBe('5:43');
   });
 
+  it('carries over instead of emitting :60', () => {
+    // 239.6 s/km must read 4:00, never 3:60
+    expect(secsToPaceStr(239.6)).toBe('4:00');
+    expect(secsToPaceStr(359.7)).toBe('6:00');
+    expect(secsToPaceStr(59.6)).toBe('1:00');
+  });
+
   it('returns "--" on non-positive', () => {
     expect(secsToPaceStr(0)).toBe('--');
     expect(secsToPaceStr(-1)).toBe('--');
@@ -83,5 +90,10 @@ describe('fmtPbTime', () => {
   it('formats over-hour as h:mm:ss', () => {
     expect(fmtPbTime(83.75)).toBe('1:23:45');
     expect(fmtPbTime(60)).toBe('1:00:00');
+  });
+
+  it('carries over instead of emitting :60', () => {
+    expect(fmtPbTime(19.999)).toBe('20:00');
+    expect(fmtPbTime(59.999)).toBe('1:00:00');
   });
 });

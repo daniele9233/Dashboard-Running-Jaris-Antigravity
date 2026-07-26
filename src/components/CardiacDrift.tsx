@@ -10,8 +10,9 @@ import { computeDrift, type DriftResult } from "../utils/cardiacDrift";
 
 function fmtPace(sec: number): string {
   if (!sec || sec <= 0) return "—";
-  const m = Math.floor(sec / 60);
-  const s = Math.round(sec % 60);
+  const total = Math.round(sec);   // arrotonda il totale: mai ":60"
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 

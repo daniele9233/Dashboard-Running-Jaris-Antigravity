@@ -12,25 +12,27 @@ import {
 } from 'recharts';
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 import type { ProAnalyticsChart } from '../../types/api';
+import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from './chartTheme';
 
 // â”€â”€â”€ Palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const N   = '#C0FF00';
+// Alias sul tema condiviso (chartTheme.ts).
+const N   = CHART_SERIES.primary;
 const N10 = 'rgba(192,255,0,0.10)';
 const N20 = 'rgba(192,255,0,0.20)';
 const N40 = 'rgba(192,255,0,0.40)';
-const OR  = '#F97316';
-const BL  = '#3B82F6';
-const PU  = '#A78BFA';
-const RD  = '#F43F5E';
-const CY  = '#22D3EE';
-const YL  = '#FBBF24';
+const OR  = CHART_SERIES.load;        // era #F97316
+const BL  = CHART_SERIES.projected;   // era #3B82F6
+const PU  = CHART_SERIES.tertiary;
+const RD  = CHART_SERIES.risk;
+const CY  = CHART_SERIES.compare;
+const YL  = CHART_SERIES.load;        // era #FBBF24, stesso ruolo di OR
 const BG  = '#080808';
-const P1  = '#0E0E0E';   // panel bg
+const P1  = CHART_SURFACE.panel;
 const P2  = '#131313';
 const HL  = '#1A1A1A';   // hover
-const DM  = '#444';
-const MT  = '#2A2A2A';
-const MID = '#333';
+const DM  = CHART_TEXT.axis;          // era #444 → contrasto verificato
+const MT  = CHART_SURFACE.borderStrong;
+const MID = CHART_SURFACE.borderStrong; // era #333
 
 // â”€â”€â”€ Micro helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -539,7 +541,8 @@ function SeasonalMatrix() {
 // 10 â€” Best Efforts Progression
 export function AnalyticsV5BestEffortsProgression({ chart, onRequestDetail }: { chart?: ProAnalyticsChart; onRequestDetail?: () => void }) {
   const [expanded, setExpanded] = useState(false);
-  const fmt = (s?: number) => s ? `${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}` : '—';
+  // arrotonda il totale prima di dividere: mai ":60"
+  const fmt = (s?: number) => s ? `${Math.floor(Math.round(s)/60)}:${String(Math.round(s)%60).padStart(2,'0')}` : '—';
   const formatAxisMonth = (value: string) => {
     const [year, month] = String(value).split('-');
     const months = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];

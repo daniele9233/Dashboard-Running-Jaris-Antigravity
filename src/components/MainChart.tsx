@@ -390,7 +390,7 @@ export function MainChart({ runs }: MainChartProps) {
                       {run.distance_km?.toFixed(1)} km
                     </span>
                      <span>
-                       {run.duration_minutes ? `${Math.floor(run.duration_minutes / 60)}:${String(Math.round(run.duration_minutes % 60)).padStart(2,'0')}` : '—'}
+                       {run.duration_minutes ? `${Math.floor(Math.round(run.duration_minutes) / 60)}:${String(Math.round(run.duration_minutes) % 60).padStart(2,'0')}` : '—'}
                      </span>
                   </div>
                   <div className="text-[10px] text-text-muted mt-1">

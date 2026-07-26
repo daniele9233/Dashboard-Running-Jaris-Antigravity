@@ -44,9 +44,10 @@ function formatDate(dateStr: string): string {
 }
 
 function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = Math.floor(minutes % 60);
-  const s = Math.round((minutes % 1) * 60);
+  const total = Math.round(minutes * 60);   // arrotonda il totale: mai ":60"
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
   if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   return `${m}:${String(s).padStart(2, '0')}`;
 }
@@ -668,7 +669,7 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                         <div className="text-right">
                           <div className="text-[7px] font-black text-gray-600 uppercase tracking-widest">Pace</div>
                           <div className="text-sm font-black italic text-[#C0FF00]">
-                            {Math.floor(chartData[hoveredStreamIdx].pace / 60)}:{String(Math.round(chartData[hoveredStreamIdx].pace % 60)).padStart(2, '0')}/km
+                            {Math.floor(Math.round(chartData[hoveredStreamIdx].pace) / 60)}:{String(Math.round(chartData[hoveredStreamIdx].pace) % 60).padStart(2, '0')}/km
                           </div>
                         </div>
                       )}

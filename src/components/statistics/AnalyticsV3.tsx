@@ -12,18 +12,19 @@ import {
 import { Activity, Zap, RefreshCcw, Info, Check, AlertTriangle } from 'lucide-react';
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 import type { GarminCsvLinkResult, ProAnalyticsChart } from '../../types/api';
+import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from './chartTheme';
 
-// ─── Constants ──────────────────────────────────────────────────────────────
-const NEON   = '#C0FF00';
-const ORANGE = '#F97316';
+// ─── Constants — alias sul tema condiviso (chartTheme.ts) ───────────────────
+const NEON   = CHART_SERIES.primary;
+const ORANGE = CHART_SERIES.load;        // era #F97316
 const BG     = '#0A0A0A';
-const CARD   = '#0E0E0E';
-const BORDER = '#1E1E1E';
-const GRID   = '#1A1A1A';
-const DIM    = '#444444';
-const MUTED  = '#666666';
-const NEON_GREEN = '#ccff00';
-const NEON_ORANGE = '#ff5b00';
+const CARD   = CHART_SURFACE.panel;
+const BORDER = CHART_SURFACE.border;
+const GRID   = CHART_SURFACE.grid;       // era #1A1A1A
+const DIM    = CHART_TEXT.faint;
+const MUTED  = CHART_TEXT.axis;          // era #666 → contrasto verificato
+const NEON_GREEN = CHART_SERIES.primary; // era #ccff00, un secondo lime
+const NEON_ORANGE = CHART_SERIES.load;   // era #ff5b00
 
 const GLASS = "backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50";
 

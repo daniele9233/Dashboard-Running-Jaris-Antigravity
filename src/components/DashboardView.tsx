@@ -942,8 +942,9 @@ export function DashboardView() {
                 const [m, s] = p.split(":").map(Number);
                 return m * 60 + s;
               };
+              // arrotonda il totale prima di dividere: mai ":60"
               const fmtSecs = (s: number): string =>
-                `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+                `${Math.floor(Math.round(s) / 60)}:${String(Math.round(s) % 60).padStart(2, "0")}`;
 
               return (
                 <div className="h-full rounded-[24px] p-5 flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">

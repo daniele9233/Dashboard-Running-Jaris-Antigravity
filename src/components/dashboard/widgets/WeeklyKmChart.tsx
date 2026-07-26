@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { Footprints, Pencil } from "lucide-react";
 import type { Run } from "../../../types/api";
 import { useApi, invalidateCache } from "../../../hooks/useApi";
@@ -47,13 +47,14 @@ function mondayOf(now: Date): Date {
 }
 
 function fmtDuration(min: number): string {
-  const h = Math.floor(min / 60);
-  const m = Math.round(min % 60);
+  const total = Math.round(min);   // arrotonda il totale: mai "1h 60min"
+  const h = Math.floor(total / 60);
+  const m = total % 60;
   return h > 0 ? `${h}h ${m}min` : `${m}min`;
 }
 
 export function WeeklyKmChart({ runs }: { runs: Run[] }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [chartPeriod, setChartPeriod] = useState<'7d' | 'month' | 'year'>('7d');
 
   // ── Obiettivo km settimanale (sincronizzato su DB, cache localStorage) ──
@@ -116,19 +117,8 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
   const remaining = Math.max(0, Math.round((goal - week.totalKm) * 10) / 10);
   const R = 34, CIRC = 2 * Math.PI * R;
 
-  // ── Dati barre Mese/Anno (grafico classico) ──
+  // ── Dati barre Anno (grafico classico, 12 mesi) ──
   const chartData = useMemo(() => {
-    if (chartPeriod === 'month') {
-      const now = new Date();
-      const year = now.getFullYear(), month = now.getMonth();
-      const days = new Date(year, month + 1, 0).getDate();
-      return Array.from({ length: days }, (_, i) => {
-        const day = i + 1;
-        const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const km = runs.filter(r => r.date.slice(0, 10) === ds).reduce((s, r) => s + r.distance_km, 0);
-        return { day: String(day), km: Math.round(km * 10) / 10 };
-      });
-    }
     const now = new Date();
     return Array.from({ length: 12 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
@@ -139,7 +129,33 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
       const km = monthRuns.reduce((s, r) => s + r.distance_km, 0);
       return { day: d.toLocaleDateString('en', { month: 'short' }).toUpperCase(), km: Math.round(km * 10) / 10 };
     });
-  }, [runs, chartPeriod]);
+  }, [runs]);
+
+  // ── Volume settimanale stile Strava (ultime N settimane, lun→dom) ──
+  const WEEKS_BACK = 16;
+  const weeklyVolumes = useMemo(() => {
+    const locale = i18n.language === "en" ? "en-GB" : "it-IT";
+    const monthShort = (d: Date) => d.toLocaleDateString(locale, { month: "short" }).replace(/\.$/, "");
+    const thisMonday = mondayOf(new Date());
+    return Array.from({ length: WEEKS_BACK }, (_, i) => {
+      const start = new Date(thisMonday);
+      start.setDate(thisMonday.getDate() - i * 7);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      const startStr = toLocal(start), endStr = toLocal(end);
+      const km = runs
+        .filter(r => { const ds = r.date?.slice(0, 10); return ds && ds >= startStr && ds <= endStr; })
+        .reduce((s, r) => s + (r.distance_km || 0), 0);
+      const sameMonth = start.getMonth() === end.getMonth();
+      const dd = (d: Date) => String(d.getDate()).padStart(2, "0");
+      const label = sameMonth
+        ? `${dd(start)}–${dd(end)} ${monthShort(end)}`
+        : `${dd(start)} ${monthShort(start)} – ${dd(end)} ${monthShort(end)}`;
+      return { key: startStr, label, km, isCurrent: i === 0 };
+    });
+  }, [runs, i18n.language]);
+  const fmtKmDetailed = (km: number) =>
+    km.toLocaleString(i18n.language === "en" ? "en-GB" : "it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <div className="h-full rounded-[24px] p-6 flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
@@ -149,7 +165,7 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
           {chartPeriod === '7d'
             ? t("dashboard.thisWeek").toUpperCase()
             : chartPeriod === 'month'
-            ? t("dashboard.currentMonth").toUpperCase()
+            ? t("dashboard.weeklyVolume").toUpperCase()
             : t("dashboard.last12Months").toUpperCase()}
         </div>
         <div className="flex bg-[#111] rounded-[12px] border border-white/[0.06] p-0.5" role="tablist" aria-label="Periodo grafico">
@@ -243,43 +259,20 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
             </div>
           </div>
 
-          {/* Grafico volume giornaliero lun→dom — hover mostra i km */}
+          {/* Grafico volume giornaliero lun→dom — barre come 1Y, hover mostra i km */}
           <div>
-            <div className="h-16 w-full">
+            <div className="h-24 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={week.days} margin={{ top: 6, right: 4, left: 4, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="wk-area" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={LIME} stopOpacity={0.35} />
-                      <stop offset="100%" stopColor={LIME} stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
+                <BarChart data={week.days} margin={{ top: 6, right: 4, left: 4, bottom: 0 }} barCategoryGap="32%">
                   <XAxis dataKey="letter" hide />
                   <YAxis hide domain={[0, (max: number) => Math.max(max * 1.15, 1)]} />
-                  <Tooltip content={<WeekTooltip />} cursor={{ stroke: "rgba(255,255,255,0.15)", strokeWidth: 1 }} />
-                  <Area
-                    type="monotone"
-                    dataKey="km"
-                    stroke={LIME}
-                    strokeWidth={2}
-                    fill="url(#wk-area)"
-                    isAnimationActive={false}
-                    dot={(props: { cx?: number; cy?: number; payload?: { isToday: boolean; km: number } }) => {
-                      const { cx, cy, payload } = props;
-                      if (cx == null || cy == null || !payload || payload.km <= 0) return <g key={`${cx}-${cy}`} />;
-                      const today = payload.isToday;
-                      return (
-                        <circle
-                          key={`${cx}-${cy}`}
-                          cx={cx} cy={cy} r={today ? 4 : 3}
-                          fill={today ? LIME : "#0A0A0A"} stroke={LIME} strokeWidth={2}
-                          style={today ? { filter: `drop-shadow(0 0 5px ${LIME})` } : undefined}
-                        />
-                      );
-                    }}
-                    activeDot={{ r: 5, fill: LIME, stroke: "#0A0A0A", strokeWidth: 2 }}
-                  />
-                </AreaChart>
+                  <Tooltip content={<WeekTooltip />} cursor={{ fill: "rgba(255,255,255,0.06)" }} />
+                  <Bar dataKey="km" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                    {week.days.map((d, i) => (
+                      <Cell key={i} fill={LIME} opacity={d.isToday ? 1 : 0.55} />
+                    ))}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </div>
             <div className="flex justify-between gap-1.5 mt-1">
@@ -290,6 +283,30 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      ) : chartPeriod === 'month' ? (
+        <div className="flex-1 min-h-0 overflow-y-auto -mr-2 pr-2">
+          <div className="divide-y divide-white/5">
+            {weeklyVolumes.map(w => (
+              <div key={w.key} className="py-2.5 first:pt-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[13px] font-black text-white">{w.label}</span>
+                  {w.isCurrent && (
+                    <span
+                      className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full"
+                      style={{ color: LIME, background: `${LIME}1a` }}
+                    >
+                      {t("dashboard.inProgress")}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-gray-500">{t("dashboard.totalDistance")}</span>
+                  <span className="text-sm font-black tabular-nums" style={{ color: LIME }}>{fmtKmDetailed(w.km)} km</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       ) : (

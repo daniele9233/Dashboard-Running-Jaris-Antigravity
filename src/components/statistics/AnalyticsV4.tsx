@@ -13,23 +13,25 @@ import {
 } from 'recharts';
 import type { Run, FitnessFreshnessPoint, ProAnalyticsChart } from '../../types/api';
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
+import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from './chartTheme';
 
 // â”€â”€â”€ Palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const N  = '#C0FF00';           // neon lime
+// Alias sul tema condiviso (chartTheme.ts).
+const N  = CHART_SERIES.primary;
 const N2 = 'rgba(192,255,0,.15)';
 const N3 = 'rgba(192,255,0,.06)';
-const OR = '#F97316';
-const BL = '#3B82F6';
-const PU = '#8B5CF6';
-const RD = '#F43F5E';
-const CY = '#22D3EE';
+const OR = CHART_SERIES.load;        // era #F97316
+const BL = CHART_SERIES.projected;   // era #3B82F6
+const PU = CHART_SERIES.tertiary;    // era #8B5CF6
+const RD = CHART_SERIES.risk;
+const CY = CHART_SERIES.compare;
 const BG = '#080808';
-const S1 = '#0E0E0E';
+const S1 = CHART_SURFACE.panel;
 const S2 = '#161616';
 const S3 = '#1C1C1C';
-const BR = '#222';
-const DM = '#555';
-const MT = '#1E1E1E';
+const BR = CHART_SURFACE.borderStrong;  // era #222
+const DM = CHART_TEXT.axis;             // era #555 → contrasto verificato
+const MT = CHART_SURFACE.border;
 
 // â”€â”€â”€ Shared tiny label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function Lbl({ children, color = DM }: { children: React.ReactNode; color?: string }) {

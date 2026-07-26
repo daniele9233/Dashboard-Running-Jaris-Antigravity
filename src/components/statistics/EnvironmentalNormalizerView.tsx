@@ -12,14 +12,16 @@ import {
   Cell,
 } from 'recharts';
 import { CloudSun, Droplets, ThermometerSun, Wind, Gauge, Sparkles, MapPin } from 'lucide-react';
+import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from './chartTheme';
 
-const NEON = '#C0FF00';
-const CYAN = '#22D3EE';
-const AMBER = '#F59E0B';
-const PINK = '#FF4D8D';
-const PANEL = '#0E0E0E';
-const BORDER = '#1F290E';
-const MUTED = '#7D8590';
+// Alias sul tema condiviso (chartTheme.ts).
+const NEON = CHART_SERIES.primary;
+const CYAN = CHART_SERIES.compare;
+const AMBER = CHART_SERIES.load;
+const PINK = CHART_SERIES.risk;          // era #FF4D8D
+const PANEL = CHART_SURFACE.panel;
+const BORDER = CHART_SURFACE.border;     // era #1F290E (verde oliva)
+const MUTED = CHART_TEXT.muted;          // era #7D8590 → contrasto verificato
 
 type WeatherSnapshot = {
   temperature: number | null;
