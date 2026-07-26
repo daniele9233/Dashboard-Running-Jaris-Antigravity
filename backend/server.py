@@ -1645,8 +1645,10 @@ async def get_dashboard():
             "pct": round((done_km / target_km) * 100) if target_km > 0 else 0,
         }
 
-    # Fitness / Freshness
-    ff_docs = await db.fitness_freshness.find(q).sort("date", -1).to_list(90)
+    # Fitness / Freshness — cap allineato a /api/fitness-freshness: il widget
+    # dashboard ha tab fino a "2 anni" e troncare a 90 record (~7 mesi con lo
+    # storico reale) mostrava dati incompleti per quei tab senza avvisare.
+    ff_docs = await db.fitness_freshness.find(q).sort("date", -1).to_list(1000)
     current_ff = None
     if ff_docs:
         latest = _project_fitness_freshness_doc(ff_docs[0]) or ff_docs[0]
