@@ -13,6 +13,7 @@ import { BiologyFutureLab } from './BiologyFutureLab';
 import { EnvironmentalNormalizerView } from './EnvironmentalNormalizerView';
 import { PaceCalculator } from './PaceCalculator';
 import { PeriodComparison } from './PeriodComparison';
+import { RunComparison } from './RunComparison';
 import { AnalyticsV4CadenceSpeedMatrix, AnalyticsV4PaceZoneDistribution } from './AnalyticsV4';
 import { CaricoFormaV2 } from './CaricoFormaV2';
 import { AnalyticsV5BestEffortsProgression, AnalyticsV5EffortMatrix, AnalyticsV5PaceDistributionBell } from './AnalyticsV5';
@@ -750,6 +751,8 @@ function buildClientAnalyticsFallbacks(runs: Run[]) {
 export function StatisticsView() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('analytics-cf-v2');
+  // Sotto-modalità della tab Confronto: corsa vs corsa (default) o mese vs mese.
+  const [compareMode, setCompareMode] = useState<'runs' | 'periods'>('runs');
   const [expandedChart, setExpandedChart] = useState<null | 'paces' | 'cadence' | 'gctMonthly'>(null);
   const [proSections, setProSections] = useState<ProAnalyticsResponse['sections']>({});
   const [proError, setProError] = useState<string | null>(null);
@@ -2483,10 +2486,33 @@ export function StatisticsView() {
           </div>
         )}
 
-        {/* ═══ CONFRONTO PERIODI ═══ */}
+        {/* ═══ CONFRONTO ═══
+            Corsa vs corsa è la vista principale; il confronto fra mesi resta
+            come seconda modalità invece di essere buttato. */}
         {activeTab === 'period-compare' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <PeriodComparison runs={runs} />
+            <div className="flex bg-[#111] rounded-[12px] border border-white/[0.06] p-0.5 w-fit mb-4" role="tablist">
+              {([
+                ['runs', 'CORSE'],
+                ['periods', 'PERIODI'],
+              ] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={compareMode === key}
+                  onClick={() => setCompareMode(key)}
+                  className={`px-3.5 py-1.5 rounded-[10px] text-[10px] font-black tracking-wider transition-all ${
+                    compareMode === key ? 'bg-[#C0FF00] text-black' : 'text-gray-500 hover:text-white'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {compareMode === 'runs'
+              ? <RunComparison runs={runs} />
+              : <PeriodComparison runs={runs} />}
           </div>
         )}
 
