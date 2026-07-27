@@ -486,6 +486,9 @@ function HeroMap({ lastRun }: { lastRun: Run | null }) {
 
 // ─── 80/20 RULE COMPONENT ────────────────────────────────────────────────────
 
+/** Tipi che il backend classifica come seduta di qualità (usa laps + streams). */
+const QUALITY_TYPES = new Set(['intervals', 'repetition', 'vo2max', 'tempo', 'threshold', 'fartlek', 'race']);
+
 function EightyTwentyRule({ runs, period }: { runs: Run[]; period: 7 | 14 }) {
   const slowMaxHr = SLOW_MAX_HR;
 
@@ -497,10 +500,47 @@ function EightyTwentyRule({ runs, period }: { runs: Run[]; period: 7 | 14 }) {
 
     const recentRuns = runs.filter(r => r.date >= cutoffStr && r.avg_hr && r.distance_km >= 1);
     let slowKm = 0, fastKm = 0;
-    const details: { date: string; km: number; hr: number; type: "slow" | "fast" }[] = [];
+    const details: { date: string; km: number; hr: number; type: "slow" | "fast" | "mixed"; fastKm?: number; slowKm?: number }[] = [];
 
     for (const r of recentRuns) {
       const hr = r.avg_hr ?? 0;
+
+      // ── Sedute di qualità: la MEDIA della corsa non le rappresenta ─────────
+      // Su 4×1000 i recuperi camminati (~105 bpm) trascinano la media sotto
+      // soglia e la seduta risultava "lenta". Peggio: per il lag cardiaco
+      // nemmeno la FC media della singola ripetuta supera la soglia (141 bpm
+      // su una rep corsa a 3:59/km). Quindi si ripartisce per GIRO usando il
+      // PASSO, che sulle ripetute brevi è l'indicatore affidabile.
+      const laps = (r.laps ?? []).filter(l => (l.distance ?? 0) > 0 && (l.moving_time ?? 0) > 0);
+      if (laps.length >= 2) {
+        const paced = laps.map(l => ({ km: l.distance / 1000, paceSec: l.moving_time / (l.distance / 1000) }));
+        // Soglia auto-calibrata sulla seduta stessa; i giri < 200 m sono rumore.
+        const meaningful = paced.filter(p => p.km >= 0.2).map(p => p.paceSec).sort((a, b) => a - b);
+        if (meaningful.length >= 2) {
+          const fastest = meaningful[0];
+          const slowest = meaningful[meaningful.length - 1];
+          // Serve un contrasto reale per parlare di lavoro/recupero: un lento
+          // continuo con auto-lap ogni km non deve essere spezzato.
+          if (slowest / fastest > 1.25) {
+            let wk = 0, sk = 0;
+            const cut = fastest + (slowest - fastest) * 0.4;
+            for (const p of paced) (p.paceSec <= cut ? (wk += p.km) : (sk += p.km));
+            fastKm += wk;
+            slowKm += sk;
+            details.push({ date: r.date, km: r.distance_km, hr, type: "mixed", fastKm: wk, slowKm: sk });
+            continue;
+          }
+        }
+      }
+
+      // Seduta di qualità senza giri distinguibili (es. tempo run continuo):
+      // il tipo lo dice già il backend, che l'ha classificata su laps/streams.
+      if (QUALITY_TYPES.has((r.run_type ?? '').toLowerCase())) {
+        fastKm += r.distance_km;
+        details.push({ date: r.date, km: r.distance_km, hr, type: "fast" });
+        continue;
+      }
+
       if (hr <= slowMaxHr) {
         slowKm += r.distance_km;
         details.push({ date: r.date, km: r.distance_km, hr, type: "slow" });
@@ -578,9 +618,18 @@ function EightyTwentyRule({ runs, period }: { runs: Run[]; period: 7 | 14 }) {
               <span className="text-gray-500">{d.date}</span>
               <span className="text-gray-400">{d.km.toFixed(1)} km</span>
               <span className="text-gray-400">{d.hr} bpm</span>
-              <span className={`font-bold ${d.type === "slow" ? "text-green-400" : "text-red-400"}`}>
-                {d.type === "slow" ? "Lenta" : "Veloce"}
-              </span>
+              {d.type === "mixed" ? (
+                // Seduta di qualità: mostra la ripartizione reale lavoro/recupero
+                <span className="font-bold text-right">
+                  <span className="text-red-400">{(d.fastKm ?? 0).toFixed(1)}</span>
+                  <span className="text-gray-600"> / </span>
+                  <span className="text-green-400">{(d.slowKm ?? 0).toFixed(1)} km</span>
+                </span>
+              ) : (
+                <span className={`font-bold ${d.type === "slow" ? "text-green-400" : "text-red-400"}`}>
+                  {d.type === "slow" ? "Lenta" : "Veloce"}
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -1075,7 +1124,7 @@ export function ProfileView() {
               <div>
                 <h2 className="text-lg font-bold text-white">Regola 80/20</h2>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Lente (Z1-Z2 ≤ {SLOW_MAX_HR} bpm) vs Veloci (Z3-Z5 &gt; {SLOW_MAX_HR} bpm)
+                  Lente (Z1-Z2 ≤ {SLOW_MAX_HR} bpm) vs Veloci (Z3-Z5). Le ripetute sono divise per giro.
                 </p>
               </div>
               <div className="flex bg-[#121212] rounded-lg p-0.5">

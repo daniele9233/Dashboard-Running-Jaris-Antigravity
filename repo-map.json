@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-27T06:27:56.175Z",
+  "generated_at": "2026-07-27T10:16:15.543Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -3311,9 +3311,9 @@
         "react-map-gl/maplibre",
         "react-router-dom"
       ],
-      "hash": "a348580287647271a925562eb5da72b674e0595e90c423f912ba45b6fac7416b",
-      "last_modified": "2026-06-13T16:30:18.276Z",
-      "size_bytes": 63501
+      "hash": "21a5bd138ee79f618c31c64a6008f69c323eb96afbfc71d5ec6736c4409f00f2",
+      "last_modified": "2026-07-27T10:16:15.544Z",
+      "size_bytes": 66270
     },
     {
       "path": "src/components/RacePredictions.tsx",
