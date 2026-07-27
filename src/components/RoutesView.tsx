@@ -594,17 +594,20 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                       <span>#</span>
                       <span>Dist</span>
                       <span>Tempo</span>
-                      <span>Passo · PBP</span>
+                      <span>PBP</span>
                       <span className="text-right">FC</span>
                     </div>
                     <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-1">
                       {segments.map((seg) => {
                         const isWork = seg.kind === 'work';
                         const isRecovery = seg.kind === 'recovery';
-                        // Il PBP si mostra solo se sposta il passo di almeno 2
-                        // sec/km: sotto quella soglia è rumore e affolla la riga.
-                        const showGap =
-                          seg.gap_pace_sec != null && Math.abs(seg.gap_pace_sec - seg.pace_sec) >= 2;
+                        // In colonna va il PBP e basta: è il passo che conta
+                        // davvero, e affiancarlo a quello grezzo raddoppiava i
+                        // numeri da leggere senza aggiungere informazione.
+                        // Il grezzo resta solo dove il dislivello manca e il PBP
+                        // non è calcolabile.
+                        const hasGap = seg.gap_pace_sec != null;
+                        const shownPace = hasGap ? seg.gap_pace_sec! : seg.pace_sec;
                         return (
                           <div
                             key={`${seg.kind}-${seg.index}`}
@@ -635,16 +638,18 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                             <span className="text-[11px] font-bold tabular-nums text-gray-300">
                               {fmtClock(seg.moving_time_s)}
                             </span>
-                            <span className={cn("text-[11px] font-black italic tabular-nums", isWork ? "text-white" : "text-gray-500")}>
-                              {fmtPaceSec(seg.pace_sec)}
-                              {showGap && (
-                                <span
-                                  className="text-[8px] not-italic font-bold text-amber-400/80 ml-1"
-                                  title={`Passo corretto per una pendenza del ${seg.grade_pct}%`}
-                                >
-                                  {fmtPaceSec(seg.gap_pace_sec!)}
-                                </span>
+                            <span
+                              className={cn(
+                                "text-[11px] font-black italic tabular-nums",
+                                hasGap ? "text-amber-400" : isWork ? "text-white" : "text-gray-500",
                               )}
+                              title={
+                                hasGap
+                                  ? `PBP · passo corretto per una pendenza del ${seg.grade_pct}% (grezzo ${fmtPaceSec(seg.pace_sec)})`
+                                  : "Dislivello non disponibile: passo grezzo"
+                              }
+                            >
+                              {fmtPaceSec(shownPace)}
                             </span>
                             <span className="text-[11px] font-bold tabular-nums text-rose-400 text-right">
                               {seg.avg_hr ?? '—'}
@@ -655,7 +660,7 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                     </div>
                     <p className="text-[8px] text-gray-600 mt-2 px-3 leading-relaxed">
                       {hasWorkSegments && 'In evidenza le ripetute, in trasparenza i recuperi. '}
-                      {segments.some((s) => s.gap_pace_sec != null) && 'In ambra il PBP, il passo corretto per la pendenza. '}
+                      {segments.some((s) => s.gap_pace_sec != null) && 'In ambra il PBP, il passo corretto per la pendenza; il passo grezzo è nel tooltip. '}
                       {intervalSource === 'streams' &&
                         'I giri dell\'orologio non erano disponibili: i parziali sono ricavati dai dati per-punto.'}
                     </p>

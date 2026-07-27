@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-27T05:46:09.963Z",
+  "generated_at": "2026-07-27T05:54:37.264Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -3377,9 +3377,9 @@
         "react-map-gl/maplibre",
         "recharts"
       ],
-      "hash": "918fa0a5f1c7cab7d16c3f9a4926abaa3ed712201f085320dae199d2e07b8fec",
-      "last_modified": "2026-07-27T05:27:02.018Z",
-      "size_bytes": 49712
+      "hash": "1c24d9a4d60218b7bdc0f2fd5c67ff56872b3f428c6613b3d2c41fd3147337f5",
+      "last_modified": "2026-07-27T05:54:37.264Z",
+      "size_bytes": 49999
     },
     {
       "path": "src/components/runner-dna/dnaShared.ts",
