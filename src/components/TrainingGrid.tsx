@@ -1298,7 +1298,10 @@ export function TrainingGrid() {
    * Sub-20 e viene riusata identica: rinominare venti riferimenti non
    * cambierebbe nulla di sostanziale.
    */
-  const [showKikko, setShowKikko] = useState(false);
+  // Acceso all'apertura: entrando in Training si vede subito il calendario
+  // kikkoSub20 sull'anno. Il bottone in header resta per spegnerlo e tornare
+  // al piano generato.
+  const [showKikko, setShowKikko] = useState(true);
   const showSub20 = showKikko;
   // Data di partenza del piano (prima seduta), scelta dall'utente.
   const [sub20StartDate, setSub20StartDate] = useState<string>(KIKKO_SUB20_DEFAULT_START);

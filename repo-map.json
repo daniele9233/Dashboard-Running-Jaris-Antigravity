@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-27T11:49:47.971Z",
+  "generated_at": "2026-07-27T17:50:22.710Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -4214,9 +4214,9 @@
         "react",
         "react-i18next"
       ],
-      "hash": "b1812b61186e03144ecaa091625a2cfea180cc4a83157e07fb8ebe17ac2cdc71",
-      "last_modified": "2026-07-27T10:37:59.400Z",
-      "size_bytes": 100308
+      "hash": "85e033d6efe98cf752c135fbbe266b384b639747f22914c379d0463738d264b7",
+      "last_modified": "2026-07-27T17:50:22.711Z",
+      "size_bytes": 100488
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
