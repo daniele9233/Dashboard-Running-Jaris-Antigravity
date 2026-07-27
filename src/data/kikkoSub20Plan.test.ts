@@ -37,20 +37,20 @@ describe("kikkoSub20 — volume", () => {
     expect(KIKKO_SUB20_WEEKLY_KM[0]).toBe(32);
   });
 
-  it("rispetta la regola del 10% sulle settimane di carico", () => {
-    // Il confronto va fatto fra picchi di blocco: dopo uno scarico il salto
-    // percentuale è alto per costruzione e non significa nulla.
+  it("sale a ogni settimana fino al picco, senza scarichi", () => {
     const km = KIKKO_SUB20_WEEKLY_KM;
-    for (const [from, to] of [[0, 1], [1, 2], [2, 4], [4, 5], [5, 6], [6, 8]]) {
-      const growth = ((km[to] - km[from]) / km[from]) * 100;
-      expect(growth).toBeGreaterThan(0);
-      expect(growth).toBeLessThanOrEqual(11);
+    for (let i = 1; i <= 8; i++) {
+      expect(km[i], `settimana ${i + 1} deve superare la ${i}`).toBeGreaterThan(km[i - 1]);
     }
   });
 
-  it("scarica il volume nelle settimane 4 e 8", () => {
-    expect(KIKKO_SUB20_WEEKLY_KM[3]).toBeLessThan(KIKKO_SUB20_WEEKLY_KM[2]);
-    expect(KIKKO_SUB20_WEEKLY_KM[7]).toBeLessThan(KIKKO_SUB20_WEEKLY_KM[6]);
+  it("ogni incremento resta dentro la regola del 10%", () => {
+    const km = KIKKO_SUB20_WEEKLY_KM;
+    for (let i = 1; i <= 8; i++) {
+      const growth = ((km[i] - km[i - 1]) / km[i - 1]) * 100;
+      expect(growth, `settimana ${i + 1}`).toBeGreaterThanOrEqual(8);
+      expect(growth, `settimana ${i + 1}`).toBeLessThanOrEqual(11);
+    }
   });
 
   it("il taper riduce il volume fra il 41% e il 60% del picco", () => {

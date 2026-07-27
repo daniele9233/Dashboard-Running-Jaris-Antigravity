@@ -13,16 +13,20 @@ import type { Session } from "../types/api";
  *    recupero che si accorcia ogni 14 giorni (3:00 → 1:45). Nelle settimane pari
  *    la seconda seduta è una soglia: tiene il conto di "due intense" senza
  *    aggiungere un secondo stimolo VO2max, che a questo volume non si recupera.
- *  · Taper negli ultimi 7-10 giorni: volume −54%, intensità INVARIATA a ritmo
+ *  · Taper negli ultimi 7-10 giorni: volume −58%, intensità INVARIATA a ritmo
  *    gara ma con molte meno ripetizioni.
  *
  * Ritmo gara 5K (RG5K) = 4:00/km → obiettivo 19:58.
  *
- * Volume settimanale (regola del 10% con scarico ogni 4ª settimana):
- *   32 · 35 · 38 · 30↓ · 42 · 46 · 50 · 39↓ · 52 · 24 (taper)
- * Le settimane di scarico servono: il 10% composto puro da 32 km porterebbe a
- * ~75 km in settimana 10, volume che questo piano non regge e non richiede.
- * Sui blocchi di carico la regola è rispettata (W3→W5 +10.5%, W7→W9 +4%).
+ * Volume settimanale — sempre a salire, regola del 10% su OGNI settimana:
+ *   32 · 35 · 38 · 42 · 46 · 50 · 55 · 60 · 66 · 28 (taper)
+ * Ogni incremento sta fra +8.6% e +10.6% (i km sono interi, da qui l'arrotondamento). Nessuna settimana di scarico: la
+ * progressione richiesta è monotona fino al picco, poi si scarica solo col taper.
+ *
+ * Nota: 32 → 66 km in nove settimane è una rampa impegnativa e senza settimane
+ * di richiamo il margine di recupero è tutto sulle corse facili. Se una
+ * settimana arriva con le gambe piatte, ripeterla invece di proseguire vale più
+ * di qualsiasi chilometro aggiunto.
  *
  * Ritmo settimanale:
  *   Lunedì    → facile          (recovery)
@@ -144,7 +148,7 @@ const tempo = (minutes: number, dist: number, extra = ""): Cell => ({
 });
 
 const WEEKS: WeekDef[] = [
-  // ═══ BLOCCO 1 · INGRESSO ══════════════════════════════════════════════════
+  // ═══ BLOCCO 1 · INGRESSO · 600 m ══════════════════════════════════════════
   {
     mon: "2026-07-27", totalKm: 32,
     cells: [
@@ -161,7 +165,7 @@ const WEEKS: WeekDef[] = [
     mon: "2026-08-03", totalKm: 35,
     cells: [
       easy(3),
-      reps(7, 600, 8, "2:00", "Una ripetuta in più della scorsa settimana: la progressione è nel numero, non nel passo."),
+      reps(7, 600, 8, "2:00", "Una ripetuta in più: la progressione è nel numero, non nel passo."),
       easy(4),
       tempo(20, 9),
       easy(4),
@@ -173,7 +177,7 @@ const WEEKS: WeekDef[] = [
     mon: "2026-08-10", totalKm: 38,
     cells: [
       easy(4),
-      reps(8, 600, 9, "1:50", "8×600 = 4,8 km a ritmo gara. Recupero leggermente più corto."),
+      reps(8, 600, 9, "1:50", "8×600 = 4,8 km a ritmo gara, recupero leggermente più corto."),
       easy(4),
       longReps("2:30", 10, "Secondo giro dei 3×2 km: 30 secondi di recupero in meno rispetto alla settimana 1."),
       easy(4),
@@ -182,95 +186,95 @@ const WEEKS: WeekDef[] = [
     ],
   },
   {
-    mon: "2026-08-17", totalKm: 30,
+    mon: "2026-08-17", totalKm: 42,
     cells: [
-      easy(3, "SETTIMANA DI SCARICO (−21%): serve ad assorbire il blocco, non a perdere terreno."),
-      reps(6, 600, 7, "2:00", "Scarico: torniamo a 6 ripetute. Qualità mantenuta, volume ridotto."),
       easy(4),
-      tempo(20, 8, "Soglia corta e pulita: devi uscire fresco."),
-      easy(3),
+      reps(9, 600, 10, "1:50", "Ultima settimana sui 600: nove ripetute, 5,4 km di lavoro."),
+      easy(5),
+      tempo(25, 10, "La soglia sale a 25′ continui."),
+      easy(4),
       null,
-      longRun(5, "Lungo ridotto per la settimana di scarico."),
+      longRun(9),
     ],
   },
 
   // ═══ BLOCCO 2 · SI PASSA AGLI 800 ═════════════════════════════════════════
   {
-    mon: "2026-08-24", totalKm: 42,
+    mon: "2026-08-24", totalKm: 46,
     cells: [
-      easy(4),
-      reps(6, 800, 9, "2:15", "Si allunga la ripetuta: da 600 a 800 m. Il numero riparte da 6, la distanza cresce."),
       easy(5),
-      longReps("2:15", 10, "Terzo giro: recupero a 2:15."),
+      reps(6, 800, 9, "2:15", "Si allunga la ripetuta: da 600 a 800 m. Il numero riparte da 6, la distanza cresce."),
+      easy(6),
+      longReps("2:15", 10, "Terzo giro dei 3×2 km: recupero a 2:15."),
       easy(5),
       null,
-      longRun(9),
+      longRun(11),
     ],
   },
   {
-    mon: "2026-08-31", totalKm: 46,
+    mon: "2026-08-31", totalKm: 50,
     cells: [
       easy(5),
       reps(7, 800, 10, "2:10"),
-      easy(6),
-      tempo(25, 10, "La soglia sale a 25′ continui."),
-      easy(5),
-      null,
-      longRun(10, "Doppia cifra sul lungo."),
-    ],
-  },
-  {
-    mon: "2026-09-07", totalKm: 50,
-    cells: [
-      easy(5),
-      reps(8, 800, 11, "2:00", "8×800 = 6,4 km a ritmo gara: più della distanza di gara, frazionata."),
       easy(7),
-      longReps("2:00", 10, "Quarto giro: recupero a 2:00. Inizia a somigliare a una gara."),
+      tempo(30, 11, "Trenta minuti continui di soglia: il motore che regge i 4:00 in gara si costruisce qui."),
       easy(6),
       null,
       longRun(11),
     ],
   },
   {
-    mon: "2026-09-14", totalKm: 39,
+    mon: "2026-09-07", totalKm: 55,
     cells: [
-      easy(4, "SETTIMANA DI SCARICO (−22%): il corpo assorbe qui il lavoro delle tre precedenti."),
-      reps(6, 800, 9, "2:15", "Scarico: sei ripetute, recupero pieno. Serve freschezza per il picco."),
-      easy(5),
-      tempo(20, 9),
-      easy(4),
+      easy(6),
+      reps(8, 800, 11, "2:00", "8×800 = 6,4 km a ritmo gara: più della distanza di gara, frazionata."),
+      easy(8),
+      longReps("2:00", 11, "Quarto giro: recupero a 2:00. Inizia a somigliare a una gara."),
+      easy(7),
       null,
-      longRun(8),
+      longRun(12),
+    ],
+  },
+  {
+    mon: "2026-09-14", totalKm: 60,
+    cells: [
+      easy(7),
+      reps(9, 800, 12, "2:00"),
+      easy(9),
+      tempo(30, 11),
+      easy(7),
+      null,
+      longRun(14),
     ],
   },
 
   // ═══ BLOCCO 3 · PICCO ═════════════════════════════════════════════════════
   {
-    mon: "2026-09-21", totalKm: 52,
+    mon: "2026-09-21", totalKm: 66,
     cells: [
-      easy(5),
-      reps(10, 800, 13, "2:00", "LA SEDUTA DEL PIANO: 10×800 = 8 km a ritmo gara. Se la chiudi con passo costante, la sub-20 è nelle gambe."),
       easy(7),
-      longReps("1:45", 10, "Ultimo giro dei 3×2 km, recupero minimo a 1:45. È il test finale della tenuta."),
-      easy(6),
+      reps(10, 800, 13, "2:00", "LA SEDUTA DEL PIANO: 10×800 = 8 km a ritmo gara. Se la chiudi con passo costante, la sub-20 è nelle gambe."),
+      easy(10),
+      longReps("1:45", 11, "Ultimo giro dei 3×2 km, recupero minimo a 1:45. È il test finale della tenuta."),
+      easy(9),
       null,
-      longRun(11, "Ultimo lungo pieno: da qui si scarica verso la gara."),
+      longRun(16, "Ultimo lungo pieno: da qui si scarica verso la gara."),
     ],
   },
 
   // ═══ SETTIMANA 10 · TAPER + GARA ══════════════════════════════════════════
   {
-    mon: "2026-09-28", totalKm: 24,
+    mon: "2026-09-28", totalKm: 28,
     cells: [
-      easy(2, "TAPER (−54% sul picco). Da qui in poi il lavoro è già fatto: si tratta solo di arrivare riposato."),
+      easy(4, "TAPER (−58% sul picco). Da qui in poi il lavoro è già fatto: si tratta solo di arrivare riposato."),
       reps(5, 800, 7, "2:30", "Metà delle ripetute del picco, STESSO ritmo gara e recupero più lungo. L'intensità si tiene, il volume no."),
-      easy(3),
+      easy(4),
       {
         title: `Sblocco 2×1000 @ ${RG5K}`,
-        dist: 4,
+        dist: 5,
         pace: RG5K,
         desc:
-          `1,5 km di riscaldamento, 2×1000 a ${RG5K}/km con 3′ di recupero, defaticamento sciolto. Ultimo richiamo ` +
+          `2 km di riscaldamento, 2×1000 a ${RG5K}/km con 3′ di recupero, defaticamento sciolto. Ultimo richiamo ` +
           `del passo a gambe fresche: DEVE sembrare facile. Se sembra dura non è un problema di forma, è che il ` +
           `taper non ha ancora finito il suo lavoro. Da oggi: idratazione, carboidrati, sonno.`,
       },

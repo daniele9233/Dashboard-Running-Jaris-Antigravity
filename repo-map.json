@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-26T18:23:20.698Z",
+  "generated_at": "2026-07-27T05:46:09.963Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -448,8 +448,8 @@
         "typing"
       ],
       "hash": "85bdb3c0aaa5353340a78307b2a098e6df99e9ba6eb1bb075b54bbf9311f3b89",
-      "last_modified": "2026-07-26T17:51:40.771Z",
-      "size_bytes": 16951
+      "last_modified": "2026-07-27T05:27:02.016Z",
+      "size_bytes": 17396
     },
     {
       "path": "backend/requirements.txt",
@@ -565,7 +565,7 @@
         "typing"
       ],
       "hash": "22920e6b866e29c87ec814805cd44ef68665e559bd8a8e80c574b64ac698040d",
-      "last_modified": "2026-07-26T18:15:07.596Z",
+      "last_modified": "2026-07-27T05:27:02.016Z",
       "size_bytes": 11429
     },
     {
@@ -783,8 +783,8 @@
         "pathlib"
       ],
       "hash": "c7128dfd040d6382e2323b2dcdad149ac7196312f727823be6af3d30a9536685",
-      "last_modified": "2026-07-26T18:14:43.856Z",
-      "size_bytes": 9692
+      "last_modified": "2026-07-27T05:27:02.016Z",
+      "size_bytes": 9923
     },
     {
       "path": "backend/test_models.py",
@@ -1737,7 +1737,7 @@
         "./client"
       ],
       "hash": "114abea5e3236fb3051d9fc83d5452ce2fb30318664fab027e3d0482387ecf9b",
-      "last_modified": "2026-07-26T18:15:07.616Z",
+      "last_modified": "2026-07-27T05:27:02.018Z",
       "size_bytes": 24180
     },
     {
@@ -2699,7 +2699,7 @@
         "react"
       ],
       "hash": "fd8dd3656ad0cc7dd9c90281e4e58e7a792f1edf1cc28a9d5114ca6722fd6c12",
-      "last_modified": "2026-07-26T18:15:07.617Z",
+      "last_modified": "2026-07-27T05:27:02.019Z",
       "size_bytes": 10462
     },
     {
@@ -2729,7 +2729,7 @@
         "recharts"
       ],
       "hash": "627622515d8f310f7b3949ee1135ac126aa9e5365be144cd7ba1bfc30a635496",
-      "last_modified": "2026-07-26T18:15:07.617Z",
+      "last_modified": "2026-07-27T05:27:02.019Z",
       "size_bytes": 16903
     },
     {
@@ -3378,7 +3378,7 @@
         "recharts"
       ],
       "hash": "918fa0a5f1c7cab7d16c3f9a4926abaa3ed712201f085320dae199d2e07b8fec",
-      "last_modified": "2026-07-26T18:15:07.616Z",
+      "last_modified": "2026-07-27T05:27:02.018Z",
       "size_bytes": 49712
     },
     {
@@ -3877,7 +3877,7 @@
         "recharts"
       ],
       "hash": "7aafd3071d5a0d2dd5a171915456b5640922333ff2b4f9743a4487f991de75fa",
-      "last_modified": "2026-07-26T18:15:07.618Z",
+      "last_modified": "2026-07-27T05:27:02.020Z",
       "size_bytes": 32108
     },
     {
@@ -3901,7 +3901,7 @@
         "react-i18next"
       ],
       "hash": "40251aafddb2a0b052ef36810acbdd827c5ff1e1f9ed02e215e6859a680349a6",
-      "last_modified": "2026-07-26T18:15:07.618Z",
+      "last_modified": "2026-07-27T05:27:02.020Z",
       "size_bytes": 20955
     },
     {
@@ -3990,8 +3990,8 @@
         "recharts"
       ],
       "hash": "9b49bc848dad066e4200a11a3bd747fc5dba71491ff569cc9c257e88d783ba47",
-      "last_modified": "2026-07-26T18:23:20.698Z",
-      "size_bytes": 24382
+      "last_modified": "2026-07-27T05:27:02.020Z",
+      "size_bytes": 24945
     },
     {
       "path": "src/components/statistics/StatisticsView.tsx",
@@ -4046,7 +4046,7 @@
         "recharts"
       ],
       "hash": "342637913378385d6424734a62cf73ff82e6cf3a3427dc48566ab6daf639f9db",
-      "last_modified": "2026-07-26T18:21:33.229Z",
+      "last_modified": "2026-07-27T05:27:02.021Z",
       "size_bytes": 126945
     },
     {
@@ -4200,9 +4200,9 @@
         "react",
         "react-i18next"
       ],
-      "hash": "8b85d60573d3f883f1a1cd548293ba8594a92bcb7cc004c42e405531b04c1d59",
-      "last_modified": "2026-07-26T18:15:07.617Z",
-      "size_bytes": 102871
+      "hash": "2f7fd7874fdb59d82d9cd187666a7866eee1f5c0f23ce1f0766aea530f0712f3",
+      "last_modified": "2026-07-27T05:42:51.380Z",
+      "size_bytes": 102083
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -4413,9 +4413,9 @@
         "./kikkoSub20Plan",
         "vitest"
       ],
-      "hash": "f1242b20554b3196efb16691ed9d790c5c79a423507ab0cdb37836de04177011",
-      "last_modified": "2026-07-26T17:43:44.687Z",
-      "size_bytes": 5072
+      "hash": "bd928f42a4c21a809fa6a56731891f64b67e12d3457ffc8a48f88d735c6d8c03",
+      "last_modified": "2026-07-27T05:46:09.949Z",
+      "size_bytes": 5088
     },
     {
       "path": "src/data/kikkoSub20Plan.ts",
@@ -4440,9 +4440,9 @@
       "imports": [
         "../types/api"
       ],
-      "hash": "ffd9942179b89f4665602be4e20d685a5947d78aae8c4741f28ba986add75533",
-      "last_modified": "2026-07-26T17:40:09.750Z",
-      "size_bytes": 13892
+      "hash": "f2c3c1686383e0d0b42cdf6a9216e515206136d5e4a557006720b3c8fcea151d",
+      "last_modified": "2026-07-27T05:46:09.963Z",
+      "size_bytes": 14202
     },
     {
       "path": "src/data/sub20Plan.ts",
@@ -4782,7 +4782,7 @@
       "routes": [],
       "imports": [],
       "hash": "ee8be9b4d4e62cbdb35502cb227b1c4478457b8ab75ca5af15339243bb288e06",
-      "last_modified": "2026-07-26T18:22:03.123Z",
+      "last_modified": "2026-07-27T05:27:02.022Z",
       "size_bytes": 16423
     },
     {
@@ -5074,8 +5074,8 @@
         "../types/api"
       ],
       "hash": "1d2ddefa076690c8c77fc41a0de047f8bafb29b65ea9ffef497dfa66222ff5c7",
-      "last_modified": "2026-07-26T17:22:59.176Z",
-      "size_bytes": 13881
+      "last_modified": "2026-07-27T05:27:02.022Z",
+      "size_bytes": 14190
     },
     {
       "path": "tsconfig.json",

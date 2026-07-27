@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer, XCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer, XCircle, Target } from "lucide-react";
 import { useApi, invalidateCache } from "../hooks/useApi";
 import { API_CACHE } from "../hooks/apiCacheKeys";
 import {
@@ -10,11 +10,10 @@ import {
 } from "../api";
 import type { Session, TrainingPlanResponse, AdaptAdaptation } from "../types/api";
 import {
-  SUB20_LEGEND, SUB20_DEFAULT_START,
-  buildSub20Sessions, computeSub20Adaptations, sub20RaceDate,
+  computeSub20Adaptations,
 } from "../data/sub20Plan";
 import {
-  KIKKO_SUB20_LEGEND, KIKKO_SUB20_DEFAULT_START, KIKKO_SUB20_META,
+  KIKKO_SUB20_LEGEND, KIKKO_SUB20_DEFAULT_START,
   buildKikkoSub20Sessions, kikkoSub20RaceDate,
 } from "../data/kikkoSub20Plan";
 
@@ -1290,18 +1289,20 @@ export function TrainingGrid() {
   const [showModal, setShowModal] = useState(false);
   const [showAdaptModal, setShowAdaptModal] = useState(false);
   /**
-   * Piano attivo. Prima era `useState(false)` senza setter, quindi tutta la
-   * macchina Sub-20 (adattamento RPE, esiti, legenda) era irraggiungibile.
-   * Ora è un selettore: 'none' = piano generato dal backend, gli altri due
-   * sono i piani statici.
+   * Piano kikkoSub20 acceso/spento. Prima era `useState(false)` senza setter,
+   * quindi tutta la macchina interna (adattamento RPE, esiti sedute, legenda)
+   * era irraggiungibile.
+   *
+   * `showSub20` resta come alias perché quella macchina è nata per il piano
+   * Sub-20 e viene riusata identica: rinominare venti riferimenti non
+   * cambierebbe nulla di sostanziale.
    */
-  const [activePlan, setActivePlan] = useState<'none' | 'sub20' | 'kikko'>('none');
-  const showSub20 = activePlan !== 'none';
-  const isKikko = activePlan === 'kikko';
-  // Data di partenza del piano statico (prima seduta), scelta dall'utente.
-  const [sub20StartDate, setSub20StartDate] = useState<string>(SUB20_DEFAULT_START);
-  // Bozza dal date-picker: si applica solo premendo "Ricalcola piano".
-  const [sub20StartDraft, setSub20StartDraft] = useState<string>(SUB20_DEFAULT_START);
+  const [showKikko, setShowKikko] = useState(false);
+  const showSub20 = showKikko;
+  // Data di partenza del piano (prima seduta), scelta dall'utente.
+  const [sub20StartDate, setSub20StartDate] = useState<string>(KIKKO_SUB20_DEFAULT_START);
+  // Bozza dal date-picker: si applica solo premendo "Ricalcola".
+  const [sub20StartDraft, setSub20StartDraft] = useState<string>(KIKKO_SUB20_DEFAULT_START);
 
   const goToDay = (date: Date, fromView: 'Week' | 'Month' | 'Year') => {
     setCurrentDate(date);
@@ -1327,10 +1328,10 @@ export function TrainingGrid() {
     return map;
   }, [planData]);
 
-  // Piano statico — costruito rispetto alla partenza scelta dall'utente.
+  // Piano kikkoSub20 — costruito rispetto alla partenza scelta dall'utente.
   const sub20Sessions = useMemo(
-    () => (isKikko ? buildKikkoSub20Sessions(sub20StartDate) : buildSub20Sessions(sub20StartDate)),
-    [sub20StartDate, isKikko],
+    () => buildKikkoSub20Sessions(sub20StartDate),
+    [sub20StartDate],
   );
   const sub20Map = useMemo(() => {
     const map: Record<string, Session> = {};
@@ -1856,6 +1857,53 @@ export function TrainingGrid() {
             Genera Piano
           </button>
 
+          {/* Piano kikkoSub20: acceso/spento, nell'accento di METIC LAB. */}
+          <button
+            type="button"
+            onClick={() => setShowKikko((v) => !v)}
+            title={showKikko ? "Torna al piano generato" : "Mostra il piano kikkoSub20"}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-black rounded-lg transition-all"
+            style={
+              showKikko
+                ? {
+                    background: "var(--app-accent)",
+                    color: "#0A0A0A",
+                    boxShadow: "0 0 18px rgba(192,255,0,0.45)",
+                  }
+                : {
+                    background: "transparent",
+                    color: "var(--app-accent)",
+                    border: "1px solid var(--app-accent)",
+                    boxShadow: "0 0 12px rgba(192,255,0,0.18)",
+                  }
+            }
+          >
+            <Target className="w-4 h-4" />
+            kikkoSub20
+          </button>
+
+          {showKikko && (
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={sub20StartDraft}
+                onChange={(e) => setSub20StartDraft(e.target.value)}
+                title="Lunedì di partenza del piano"
+                className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-2.5 py-1.5 text-xs font-bold text-white focus:outline-none focus:border-[#C0FF00]/50"
+              />
+              <button
+                type="button"
+                onClick={recalcSub20FromDraft}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold text-gray-300 bg-[#1E1E1E] border border-[#2A2A2A] hover:text-white transition-colors"
+              >
+                Ricalcola
+              </button>
+              <span className="text-xs font-bold text-gray-500">
+                gara <span style={{ color: "var(--app-accent)" }}>{kikkoSub20RaceDate(sub20StartDate)}</span>
+              </span>
+            </div>
+          )}
+
           <div className="flex bg-[#1E1E1E] rounded-md border border-[#2A2A2A] p-1">
             {(['Day', 'Week', 'Month', 'Year'] as const).map(v => (
               <button
@@ -1880,63 +1928,6 @@ export function TrainingGrid() {
             </button>
           </div>
         </div>
-      </div>
-
-      {/* Selettore piano — riattiva la macchina Sub-20 e monta kikkoSub20 */}
-      <div className="flex flex-wrap items-center gap-3 px-6 pb-4 border-b border-[#2A2A2A]">
-        <span className="text-[10px] font-black tracking-[0.2em] uppercase text-gray-500">Piano</span>
-        <div className="flex bg-[#111] rounded-[12px] border border-white/[0.06] p-0.5">
-          {([
-            { key: 'none', label: 'GENERATO' },
-            { key: 'sub20', label: 'SUB-20' },
-            { key: 'kikko', label: 'KIKKOSUB20' },
-          ] as const).map((p) => (
-            <button
-              key={p.key}
-              type="button"
-              onClick={() => {
-                setActivePlan(p.key);
-                if (p.key === 'kikko') {
-                  setSub20StartDate(KIKKO_SUB20_DEFAULT_START);
-                  setSub20StartDraft(KIKKO_SUB20_DEFAULT_START);
-                } else if (p.key === 'sub20') {
-                  setSub20StartDate(SUB20_DEFAULT_START);
-                  setSub20StartDraft(SUB20_DEFAULT_START);
-                }
-              }}
-              className={`px-3 py-1.5 rounded-[10px] text-[10px] font-black tracking-wider transition-all ${
-                activePlan === p.key ? 'bg-[#C0FF00] text-black' : 'text-gray-500 hover:text-white'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-
-        {showSub20 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="date"
-              value={sub20StartDraft}
-              onChange={(e) => setSub20StartDraft(e.target.value)}
-              className="bg-[#0A0A0A] border border-[#262626] rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-white focus:outline-none focus:border-[#C0FF00]/40"
-            />
-            <button
-              type="button"
-              onClick={recalcSub20FromDraft}
-              className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider bg-white/[0.06] text-gray-300 hover:text-white hover:bg-white/[0.1] transition-colors"
-            >
-              RICALCOLA
-            </button>
-            <span className="text-[10px] font-bold text-gray-500">
-              {isKikko ? `${KIKKO_SUB20_META.weeks} sett · gara ` : 'gara '}
-              <span className="text-[#C0FF00]">
-                {isKikko ? kikkoSub20RaceDate(sub20StartDate) : sub20RaceDate(sub20StartDate)}
-              </span>
-              {isKikko && <span className="text-gray-600"> · obiettivo {KIKKO_SUB20_META.goalTime} @ {KIKKO_SUB20_META.racePace}/km</span>}
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Empty state */}
@@ -1967,7 +1958,7 @@ export function TrainingGrid() {
           {/* Legend */}
           {(showSub20 || hasPlan) && (
             <div className="flex flex-wrap items-center gap-4 mt-6 pt-4 border-t border-[#2A2A2A]">
-              {(showSub20 ? (isKikko ? KIKKO_SUB20_LEGEND : SUB20_LEGEND) : ([
+              {(showSub20 ? KIKKO_SUB20_LEGEND : ([
                 { color: SESSION_COLORS.easy,      label: 'Easy / Recovery' },
                 { color: SESSION_COLORS.tempo,     label: 'Tempo' },
                 { color: SESSION_COLORS.intervals, label: 'Intervals' },
