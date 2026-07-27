@@ -19,6 +19,21 @@ const DAY_SHORT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 const LIME = "#C0FF00";
 const CYAN = "#22D3EE";
 
+// recharts 3 riporta le props degli assi nel suo store: se `domain`/`margin` sono
+// letterali inline cambiano identità a ogni render → notify → render → loop infinito.
+// Vanno tenute fuori dal componente (identità stabile).
+const WEEK_MARGIN = { top: 6, right: 4, left: 4, bottom: 0 };
+const WEEK_Y_DOMAIN: [number, (max: number) => number] = [0, (max: number) => Math.max(max * 1.15, 1)];
+const WEEK_TOOLTIP_CURSOR = { fill: "rgba(255,255,255,0.06)" };
+const YEAR_TOOLTIP_CURSOR = { fill: "rgba(255,255,255,0.05)" };
+const YEAR_TOOLTIP_STYLE = {
+  backgroundColor: "#111",
+  border: "1px solid #333",
+  borderRadius: "12px",
+  color: "#fff",
+};
+const BAR_RADIUS: [number, number, number, number] = [4, 4, 0, 0];
+
 // Tooltip settimanale: mostra "Gio · 13 km" al passaggio del mouse.
 const WeekTooltip = ({ active, payload }: {
   active?: boolean;
@@ -263,11 +278,11 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
           <div>
             <div className="h-24 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={week.days} margin={{ top: 6, right: 4, left: 4, bottom: 0 }} barCategoryGap="32%">
+                <BarChart data={week.days} margin={WEEK_MARGIN} barCategoryGap="32%">
                   <XAxis dataKey="letter" hide />
-                  <YAxis hide domain={[0, (max: number) => Math.max(max * 1.15, 1)]} />
-                  <Tooltip content={<WeekTooltip />} cursor={{ fill: "rgba(255,255,255,0.06)" }} />
-                  <Bar dataKey="km" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                  <YAxis hide domain={WEEK_Y_DOMAIN} />
+                  <Tooltip content={<WeekTooltip />} cursor={WEEK_TOOLTIP_CURSOR} />
+                  <Bar dataKey="km" radius={BAR_RADIUS} isAnimationActive={false}>
                     {week.days.map((d, i) => (
                       <Cell key={i} fill={LIME} opacity={d.isToday ? 1 : 0.55} />
                     ))}
@@ -316,11 +331,11 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
               <XAxis dataKey="day" stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
               <Tooltip
-                cursor={{ fill: "rgba(255,255,255,0.05)" }}
-                contentStyle={{ backgroundColor: "#111", border: "1px solid #333", borderRadius: "12px", color: "#fff" }}
+                cursor={YEAR_TOOLTIP_CURSOR}
+                contentStyle={YEAR_TOOLTIP_STYLE}
                 formatter={(v: number) => [`${v} km`, "Volume"]}
               />
-              <Bar dataKey="km" fill="#C0FF00" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="km" fill="#C0FF00" radius={BAR_RADIUS} />
             </BarChart>
           </ResponsiveContainer>
         </div>
