@@ -39,10 +39,75 @@ export const getRun = (id: string) => api.get<RunsResponse['runs'][0]>(`/api/run
 
 export const getRunSplits = (id: string) => api.get<unknown>(`/api/runs/${id}/splits`);
 
-export const getRunWeather = (id: string) => api.get<{ weather: Record<string, unknown> | null }>(`/api/runs/${id}/weather`);
+// ─── PARZIALI / RIPETUTE ─────────────────────────────────────────────────────
+/** Da dove arrivano i parziali. Va mostrato: i giri veri e una segmentazione
+ *  ricavata dai dati non sono la stessa cosa. */
+export type IntervalSource = 'laps' | 'streams' | 'splits' | 'none';
+
+export type IntervalSegment = {
+  index: number;
+  kind: 'work' | 'recovery' | 'steady' | 'split';
+  distance_m: number;
+  moving_time_s: number;
+  pace_sec: number;
+  avg_hr: number | null;
+  max_hr: number | null;
+  grade_pct: number | null;
+  elev_delta_m?: number | null;
+  /** PBP — passo corretto per la pendenza (sec/km). */
+  gap_pace_sec: number | null;
+};
+
+export type IntervalSummary = {
+  label: string;
+  n_work: number;
+  regular: boolean;
+  avg_work_pace_sec: number;
+  avg_work_gap_sec: number | null;
+  avg_work_distance_m: number;
+  total_work_distance_m: number;
+  avg_recovery_s: number | null;
+  fastest_pace_sec: number;
+  slowest_pace_sec: number;
+  /** Tenuta: secondi persi dall'ultima ripetuta rispetto alla prima. */
+  fade_sec: number;
+  hr_drift_bpm: number | null;
+};
+
+export type RunIntervals = {
+  source: IntervalSource;
+  segments: IntervalSegment[];
+  summary: IntervalSummary | null;
+};
+
+export const getRunIntervals = (id: string) =>
+  api.get<RunIntervals>(`/api/runs/${id}/intervals`);
+
+/** Riscarica da Strava i giri delle corse importate prima che il sync li salvasse. */
+export const postBackfillLaps = (limit = 40, onlyIntervals = true) =>
+  api.post<{ ok: boolean; updated: number; failed: number; remaining: number; rate_limited: boolean; done: boolean }>(
+    '/api/runs/backfill-laps',
+    { limit, only_intervals: onlyIntervals },
+  );
+
+export type StoredWeather = {
+  temperature?: number | null;
+  humidity?: number | null;
+  apparent_temperature?: number | null;
+  dewpoint?: number | null;
+  wind_speed?: number | null;
+  source?: string | null;
+  estimated_hour?: number | null;
+};
+
+export const getRunWeather = (id: string) => api.get<{ weather: StoredWeather | null }>(`/api/runs/${id}/weather`);
 
 export const postRunWeather = (id: string, data: Record<string, unknown>) =>
   api.post<{ ok: boolean }>(`/api/runs/${id}/weather`, data);
+
+/** Meteo di N corse in una chiamata sola: evita un round-trip per corsa. */
+export const getRunsWeatherBulk = (runIds: string[]) =>
+  api.post<{ weather: Record<string, StoredWeather> }>('/api/runs/weather/bulk', { run_ids: runIds });
 
 // ─── FIELD TEST (pace-only VDOT benchmark) ───────────────────────────────────
 export const postFieldTest = (data: { distance_km: 3 | 5 | 6; time_seconds: number; date?: string }) =>

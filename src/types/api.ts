@@ -117,6 +117,10 @@ export interface Run {
   elapsed_time?: number | null;
   weather?: string | null;
   temperature?: number | null;
+  /** PBP a livello corsa: passo corretto per la pendenza, in secondi/km. */
+  gap_pace_sec?: number | null;
+  /** Stesso valore già formattato "m:ss". */
+  gap_pace?: string | null;
   surface?: string | null;
   terrain?: string | null;
   event?: string | null;

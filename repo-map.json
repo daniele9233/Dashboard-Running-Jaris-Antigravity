@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-26T13:44:30.886Z",
+  "generated_at": "2026-07-26T18:23:20.698Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,10 +14,10 @@
     ]
   },
   "counts": {
-    "files": 182,
+    "files": 188,
     "backend_routes": 68,
     "frontend_routes": 16,
-    "api_clients": 70
+    "api_clients": 73
   },
   "files": [
     {
@@ -415,6 +415,43 @@
       "size_bytes": 1831
     },
     {
+      "path": "backend/intervals.py",
+      "kind": "backend-script",
+      "purpose": "Backend helper or diagnostic script intervals.py.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "profile",
+        "strava",
+        "training"
+      ],
+      "exports": [
+        "_fmt_clock",
+        "_fmt_pace",
+        "_import_server",
+        "_label_work_recovery",
+        "_median_filter",
+        "_mk_segment",
+        "_net_elevation_by_lap",
+        "_round_distance_label",
+        "_two_means",
+        "build_intervals",
+        "grade_adjustment_sec",
+        "segments_from_laps",
+        "segments_from_splits",
+        "segments_from_streams",
+        "summarize"
+      ],
+      "routes": [],
+      "imports": [
+        "backend",
+        "typing"
+      ],
+      "hash": "85bdb3c0aaa5353340a78307b2a098e6df99e9ba6eb1bb075b54bbf9311f3b89",
+      "last_modified": "2026-07-26T17:51:40.771Z",
+      "size_bytes": 16951
+    },
+    {
       "path": "backend/requirements.txt",
       "kind": "documentation",
       "purpose": "Project documentation.",
@@ -500,29 +537,36 @@
         "activities",
         "ai",
         "api",
+        "dashboard",
         "layout",
         "profile",
         "strava"
       ],
       "exports": [
+        "_find_run",
+        "backfill_laps",
         "get_run",
+        "get_run_intervals",
         "get_run_splits",
         "get_run_weather",
         "get_runs",
+        "get_runs_weather_bulk",
         "post_run_weather"
       ],
       "routes": [],
       "imports": [
         "backend.deps",
+        "backend.intervals",
         "bson",
         "deps",
         "fastapi",
         "fastapi.responses",
+        "intervals",
         "typing"
       ],
-      "hash": "ea46a89595e8e986ababff3346904cad2c847aa7ff7c455514b0ba08f696d7cf",
-      "last_modified": "2026-07-26T13:44:21.763Z",
-      "size_bytes": 4537
+      "hash": "22920e6b866e29c87ec814805cd44ef68665e559bd8a8e80c574b64ac698040d",
+      "last_modified": "2026-07-26T18:15:07.596Z",
+      "size_bytes": 11429
     },
     {
       "path": "backend/server.py",
@@ -699,6 +743,48 @@
       "hash": "19db8f23ed00d7f69e669d91548b2a4f73a1530eac5528bde6e9d86010b2b87d",
       "last_modified": "2026-07-26T11:58:14.845Z",
       "size_bytes": 486090
+    },
+    {
+      "path": "backend/test_intervals.py",
+      "kind": "backend-script",
+      "purpose": "Backend helper or diagnostic script test_intervals.py.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "strava",
+        "training"
+      ],
+      "exports": [
+        "lap",
+        "streams_from_segments",
+        "test_build_falls_back_to_streams_then_splits",
+        "test_build_prefers_laps_over_streams",
+        "test_build_reports_none_when_there_is_nothing",
+        "test_easy_run_with_stops_is_not_called_intervals",
+        "test_grade_adjustment_is_asymmetric",
+        "test_laps_of_a_steady_run_are_not_called_intervals",
+        "test_laps_separate_work_from_recovery",
+        "test_net_elevation_from_streams_beats_cumulative_gain",
+        "test_pbp_is_faster_uphill_and_slower_downhill",
+        "test_steep_downhill_benefit_is_capped",
+        "test_streams_detect_repeats_when_laps_are_missing",
+        "test_streams_reject_a_continuous_run",
+        "test_streams_reject_oversized_blocks",
+        "test_streams_reject_slow_blocks_even_with_contrast",
+        "test_summary_flags_irregular_series",
+        "test_summary_needs_at_least_two_reps",
+        "test_summary_reads_like_a_training_log",
+        "test_summary_reports_fade_and_hr_drift",
+        "test_tiny_laps_are_discarded",
+        "test_trailing_junk_split_is_dropped"
+      ],
+      "routes": [],
+      "imports": [
+        "pathlib"
+      ],
+      "hash": "c7128dfd040d6382e2323b2dcdad149ac7196312f727823be6af3d30a9536685",
+      "last_modified": "2026-07-26T18:14:43.856Z",
+      "size_bytes": 9692
     },
     {
       "path": "backend/test_models.py",
@@ -1552,9 +1638,11 @@
         "getProfile",
         "getRecoveryScore",
         "getRun",
+        "getRunIntervals",
         "getRunnerDna",
         "getRuns",
         "getRunSplits",
+        "getRunsWeatherBulk",
         "getRunWeather",
         "getStravaAuthUrl",
         "getStravaConnections",
@@ -1568,9 +1656,7 @@
         "getWeeklyHistory",
         "getWeeklyReport",
         "GridLayoutItem",
-        "GridLayouts",
-        "importGarminCsv",
-        "jarvisChat"
+        "GridLayouts"
       ],
       "routes": [
         "DELETE /api/field-test/${id}",
@@ -1601,6 +1687,7 @@
         "GET /api/runner-dna",
         "GET /api/runs",
         "GET /api/runs/${id}",
+        "GET /api/runs/${id}/intervals",
         "GET /api/runs/${id}/splits",
         "GET /api/runs/${id}/weather",
         "GET /api/strava/auth-url",
@@ -1630,6 +1717,8 @@
         "POST /api/jarvis/chat",
         "POST /api/recovery-checkin",
         "POST /api/runs/${id}/weather",
+        "POST /api/runs/backfill-laps",
+        "POST /api/runs/weather/bulk",
         "POST /api/strava/exchange-code",
         "POST /api/strava/sync",
         "POST /api/sub20/evaluate-session",
@@ -1647,9 +1736,9 @@
         "../types/jarvis",
         "./client"
       ],
-      "hash": "461ec5633c9a6311d12596853832e5a2889297ce00493752a44511c22736545b",
-      "last_modified": "2026-07-26T13:44:30.887Z",
-      "size_bytes": 21859
+      "hash": "114abea5e3236fb3051d9fc83d5452ce2fb30318664fab027e3d0482387ecf9b",
+      "last_modified": "2026-07-26T18:15:07.616Z",
+      "size_bytes": 24180
     },
     {
       "path": "src/App.tsx",
@@ -2592,9 +2681,9 @@
       "purpose": "React component WeatherNormalizerWidget.",
       "touch_when": [
         "activities",
+        "api",
         "dashboard",
         "layout",
-        "map",
         "statistics",
         "types"
       ],
@@ -2604,13 +2693,14 @@
       "routes": [],
       "imports": [
         "../../../types/api",
+        "../../../utils/weather",
         "../../statistics/chartTheme",
         "lucide-react",
         "react"
       ],
-      "hash": "cdaf18b720f16bfb4992a4bbfbca8b0485eca3565a7ce2ea7a6fe7bf1a1dcaf9",
-      "last_modified": "2026-07-26T13:43:33.134Z",
-      "size_bytes": 8422
+      "hash": "fd8dd3656ad0cc7dd9c90281e4e58e7a792f1edf1cc28a9d5114ca6722fd6c12",
+      "last_modified": "2026-07-26T18:15:07.617Z",
+      "size_bytes": 10462
     },
     {
       "path": "src/components/dashboard/widgets/WeeklyKmChart.tsx",
@@ -2639,7 +2729,7 @@
         "recharts"
       ],
       "hash": "627622515d8f310f7b3949ee1135ac126aa9e5365be144cd7ba1bfc30a635496",
-      "last_modified": "2026-07-26T12:10:47.477Z",
+      "last_modified": "2026-07-26T18:15:07.617Z",
       "size_bytes": 16903
     },
     {
@@ -3259,6 +3349,7 @@
       "touch_when": [
         "activities",
         "ai",
+        "api",
         "cadence",
         "garmin",
         "layout",
@@ -3286,9 +3377,9 @@
         "react-map-gl/maplibre",
         "recharts"
       ],
-      "hash": "55501d9a843f92ee557e5a80772b81effd00045c3342b0ebebdd8fb7ae34cc66",
-      "last_modified": "2026-07-26T12:02:28.669Z",
-      "size_bytes": 46589
+      "hash": "918fa0a5f1c7cab7d16c3f9a4926abaa3ed712201f085320dae199d2e07b8fec",
+      "last_modified": "2026-07-26T18:15:07.616Z",
+      "size_bytes": 49712
     },
     {
       "path": "src/components/runner-dna/dnaShared.ts",
@@ -3766,12 +3857,11 @@
       "touch_when": [
         "activities",
         "ai",
-        "api",
+        "dashboard",
         "garmin",
         "layout",
         "map",
         "statistics",
-        "strava",
         "types"
       ],
       "exports": [
@@ -3780,20 +3870,22 @@
       "routes": [],
       "imports": [
         "../../types/api",
+        "../../utils/weather",
         "./chartTheme",
         "lucide-react",
         "react",
         "recharts"
       ],
-      "hash": "3caf385e7db8f29876cd78d0e0827920059e307858cabe709f4383299381e0a9",
-      "last_modified": "2026-07-26T12:11:03.395Z",
-      "size_bytes": 39926
+      "hash": "7aafd3071d5a0d2dd5a171915456b5640922333ff2b4f9743a4487f991de75fa",
+      "last_modified": "2026-07-26T18:15:07.618Z",
+      "size_bytes": 32108
     },
     {
       "path": "src/components/statistics/PaceCalculator.tsx",
       "kind": "frontend-statistics-component",
       "purpose": "React component PaceCalculator.",
       "touch_when": [
+        "ai",
         "layout",
         "statistics",
         "types"
@@ -3805,11 +3897,12 @@
       "imports": [
         "./chartTheme",
         "lucide-react",
-        "react"
+        "react",
+        "react-i18next"
       ],
-      "hash": "576913542ca364d5f20d51ccf861faaee14593b301bdb7f911225090ea10d6ee",
-      "last_modified": "2026-07-26T13:40:57.381Z",
-      "size_bytes": 13908
+      "hash": "40251aafddb2a0b052ef36810acbdd827c5ff1e1f9ed02e215e6859a680349a6",
+      "last_modified": "2026-07-26T18:15:07.618Z",
+      "size_bytes": 20955
     },
     {
       "path": "src/components/statistics/PeriodComparison.tsx",
@@ -3869,6 +3962,38 @@
       "size_bytes": 54311
     },
     {
+      "path": "src/components/statistics/RunComparison.tsx",
+      "kind": "frontend-statistics-component",
+      "purpose": "React component RunComparison.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "garmin",
+        "layout",
+        "map",
+        "statistics",
+        "strava",
+        "types"
+      ],
+      "exports": [
+        "RunComparison"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "../../utils/weather",
+        "./chartTheme",
+        "@mapbox/polyline",
+        "lucide-react",
+        "react",
+        "react-map-gl/maplibre",
+        "recharts"
+      ],
+      "hash": "9b49bc848dad066e4200a11a3bd747fc5dba71491ff569cc9c257e88d783ba47",
+      "last_modified": "2026-07-26T18:23:20.698Z",
+      "size_bytes": 24382
+    },
+    {
       "path": "src/components/statistics/StatisticsView.tsx",
       "kind": "frontend-statistics-component",
       "purpose": "React component StatisticsView.",
@@ -3912,6 +4037,7 @@
         "./EnvironmentalNormalizerView",
         "./PaceCalculator",
         "./PeriodComparison",
+        "./RunComparison",
         "./StatsDrift",
         "lucide-react",
         "react",
@@ -3919,9 +4045,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "8536e7ed058c29422f7229a2be3f008d9aaf64162f77a23313b395bdae489bb3",
-      "last_modified": "2026-07-26T13:43:40.447Z",
-      "size_bytes": 125660
+      "hash": "342637913378385d6424734a62cf73ff82e6cf3a3427dc48566ab6daf639f9db",
+      "last_modified": "2026-07-26T18:21:33.229Z",
+      "size_bytes": 126945
     },
     {
       "path": "src/components/statistics/StatsCalc.tsx",
@@ -4065,6 +4191,7 @@
       "routes": [],
       "imports": [
         "../api",
+        "../data/kikkoSub20Plan",
         "../data/sub20Plan",
         "../hooks/apiCacheKeys",
         "../hooks/useApi",
@@ -4073,9 +4200,9 @@
         "react",
         "react-i18next"
       ],
-      "hash": "b2949ba1d230dd2a5ad86d61a6df10f5941afcf0a41b01aa12ead5bede391a2d",
-      "last_modified": "2026-07-19T05:36:43.195Z",
-      "size_bytes": 99618
+      "hash": "8b85d60573d3f883f1a1cd548293ba8594a92bcb7cc004c42e405531b04c1d59",
+      "last_modified": "2026-07-26T18:15:07.617Z",
+      "size_bytes": 102871
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -4270,6 +4397,52 @@
       "hash": "871474f36e4442d4281f9ae4fbac599ba418d73faabf3fcf44e6b085e2b09c81",
       "last_modified": "2026-04-29T06:17:00.249Z",
       "size_bytes": 1776
+    },
+    {
+      "path": "src/data/kikkoSub20Plan.test.ts",
+      "kind": "frontend-source",
+      "purpose": "frontend-source kikkoSub20Plan.test.ts.",
+      "touch_when": [
+        "ai",
+        "training",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "./kikkoSub20Plan",
+        "vitest"
+      ],
+      "hash": "f1242b20554b3196efb16691ed9d790c5c79a423507ab0cdb37836de04177011",
+      "last_modified": "2026-07-26T17:43:44.687Z",
+      "size_bytes": 5072
+    },
+    {
+      "path": "src/data/kikkoSub20Plan.ts",
+      "kind": "frontend-source",
+      "purpose": "frontend-source kikkoSub20Plan.ts.",
+      "touch_when": [
+        "ai",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "buildKikkoSub20Sessions",
+        "KIKKO_SUB20_DEFAULT_START",
+        "KIKKO_SUB20_LEGEND",
+        "KIKKO_SUB20_META",
+        "KIKKO_SUB20_SESSIONS",
+        "KIKKO_SUB20_WEEKLY_KM",
+        "kikkoSub20ActualWeeklyKm",
+        "kikkoSub20RaceDate"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api"
+      ],
+      "hash": "ffd9942179b89f4665602be4e20d685a5947d78aae8c4741f28ba986add75533",
+      "last_modified": "2026-07-26T17:40:09.750Z",
+      "size_bytes": 13892
     },
     {
       "path": "src/data/sub20Plan.ts",
@@ -4608,9 +4781,9 @@
       ],
       "routes": [],
       "imports": [],
-      "hash": "7d43257f9412a02115b976f16334eac5d9e97217632a8898bf204a79d2a3ff81",
-      "last_modified": "2026-07-26T11:57:54.022Z",
-      "size_bytes": 16235
+      "hash": "ee8be9b4d4e62cbdb35502cb227b1c4478457b8ab75ca5af15339243bb288e06",
+      "last_modified": "2026-07-26T18:22:03.123Z",
+      "size_bytes": 16423
     },
     {
       "path": "src/types/jarvis.ts",
@@ -4865,6 +5038,44 @@
       "hash": "8966528d9e2ef427cd209c03673b208771593d32ba69cfb3fac1a7770dafaac7",
       "last_modified": "2026-04-29T21:07:35.362Z",
       "size_bytes": 3987
+    },
+    {
+      "path": "src/utils/weather.ts",
+      "kind": "frontend-utility",
+      "purpose": "Shared utility module exporting computeDewpoint, computeEnvironmentalPenalty, fetchWeatherBatch, fetchWeatherForRun.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "dashboard",
+        "map",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "computeDewpoint",
+        "computeEnvironmentalPenalty",
+        "fetchWeatherBatch",
+        "fetchWeatherForRun",
+        "formatPace",
+        "hasWeatherContext",
+        "inferRunHour",
+        "parsePaceToSeconds",
+        "preloadStoredWeather",
+        "runCoveredHours",
+        "runStartHour",
+        "WeatherSnapshot",
+        "WeatherSource"
+      ],
+      "routes": [],
+      "imports": [
+        "../api",
+        "../types/api"
+      ],
+      "hash": "1d2ddefa076690c8c77fc41a0de047f8bafb29b65ea9ffef497dfa66222ff5c7",
+      "last_modified": "2026-07-26T17:22:59.176Z",
+      "size_bytes": 13881
     },
     {
       "path": "tsconfig.json",
@@ -5683,6 +5894,12 @@
       "file": "src/api/index.ts"
     },
     {
+      "name": "getRunIntervals",
+      "method": "GET",
+      "path": "/api/runs/${id}/intervals",
+      "file": "src/api/index.ts"
+    },
+    {
       "name": "getRunnerDna",
       "method": "GET",
       "path": "/api/runner-dna",
@@ -5698,6 +5915,12 @@
       "name": "getRunSplits",
       "method": "GET",
       "path": "/api/runs/${id}/splits",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getRunsWeatherBulk",
+      "method": "POST",
+      "path": "/api/runs/weather/bulk",
       "file": "src/api/index.ts"
     },
     {
@@ -5788,6 +6011,12 @@
       "name": "linkGarminCsv",
       "method": "POST",
       "path": "/api/garmin/csv-link",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "postBackfillLaps",
+      "method": "POST",
+      "path": "/api/runs/backfill-laps",
       "file": "src/api/index.ts"
     },
     {
