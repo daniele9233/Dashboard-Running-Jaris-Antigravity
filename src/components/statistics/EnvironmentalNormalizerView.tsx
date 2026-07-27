@@ -13,6 +13,17 @@ import {
 } from 'recharts';
 import { CloudSun, Droplets, ThermometerSun, Wind, Gauge, Sparkles, MapPin } from 'lucide-react';
 import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from './chartTheme';
+// Meteo, penalità climatica e parsing passo vivono in un modulo condiviso: il
+// widget dashboard "Impatto Meteo" usa gli stessi identici calcoli, così la
+// stessa corsa non mostra due numeri diversi in due schermate.
+import {
+  fetchWeatherForRun,
+  computeEnvironmentalPenalty,
+  parsePaceToSeconds,
+  formatPace,
+  preloadStoredWeather,
+  type WeatherSnapshot,
+} from '../../utils/weather';
 
 // Alias sul tema condiviso (chartTheme.ts).
 const NEON = CHART_SERIES.primary;
@@ -22,16 +33,6 @@ const PINK = CHART_SERIES.risk;          // era #FF4D8D
 const PANEL = CHART_SURFACE.panel;
 const BORDER = CHART_SURFACE.border;     // era #1F290E (verde oliva)
 const MUTED = CHART_TEXT.muted;          // era #7D8590 → contrasto verificato
-
-type WeatherSnapshot = {
-  temperature: number | null;
-  humidity: number | null;
-  apparent: number | null;
-  wind: number | null;
-  estimatedHour: number;
-  estimatedLabel: string;
-  source: 'archive' | 'forecast' | 'run-fallback';
-};
 
 type EnrichedRun = {
   run: Run;
@@ -43,192 +44,20 @@ type EnrichedRun = {
   idealNarrative: string;
 };
 
-const weatherCache = new Map<string, Promise<WeatherSnapshot | null>>();
-
-function parsePaceToSeconds(pace?: string | null): number | null {
-  if (!pace) return null;
-  const clean = pace.replace('/km', '').trim();
-  const [minStr, secStr] = clean.split(':');
-  const mins = Number(minStr);
-  const secs = Number(secStr);
-  if (!Number.isFinite(mins) || !Number.isFinite(secs)) return null;
-  return mins * 60 + secs;
-}
-
-function formatPace(seconds?: number | null): string {
-  if (seconds == null || !Number.isFinite(seconds)) return '—';
-  const rounded = Math.max(0, Math.round(seconds));
-  const mins = Math.floor(rounded / 60);
-  const secs = rounded % 60;
-  return `${mins}:${String(secs).padStart(2, '0')}`;
-}
+// recharts 3 riporta le props degli assi nel suo store: `domain` inline cambia
+// identità a ogni render → notify → render → loop infinito. Identità stabile qui.
+const PACE_Y_DOMAIN: [(min: number) => number, (max: number) => number] = [
+  (min: number) => Math.floor((min - 12) / 5) * 5,
+  (max: number) => Math.ceil((max + 12) / 5) * 5,
+];
+const DELTA_Y_DOMAIN: [number, (max: number) => number] = [
+  0,
+  (max: number) => Math.max(12, Math.ceil(max + 3)),
+];
 
 function formatDateLabel(date: string): string {
   const d = new Date(date);
   return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-// Real local start hour from start_date_local (e.g. "2026-06-02T08:15:15Z").
-// The 'Z' is nominal — Strava stores local wall-clock here — so read the hour
-// straight from the string instead of timezone-converting via Date.
-function runStartHour(run: Run): number | null {
-  const s = run.start_date_local;
-  if (typeof s === 'string' && s.length >= 13 && s[10] === 'T') {
-    const h = parseInt(s.slice(11, 13), 10);
-    if (Number.isFinite(h) && h >= 0 && h <= 23) return h;
-  }
-  return null;
-}
-
-// The two hourly samples closest to the run's MIDPOINT. Hourly readings are
-// instantaneous at HH:00: a 07:25→07:47 run sits between the 07:00 (19.9°C)
-// and 08:00 (21.3°C) samples, and the start-hour snapshot alone can sit just
-// under the 20°C hot threshold and wrongly drop the run. Averaging the two
-// bracketing samples (≈20.6°C) matches what the runner actually felt.
-function runCoveredHours(run: Run, startHour: number): number[] {
-  const s = run.start_date_local;
-  const minutes =
-    typeof s === 'string' && s.length >= 16 ? parseInt(s.slice(14, 16), 10) : 0;
-  const startMin = startHour * 60 + (Number.isFinite(minutes) ? minutes : 0);
-  const midMin = startMin + Math.max(0, run.duration_minutes ?? 0) / 2;
-  const h1 = Math.min(23, Math.floor(midMin / 60));
-  const h2 = Math.min(23, Math.max(h1, Math.round(midMin / 60)));
-  return h1 === h2 ? [h1] : [h1, h2];
-}
-
-function inferRunHour(name?: string | null): { hour: number; label: string } {
-  const text = (name ?? '').toLowerCase();
-  if (text.includes('night')) return { hour: 22, label: 'stima notte · 22:00' };
-  if (text.includes('evening')) return { hour: 20, label: 'stima sera · 20:00' };
-  if (text.includes('afternoon') || text.includes('pomerid')) return { hour: 17, label: 'stima pomeriggio · 17:00' };
-  if (text.includes('lunch') || text.includes('pranzo')) return { hour: 13, label: 'stima pausa pranzo · 13:00' };
-  if (text.includes('morning') || text.includes('mattutin')) return { hour: 7, label: 'stima mattina · 07:00' };
-  return { hour: 8, label: 'stima fascia diurna · 08:00' };
-}
-
-function buildWeatherKey(run: Run, hour: number): string {
-  const [lat, lon] = run.start_latlng ?? [0, 0];
-  return `${run.id}:${run.date}:${lat.toFixed(4)}:${lon.toFixed(4)}:${hour}`;
-}
-
-async function fetchWeatherForRun(run: Run): Promise<WeatherSnapshot | null> {
-  if (!run.start_latlng) return null;
-  // Prefer the run's real recorded start hour; only guess from the name when
-  // the activity carries no timestamp. The guess can land an hour too early
-  // (a "mattutina" assumed at 07:00 when it was actually 08:15), reading a
-  // sub-20°C temperature and wrongly dropping a warm run.
-  const realHour = runStartHour(run);
-  const inferred = inferRunHour(run.name);
-  const hour = realHour ?? inferred.hour;
-  const label = realHour != null
-    ? `ora reale · ${String(realHour).padStart(2, '0')}:00`
-    : inferred.label;
-  const key = buildWeatherKey(run, hour);
-  const cached = weatherCache.get(key);
-  if (cached) return cached;
-
-  const request = (async () => {
-    const [latitude, longitude] = run.start_latlng!;
-    // The archive API lags ~5 days, so recent runs (incl. today's) return no
-    // data there and would be dropped. For those use the forecast API, which
-    // serves recent past via past_days. Older runs use the historical archive.
-    const ageDays = (Date.now() - new Date(run.date).getTime()) / 86400000;
-    const useForecast = ageDays < 9;
-    try {
-      const base = {
-        latitude: latitude.toString(),
-        longitude: longitude.toString(),
-        hourly: 'temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m',
-        timezone: 'auto',
-      };
-      const url = useForecast
-        ? `https://api.open-meteo.com/v1/forecast?${new URLSearchParams({ ...base, past_days: '10', forecast_days: '1' }).toString()}`
-        : `https://archive-api.open-meteo.com/v1/archive?${new URLSearchParams({ ...base, start_date: run.date, end_date: run.date }).toString()}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`weather ${response.status}`);
-      const json = await response.json();
-      const times: string[] = json?.hourly?.time ?? [];
-      const temperatures: Array<number | null> = json?.hourly?.temperature_2m ?? [];
-      const humidities: Array<number | null> = json?.hourly?.relative_humidity_2m ?? [];
-      const apparentTemps: Array<number | null> = json?.hourly?.apparent_temperature ?? [];
-      const winds: Array<number | null> = json?.hourly?.wind_speed_10m ?? [];
-      // Average over ALL hours covered by the run (start..end), not a single
-      // start-hour snapshot: at dawn the temperature climbs fast and the
-      // snapshot can read 1-2°C colder than what the runner actually felt.
-      const coveredHours = realHour != null ? runCoveredHours(run, realHour) : [hour];
-      const wantedPrefixes = coveredHours.map(
-        (h) => `${run.date}T${String(h).padStart(2, '0')}:00`,
-      );
-      let indices = times
-        .map((value, i) => (wantedPrefixes.some((p) => value.startsWith(p)) ? i : -1))
-        .filter((i) => i >= 0);
-      if (!indices.length) {
-        const anyDay = times.findIndex((value) => value.startsWith(run.date)); // any hour that day
-        if (anyDay >= 0) indices = [anyDay];
-        else if (!useForecast) indices = [Math.min(Math.max(hour, 0), times.length - 1)];
-      }
-      const avgOf = (arr: Array<number | null>): number | null => {
-        const vals = indices.map((i) => arr[i]).filter((v): v is number => v != null);
-        return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-      };
-      // The device-recorded temperature (from the watch/Strava) is the ground
-      // truth for that exact moment — prefer it over the modelled value at a
-      // guessed hour, which can sit just under a threshold (e.g. 20.2°C at 07:00
-      // when the run was actually 22°C at 08:15).
-      const measuredTemp =
-        typeof run.temperature === 'number' && run.temperature > -50 ? run.temperature : null;
-      if (!indices.length && measuredTemp == null) return null;
-      return {
-        temperature: measuredTemp ?? avgOf(temperatures),
-        humidity: avgOf(humidities),
-        apparent: avgOf(apparentTemps) ?? measuredTemp,
-        wind: avgOf(winds),
-        estimatedHour: hour,
-        estimatedLabel: measuredTemp != null ? `${label} · temp reale del dispositivo` : label,
-        source: (measuredTemp != null ? 'run-fallback' : useForecast ? 'forecast' : 'archive') as
-          | 'archive'
-          | 'forecast'
-          | 'run-fallback',
-      };
-    } catch {
-      if (run.temperature == null) return null;
-      return {
-        temperature: run.temperature,
-        humidity: null,
-        apparent: run.temperature,
-        wind: null,
-        estimatedHour: hour,
-        estimatedLabel: `${label} · fallback temperatura run`,
-        source: 'run-fallback' as const,
-      };
-    }
-  })();
-
-  weatherCache.set(key, request);
-  return request;
-}
-
-function computeEnvironmentalPenalty(run: Run, weather: WeatherSnapshot | null): number {
-  const actualPaceSec = parsePaceToSeconds(run.avg_pace) ?? 0;
-  if (!actualPaceSec) return 0;
-
-  const effectiveTemp = weather?.apparent ?? weather?.temperature ?? run.temperature ?? 10;
-  const humidity = weather?.humidity ?? 60;
-  const wind = weather?.wind ?? 8;
-  const elevationPerKm = run.distance_km > 0 ? (run.elevation_gain ?? 0) / run.distance_km : 0;
-
-  const heatPenalty = Math.max(0, effectiveTemp - 12) * 0.72;
-  const coldPenalty = Math.max(0, 5 - effectiveTemp) * 0.30;
-  const humidityPenalty = Math.max(0, humidity - 65) * 0.16;
-  const windPenalty = Math.max(0, wind - 12) * 0.12;
-  const climbPenalty = Math.max(0, elevationPerKm - 6) * 0.15;
-  const synergyPenalty = effectiveTemp > 22 && humidity > 70
-    ? ((effectiveTemp - 22) * (humidity - 70)) / 85
-    : 0;
-
-  const distanceFactor = Math.min(1.12, Math.max(0.88, (run.distance_km ?? 0) / 8));
-  const total = (heatPenalty + coldPenalty + humidityPenalty + windPenalty + climbPenalty + synergyPenalty) * distanceFactor;
-  return Math.max(0, Math.min(28, total));
 }
 
 function describeNormalization(run: Run, weather: WeatherSnapshot | null, deltaSec: number): string {
@@ -284,6 +113,10 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
     const missing = weatherWindowRuns.filter((run) => !(run.id in weatherByRun));
     if (!missing.length) return;
     (async () => {
+      // Prima si guarda cosa è già salvato su Mongo (una sola chiamata per
+      // tutte le corse), poi si va su open-meteo solo per ciò che manca.
+      await preloadStoredWeather(missing.map((run) => run.id).filter(Boolean));
+      if (cancelled) return;
       const entries = await Promise.all(
         missing.map(async (run) => [run.id, await fetchWeatherForRun(run)] as const),
       );
@@ -553,13 +386,10 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
                         tick={{ fill: '#67707A', fontSize: 10, fontWeight: 800 }}
                         axisLine={false}
                         tickLine={false}
-                        domain={[
-                          (min: number) => Math.floor((min - 12) / 5) * 5,
-                          (max: number) => Math.ceil((max + 12) / 5) * 5,
-                        ]}
+                        domain={PACE_Y_DOMAIN}
                         tickFormatter={(value) => formatPace(value)}
                       />
-                      <YAxis yAxisId="delta" hide domain={[0, (max: number) => Math.max(12, Math.ceil(max + 3))]} />
+                      <YAxis yAxisId="delta" hide domain={DELTA_Y_DOMAIN} />
                       <Tooltip
                         contentStyle={{
                           background: '#090909',
@@ -732,7 +562,9 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
                       ? 'meteo archivio'
                       : item.weather?.source === 'forecast'
                         ? 'meteo recente'
-                        : 'fallback temperatura'}
+                        : item.weather?.source === 'stored'
+                          ? 'meteo salvato'
+                          : 'fallback temperatura'}
                   </div>
                 </div>
               </div>
