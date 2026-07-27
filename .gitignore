@@ -42,3 +42,11 @@ Thumbs.db
 
 # graphify regeneration cache (derived, not tracked)
 graphify-out/cache/
+
+# Dump di dati personali usati per debug.
+# Il repo è PUBBLICO e questi file contengono polyline GPS, coordinate di
+# partenza (casa) e frequenza cardiaca: non devono finire in cronologia.
+runs.json
+runs-*.json
+resp.json
+ivids.txt
