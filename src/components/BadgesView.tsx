@@ -2,7 +2,6 @@ import { useTranslation } from "react-i18next";
 import { Medal, Lock, Play } from "lucide-react";
 import { useBadges } from "./celebrations/BadgeProvider";
 import { CELEBRATIONS, CELEBRATION_GROUPS } from "./celebrations/celebrationRegistry";
-import { isAutoDetectable } from "./celebrations/badgeRules";
 
 /**
  * BadgesView — bacheca dei traguardi.
@@ -128,7 +127,7 @@ export function BadgesView() {
                       onClick={() => replay(def)}
                       aria-label={`${def.title} — ${t("badges.preview")}`}
                       className="group relative text-left rounded-2xl border border-white/[0.06] bg-white/[0.015] p-4 overflow-hidden cursor-pointer transition-colors hover:bg-white/[0.04] hover:border-white/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C0FF00]/60"
-                      title={isAutoDetectable(def.id) ? def.mechanic : t("badges.notAutoDetect")}
+                      title={def.mechanic}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="w-2 h-2 rounded-full bg-gray-700" />

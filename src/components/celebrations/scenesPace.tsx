@@ -63,7 +63,7 @@ export function UrbanLimitScene({ accent, accent2 }: SceneProps) {
         <circle className="ul-glow" cx="200" cy="120" r="62" fill={accent} opacity="0" style={{ filter: "blur(14px)" }} />
         <circle cx="200" cy="120" r="58" fill="#0C0C0C" stroke="#1F1F1F" strokeWidth="2" />
         <circle className="ul-ring" cx="200" cy="120" r="58" stroke={accent} strokeWidth="7" strokeLinecap="round" />
-        <text className="ul-num" x="200" y="132" textAnchor="middle" fill="white" style={{ fontFamily: MONO, fontSize: 50, fontWeight: 800 }}>25</text>
+        <text className="ul-num" x="200" y="132" textAnchor="middle" fill="white" style={{ fontFamily: MONO, fontSize: 50, fontWeight: 800 }}>16</text>
         <text className="ul-unit" x="200" y="186" textAnchor="middle" fill={accent} style={{ fontFamily: MONO, fontSize: 12, fontWeight: 800, letterSpacing: "0.28em" }}>KM / H</text>
       </svg>
     </div>
@@ -289,7 +289,7 @@ export function YassoScene({ accent, accent2 }: SceneProps) {
         <line className="ya-base" x1="50" y1="166" x2="356" y2="166" stroke="#3F3F46" strokeWidth="2" strokeLinecap="round" />
         <g className="ya-tag" transform="translate(200 196)">
           <rect x="-52" y="-13" width="104" height="26" rx="13" fill="#0D0D0D" stroke={accent2} strokeWidth="1.5" />
-          <text x="0" y="5" textAnchor="middle" fill={accent2} style={{ fontFamily: MONO, fontSize: 13, fontWeight: 800 }}>800 × 10</text>
+          <text x="0" y="5" textAnchor="middle" fill={accent2} style={{ fontFamily: MONO, fontSize: 13, fontWeight: 800 }}>10 × REP</text>
         </g>
       </svg>
     </div>

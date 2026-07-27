@@ -324,7 +324,7 @@ export function RankClimbScene({ accent, accent2 }: SceneProps) {
         ))}
         <rect className="rc-hl" x="96" y="28" width="180" height="26" rx="7" fill={`${accent}1E`}
           stroke={accent} strokeWidth="2" opacity="0" style={{ transformOrigin: "96px 41px", transform: "scaleX(0.4)" }} />
-        <text className="rc-new" x="114" y="46" fill={accent} style={{ fontFamily: MONO, fontSize: 13, fontWeight: 800 }}>4°  TU</text>
+        <text className="rc-new" x="114" y="46" fill={accent} style={{ fontFamily: MONO, fontSize: 13, fontWeight: 800 }}>TOP 5</text>
         <g className="rc-arrow">
           <line x1="312" y1="160" x2="312" y2="52" stroke={accent2} strokeWidth="3.5" strokeLinecap="round" />
           <path d="M 302 64 L 312 48 L 322 64" stroke={accent2} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />

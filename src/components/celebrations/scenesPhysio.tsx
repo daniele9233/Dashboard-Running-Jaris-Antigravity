@@ -64,7 +64,7 @@ export function SteadyHeartScene({ accent, accent2 }: SceneProps) {
         <g className="sh-heart" transform="translate(64 76)">
           <path d="M 0 6 C -10 -8, -26 2, 0 22 C 26 2, 10 -8, 0 6 Z" fill={accent2} />
         </g>
-        <text x="86" y="82" fill={accent2} style={{ fontFamily: MONO, fontSize: 12, fontWeight: 800 }}>± 3 bpm</text>
+        <text x="86" y="82" fill={accent2} style={{ fontFamily: MONO, fontSize: 12, fontWeight: 800 }}>± 5 bpm</text>
         <g className="sh-check" transform="translate(320 80)">
           <circle r="15" fill="#0D0D0D" stroke={accent} strokeWidth="2" />
           <path d="M -7 0 L -2 6 L 8 -7" stroke={accent} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />

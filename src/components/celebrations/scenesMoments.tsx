@@ -60,7 +60,7 @@ export function BirthdayScene({ accent, accent2 }: SceneProps) {
         <rect className="bd-base" x="150" y="172" width="100" height="22" rx="6" fill="#0D0D0D" stroke={accent} strokeWidth="2" />
         <rect className="bd-candle" x="194" y="120" width="12" height="52" rx="3" fill={accent2} />
         <path className="bd-flame" d="M 200 100 C 208 110, 210 118, 200 124 C 190 118, 192 110, 200 100 Z" fill={accent} />
-        <text x="200" y="214" textAnchor="middle" fill={accent} style={{ fontFamily: MONO, fontSize: 11, fontWeight: 800, letterSpacing: "0.2em" }}>BUON COMPLEANNO</text>
+        <text x="200" y="214" textAnchor="middle" fill={accent} style={{ fontFamily: MONO, fontSize: 11, fontWeight: 800, letterSpacing: "0.2em" }}>BUON NATALE</text>
       </svg>
     </div>
   );
@@ -225,8 +225,8 @@ export function YearStreakScene({ accent, accent2 }: SceneProps) {
         })}
         <g className="yz-core">
           <circle cx="200" cy="120" r="50" fill="#0D0D0D" stroke={accent} strokeWidth="1.5" />
-          <text x="200" y="116" textAnchor="middle" fill="white" style={{ fontFamily: MONO, fontSize: 34, fontWeight: 800 }}>365</text>
-          <text x="200" y="138" textAnchor="middle" fill={accent} style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: "0.2em" }}>GIORNI</text>
+          <text x="200" y="116" textAnchor="middle" fill="white" style={{ fontFamily: MONO, fontSize: 34, fontWeight: 800 }}>52</text>
+          <text x="200" y="138" textAnchor="middle" fill={accent} style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: "0.2em" }}>SETTIMANE</text>
         </g>
       </svg>
     </div>

@@ -55,7 +55,7 @@ export function TripleFlameScene({ accent, accent2 }: SceneProps) {
   }, { scope: ref });
   const X = [96, 198, 302];
   const SCALES = [0.62, 0.85, 1.18];
-  const N = ["7", "14", "30"];
+  const N = ["10", "15", "20"];
   return (
     <div ref={ref} className="w-full h-full flex items-center justify-center">
       <svg viewBox="0 0 400 240" className="w-full h-full" fill="none">
@@ -256,7 +256,7 @@ export function SnowflakeScene({ accent, accent2 }: SceneProps) {
         </g>
         <g className="sf-temp sf-shiver">
           <text x="200" y="206" textAnchor="middle" fill="white"
-            style={{ fontFamily: MONO, fontSize: 22, fontWeight: 800 }}>−2°C</text>
+            style={{ fontFamily: MONO, fontSize: 22, fontWeight: 800 }}>2°C</text>
         </g>
       </svg>
     </div>
@@ -327,7 +327,7 @@ export function PerfectCheckScene({ accent, accent2 }: SceneProps) {
             stroke={i % 2 ? accent : accent2} strokeWidth="2.5" strokeLinecap="round" />;
         })}
         <text className="pc-pct" x="200" y="196" textAnchor="middle" fill={accent}
-          style={{ fontFamily: MONO, fontSize: 15, fontWeight: 800, letterSpacing: "0.25em" }}>PIANO 100%</text>
+          style={{ fontFamily: MONO, fontSize: 15, fontWeight: 800, letterSpacing: "0.25em" }}>20 GIORNI</text>
       </svg>
     </div>
   );

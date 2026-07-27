@@ -271,7 +271,7 @@ export function TripleBibScene({ accent, accent2 }: SceneProps) {
             <g className="tb-bib">
               <rect x="-38" y="-30" width="76" height="62" rx="6" fill="#0D0D0D" stroke={i === 1 ? accent : accent2} strokeWidth="2" />
               <text x="0" y="2" textAnchor="middle" fill={i === 1 ? accent : accent2} style={{ fontFamily: MONO, fontSize: 20, fontWeight: 800 }}>{i + 1}</text>
-              <text x="0" y="22" textAnchor="middle" fill="#52525B" style={{ fontFamily: MONO, fontSize: 9, fontWeight: 700 }}>GARA</text>
+              <text x="0" y="22" textAnchor="middle" fill="#52525B" style={{ fontFamily: MONO, fontSize: 9, fontWeight: 700 }}>PROVA</text>
             </g>
             <circle className="tb-pin" cx="0" cy="-30" r="4" fill="white" />
           </g>

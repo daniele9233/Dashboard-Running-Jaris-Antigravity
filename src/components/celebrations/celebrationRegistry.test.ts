@@ -69,4 +69,9 @@ describe("celebrationRegistry", () => {
       expect(ids, `regola orfana: ${id}`).toContain(id);
     }
   });
+
+  it("ogni badge ha un criterio automatico: nessun badge morto", () => {
+    const senzaRegola = CELEBRATIONS.filter((c) => !(c.id in BADGE_RULES)).map((c) => c.id);
+    expect(senzaRegola).toEqual([]);
+  });
 });

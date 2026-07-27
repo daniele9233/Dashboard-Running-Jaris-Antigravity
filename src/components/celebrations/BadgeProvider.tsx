@@ -9,6 +9,14 @@ const GROUP_PRIORITY: Record<CelebrationGroup, number> = {
   GARE: 6, CLASSICI: 5, VELOCITÀ: 4, FISIOLOGIA: 3, VOLUME: 2, SALITE: 1, COSTANZA: 0,
 };
 
+/**
+ * Quante celebrazioni a schermo pieno al massimo per sync. Gli obiettivi
+ * guardano tutto lo storico, quindi il primo sync dopo un cambio di criteri
+ * ne sblocca decine in un colpo: si festeggiano le più importanti, le altre
+ * compaiono comunque in bacheca (e da lì si rigiocano).
+ */
+const MAX_CELEBRATIONS = 3;
+
 const EMPTY_STATE: BadgeState = {
   activated: false, activated_at: null, baseline_run_ids: [], baseline: {}, unlocked: {},
 };
@@ -59,10 +67,10 @@ export function BadgeProvider({ children }: { children: ReactNode }) {
     return () => { alive = false; };
   }, []);
 
-  const fire = useCallback((defs: CelebrationDef[]) => {
+  const fire = useCallback((defs: CelebrationDef[], cap = Infinity) => {
     if (!defs.length) return;
     const ordered = [...defs].sort((a, b) => GROUP_PRIORITY[b.group] - GROUP_PRIORITY[a.group]);
-    setQueue(ordered);
+    setQueue(ordered.slice(0, cap));
     setRunId((n) => n + 1);
   }, []);
 
@@ -82,7 +90,7 @@ export function BadgeProvider({ children }: { children: ReactNode }) {
     const defs = newIds
       .map((id) => CELEBRATIONS.find((c) => c.id === id))
       .filter((d): d is CelebrationDef => Boolean(d));
-    fire(defs);
+    fire(defs, MAX_CELEBRATIONS);
     return newIds;
   }, [fire]);
 

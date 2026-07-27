@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-27T18:34:25.513Z",
+  "generated_at": "2026-07-27T19:47:19.271Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 191,
+    "files": 192,
     "backend_routes": 68,
     "frontend_routes": 16,
     "api_clients": 73
@@ -1942,14 +1942,13 @@
       "routes": [],
       "imports": [
         "./celebrations/BadgeProvider",
-        "./celebrations/badgeRules",
         "./celebrations/celebrationRegistry",
         "lucide-react",
         "react-i18next"
       ],
-      "hash": "330ba1d91ded27ed695a9704392f185bf29b2d09facab78a94ef11265f6ac9f7",
-      "last_modified": "2026-07-27T18:34:17.315Z",
-      "size_bytes": 8468
+      "hash": "a5d54af03142b141bcc5c13c699efc6b69b4fa56c87c7b97850f5acfc72f3c0e",
+      "last_modified": "2026-07-27T19:45:26.346Z",
+      "size_bytes": 8350
     },
     {
       "path": "src/components/CardiacDrift.tsx",
@@ -2000,9 +1999,34 @@
         "./MultiCelebrationOverlay",
         "react"
       ],
-      "hash": "2f5ac31b861144e13ff0584f8dd1a8af532e27ddcd01c7bdd46fe9238d3da055",
-      "last_modified": "2026-06-13T16:44:17.940Z",
-      "size_bytes": 4027
+      "hash": "74a28b1a7d57106fec7bdb6aa8dade96be14bd4a4cb2c19c450442b3290988af",
+      "last_modified": "2026-07-27T19:45:17.529Z",
+      "size_bytes": 4399
+    },
+    {
+      "path": "src/components/celebrations/badgeRules.test.ts",
+      "kind": "frontend-component",
+      "purpose": "React component badgeRules.test.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "garmin",
+        "map",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "./badgeRules",
+        "vitest"
+      ],
+      "hash": "5bd858b54c9e0e7328f0e37f3161bfc99e0a85c38e331a88487a0702c957ba4f",
+      "last_modified": "2026-07-27T19:47:13.488Z",
+      "size_bytes": 12538
     },
     {
       "path": "src/components/celebrations/badgeRules.ts",
@@ -2013,6 +2037,8 @@
         "ai",
         "cadence",
         "garmin",
+        "strava",
+        "training",
         "types"
       ],
       "exports": [
@@ -2023,15 +2049,17 @@
         "buildMetrics",
         "evaluateMet",
         "isAutoDetectable",
-        "Metrics"
+        "Metrics",
+        "vdotFrom"
       ],
       "routes": [],
       "imports": [
-        "../../types/api"
+        "../../types/api",
+        "../../utils/cardiacDrift"
       ],
-      "hash": "42535fff02ce36673c2c9531e453911b6e57fb302549b341edd975fe983ea101",
-      "last_modified": "2026-06-13T16:43:06.451Z",
-      "size_bytes": 12698
+      "hash": "1d189427a13af83ce6be164b5fc4a9c01026c051352a7f81a7fa8fc9819d611f",
+      "last_modified": "2026-07-27T19:39:35.488Z",
+      "size_bytes": 29016
     },
     {
       "path": "src/components/celebrations/CelebrationContent.tsx",
@@ -2091,9 +2119,9 @@
         "./celebrationRegistry",
         "vitest"
       ],
-      "hash": "8b6c30150a659d235af7f08bacb618b3e569d7ce99c96c60386ec1ac0480e820",
-      "last_modified": "2026-07-27T18:33:24.425Z",
-      "size_bytes": 2391
+      "hash": "26ec27d274b86bbe43d3b9b0b7004db5135f427737f01fe9ac56856b194eb0cc",
+      "last_modified": "2026-07-27T19:47:19.271Z",
+      "size_bytes": 2601
     },
     {
       "path": "src/components/celebrations/celebrationRegistry.tsx",
@@ -2128,9 +2156,9 @@
         "./scenesVolume",
         "react"
       ],
-      "hash": "a77dc71dafde26cf3eae6c6c6207e67aca1607857938c4b7f0abe13d9caae793",
-      "last_modified": "2026-06-13T06:24:23.883Z",
-      "size_bytes": 31496
+      "hash": "01f42842a6fe7480a121512947a6521a9ff21bc83a3ead5c20ad5874e677437a",
+      "last_modified": "2026-07-27T19:45:00.199Z",
+      "size_bytes": 31570
     },
     {
       "path": "src/components/celebrations/gsapSetup.ts",
@@ -2292,7 +2320,6 @@
       "purpose": "React component scenesHabit.",
       "touch_when": [
         "ai",
-        "training",
         "types"
       ],
       "exports": [
@@ -2313,9 +2340,9 @@
         "./sceneUtils",
         "react"
       ],
-      "hash": "b90ca4e4ef3215ff0fb6c6a66b993d404cc2d501bae237c7c39f78868b50358c",
-      "last_modified": "2026-06-12T14:54:26.101Z",
-      "size_bytes": 20829
+      "hash": "35c20e4766a59ff5685e4f6bb2847b0c6fae3b88883320220e4d3427e6efecf5",
+      "last_modified": "2026-07-27T19:41:16.722Z",
+      "size_bytes": 20826
     },
     {
       "path": "src/components/celebrations/scenesMoments.tsx",
@@ -2342,9 +2369,9 @@
         "./sceneUtils",
         "react"
       ],
-      "hash": "f97047bbb10ee635264f3ca5d184cf2947e82e3e161beeb3d26af645aad368c1",
-      "last_modified": "2026-06-13T06:19:51.370Z",
-      "size_bytes": 19098
+      "hash": "4ee6c6f477ca2cdf85ba87c528cb5692d26a5c2e3f8e8fcc791e88b991e59d0f",
+      "last_modified": "2026-07-27T19:41:24.244Z",
+      "size_bytes": 19096
     },
     {
       "path": "src/components/celebrations/scenesPace.tsx",
@@ -2373,8 +2400,8 @@
         "./sceneUtils",
         "react"
       ],
-      "hash": "ecf6a988629af2f6c1f8836a4c36303ab2e5d153dd1a355b39ead91a1fa717aa",
-      "last_modified": "2026-06-13T06:15:13.743Z",
+      "hash": "8b24c256f1caebcb9bc216a023837d6ade4f4e5cca6fb34fca9be634f26d32bd",
+      "last_modified": "2026-07-27T19:41:29.585Z",
       "size_bytes": 19078
     },
     {
@@ -2404,8 +2431,8 @@
         "./sceneUtils",
         "react"
       ],
-      "hash": "a0c76f9c564a673236ea3c93cf5fdb316b175afd72b8c736a2e020da78c5e801",
-      "last_modified": "2026-06-13T06:18:22.899Z",
+      "hash": "80a66e3aba5782174d6d61dbaba0cf8661e27100ea0f3ffe0a2dd52aab81391b",
+      "last_modified": "2026-07-27T19:41:30.493Z",
       "size_bytes": 20754
     },
     {
@@ -2433,9 +2460,9 @@
         "./sceneUtils",
         "react"
       ],
-      "hash": "2e2b6111e802c32fc025a0c6170498293702584d6df6d4d3098c194502020fe9",
-      "last_modified": "2026-06-13T06:21:21.287Z",
-      "size_bytes": 19714
+      "hash": "02f762f1317f366b74c73ad3458b94c40d11a44c95a424f3196e0e992a410a00",
+      "last_modified": "2026-07-27T19:41:38.110Z",
+      "size_bytes": 19715
     },
     {
       "path": "src/components/celebrations/scenesRace.tsx",
@@ -2466,9 +2493,9 @@
         "./sceneUtils",
         "react"
       ],
-      "hash": "75b5b44007450e1a893b4c426e94192dfd2ac62292a15f5da70665e6815cd88e",
-      "last_modified": "2026-06-12T14:56:38.724Z",
-      "size_bytes": 26965
+      "hash": "85775ce27347f43cd2f73882a51e6cc5130d6353a075d01b8dc82b1ace726152",
+      "last_modified": "2026-07-27T19:41:38.460Z",
+      "size_bytes": 26963
     },
     {
       "path": "src/components/celebrations/scenesSpeed.tsx",
@@ -4655,9 +4682,9 @@
       ],
       "routes": [],
       "imports": [],
-      "hash": "8944c4af891bb4804b41eb0d70d89e73fc5a6ce890570cb8ac27f5beb2c19521",
-      "last_modified": "2026-07-27T18:34:25.513Z",
-      "size_bytes": 27344
+      "hash": "3ccb513058d00d38e8a95964fee7ba54311a2d21d440fc65e65c99cf61d4a645",
+      "last_modified": "2026-07-27T19:45:31.772Z",
+      "size_bytes": 27207
     },
     {
       "path": "src/index.css",
