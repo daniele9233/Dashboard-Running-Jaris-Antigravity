@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-27T10:48:43.582Z",
+  "generated_at": "2026-07-27T11:49:47.971Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 194,
+    "files": 191,
     "backend_routes": 68,
     "frontend_routes": 16,
     "api_clients": 73
@@ -3955,33 +3955,6 @@
       "size_bytes": 20955
     },
     {
-      "path": "src/components/statistics/PeriodComparison.tsx",
-      "kind": "frontend-statistics-component",
-      "purpose": "React component PeriodComparison.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "garmin",
-        "layout",
-        "statistics",
-        "types"
-      ],
-      "exports": [
-        "PeriodComparison"
-      ],
-      "routes": [],
-      "imports": [
-        "../../types/api",
-        "./chartTheme",
-        "lucide-react",
-        "react",
-        "recharts"
-      ],
-      "hash": "243d0bea8f8802fab72bf53babbdf19ad41d654f4dfa37e025d4158ab30d6260",
-      "last_modified": "2026-07-26T13:41:46.720Z",
-      "size_bytes": 14957
-    },
-    {
       "path": "src/components/statistics/PotenzialProgressiV2.tsx",
       "kind": "frontend-statistics-component",
       "purpose": "React component PotenzialProgressiV2.",
@@ -4010,40 +3983,6 @@
       "hash": "b27b6e433fa19234e11ef47e8f759f18e8f31703ce9c4724ab9dae5115124201",
       "last_modified": "2026-07-26T11:10:10.431Z",
       "size_bytes": 54311
-    },
-    {
-      "path": "src/components/statistics/RunComparison.tsx",
-      "kind": "frontend-statistics-component",
-      "purpose": "React component RunComparison.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "garmin",
-        "layout",
-        "map",
-        "statistics",
-        "strava",
-        "types"
-      ],
-      "exports": [
-        "isComparableRun",
-        "RunComparison"
-      ],
-      "routes": [],
-      "imports": [
-        "../../types/api",
-        "../../utils/mapbox",
-        "../../utils/weather",
-        "./chartTheme",
-        "@mapbox/polyline",
-        "lucide-react",
-        "react",
-        "react-map-gl/mapbox",
-        "recharts"
-      ],
-      "hash": "8c532a3721c170b42802b5b222afe79498bd02e2aca7f6170fe896287415254e",
-      "last_modified": "2026-07-27T10:48:43.583Z",
-      "size_bytes": 26786
     },
     {
       "path": "src/components/statistics/StatisticsView.tsx",
@@ -4088,7 +4027,6 @@
         "./chartTheme",
         "./EnvironmentalNormalizerView",
         "./PaceCalculator",
-        "./RunComparison",
         "./StatsDrift",
         "lucide-react",
         "react",
@@ -4096,9 +4034,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "12ccef5dd7ba7f0ab166176c14efc59c7253fcd52571988567b3bc52cef34feb",
-      "last_modified": "2026-07-27T10:46:07.220Z",
-      "size_bytes": 125676
+      "hash": "078594ee584b9c541e6181ab671f56a93d002b51337a14f29eff2c06726acf3d",
+      "last_modified": "2026-07-27T11:49:47.971Z",
+      "size_bytes": 125235
     },
     {
       "path": "src/components/statistics/StatsCalc.tsx",
@@ -4964,24 +4902,6 @@
       "hash": "7a8d7273353ca4d282cb6d4bfa5191da9763c1927a75601f566e85208f09f1cf",
       "last_modified": "2026-04-27T10:05:05.860Z",
       "size_bytes": 15144
-    },
-    {
-      "path": "src/utils/mapbox.ts",
-      "kind": "frontend-utility",
-      "purpose": "Shared utility module exporting MAPBOX_STYLE_DARK, MAPBOX_TOKEN.",
-      "touch_when": [
-        "ai",
-        "map"
-      ],
-      "exports": [
-        "MAPBOX_STYLE_DARK",
-        "MAPBOX_TOKEN"
-      ],
-      "routes": [],
-      "imports": [],
-      "hash": "f05f9a26cda7d97fe3a7a60cbcd9fe82133e1974d49a8f10df18467be26dd0f2",
-      "last_modified": "2026-07-27T10:46:19.189Z",
-      "size_bytes": 597
     },
     {
       "path": "src/utils/paceFormat.test.ts",

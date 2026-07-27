@@ -12,7 +12,6 @@ import { BiologyFutureV2 } from './BiologyFutureV2';
 import { BiologyFutureLab } from './BiologyFutureLab';
 import { EnvironmentalNormalizerView } from './EnvironmentalNormalizerView';
 import { PaceCalculator } from './PaceCalculator';
-import { RunComparison } from './RunComparison';
 import { AnalyticsV4CadenceSpeedMatrix, AnalyticsV4PaceZoneDistribution } from './AnalyticsV4';
 import { CaricoFormaV2 } from './CaricoFormaV2';
 import { AnalyticsV5BestEffortsProgression, AnalyticsV5EffortMatrix, AnalyticsV5PaceDistributionBell } from './AnalyticsV5';
@@ -60,7 +59,6 @@ import {
   CloudSun,
   Plus,
   RotateCcw,
-  GitCompare,
   Calculator,
 } from 'lucide-react';
 import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
@@ -926,7 +924,6 @@ export function StatisticsView() {
     { id: 'environment', label: t('statsTabs.climatePace'),           icon: CloudSun },
     { id: 'biologyv2',   label: t('statsTabs.detraining'),            icon: Dna },
     { id: 'pace-calc',   label: 'Calcolatore',                       icon: Calculator },
-    { id: 'period-compare', label: 'Confronto',                       icon: GitCompare },
   ];
 
   const noData = (message = t('statsTabs.insufficientData')) => (
@@ -2480,13 +2477,6 @@ export function StatisticsView() {
         {activeTab === 'pace-calc' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
             <PaceCalculator vdot={vdot} />
-          </div>
-        )}
-
-        {/* ═══ CONFRONTO ═══ Corsa vs corsa: unica modalità. */}
-        {activeTab === 'period-compare' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <RunComparison runs={runs} />
           </div>
         )}
 
