@@ -63,18 +63,20 @@ describe("kikkoSub20 — volume", () => {
 });
 
 describe("kikkoSub20 — intensità", () => {
-  it("ogni settimana ha esattamente due sedute intense", () => {
+  it("ogni settimana ha esattamente quattro uscite", () => {
     for (let i = 0; i < KIKKO_SUB20_META.weeks; i++) {
-      const intense = weekOf(i).filter((s) => s.type === "intervals" || s.type === "tempo");
-      expect(intense, `settimana ${i + 1}`).toHaveLength(2);
+      expect(weekOf(i), `settimana ${i + 1}`).toHaveLength(4);
     }
   });
 
-  it("tutti gli altri giorni sono facili o lungo", () => {
-    const soft = KIKKO_SUB20_SESSIONS.filter(
-      (s) => s.type !== "intervals" && s.type !== "tempo",
-    );
-    expect(soft.every((s) => s.type === "recovery" || s.type === "long")).toBe(true);
+  it("ogni settimana ha due qualità e due lente", () => {
+    for (let i = 0; i < KIKKO_SUB20_META.weeks; i++) {
+      const week = weekOf(i);
+      const hard = week.filter((s) => s.type === "intervals" || s.type === "tempo");
+      const soft = week.filter((s) => s.type === "recovery" || s.type === "long");
+      expect(hard, `settimana ${i + 1} — qualità`).toHaveLength(2);
+      expect(soft, `settimana ${i + 1} — lente`).toHaveLength(2);
+    }
   });
 
   it("gli intervalli brevi vanno tutti a ritmo gara", () => {
@@ -94,6 +96,54 @@ describe("kikkoSub20 — intensità", () => {
     const titles = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals").map((s) => s.title);
     expect(titles[9]).toContain("5×800");
     expect(titles[9]).toContain(RACE_PACE);
+  });
+
+  it("ogni seduta di ripetute dichiara il recupero nel titolo", () => {
+    const hard = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals");
+    for (const s of hard) {
+      expect(s.title, s.title).toMatch(/rec \d+:\d\d/);
+    }
+  });
+
+  it("il recupero degli intervalli sta fra 1:0.6 e 1:1 del lavoro", () => {
+    // Daniels: sul lavoro a ritmo intervallo il recupero non deve superare la
+    // durata della ripetuta, altrimenti diventa lavoro di velocità pura.
+    // Sotto ~0.6 la seduta non si regge al ritmo gara richiesto.
+    const hard = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals");
+    for (const s of hard) {
+      const m = s.title.match(/(\d+)×(\d+) m .*rec (\d+):(\d\d)/);
+      expect(m, s.title).not.toBeNull();
+      const meters = Number(m![2]);
+      const recSec = Number(m![3]) * 60 + Number(m![4]);
+      const workSec = (meters / 1000) * 240; // 240 s/km = ritmo gara
+      const ratio = recSec / workSec;
+      expect(ratio, `${s.title} → 1:${ratio.toFixed(2)}`).toBeGreaterThanOrEqual(0.6);
+      expect(ratio, `${s.title} → 1:${ratio.toFixed(2)}`).toBeLessThanOrEqual(1.05);
+    }
+  });
+
+  it("dentro ogni blocco il recupero si accorcia", () => {
+    const recOf = (t: string) => {
+      const m = t.match(/rec (\d+):(\d\d)/);
+      return m ? Number(m[1]) * 60 + Number(m[2]) : NaN;
+    };
+    const titles = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals").map((s) => s.title);
+    const block600 = titles.filter((t) => t.includes("×600")).map(recOf);
+    const block800 = titles.filter((t) => t.includes("×800")).slice(0, -1).map(recOf); // esclude il taper
+    for (const block of [block600, block800]) {
+      for (let i = 1; i < block.length; i++) {
+        expect(block[i]).toBeLessThan(block[i - 1]);
+      }
+    }
+  });
+
+  it("il taper allunga il recupero invece di accorciarlo", () => {
+    const titles = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals").map((s) => s.title);
+    const recOf = (t: string) => {
+      const m = t.match(/rec (\d+):(\d\d)/);
+      return m ? Number(m[1]) * 60 + Number(m[2]) : NaN;
+    };
+    expect(recOf(titles[9])).toBeGreaterThan(recOf(titles[8]));
   });
 
   it("i 3×2 km tornano a settimane alterne con recupero sempre più corto", () => {
@@ -117,14 +167,30 @@ describe("kikkoSub20 — calendario", () => {
   });
 
   it("sposta l'intero piano quando cambia la data di partenza", () => {
+    // La data scelta è il LUNEDÌ di riferimento della settimana 1: la prima
+    // uscita cade il martedì successivo, perché il lunedì non si corre.
     const shifted = buildKikkoSub20Sessions("2026-08-03"); // +7 giorni
-    expect(shifted[0].date).toBe("2026-08-03");
-    expect(shifted[0].day).toBe("Lunedì");
+    expect(shifted[0].date).toBe("2026-08-04");
+    expect(shifted[0].day).toBe("Martedì");
     expect(kikkoSub20RaceDate("2026-08-03")).toBe("2026-10-11");
     expect(shifted).toHaveLength(KIKKO_SUB20_SESSIONS.length);
   });
 
-  it("non programma nulla di sabato (giorno di riposo)", () => {
-    expect(KIKKO_SUB20_SESSIONS.some((s) => s.day === "Sabato")).toBe(false);
+  it("corre solo martedì, giovedì, sabato e domenica", () => {
+    const days = new Set(KIKKO_SUB20_SESSIONS.map((s) => s.day));
+    expect([...days].sort()).toEqual(["Domenica", "Giovedì", "Martedì", "Sabato"]);
+  });
+
+  it("lascia almeno un giorno fra le due sedute di qualità", () => {
+    // Martedì e giovedì: 48 ore di stacco. Attaccate non si recupererebbero.
+    const hard = KIKKO_SUB20_SESSIONS.filter(
+      (s) => s.type === "intervals" || s.type === "tempo",
+    );
+    for (let i = 1; i < hard.length; i++) {
+      const gap = Math.round(
+        (Date.parse(hard[i].date) - Date.parse(hard[i - 1].date)) / 86_400_000,
+      );
+      expect(gap).toBeGreaterThanOrEqual(2);
+    }
   });
 });

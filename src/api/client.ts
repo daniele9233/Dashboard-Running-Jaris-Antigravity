@@ -2,11 +2,20 @@
 const PUBLIC_RENDER_BACKEND_URL = 'https://dani-backend-ea0s.onrender.com';
 const LOCAL_BACKEND_URL = 'http://localhost:8000';
 
+/**
+ * Sotto Vite le variabili stanno in `import.meta.env`. Fuori da Vite — script
+ * node/tsx che importano moduli di src/ per fare analisi offline — quell'oggetto
+ * non esiste e la sola lettura fa esplodere l'import. Con questo accesso
+ * difensivo gli stessi moduli restano usabili da riga di comando.
+ */
+const ENV: Record<string, any> =
+  (typeof import.meta !== "undefined" && (import.meta as any).env) || {};
+
 function normaliseBackendUrl(value?: string): string {
   let rawUrl = value?.trim();
 
   if (!rawUrl) {
-    return import.meta.env.DEV ? LOCAL_BACKEND_URL : PUBLIC_RENDER_BACKEND_URL;
+    return ENV.DEV ? LOCAL_BACKEND_URL : PUBLIC_RENDER_BACKEND_URL;
   }
 
   if (!rawUrl.startsWith('http')) {
@@ -25,11 +34,11 @@ function normaliseBackendUrl(value?: string): string {
 
     return url.origin;
   } catch {
-    return import.meta.env.DEV ? LOCAL_BACKEND_URL : PUBLIC_RENDER_BACKEND_URL;
+    return ENV.DEV ? LOCAL_BACKEND_URL : PUBLIC_RENDER_BACKEND_URL;
   }
 }
 
-const BASE_URL = normaliseBackendUrl(import.meta.env.VITE_BACKEND_URL);
+const BASE_URL = normaliseBackendUrl(ENV.VITE_BACKEND_URL);
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {

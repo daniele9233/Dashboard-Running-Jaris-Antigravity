@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-27T05:54:37.264Z",
+  "generated_at": "2026-07-27T06:27:56.175Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 188,
+    "files": 190,
     "backend_routes": 68,
     "frontend_routes": 16,
     "api_clients": 73
@@ -539,12 +539,14 @@
         "api",
         "dashboard",
         "layout",
+        "map",
         "profile",
         "strava"
       ],
       "exports": [
         "_find_run",
         "backfill_laps",
+        "backfill_weather",
         "get_run",
         "get_run_intervals",
         "get_run_splits",
@@ -557,16 +559,18 @@
       "imports": [
         "backend.deps",
         "backend.intervals",
+        "backend.weather_backfill",
         "bson",
         "deps",
         "fastapi",
         "fastapi.responses",
         "intervals",
-        "typing"
+        "typing",
+        "weather_backfill"
       ],
-      "hash": "22920e6b866e29c87ec814805cd44ef68665e559bd8a8e80c574b64ac698040d",
-      "last_modified": "2026-07-27T05:27:02.016Z",
-      "size_bytes": 11429
+      "hash": "0bb475c00f7341559c821299e22e6942dce3a4bf2d28d3ad66fbd1cd4abc9fc9",
+      "last_modified": "2026-07-27T06:22:42.265Z",
+      "size_bytes": 14206
     },
     {
       "path": "backend/server.py",
@@ -873,6 +877,31 @@
       "hash": "899a0cb1d4e5595036b7a747764816574c94759bffe5c5c296fdaa0dbe561aae",
       "last_modified": "2026-05-03T09:24:03.646Z",
       "size_bytes": 7735
+    },
+    {
+      "path": "backend/weather_backfill.py",
+      "kind": "backend-script",
+      "purpose": "Backend helper or diagnostic script weather_backfill.py.",
+      "touch_when": [
+        "ai",
+        "api",
+        "map",
+        "strava"
+      ],
+      "exports": [
+        "_covered_hours",
+        "_dewpoint",
+        "_infer_hour",
+        "_run_start_hour",
+        "resolve_weather"
+      ],
+      "routes": [],
+      "imports": [
+        "typing"
+      ],
+      "hash": "ca58d45f17505cb0012104779b1bd0d339a633f688862677463b7a2bc1726e31",
+      "last_modified": "2026-07-27T06:22:19.970Z",
+      "size_bytes": 5260
     },
     {
       "path": "backend/worker.py",
@@ -1531,6 +1560,27 @@
       "size_bytes": 231
     },
     {
+      "path": "scripts/sub20-readiness.ts",
+      "kind": "tooling-script",
+      "purpose": "Project tooling script sub20-readiness.ts.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "strava",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "../src/types/api",
+        "../src/utils/weather"
+      ],
+      "hash": "e9dc768366e6a9aa50b6574725ce65d39eef1dc392fdc81a0f9cadaba63dee4e",
+      "last_modified": "2026-07-27T06:27:56.176Z",
+      "size_bytes": 8047
+    },
+    {
       "path": "scripts/update-ai-context.ts",
       "kind": "tooling-script",
       "purpose": "Project tooling script update-ai-context.ts.",
@@ -1574,9 +1624,9 @@
       ],
       "routes": [],
       "imports": [],
-      "hash": "671521ad7d2cbdeb298f4f2ca96b259bc39192a9ad9bbf2d66d1a2b923572e70",
-      "last_modified": "2026-04-23T06:35:52.900Z",
-      "size_bytes": 2873
+      "hash": "c4afbe97c9d156f91fff942b9934953f4939f906942a0868928e2f7ce25e34ee",
+      "last_modified": "2026-07-27T06:25:50.434Z",
+      "size_bytes": 3347
     },
     {
       "path": "src/api/index.ts",
@@ -4192,7 +4242,6 @@
       "imports": [
         "../api",
         "../data/kikkoSub20Plan",
-        "../data/sub20Plan",
         "../hooks/apiCacheKeys",
         "../hooks/useApi",
         "../types/api",
@@ -4200,9 +4249,9 @@
         "react",
         "react-i18next"
       ],
-      "hash": "2f7fd7874fdb59d82d9cd187666a7866eee1f5c0f23ce1f0766aea530f0712f3",
-      "last_modified": "2026-07-27T05:42:51.380Z",
-      "size_bytes": 102083
+      "hash": "d85165ff2a9461b4ec9d838ac24450eb8fa1763fe0011e75fc347aa22123c78d",
+      "last_modified": "2026-07-27T06:20:55.597Z",
+      "size_bytes": 98886
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -4413,15 +4462,16 @@
         "./kikkoSub20Plan",
         "vitest"
       ],
-      "hash": "bd928f42a4c21a809fa6a56731891f64b67e12d3457ffc8a48f88d735c6d8c03",
-      "last_modified": "2026-07-27T05:46:09.949Z",
-      "size_bytes": 5088
+      "hash": "b9b38aff9c9644fdd80bb27e12722ee81d7a3f09afaed98d3afe9545eb3c70c0",
+      "last_modified": "2026-07-27T06:02:15.057Z",
+      "size_bytes": 8153
     },
     {
       "path": "src/data/kikkoSub20Plan.ts",
       "kind": "frontend-source",
       "purpose": "frontend-source kikkoSub20Plan.ts.",
       "touch_when": [
+        "activities",
         "ai",
         "training",
         "types"
@@ -4434,15 +4484,16 @@
         "KIKKO_SUB20_SESSIONS",
         "KIKKO_SUB20_WEEKLY_KM",
         "kikkoSub20ActualWeeklyKm",
+        "kikkoSub20NormalizeStart",
         "kikkoSub20RaceDate"
       ],
       "routes": [],
       "imports": [
         "../types/api"
       ],
-      "hash": "f2c3c1686383e0d0b42cdf6a9216e515206136d5e4a557006720b3c8fcea151d",
-      "last_modified": "2026-07-27T05:46:09.963Z",
-      "size_bytes": 14202
+      "hash": "02a33d8116360a65d2900b80d0f45e0fd9afcf54c69f6fa7beef522b4d83543b",
+      "last_modified": "2026-07-27T06:18:49.924Z",
+      "size_bytes": 16997
     },
     {
       "path": "src/data/sub20Plan.ts",

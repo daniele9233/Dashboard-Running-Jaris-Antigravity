@@ -9,6 +9,7 @@ Endpoints:
 - GET /api/runs/{run_id}/splits      → solo splits di una corsa
 - GET /api/runs/{run_id}/intervals   → parziali (laps → streams → splits) + PBP
 - POST /api/runs/backfill-laps       → riscarica i giri da Strava per corse vecchie
+- POST /api/runs/backfill-weather    → risolve il meteo lato server per tutte le corse
 - POST /api/runs/weather/bulk        → snapshot meteo di N corse in una chiamata
 - GET /api/runs/{run_id}/weather     → snapshot meteo salvato
 - POST /api/runs/{run_id}/weather    → salva snapshot meteo
@@ -22,9 +23,11 @@ from fastapi.responses import JSONResponse
 try:
     from deps import get_db, get_athlete_id, oid, oids, normalise_run_quality_fields, _import_server
     from intervals import build_intervals
+    from weather_backfill import resolve_weather
 except ImportError:  # pragma: no cover
     from backend.deps import get_db, get_athlete_id, oid, oids, normalise_run_quality_fields, _import_server  # type: ignore
     from backend.intervals import build_intervals  # type: ignore
+    from backend.weather_backfill import resolve_weather  # type: ignore
 
 router = APIRouter(tags=["runs"])
 
@@ -193,6 +196,77 @@ async def backfill_laps(
         "remaining": max(0, remaining - updated),
         "rate_limited": rate_limited,
         "done": not rate_limited and remaining - updated <= 0,
+    }
+
+
+@router.post("/api/runs/backfill-weather")
+async def backfill_weather(
+    payload: dict = Body(default={}),
+    db=Depends(get_db),
+    athlete_id: Optional[int] = Depends(get_athlete_id),
+):
+    """Risolve e salva il meteo delle corse che non ce l'hanno ancora.
+
+    Prima il meteo veniva chiesto a open-meteo dal browser e solo per le corse
+    mostrate a schermo: bastava non aprire quella vista perché il dato non
+    esistesse. Qui la risoluzione è del server, quindi vale per tutte.
+
+    Body: { "limit": 120, "min_distance_km": 0 }
+    """
+    import datetime as dt
+    import httpx
+    from bson import ObjectId
+
+    limit = max(1, min(int(payload.get("limit", 120) or 120), 400))
+    min_km = float(payload.get("min_distance_km", 0) or 0)
+
+    q: dict = {"is_treadmill": {"$ne": True}, "start_latlng": {"$exists": True, "$ne": None}}
+    if athlete_id:
+        q["athlete_id"] = athlete_id
+    if min_km > 0:
+        q["distance_km"] = {"$gte": min_km}
+
+    candidates = await db.runs.find(q, {
+        "_id": 1, "date": 1, "start_date_local": 1, "start_latlng": 1,
+        "duration_minutes": 1, "name": 1, "is_treadmill": 1,
+    }).sort("date", -1).to_list(length=None)
+
+    known = set()
+    async for doc in db.run_weather.find({}, {"run_id": 1}):
+        known.add(doc["run_id"])
+    todo = [c for c in candidates if str(c["_id"]) not in known][:limit]
+    remaining_before = len([c for c in candidates if str(c["_id"]) not in known])
+
+    if not todo:
+        return {"ok": True, "resolved": 0, "failed": 0, "remaining": 0, "done": True}
+
+    today = dt.date.today().isoformat()
+    resolved, failed = 0, 0
+    now = dt.datetime.utcnow().isoformat()
+
+    async with httpx.AsyncClient(timeout=30.0) as http:
+        for doc in todo:
+            try:
+                snap = await resolve_weather(http, doc, today)
+            except Exception:
+                snap = None
+            if not snap:
+                failed += 1
+                continue
+            await db.run_weather.update_one(
+                {"run_id": str(doc["_id"])},
+                {"$set": {**snap, "run_id": str(doc["_id"]), "date": doc.get("date"), "updated_at": now},
+                 "$setOnInsert": {"created_at": now}},
+                upsert=True,
+            )
+            resolved += 1
+
+    return {
+        "ok": True,
+        "resolved": resolved,
+        "failed": failed,
+        "remaining": max(0, remaining_before - resolved),
+        "done": remaining_before - resolved <= 0,
     }
 
 

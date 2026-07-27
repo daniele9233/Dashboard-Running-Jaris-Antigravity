@@ -5,16 +5,13 @@ import { useApi, invalidateCache } from "../hooks/useApi";
 import { API_CACHE } from "../hooks/apiCacheKeys";
 import {
   getTrainingPlan, generateTrainingPlan, adaptTrainingPlan, evaluateTest,
-  getSub20Status, putSub20Status, putSub20Rpe, putSub20StartDate,
-  type Sub20StatusResponse, type Sub20SessionStatus, type Sub20RpeLevel,
+  getSub20Status, putSub20Status, putSub20StartDate,
+  type Sub20StatusResponse, type Sub20SessionStatus,
 } from "../api";
 import type { Session, TrainingPlanResponse, AdaptAdaptation } from "../types/api";
 import {
-  computeSub20Adaptations,
-} from "../data/sub20Plan";
-import {
   KIKKO_SUB20_LEGEND, KIKKO_SUB20_DEFAULT_START,
-  buildKikkoSub20Sessions, kikkoSub20RaceDate,
+  buildKikkoSub20Sessions, kikkoSub20RaceDate, kikkoSub20NormalizeStart,
 } from "../data/kikkoSub20Plan";
 
 const SESSION_COLORS: Record<string, string> = {
@@ -1341,13 +1338,7 @@ export function TrainingGrid() {
 
   const getSession = (year: number, month: number, day: number): Session | undefined => {
     const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    if (showSub20) {
-      const base = sub20Map[key];
-      if (!base) return undefined;
-      // Applica il ritmo adattato dall'RPE (se diverso dal base).
-      const a = sub20AdaptMap[key];
-      return a && a.pace && a.pace !== base.target_pace ? { ...base, target_pace: a.pace } : base;
-    }
+    if (showSub20) return sub20Map[key];
     return sessionMap[key];
   };
 
@@ -1357,8 +1348,12 @@ export function TrainingGrid() {
   useEffect(() => {
     if (sub20StatusData?.statuses) setSub20StatusLocal(sub20StatusData.statuses);
     if (sub20StatusData?.start_date) {
-      setSub20StartDate(sub20StatusData.start_date);
-      setSub20StartDraft(sub20StatusData.start_date);
+      // Sul DB può esserci la partenza del vecchio piano Sub-20, che era
+      // ancorata a un martedì: senza normalizzare, kikkoSub20 slitta di un
+      // giorno e le qualità cadono di mercoledì e venerdì.
+      const monday = kikkoSub20NormalizeStart(sub20StatusData.start_date);
+      setSub20StartDate(monday);
+      setSub20StartDraft(monday);
     }
   }, [sub20StatusData]);
 
@@ -1382,48 +1377,25 @@ export function TrainingGrid() {
     }
   }, []);
 
-  // ── RPE + auto-adattamento del piano (persistente su DB) ──
-  const [sub20Rpe, setSub20RpeLocal] = useState<Record<string, Sub20RpeLevel>>({});
-  useEffect(() => {
-    if (sub20StatusData?.rpe) setSub20RpeLocal(sub20StatusData.rpe);
-  }, [sub20StatusData]);
 
-  // Ritmi ricalcolati dallo storico RPE: per tipo, graduale, ±3 sec/km (tetto ±6).
-  const sub20AdaptMap = useMemo(
-    () => (showSub20 ? computeSub20Adaptations(sub20Sessions, sub20Rpe, sub20Status) : {}),
-    [showSub20, sub20Sessions, sub20Rpe, sub20Status],
-  );
-
-  const sub20RpeOf = (date: string): Sub20RpeLevel | undefined =>
-    showSub20 ? sub20Rpe[date] : undefined;
-
-  const markSub20Rpe = useCallback(async (date: string, rpe: Sub20RpeLevel | null) => {
-    setSub20RpeLocal((prev) => {
-      const next = { ...prev };
-      if (rpe) next[date] = rpe; else delete next[date];
-      return next;
-    });
-    try {
-      const res = await putSub20Rpe(date, rpe);
-      if (res?.rpe) setSub20RpeLocal(res.rpe);
-      invalidateCache("sub20-status");
-    } catch {
-      /* l'ottimistico resta; ritenta al prossimo click */
-    }
-  }, []);
-
-  // "Ricalcola piano": il piano parte ESATTAMENTE dalla data scelta, il
-  // calendario salta a quel giorno e la scelta si salva su DB.
+  // "Ricalcola": la data scelta viene riportata al lunedì della sua settimana
+  // (il piano è ancorato al lunedì), il calendario ci salta sopra e la scelta
+  // si salva su DB già normalizzata.
   const recalcSub20FromDraft = useCallback(async () => {
-    const picked = sub20StartDraft;
-    if (!picked || picked.length !== 10) return;
-    setSub20StartDate(picked);
-    const [y, m, d] = picked.split("-").map(Number);
+    if (!sub20StartDraft || sub20StartDraft.length !== 10) return;
+    const monday = kikkoSub20NormalizeStart(sub20StartDraft);
+    setSub20StartDate(monday);
+    setSub20StartDraft(monday);
+    const [y, m, d] = monday.split("-").map(Number);
     setCurrentDate(new Date(y, m - 1, d));
     setView("Month");
     try {
-      const res = await putSub20StartDate(picked);
-      if (res?.start_date) setSub20StartDate(res.start_date);
+      const res = await putSub20StartDate(monday);
+      if (res?.start_date) {
+        const normalized = kikkoSub20NormalizeStart(res.start_date);
+        setSub20StartDate(normalized);
+        setSub20StartDraft(normalized);
+      }
       invalidateCache("sub20-status");
     } catch {
       /* l'ottimistico resta */
@@ -1595,8 +1567,6 @@ export function TrainingGrid() {
     const st = sub20StatusOf(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
     const done = st === 'done' || (!showSub20 && display?.completed);
     const failed = st === 'failed';
-    const rpeVal = sub20RpeOf(dayKey);
-    const adaptInfo = showSub20 ? sub20AdaptMap[dayKey] : undefined;
 
     return (
       <div className="h-full flex items-start justify-center pt-10">
@@ -1665,41 +1635,6 @@ export function TrainingGrid() {
                 </div>
               )}
 
-              {/* RPE — quanto è stata dura? Alimenta l'auto-adattamento (solo Sub-20) */}
-              {showSub20 && (
-                <div className="mb-6 pb-6 border-b border-[#2A2A2A]">
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Com'è andata? (RPE)</div>
-                  <div className="flex gap-3">
-                    {([
-                      ['facile', '😌 Facile', '#10B981'],
-                      ['giusto', '👍 Giusto', '#F59E0B'],
-                      ['duro', '🥵 Troppo duro', '#EF4444'],
-                    ] as const).map(([val, label, col]) => {
-                      const active = rpeVal === val;
-                      return (
-                        <button
-                          key={val}
-                          type="button"
-                          onClick={() => markSub20Rpe(dayKey, active ? null : val)}
-                          className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-bold border transition-colors ${active ? 'text-black' : 'text-gray-300 hover:bg-white/5'}`}
-                          style={active ? { background: col, borderColor: col } : { background: 'transparent', borderColor: '#2A2A2A' }}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {adaptInfo && adaptInfo.offsetSec !== 0 ? (
-                    <p className="text-[11px] mt-2.5 font-medium" style={{ color: adaptInfo.offsetSec < 0 ? '#EF4444' : '#10B981' }}>
-                      ⚙️ Piano adattato: {adaptInfo.basePace} → {adaptInfo.pace}/km · {adaptInfo.reason}
-                    </p>
-                  ) : (
-                    <p className="text-[11px] text-gray-600 mt-2.5">
-                      Segna lo sforzo: due qualità dello stesso tipo “facili” di fila e il ritmo si fa più veloce; due “dure/fallite” e si alleggerisce (±3 sec/km, max ±6).
-                    </p>
-                  )}
-                </div>
-              )}
 
               <p className="text-gray-300 leading-relaxed mb-6">{display.description}</p>
 
