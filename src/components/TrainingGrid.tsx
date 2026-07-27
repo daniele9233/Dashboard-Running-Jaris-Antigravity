@@ -3,6 +3,10 @@ import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer, XCircle, Target } from "lucide-react";
 import { useApi, invalidateCache } from "../hooks/useApi";
 import { API_CACHE } from "../hooks/apiCacheKeys";
+import { getRuns } from "../api";
+import type { RunsResponse } from "../types/api";
+import { evaluatePlan, diagnose } from "../utils/trainingAdherence";
+import { SessionVerdict, AdherenceBanner, AdherenceStrip } from "./TrainingAdherence";
 import {
   getTrainingPlan, generateTrainingPlan, adaptTrainingPlan, evaluateTest,
   getSub20Status, putSub20Status, putSub20StartDate,
@@ -1325,6 +1329,7 @@ export function TrainingGrid() {
     return map;
   }, [planData]);
 
+
   // Piano kikkoSub20 — costruito rispetto alla partenza scelta dall'utente.
   const sub20Sessions = useMemo(
     () => buildKikkoSub20Sessions(sub20StartDate),
@@ -1341,6 +1346,19 @@ export function TrainingGrid() {
     if (showSub20) return sub20Map[key];
     return sessionMap[key];
   };
+
+  // ── Aderenza: confronto automatico fra prescrizione e giri realmente corsi.
+  // Il verdetto lo dà il sistema; la diagnosi guarda il pattern, non il giorno.
+  const { data: runsData } = useApi<RunsResponse>(getRuns, { cacheKey: API_CACHE.RUNS });
+  const adherence = useMemo(
+    () => evaluatePlan(showSub20 ? sub20Sessions : Object.values(sessionMap), runsData?.runs ?? []),
+    [sessionMap, sub20Sessions, runsData, showSub20],
+  );
+  const adherenceByDate = useMemo(
+    () => Object.fromEntries(adherence.map((e) => [e.date.slice(0, 10), e])),
+    [adherence],
+  );
+  const diagnosis = useMemo(() => diagnose(adherence), [adherence]);
 
   // ── Esiti sedute Sub-20 (persistenti su DB) ──
   const { data: sub20StatusData } = useApi<Sub20StatusResponse>(getSub20Status, { cacheKey: "sub20-status" });
@@ -1601,10 +1619,17 @@ export function TrainingGrid() {
                 </span>
               </div>
 
-              {/* Esito — solo Sub-20, persistente su DB */}
+              {/* Esito AUTOMATICO: confronto prescrizione ↔ giri corsi */}
+              {adherenceByDate[dayKey] && (
+                <div className="mb-6 pb-6 border-b border-[#2A2A2A]">
+                  <SessionVerdict e={adherenceByDate[dayKey]} />
+                </div>
+              )}
+
+              {/* Esito manuale — solo Sub-20, persistente su DB */}
               {showSub20 && (
                 <div className="mb-6 pb-6 border-b border-[#2A2A2A]">
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Esito allenamento</div>
+                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Correzione manuale</div>
                   <div className="flex gap-3">
                     <button
                       type="button"
@@ -1778,8 +1803,9 @@ export function TrainingGrid() {
     <div className="flex flex-col h-full bg-[#121212]">
       {/* Header */}
       <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-white">{t("sections.trainingMenu")}</h1>
+        <div className="flex items-center gap-4 min-w-0">
+          <h1 className="text-2xl font-bold text-white shrink-0">{t("sections.trainingMenu")}</h1>
+          <AdherenceStrip evals={adherence} />
         </div>
 
         <div className="flex items-center gap-4">
@@ -1886,6 +1912,8 @@ export function TrainingGrid() {
       {/* Calendar (piano generico o Sub-20: stesso rendering, dataset diverso) */}
       {(showSub20 || hasPlan || planData === null) && (
         <div className="flex-1 overflow-auto p-6">
+          {/* Diagnosi: parla solo quando c'è un pattern, non a ogni seduta storta */}
+          <AdherenceBanner d={diagnosis} />
           {view === 'Month' && renderMonthView()}
           {view === 'Week' && renderWeekView()}
           {view === 'Day' && renderDayView()}

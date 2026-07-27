@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-27T10:16:15.543Z",
+  "generated_at": "2026-07-27T10:37:59.399Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 190,
+    "files": 193,
     "backend_routes": 68,
     "frontend_routes": 16,
     "api_clients": 73
@@ -4223,6 +4223,30 @@
       "size_bytes": 5336
     },
     {
+      "path": "src/components/TrainingAdherence.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component TrainingAdherence.",
+      "touch_when": [
+        "ai",
+        "layout",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "AdherenceBanner",
+        "AdherenceStrip",
+        "SessionVerdict"
+      ],
+      "routes": [],
+      "imports": [
+        "../utils/trainingAdherence",
+        "lucide-react"
+      ],
+      "hash": "879d017fa2a045b5b067342b9fbfba5e63599be61bfccda09046236a76113bd3",
+      "last_modified": "2026-07-27T10:36:13.255Z",
+      "size_bytes": 6579
+    },
+    {
       "path": "src/components/TrainingGrid.tsx",
       "kind": "frontend-component",
       "purpose": "React component TrainingGrid.",
@@ -4245,13 +4269,15 @@
         "../hooks/apiCacheKeys",
         "../hooks/useApi",
         "../types/api",
+        "../utils/trainingAdherence",
+        "./TrainingAdherence",
         "lucide-react",
         "react",
         "react-i18next"
       ],
-      "hash": "d85165ff2a9461b4ec9d838ac24450eb8fa1763fe0011e75fc347aa22123c78d",
-      "last_modified": "2026-07-27T06:20:55.597Z",
-      "size_bytes": 98886
+      "hash": "b1812b61186e03144ecaa091625a2cfea180cc4a83157e07fb8ebe17ac2cdc71",
+      "last_modified": "2026-07-27T10:37:59.400Z",
+      "size_bytes": 100308
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -5089,6 +5115,57 @@
       "hash": "8966528d9e2ef427cd209c03673b208771593d32ba69cfb3fac1a7770dafaac7",
       "last_modified": "2026-04-29T21:07:35.362Z",
       "size_bytes": 3987
+    },
+    {
+      "path": "src/utils/trainingAdherence.test.ts",
+      "kind": "frontend-utility",
+      "purpose": "Shared utility module exporting trainingAdherence.test.",
+      "touch_when": [
+        "ai",
+        "training",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "../types/api",
+        "./trainingAdherence",
+        "vitest"
+      ],
+      "hash": "f4f2a5c3ca491dc21c6e4fa9c8c42a9f87b559c3d575a8d6ff45bc4c39a1d412",
+      "last_modified": "2026-07-27T10:35:22.749Z",
+      "size_bytes": 7991
+    },
+    {
+      "path": "src/utils/trainingAdherence.ts",
+      "kind": "frontend-utility",
+      "purpose": "Shared utility module exporting diagnose, Diagnosis, DiagnosisCause, DiagnosisLevel.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "diagnose",
+        "Diagnosis",
+        "DiagnosisCause",
+        "DiagnosisLevel",
+        "evaluatePlan",
+        "evaluateSession",
+        "parsePrescription",
+        "Prescription",
+        "SessionEval",
+        "SessionKind",
+        "Verdict"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api"
+      ],
+      "hash": "347baa0e17286dfaab032c1d7c0dce262f6f06358a149e352c044117276cc7f8",
+      "last_modified": "2026-07-27T10:34:40.654Z",
+      "size_bytes": 14341
     },
     {
       "path": "src/utils/weather.ts",
