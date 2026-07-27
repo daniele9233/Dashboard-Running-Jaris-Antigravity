@@ -365,7 +365,8 @@ export const translations = {
       unlockedOn: "Sbloccato {{date}}",
       unlocked: "Sbloccato",
       notAutoDetect: "Non ancora agganciato alla rilevazione automatica",
-      simulatorNote: "Simulatore animazioni · solo per anteprima",
+      preview: "Anteprima",
+      previewHint: "Clicca un badge per vederne la celebrazione — anche quelli ancora da sbloccare.",
     },
     // ── Gamification
     gami: {
@@ -767,7 +768,8 @@ export const translations = {
       unlockedOn: "Unlocked {{date}}",
       unlocked: "Unlocked",
       notAutoDetect: "Not yet wired to automatic detection",
-      simulatorNote: "Animation simulator · preview only",
+      preview: "Preview",
+      previewHint: "Click any badge to watch its celebration — locked ones included.",
     },
     gami: {
       modeEvolution: "Athlete Evolution",

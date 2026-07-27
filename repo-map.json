@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-27T17:50:22.710Z",
+  "generated_at": "2026-07-27T18:34:25.513Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -1944,13 +1944,12 @@
         "./celebrations/BadgeProvider",
         "./celebrations/badgeRules",
         "./celebrations/celebrationRegistry",
-        "./celebrations/CelebrationStudio",
         "lucide-react",
         "react-i18next"
       ],
-      "hash": "b1584b9cd39955bbe8bced75e854df7e30b105d6692d00fa9756478cae0d3a1e",
-      "last_modified": "2026-07-18T16:36:51.275Z",
-      "size_bytes": 7893
+      "hash": "330ba1d91ded27ed695a9704392f185bf29b2d09facab78a94ef11265f6ac9f7",
+      "last_modified": "2026-07-27T18:34:17.315Z",
+      "size_bytes": 8468
     },
     {
       "path": "src/components/CardiacDrift.tsx",
@@ -2079,6 +2078,24 @@
       "size_bytes": 2912
     },
     {
+      "path": "src/components/celebrations/celebrationRegistry.test.ts",
+      "kind": "frontend-component",
+      "purpose": "React component celebrationRegistry.test.",
+      "touch_when": [
+        "ai"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "./badgeRules",
+        "./celebrationRegistry",
+        "vitest"
+      ],
+      "hash": "8b6c30150a659d235af7f08bacb618b3e569d7ce99c96c60386ec1ac0480e820",
+      "last_modified": "2026-07-27T18:33:24.425Z",
+      "size_bytes": 2391
+    },
+    {
       "path": "src/components/celebrations/celebrationRegistry.tsx",
       "kind": "frontend-component",
       "purpose": "React component celebrationRegistry.",
@@ -2114,30 +2131,6 @@
       "hash": "a77dc71dafde26cf3eae6c6c6207e67aca1607857938c4b7f0abe13d9caae793",
       "last_modified": "2026-06-13T06:24:23.883Z",
       "size_bytes": 31496
-    },
-    {
-      "path": "src/components/celebrations/CelebrationStudio.tsx",
-      "kind": "frontend-component",
-      "purpose": "React component CelebrationStudio.",
-      "touch_when": [
-        "ai",
-        "layout",
-        "types"
-      ],
-      "exports": [
-        "CelebrationStudio"
-      ],
-      "routes": [],
-      "imports": [
-        "./CelebrationOverlay",
-        "./celebrationRegistry",
-        "./MultiCelebrationOverlay",
-        "lucide-react",
-        "react"
-      ],
-      "hash": "77cbb480b895f9ad7fa6c3da44a26502ea27a61c426f633b68e6c0d2833c301b",
-      "last_modified": "2026-06-13T14:59:27.546Z",
-      "size_bytes": 7362
     },
     {
       "path": "src/components/celebrations/gsapSetup.ts",
@@ -4662,9 +4655,9 @@
       ],
       "routes": [],
       "imports": [],
-      "hash": "c0a069f9d249892d35120882144ad739443059f5a30d1e66d9c5fcb7932b18a5",
-      "last_modified": "2026-07-26T10:38:39.592Z",
-      "size_bytes": 27223
+      "hash": "8944c4af891bb4804b41eb0d70d89e73fc5a6ce890570cb8ac27f5beb2c19521",
+      "last_modified": "2026-07-27T18:34:25.513Z",
+      "size_bytes": 27344
     },
     {
       "path": "src/index.css",

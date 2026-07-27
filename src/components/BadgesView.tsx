@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
 import { Medal, Lock, Play } from "lucide-react";
-import { CelebrationStudio } from "./celebrations/CelebrationStudio";
 import { useBadges } from "./celebrations/BadgeProvider";
 import { CELEBRATIONS, CELEBRATION_GROUPS } from "./celebrations/celebrationRegistry";
 import { isAutoDetectable } from "./celebrations/badgeRules";
@@ -8,10 +7,12 @@ import { isAutoDetectable } from "./celebrations/badgeRules";
 /**
  * BadgesView — bacheca dei traguardi.
  *
- * Mostra cosa hai sbloccato (a colori, cliccabile per rivedere la celebrazione)
- * e cosa resta da sbloccare (in silhouette col criterio). Gli sblocchi arrivano
- * dopo ogni sync, valutati sulle corse nuove (no storico). Sotto resta il
- * Celebration Studio come simulatore per provare le animazioni.
+ * Mostra cosa hai sbloccato (a colori, con la data) e cosa resta da sbloccare
+ * (in silhouette col criterio). Gli sblocchi arrivano dopo ogni sync, valutati
+ * sulle corse nuove (no storico).
+ *
+ * Ogni card — sbloccata o no — lancia la sua celebrazione al click: tutte e 100
+ * le animazioni vivono qui, non serve più un simulatore separato.
  */
 
 function fmtDate(iso: string | undefined, locale: string): string {
@@ -71,6 +72,10 @@ export function BadgesView() {
               {t("badges.emptyState")}
             </p>
           )}
+          <p className="text-[11px] text-gray-500 mt-3 flex items-center gap-1.5 leading-relaxed">
+            <Play className="w-3 h-3 text-[#C0FF00] shrink-0" aria-hidden />
+            {t("badges.previewHint")}
+          </p>
         </div>
 
         {/* ── COLLEZIONE PER CATEGORIA ── */}
@@ -117,20 +122,27 @@ export function BadgesView() {
                   }
 
                   return (
-                    <div
+                    <button
                       key={def.id}
-                      className="relative rounded-2xl border border-white/[0.06] bg-white/[0.015] p-4 overflow-hidden opacity-60"
+                      type="button"
+                      onClick={() => replay(def)}
+                      aria-label={`${def.title} — ${t("badges.preview")}`}
+                      className="group relative text-left rounded-2xl border border-white/[0.06] bg-white/[0.015] p-4 overflow-hidden cursor-pointer transition-colors hover:bg-white/[0.04] hover:border-white/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C0FF00]/60"
                       title={isAutoDetectable(def.id) ? def.mechanic : t("badges.notAutoDetect")}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="w-2 h-2 rounded-full bg-gray-700" />
-                        <Lock className="w-3.5 h-3.5 text-gray-700" />
+                        <Lock className="w-3.5 h-3.5 text-gray-600" />
                       </div>
-                      <div className="text-[12px] font-black uppercase tracking-wide text-gray-500 leading-tight">
+                      <div className="text-[12px] font-black uppercase tracking-wide text-gray-400 leading-tight">
                         {def.title}
                       </div>
-                      <div className="text-[9px] text-gray-600 mt-1.5 leading-snug">{def.mechanic}</div>
-                    </div>
+                      <div className="text-[9px] text-[#8A8A8A] mt-1.5 leading-snug">{def.mechanic}</div>
+                      <div className="mt-2 flex items-center gap-1 text-[9px] font-black tracking-[0.18em] uppercase text-gray-600 group-hover:text-white transition-colors">
+                        <Play className="w-2.5 h-2.5" />
+                        {t("badges.preview")}
+                      </div>
+                    </button>
                   );
                 })}
               </div>
@@ -138,13 +150,6 @@ export function BadgesView() {
           );
         })}
 
-        {/* ── SIMULATORE (dev) ── */}
-        <div className="pt-2">
-          <p className="text-[9px] font-black tracking-[0.3em] uppercase text-gray-700 mb-2 px-1">
-            {t("badges.simulatorNote")}
-          </p>
-          <CelebrationStudio />
-        </div>
       </div>
     </main>
   );
