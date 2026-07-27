@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-27T10:37:59.399Z",
+  "generated_at": "2026-07-27T10:48:43.582Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 193,
+    "files": 194,
     "backend_routes": 68,
     "frontend_routes": 16,
     "api_clients": 73
@@ -4026,22 +4026,24 @@
         "types"
       ],
       "exports": [
+        "isComparableRun",
         "RunComparison"
       ],
       "routes": [],
       "imports": [
         "../../types/api",
+        "../../utils/mapbox",
         "../../utils/weather",
         "./chartTheme",
         "@mapbox/polyline",
         "lucide-react",
         "react",
-        "react-map-gl/maplibre",
+        "react-map-gl/mapbox",
         "recharts"
       ],
-      "hash": "9b49bc848dad066e4200a11a3bd747fc5dba71491ff569cc9c257e88d783ba47",
-      "last_modified": "2026-07-27T05:27:02.020Z",
-      "size_bytes": 24945
+      "hash": "8c532a3721c170b42802b5b222afe79498bd02e2aca7f6170fe896287415254e",
+      "last_modified": "2026-07-27T10:48:43.583Z",
+      "size_bytes": 26786
     },
     {
       "path": "src/components/statistics/StatisticsView.tsx",
@@ -4086,7 +4088,6 @@
         "./chartTheme",
         "./EnvironmentalNormalizerView",
         "./PaceCalculator",
-        "./PeriodComparison",
         "./RunComparison",
         "./StatsDrift",
         "lucide-react",
@@ -4095,9 +4096,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "342637913378385d6424734a62cf73ff82e6cf3a3427dc48566ab6daf639f9db",
-      "last_modified": "2026-07-27T05:27:02.021Z",
-      "size_bytes": 126945
+      "hash": "12ccef5dd7ba7f0ab166176c14efc59c7253fcd52571988567b3bc52cef34feb",
+      "last_modified": "2026-07-27T10:46:07.220Z",
+      "size_bytes": 125676
     },
     {
       "path": "src/components/statistics/StatsCalc.tsx",
@@ -4963,6 +4964,24 @@
       "hash": "7a8d7273353ca4d282cb6d4bfa5191da9763c1927a75601f566e85208f09f1cf",
       "last_modified": "2026-04-27T10:05:05.860Z",
       "size_bytes": 15144
+    },
+    {
+      "path": "src/utils/mapbox.ts",
+      "kind": "frontend-utility",
+      "purpose": "Shared utility module exporting MAPBOX_STYLE_DARK, MAPBOX_TOKEN.",
+      "touch_when": [
+        "ai",
+        "map"
+      ],
+      "exports": [
+        "MAPBOX_STYLE_DARK",
+        "MAPBOX_TOKEN"
+      ],
+      "routes": [],
+      "imports": [],
+      "hash": "f05f9a26cda7d97fe3a7a60cbcd9fe82133e1974d49a8f10df18467be26dd0f2",
+      "last_modified": "2026-07-27T10:46:19.189Z",
+      "size_bytes": 597
     },
     {
       "path": "src/utils/paceFormat.test.ts",

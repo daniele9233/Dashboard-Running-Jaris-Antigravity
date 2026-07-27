@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import Map, { Source, Layer } from "react-map-gl/maplibre";
-import type { MapRef } from "react-map-gl/maplibre";
-import "maplibre-gl/dist/maplibre-gl.css";
+import Map, { Source, Layer } from "react-map-gl/mapbox";
+import type { MapRef } from "react-map-gl/mapbox";
+import "mapbox-gl/dist/mapbox-gl.css";
 import polylineDecode from "@mapbox/polyline";
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -13,16 +13,54 @@ import {
   fetchWeatherForRun, computeEnvironmentalPenalty, hasWeatherContext,
   type WeatherSnapshot,
 } from "../../utils/weather";
+import { MAPBOX_TOKEN, MAPBOX_STYLE_DARK } from "../../utils/mapbox";
 
 const A_COLOR = CHART_SERIES.compare;   // corsa A
 const B_COLOR = CHART_SERIES.primary;   // corsa B
 const PANEL = CHART_SURFACE.panel;
 const BORDER = CHART_SURFACE.border;
 
-const MAP_STYLE = "https://tiles.openfreemap.org/styles/dark";
-
 /** Distanza minima perché una corsa possa contare come "la migliore". */
 const MIN_BEST_KM = 3;
+
+/**
+ * Corse confrontabili: ha senso paragonare prestazioni, non uscite lente.
+ * Passano il filtro le sedute di QUALITÀ (dove il passo medio non racconta
+ * la seduta, perché i recuperi lo diluiscono) e le corse VELOCI oltre i 3 km.
+ */
+const QUALITY_TYPES = new Set([
+  "intervals", "repetition", "vo2max", "tempo", "threshold", "fartlek", "race", "progression",
+]);
+/** Sotto i 4:30/km una corsa è una prestazione, non un fondo lento. */
+const FAST_PACE_SEC = 4 * 60 + 30;
+
+export function isComparableRun(r: Run): boolean {
+  if (r.is_treadmill) return false;
+  const km = r.distance_km ?? 0;
+  if (km < MIN_BEST_KM) return false;
+
+  // Corsa veloce: il passo medio parla da solo.
+  const avg = parsePaceSec(r.avg_pace);
+  if (avg != null && avg < FAST_PACE_SEC) return true;
+
+  // Seduta di qualità: il passo medio è diluito dai recuperi (un 4×1000 a
+  // 3:56 con recuperi camminati esce a 5:00 di media). Vale il passo del
+  // tratto di LAVORO — il più veloce fra giri e split.
+  if (!QUALITY_TYPES.has((r.run_type ?? "").toLowerCase())) return false;
+  const workPaces: number[] = [];
+  for (const l of r.laps ?? []) {
+    if ((l.distance ?? 0) >= 200 && (l.moving_time ?? 0) > 0) {
+      workPaces.push(l.moving_time / (l.distance / 1000));
+    }
+  }
+  for (const s of r.splits ?? []) {
+    const p = parsePaceSec(s.pace);
+    if (p != null) workPaces.push(p);
+  }
+  // Senza dettaglio non si può smentire il tipo: la si tiene.
+  if (!workPaces.length) return true;
+  return Math.min(...workPaces) < FAST_PACE_SEC;
+}
 
 // recharts 3 tiene le props del grafico nel suo store: oggetti inline creerebbero
 // una nuova identità a ogni render e manderebbero il componente in loop.
@@ -143,8 +181,9 @@ function RouteMap({
     <div className="h-full rounded-2xl overflow-hidden border" style={{ borderColor: BORDER }}>
       <Map
         ref={mapRef}
+        mapboxAccessToken={MAPBOX_TOKEN}
         initialViewState={{ longitude: coords[0][0], latitude: coords[0][1], zoom: 12 }}
-        mapStyle={MAP_STYLE}
+        mapStyle={MAPBOX_STYLE_DARK}
         attributionControl={false}
         style={{ width: "100%", height: "100%" }}
       >
@@ -299,8 +338,11 @@ function MirrorRow({ m }: { m: MetricRow }) {
 
 // ─── Vista principale ────────────────────────────────────────────────────────
 export function RunComparison({ runs }: { runs: Run[] }) {
+  // Solo prestazioni confrontabili: sedute di qualità e corse veloci oltre i
+  // 3 km. Mettere a confronto due fondi lenti non dice nulla, e sporca anche
+  // i preset ("la migliore" finirebbe per essere un lento qualsiasi).
   const sorted = useMemo(
-    () => [...runs].filter((r) => r.distance_km > 0).sort((a, b) => b.date.localeCompare(a.date)),
+    () => runs.filter(isComparableRun).sort((a, b) => b.date.localeCompare(a.date)),
     [runs],
   );
 
