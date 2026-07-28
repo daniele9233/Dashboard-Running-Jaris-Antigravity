@@ -120,35 +120,56 @@ const HOT_TEMP_C = 27, HOT_HUMIDITY = 60;
 
 // ══ PROIEZIONE ════════════════════════════════════════════════════════════════
 /**
- * "Se continui così, fra 30 giorni…".
+ * "Con questi XP arrivi lì".
  *
- * Il VDOT migliore di ogni finestra di 30 giorni (già normalizzato per il caldo)
- * dà una serie storica; la pendenza esce da una regressione ai minimi quadrati
- * sull'ultimo anno. In avanti la crescita NON è lineare: si avvicina a un
- * asintoto con costante di tempo TAU, perché estrapolare dritto un +1 VDOT/mese
- * porterebbe a promettere una maratona olimpica in due anni.
+ * Gli XP sono la moneta del lavoro svolto: la proiezione li usa come asse al
+ * posto del calendario, così il traguardo ha un PREZZO invece che una data.
+ * "Fra 30 giorni" non dipende da te; "fra 1.240 XP, cioè ~10 sedute" sì.
+ *
+ * Come si costruisce:
+ * 1. il VDOT migliore di ogni finestra di 30 giorni (già normalizzato per il
+ *    caldo) dà la serie storica della forma;
+ * 2. una regressione ai minimi quadrati sugli ultimi 6 mesi dà la pendenza in
+ *    VDOT/giorno, tappata a +1 al mese;
+ * 3. gli XP guadagnati nello stesso periodo danno il ritmo XP/giorno, quindi il
+ *    cambio: quanti XP costa un punto di VDOT;
+ * 4. la curva in avanti NON è retta ma tende a un asintoto: più sei allenato,
+ *    più XP servono per lo stesso guadagno.
  */
 const PROJ_TAU = 90;            // giorni: oltre, i guadagni si appiattiscono
 const PROJ_MAX_SLOPE = 0.035;   // VDOT/giorno ≈ +1 al mese: tetto fisiologico
 const PROJ_WINDOW = 180;        // la tendenza è quella del blocco in corso, non
                                 // della stagione scorsa: uno stop di due mesi un
                                 // anno fa non deve schiacciare la crescita di oggi
-const PROJ_HORIZONS = [30, 60, 90];
+const PROJ_RATE_WINDOW = 90;    // su quanti giorni si misura il ritmo di XP
 
-export interface ProjPoint { day: number; vdot: number; sec5k: number; sec10k: number }
-export interface ProjHorizon { days: number; vdot: number; t5k: string; t10k: string; thrPace: string }
-export interface MilestoneEta { id: string; group: string; label: string; days: number | null; reqVdot: number }
+/** Un punto della curva: XP spesi da oggi → forma che ne esce. */
+export interface ProjPoint { xp: number; vdot: number; sec5k: number; sec10k: number }
+/** Un livello davanti a te: quanto costa e cosa ti restituisce. */
+export interface LevelGain {
+  level: number; xpNeeded: number; vdot: number; dVdot: number;
+  t5k: string; t10k: string; thrPace: string; gain5k: number;
+  days: number | null; sessions: number;
+}
+/** Un traguardo cronometrico, col suo prezzo in XP. */
+export interface MilestoneCost {
+  id: string; group: string; label: string; reqVdot: number;
+  xpNeeded: number | null; level: number | null; days: number | null;
+}
 export interface Projection {
   ok: boolean;
   vdotNow: number;
   perMonth: number;                       // pendenza stimata, VDOT al mese
   trend: "up" | "flat" | "down";
   samples: number;                        // finestre usate dalla regressione
-  /** Misure reali: giorno relativo a oggi (negativo) e tempo 5K implicito. */
-  history: { day: number; vdot: number; sec5k: number }[];
+  xpPerDay: number;                       // ritmo attuale
+  xpPerSession: number;                   // XP medi per seduta
+  xpPerVdot: number | null;               // prezzo di un punto di VDOT, ora
+  /** Misure reali: XP relativi a oggi (negativi) e tempo 5K di allora. */
+  history: { xp: number; vdot: number; sec5k: number }[];
   points: ProjPoint[];
-  horizons: ProjHorizon[];
-  milestones: MilestoneEta[];
+  levels: LevelGain[];
+  milestones: MilestoneCost[];
   hotDelta5k: number;                     // secondi persi sui 5K con 20-30°C
 }
 
@@ -177,10 +198,17 @@ function runVdot(r: Run): number | null {
   return vdotFrom(dist * 1000, coolPace * dist);
 }
 
-export function buildProjection(runs: Run[]): Projection {
+/**
+ * @param xpByDay XP guadagnati per giorno (chiave = indice giorno)
+ * @param totalXp XP totali dell'atleta, livello compreso di bonus
+ */
+export function buildProjection(
+  runs: Run[], xpByDay: Map<number, number>, totalXp: number, level: number,
+): Projection {
   const empty: Projection = {
     ok: false, vdotNow: 0, perMonth: 0, trend: "flat", samples: 0,
-    history: [], points: [], horizons: [], milestones: [], hotDelta5k: 0,
+    xpPerDay: 0, xpPerSession: 0, xpPerVdot: null,
+    history: [], points: [], levels: [], milestones: [], hotDelta5k: 0,
   };
   const efforts = runs
     .map((r) => ({ day: dayIndex(r.date), vdot: runVdot(r) }))
@@ -213,41 +241,82 @@ export function buildProjection(runs: Run[]): Projection {
   // primato di sempre: un 5000 corso un anno fa non è la base da cui proiettare.
   const recent = [0, 1, 2].map((b) => buckets.get(b) ?? 0).filter(Boolean);
   const vdotNow = recent.length ? Math.max(...recent) : estimateVdot(runs);
-  const at = (t: number) => vdotNow + slope * PROJ_TAU * (1 - Math.exp(-t / PROJ_TAU));
+  // ── il cambio: quanti XP costa un punto di VDOT ──
+  const xpIn = (fromDay: number) => {
+    let s = 0;
+    for (const [d, xp] of xpByDay) if (d > fromDay && d <= today) s += xp;
+    return s;
+  };
+  const xpRecent = xpIn(today - PROJ_RATE_WINDOW);
+  const xpPerDay = Math.max(1, xpRecent / PROJ_RATE_WINDOW);
+  const sessions90 = [...xpByDay.keys()].filter((d) => d > today - PROJ_RATE_WINDOW && d <= today).length;
+  const xpPerSession = sessions90 > 0 ? Math.round(xpRecent / sessions90) : Math.round(xpPerDay * 2);
 
-  const points: ProjPoint[] = [];
-  for (let d = 0; d <= 90; d += 5) {
-    const v = at(d);
-    points.push({ day: d, vdot: v, sec5k: predictSec(5000, v), sec10k: predictSec(10000, v) });
-  }
-  const horizons: ProjHorizon[] = PROJ_HORIZONS.map((days) => {
-    const v = at(days);
-    return {
-      days, vdot: Math.round(v * 10) / 10,
+  const gainCap = slope * PROJ_TAU;        // guadagno massimo di questo blocco
+  const tauXp = xpPerDay * PROJ_TAU;       // XP che valgono una costante di tempo
+  const at = (xp: number) => vdotNow + gainCap * (1 - Math.exp(-xp / tauXp));
+  /** XP necessari per arrivare a un certo VDOT (null se fuori dall'asintoto). */
+  const xpFor = (reqVdot: number): number | null => {
+    if (reqVdot <= vdotNow) return 0;
+    if (gainCap <= 0) return null;
+    const k = (reqVdot - vdotNow) / gainCap;
+    if (k >= 0.98) return null;            // l'asintoto non si tocca
+    return Math.round(-tauXp * Math.log(1 - k));
+  };
+
+  // ── i prossimi 4 livelli: prezzo in XP e cosa restituiscono ──
+  const levels: LevelGain[] = [];
+  for (let l = level + 1; l <= Math.min(MAX_LEVEL, level + 4); l++) {
+    const xpNeeded = Math.max(0, cumXpForLevel(l) - totalXp);
+    const v = at(xpNeeded);
+    levels.push({
+      level: l, xpNeeded, vdot: Math.round(v * 10) / 10,
+      dVdot: Math.round((v - vdotNow) * 100) / 100,
       t5k: fmtClock(predictSec(5000, v)), t10k: fmtClock(predictSec(10000, v)),
       thrPace: fmtClock(thresholdPaceSec(v)),
-    };
-  });
+      gain5k: Math.round(predictSec(5000, vdotNow) - predictSec(5000, v)),
+      days: xpPerDay > 0 ? Math.round(xpNeeded / xpPerDay) : null,
+      sessions: Math.max(1, Math.round(xpNeeded / Math.max(1, xpPerSession))),
+    });
+  }
 
-  // quando arriva un traguardo, alla pendenza attuale
-  const eta = (reqVdot: number): number | null => {
-    if (reqVdot <= vdotNow) return 0;
-    if (slope <= 0) return null;
-    const k = (reqVdot - vdotNow) / (slope * PROJ_TAU);
-    if (k >= 1) return null;                       // asintoto sotto il traguardo
-    const t = -PROJ_TAU * Math.log(1 - k);
-    return t > 540 ? null : Math.round(t);         // oltre 18 mesi = non promettere
-  };
+  // ── i traguardi cronometrici, col loro prezzo ──
   // solo 5K e 10K: sono le distanze che corre davvero a ritmo. Promettere una
   // maratona partendo da un VDOT stimato su prove corte sarebbe fuffa.
-  const milestones: MilestoneEta[] = GOAL_DEFS
+  const milestones: MilestoneCost[] = GOAL_DEFS
     .filter((g) => g.group === "5K" || g.group === "10K")
     .map((g) => ({ id: g.id, group: g.group, label: g.label, reqVdot: vdotFrom(g.m, g.sec) }))
     .filter((g) => g.reqVdot > vdotNow)
     .sort((a, b) => a.reqVdot - b.reqVdot)
     .slice(0, 4)
-    .map((g) => ({ ...g, reqVdot: Math.round(g.reqVdot * 10) / 10, days: eta(g.reqVdot) }));
+    .map((g) => {
+      const xpNeeded = xpFor(g.reqVdot);
+      return {
+        ...g, reqVdot: Math.round(g.reqVdot * 10) / 10, xpNeeded,
+        level: xpNeeded == null ? null : levelFromXp(totalXp + xpNeeded),
+        days: xpNeeded == null ? null : Math.round(xpNeeded / xpPerDay),
+      };
+    });
 
+  // ── curva: da oggi fino al 4° livello davanti (o al traguardo più caro) ──
+  const xpMax = Math.max(
+    levels[levels.length - 1]?.xpNeeded ?? 0,
+    ...milestones.map((m) => m.xpNeeded ?? 0),
+    Math.round(tauXp / 2),
+  );
+  const points: ProjPoint[] = [];
+  for (let i = 0; i <= 30; i++) {
+    const xp = (xpMax * i) / 30;
+    const v = at(xp);
+    points.push({ xp, vdot: v, sec5k: predictSec(5000, v), sec10k: predictSec(10000, v) });
+  }
+
+  // ── storico: quanti XP erano stati spesi quando la forma era quella ──
+  const cumBefore = (day: number) => {
+    let s = 0;
+    for (const [d, xp] of xpByDay) if (d <= day) s += xp;
+    return s;
+  };
   const base5k = predictSec(5000, vdotNow);
   return {
     ok: true,
@@ -255,8 +324,14 @@ export function buildProjection(runs: Run[]): Projection {
     perMonth: Math.round(slope * 30 * 100) / 100,
     trend: slope > 0.003 ? "up" : slope < -0.003 ? "down" : "flat",
     samples: n,
-    history: history.map((h) => ({ ...h, sec5k: predictSec(5000, h.vdot) })),
-    points, horizons, milestones,
+    xpPerDay: Math.round(xpPerDay),
+    xpPerSession,
+    xpPerVdot: slope > 0 ? Math.round(xpPerDay / slope) : null,
+    history: history.map((h) => ({
+      xp: cumBefore(today + h.day) - totalXp,   // negativo: XP spesi prima di oggi
+      vdot: h.vdot, sec5k: predictSec(5000, h.vdot),
+    })),
+    points, levels, milestones,
     hotDelta5k: Math.round(base5k * heatSlowdownFrac(HOT_TEMP_C, HOT_HUMIDITY, 5)),
   };
 }
@@ -375,18 +450,30 @@ function runXp(r: Run, isPB: boolean, bestPaceSec: number | null): number {
   return Math.max(1, Math.round(xp));
 }
 
-/** Bonus di costanza: una settimana piena vale più della somma delle sue corse. */
-function weeklyBonusXp(runs: Run[]): number {
-  const byWeek: Record<string, number> = {};
+/**
+ * Bonus di costanza: una settimana piena vale più della somma delle sue corse.
+ * Restituisce anche a che giorno accreditarlo (l'ultima corsa della settimana),
+ * così la linea del tempo degli XP resta coerente con il totale.
+ */
+function weeklyBonuses(runs: Run[]): { total: number; byDay: Map<number, number> } {
+  const km: Record<string, number> = {};
+  const lastDay: Record<string, number> = {};
   for (const r of runs) {
     const dt = new Date(r.date.slice(0, 10) + "T00:00:00Z");
     dt.setUTCDate(dt.getUTCDate() - ((dt.getUTCDay() + 6) % 7));
     const k = dt.toISOString().slice(0, 10);
-    byWeek[k] = (byWeek[k] || 0) + (r.distance_km || 0);
+    km[k] = (km[k] || 0) + (r.distance_km || 0);
+    lastDay[k] = Math.max(lastDay[k] ?? -Infinity, dayIndex(r.date));
   }
-  return Object.values(byWeek).reduce(
-    (s, km) => s + (km >= 50 ? XP_BONUS.week50 : km >= 35 ? XP_BONUS.week35 : 0), 0,
-  );
+  const byDay = new Map<number, number>();
+  let total = 0;
+  for (const [k, v] of Object.entries(km)) {
+    const bonus = v >= 50 ? XP_BONUS.week50 : v >= 35 ? XP_BONUS.week35 : 0;
+    if (!bonus) continue;
+    total += bonus;
+    byDay.set(lastDay[k], (byDay.get(lastDay[k]) ?? 0) + bonus);
+  }
+  return { total, byDay };
 }
 
 /** Righe della leggenda: esempi calcolati con la formula vera, sui suoi ritmi. */
@@ -418,7 +505,11 @@ const EMPTY: LevelSystem = {
   tier: { idx: 0, ...TIER_DEFS[0], levelStart: 1, levelEnd: 10, xpStart: 0, state: "current", unlockedLevels: 0 },
   levelFloor: 0, levelCeil: cumXpForLevel(2), intoLevel: 0, spanLevel: cumXpForLevel(2), pct: 0, xpToNext: cumXpForLevel(2), maxed: false,
   tiers: [], levels: [], nextReward: null, currentVdot: 0,
-  projection: { ok: false, vdotNow: 0, perMonth: 0, trend: "flat", samples: 0, history: [], points: [], horizons: [], milestones: [], hotDelta5k: 0 },
+  projection: {
+    ok: false, vdotNow: 0, perMonth: 0, trend: "flat", samples: 0,
+    xpPerDay: 0, xpPerSession: 0, xpPerVdot: null,
+    history: [], points: [], levels: [], milestones: [], hotDelta5k: 0,
+  },
   legend: [], weekBonusXp: 0, recent: [], stats: { totalKm: 0, totalRuns: 0, totalHours: 0 },
 };
 
@@ -430,8 +521,20 @@ export function computeLevelSystem(runsIn: Run[], _profile: Profile | null): Lev
   const pb = pbIds(runs);
   const bestPaceSec = bestSustainedPaceSec(runs);
   let totalXp = 0, totalKm = 0, totalMin = 0;
-  for (const r of runs) { totalXp += runXp(r, pb.has(r.id), bestPaceSec); totalKm += r.distance_km || 0; totalMin += r.duration_minutes || 0; }
-  const weekBonusXp = weeklyBonusXp(runs);
+  // linea del tempo degli XP: serve alla proiezione per sapere a che ritmo
+  // l'atleta accumula e quanto gli è costato arrivare alla forma di oggi
+  const xpByDay = new Map<number, number>();
+  for (const r of runs) {
+    const xp = runXp(r, pb.has(r.id), bestPaceSec);
+    totalXp += xp;
+    const d = dayIndex(r.date);
+    xpByDay.set(d, (xpByDay.get(d) ?? 0) + xp);
+    totalKm += r.distance_km || 0;
+    totalMin += r.duration_minutes || 0;
+  }
+  const week = weeklyBonuses(runs);
+  for (const [d, xp] of week.byDay) xpByDay.set(d, (xpByDay.get(d) ?? 0) + xp);
+  const weekBonusXp = week.total;
   totalXp = Math.round(totalXp + weekBonusXp);
 
   const level = levelFromXp(totalXp);
@@ -456,7 +559,7 @@ export function computeLevelSystem(runsIn: Run[], _profile: Profile | null): Lev
   // forma attuale + proiezione ("se continui così, fra 30 giorni…").
   // Il VDOT mostrato è quello della proiezione (forma recente): un solo numero
   // in pagina, altrimenti il chip in alto e il grafico raccontano storie diverse.
-  const projection = buildProjection(runs);
+  const projection = buildProjection(runs, xpByDay, totalXp, level);
   const currentVdot = projection.ok ? projection.vdotNow : estimateVdot(runs);
   const legend = buildXpLegend(runs);
 

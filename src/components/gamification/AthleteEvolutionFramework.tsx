@@ -10,6 +10,7 @@ import { CHART_SERIES, CHART_TEXT } from "../statistics/chartTheme";
 import {
   computeLevelSystem, XP_BONUS,
   type LevelSystem, type TierState, type LevelNode, type Projection, type XpExample,
+  type LevelGain,
 } from "./evolutionEngine";
 
 const MONO = "'JetBrains Mono', monospace";
@@ -212,92 +213,117 @@ function Stat({ label, value, unit }: { label: string; value: string; unit: stri
   );
 }
 
-// ── PROIEZIONE: "se continui così…" ───────────────────────────────────────────
+// ── PROIEZIONE: quanto costa in XP il prossimo pezzo di forma ─────────────────
+const xpFmt = (n: number) => n.toLocaleString("it-IT");
+
 function ProjectionPanel({ p }: { p: Projection }) {
   if (!p.ok) return (
     <section className="aef-rise min-w-0">
-      <SectionTitle icon={LineChart}>Se continui così</SectionTitle>
+      <SectionTitle icon={LineChart}>Dove ti portano gli XP</SectionTitle>
       <Panel className="p-6 text-center text-[11px] text-gray-500">
-        Servono almeno tre mesi di prove sopra i 3 km per stimare una tendenza.
+        Servono almeno tre mesi di prove sopra i 3 km per stimare quanto rende il tuo lavoro.
       </Panel>
     </section>
   );
 
-  const h30 = p.horizons[0];
-  const headline = p.trend === "up"
-    ? <>Fra <b className="text-white">30 giorni</b> corri i 5 km in <b style={{ color: CHART_SERIES.primary }}>{h30.t5k}</b> e i 10 km in <b style={{ color: CHART_SERIES.primary }}>{h30.t10k}</b>.</>
-    : p.trend === "down"
-      ? <>La forma sta calando: senza un cambio di rotta fra <b className="text-white">30 giorni</b> i 5 km tornano a <b style={{ color: CHART_SERIES.risk }}>{h30.t5k}</b>.</>
-      : <>La forma è stabile: fra <b className="text-white">30 giorni</b> i 5 km restano intorno a <b className="text-white">{h30.t5k}</b>.</>;
+  const next = p.levels[0];
+  const headline = p.trend === "down"
+    ? <>La forma sta calando: prima di comprare secondi con gli XP serve invertire la rotta.</>
+    : !next
+      ? <>Sei al livello massimo: ogni XP da qui è mantenimento.</>
+      : p.trend === "flat"
+        ? <>Ti mancano <b style={{ color: CHART_SERIES.primary }}>{xpFmt(next.xpNeeded)} XP</b> al <b className="text-white">livello {next.level}</b> — circa {next.sessions} sedute. Al ritmo di crescita attuale la forma resta lì: per guadagnare secondi serve più qualità.</>
+        : <>Ti mancano <b style={{ color: CHART_SERIES.primary }}>{xpFmt(next.xpNeeded)} XP</b> al <b className="text-white">livello {next.level}</b>: circa <b className="text-white">{next.sessions} sedute</b>, e ci arrivi con i 5 km in <b style={{ color: CHART_SERIES.primary }}>{next.t5k}</b>{next.gain5k > 0 && <> (−{next.gain5k}s)</>}.</>;
 
   return (
     <section className="aef-rise min-w-0">
-      <SectionTitle icon={LineChart} hint={`tendenza su ${p.samples} mesi · ${p.perMonth > 0 ? "+" : ""}${p.perMonth.toFixed(2)} VDOT/mese`}>Se continui così</SectionTitle>
+      <SectionTitle icon={LineChart} hint={p.xpPerVdot ? `${xpFmt(p.xpPerVdot)} XP per +1 VDOT` : `tendenza su ${p.samples} mesi`}>
+        Dove ti portano gli XP
+      </SectionTitle>
       <Panel className="p-4 md:p-5">
         <p className="text-[12px] leading-relaxed text-gray-400 mb-4">{headline}</p>
 
         <ProjectionChart p={p} />
 
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          {p.horizons.map((h) => (
-            <div key={h.days} className="rounded-xl border border-white/10 bg-black/25 p-2.5">
-              <div className="text-[8px] font-black tracking-[0.2em] uppercase text-gray-500 mb-1.5">fra {h.days} giorni</div>
-              <Row k="5 km" v={h.t5k} />
-              <Row k="10 km" v={h.t10k} />
-              <Row k="soglia" v={`${h.thrPace}/km`} />
-            </div>
-          ))}
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {p.levels.map((l) => <LevelCost key={l.level} l={l} vdotNow={p.vdotNow} />)}
         </div>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
           {p.milestones.map((m) => (
             <span key={m.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black border"
-              style={{ fontFamily: MONO, borderColor: m.days == null ? "rgba(255,255,255,0.08)" : `${CHART_SERIES.primary}44`, color: m.days == null ? CHART_TEXT.axis : CHART_SERIES.primary }}>
+              style={{ fontFamily: MONO, borderColor: m.xpNeeded == null ? "rgba(255,255,255,0.08)" : `${CHART_SERIES.primary}44`, color: m.xpNeeded == null ? CHART_TEXT.axis : CHART_SERIES.primary }}>
               {m.label}
-              <span className="opacity-70">{m.days == null ? "non a questo ritmo" : m.days === 0 ? "già alla portata" : `~${m.days} gg`}</span>
+              <span className="opacity-70">
+                {m.xpNeeded == null ? "oltre questa tendenza" : `+${xpFmt(m.xpNeeded)} XP · Lv ${m.level}`}
+              </span>
             </span>
           ))}
         </div>
 
         <p className="mt-3 text-[9px] leading-relaxed text-gray-600">
-          Tempi a temperatura ideale. Con i 20-30°C di Roma aggiungi ~{p.hotDelta5k}s sui 5 km.
-          La curva si appiattisce col tempo: più sei allenato, più ogni secondo costa.
+          Prezzi calcolati sul tuo ritmo attuale: {xpFmt(p.xpPerDay)} XP al giorno, {xpFmt(p.xpPerSession)} XP a seduta.
+          Tempi a temperatura ideale (con i 20-30°C di Roma aggiungi ~{p.hotDelta5k}s sui 5 km).
+          La curva si appiattisce: più sei allenato, più XP costa lo stesso secondo.
         </p>
       </Panel>
     </section>
   );
 }
 
-function Row({ k, v }: { k: string; v: string }) {
+function LevelCost({ l, vdotNow }: { l: LevelGain; vdotNow: number }) {
+  const gain = l.dVdot > 0;
   return (
-    <div className="flex items-baseline justify-between">
-      <span className="text-[9px] text-gray-500">{k}</span>
-      <span className="text-[13px] font-black tabular-nums text-white" style={{ fontFamily: MONO }}>{v}</span>
+    <div className="rounded-xl border border-white/10 bg-black/25 p-2.5">
+      <div className="flex items-baseline justify-between mb-1.5">
+        <span className="text-[9px] font-black tracking-[0.2em] uppercase text-gray-500">Lv {l.level}</span>
+        <span className="text-[11px] font-black tabular-nums" style={{ fontFamily: MONO, color: CHART_SERIES.primary }}>+{xpFmt(l.xpNeeded)}</span>
+      </div>
+      <div className="text-[9px] text-gray-600 mb-1.5" style={{ fontFamily: MONO }}>
+        ≈ {l.sessions} sedute{l.days != null && ` · ${l.days} gg`}
+      </div>
+      <Row k="VDOT" v={gain ? `${l.vdot.toFixed(1)} +${l.dVdot.toFixed(2)}` : vdotNow.toFixed(1)} />
+      <Row k="5 km" v={l.t5k} />
+      <Row k="10 km" v={l.t10k} />
     </div>
   );
 }
 
-/** Storico misurato (lime) + proiezione modellata (indaco), tempo sui 5 km. */
+function Row({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-1">
+      <span className="text-[9px] text-gray-500 shrink-0">{k}</span>
+      <span className="text-[12px] font-black tabular-nums text-white truncate" style={{ fontFamily: MONO }}>{v}</span>
+    </div>
+  );
+}
+
+/**
+ * Asse X = XP, non giorni: a sinistra quelli già spesi, a destra quelli che
+ * servono. Le tacche verticali sono i livelli, così si legge subito quanto
+ * lavoro separa dal prossimo scatto di forma.
+ */
 function ProjectionChart({ p }: { p: Projection }) {
-  const W = 360, H = 150, L = 46, R = 12, T = 14, B = 26;
-  // il grafico mostra tutta la finestra che alimenta la regressione (180 giorni)
-  const D0 = -180;
-  const past = p.history.filter((h) => h.day >= D0).map((h) => ({ day: h.day, sec: h.sec5k }));
-  const future = p.points.map((pt) => ({ day: pt.day, sec: pt.sec5k }));
+  const W = 360, H = 156, L = 46, R = 14, T = 16, B = 30;
+  const xMax = p.points[p.points.length - 1].xp || 1;
+  const xMin = Math.min(0, ...p.history.map((h) => h.xp), -xMax * 0.6);
+  const past = p.history.map((h) => ({ xp: h.xp, sec: h.sec5k }));
+  const future = p.points.map((pt) => ({ xp: pt.xp, sec: pt.sec5k }));
   const all = [...past, ...future];
   const lo = Math.min(...all.map((a) => a.sec)), hi = Math.max(...all.map((a) => a.sec));
   const padY = Math.max(8, (hi - lo) * 0.18);
   const y0 = lo - padY, y1 = hi + padY;
-  const X = (d: number) => L + ((d - D0) / (90 - D0)) * (W - L - R);
+  const X = (xp: number) => L + ((xp - xMin) / (xMax - xMin)) * (W - L - R);
   const Y = (s: number) => T + ((s - y0) / Math.max(1, y1 - y0)) * (H - T - B);
-  const path = (pts: { day: number; sec: number }[]) =>
-    pts.map((pt, i) => `${i ? "L" : "M"} ${X(pt.day).toFixed(1)} ${Y(pt.sec).toFixed(1)}`).join(" ");
+  const path = (pts: { xp: number; sec: number }[]) =>
+    pts.map((pt, i) => `${i ? "L" : "M"} ${X(pt.xp).toFixed(1)} ${Y(pt.sec).toFixed(1)}`).join(" ");
   const ticks = [y0 + (y1 - y0) * 0.15, (y0 + y1) / 2, y1 - (y1 - y0) * 0.15];
+  const kxp = (xp: number) => (Math.abs(xp) >= 1000 ? `${(xp / 1000).toFixed(1).replace(".", ",")}k` : String(Math.round(xp)));
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label="Proiezione del tempo sui 5 km">
-      {/* fascia "futuro": una campitura leggera, non un blocco pieno */}
-      <rect x={X(0)} y={T} width={X(90) - X(0)} height={H - T - B} fill={CHART_SERIES.projected} opacity={0.07} />
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label="Forma prevista in base agli XP guadagnati">
+      {/* fascia "da guadagnare" */}
+      <rect x={X(0)} y={T} width={X(xMax) - X(0)} height={H - T - B} fill={CHART_SERIES.projected} opacity={0.07} />
 
       {ticks.map((t, i) => (
         <g key={i}>
@@ -306,26 +332,36 @@ function ProjectionChart({ p }: { p: Projection }) {
         </g>
       ))}
 
+      {/* livelli davanti: dove cade ogni scatto */}
+      {p.levels.map((l) => (
+        <g key={l.level}>
+          <line x1={X(l.xpNeeded)} x2={X(l.xpNeeded)} y1={T} y2={H - B} stroke={CHART_SERIES.projected} strokeOpacity={0.35} strokeDasharray="2 3" />
+          <text x={X(l.xpNeeded)} y={T - 5} textAnchor="middle" fill={CHART_SERIES.projected} style={{ fontFamily: MONO, fontSize: 8, fontWeight: 800 }}>Lv {l.level}</text>
+          {/* il costo sotto l'asse solo se non finisce addosso a "oggi" */}
+          {X(l.xpNeeded) - X(0) > 22 && (
+            <text x={X(l.xpNeeded)} y={H - B + 12} textAnchor="middle" fill={CHART_TEXT.axis} style={{ fontFamily: MONO, fontSize: 8 }}>+{kxp(l.xpNeeded)}</text>
+          )}
+        </g>
+      ))}
+
       {/* storico misurato */}
       {past.length > 1 && <path d={path(past)} fill="none" stroke={CHART_SERIES.primary} strokeWidth={2.5} strokeLinecap="round" />}
-      {past.map((pt, i) => <circle key={i} cx={X(pt.day)} cy={Y(pt.sec)} r={2.6} fill={CHART_SERIES.primary} />)}
+      {past.map((pt, i) => <circle key={i} cx={X(pt.xp)} cy={Y(pt.sec)} r={2.6} fill={CHART_SERIES.primary} />)}
       {/* proiezione: parte dall'ultima misura, così la linea non si spezza */}
       <path className="aef-curve" d={path(past.length ? [past[past.length - 1], ...future] : future)}
         fill="none" stroke={CHART_SERIES.projected} strokeWidth={2.5} strokeDasharray="5 4" strokeLinecap="round" />
 
       {/* oggi */}
       <line x1={X(0)} x2={X(0)} y1={T} y2={H - B} stroke="#2A2A2A" />
-      <text x={X(0)} y={H - B + 14} textAnchor="middle" fill={CHART_TEXT.axis} style={{ fontFamily: MONO, fontSize: 9 }}>oggi</text>
-      {[30, 60, 90].map((d) => (
-        <text key={d} x={X(d)} y={H - B + 14} textAnchor="middle" fill={CHART_TEXT.axis} style={{ fontFamily: MONO, fontSize: 9 }}>+{d}</text>
-      ))}
-      <text x={L} y={H - B + 14} textAnchor="start" fill={CHART_TEXT.axis} style={{ fontFamily: MONO, fontSize: 9 }}>−6 mesi</text>
+      <text x={X(0)} y={H - B + 12} textAnchor="middle" fill={CHART_TEXT.axis} style={{ fontFamily: MONO, fontSize: 9 }}>oggi</text>
+      <text x={L} y={H - B + 12} textAnchor="start" fill={CHART_TEXT.axis} style={{ fontFamily: MONO, fontSize: 8 }}>{kxp(xMin)} XP</text>
+      <text x={W / 2} y={H - 4} textAnchor="middle" fill={CHART_TEXT.faint} style={{ fontFamily: MONO, fontSize: 8, letterSpacing: "0.2em" }}>XP</text>
       <circle cx={X(0)} cy={Y(future[0].sec)} r={4} fill="#0A0A0A" stroke={CHART_SERIES.primary} strokeWidth={2.5} />
 
       {/* dove si arriva: il numero in fondo alla curva, altrimenti la proiezione
           sembra piatta e non si legge il guadagno */}
-      <circle cx={X(90)} cy={Y(future[future.length - 1].sec)} r={3} fill={CHART_SERIES.projected} />
-      <text x={X(90) - 4} y={Y(future[future.length - 1].sec) - 8} textAnchor="end"
+      <circle cx={X(xMax)} cy={Y(future[future.length - 1].sec)} r={3} fill={CHART_SERIES.projected} />
+      <text x={X(xMax) - 4} y={Y(future[future.length - 1].sec) - 8} textAnchor="end"
         fill={CHART_SERIES.projected} style={{ fontFamily: MONO, fontSize: 10, fontWeight: 800 }}>
         {clock(future[future.length - 1].sec)}
       </text>

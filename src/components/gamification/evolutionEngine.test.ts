@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeLevelSystem, buildProjection, buildXpLegend, XP_ZONES, XP_BONUS } from "./evolutionEngine";
+import { computeLevelSystem, buildXpLegend, XP_ZONES, XP_BONUS } from "./evolutionEngine";
 import type { Run } from "../../types/api";
 
 /**
@@ -84,71 +84,101 @@ describe("leggenda XP", () => {
   });
 });
 
-describe("proiezione", () => {
-  /** Serie mensile con miglioramento costante di `gain` s/km al mese. */
+describe("proiezione in XP", () => {
+  /**
+   * Mesi di allenamento con miglioramento costante di `gain` s/km al mese.
+   * Ogni mese ha una prova sui 5 km più qualche corsa, altrimenti non ci sono
+   * XP da cui ricavare il ritmo di accumulo.
+   */
   const series = (months: number, startPace: number, gain: number) =>
     Array.from({ length: months }, (_, i) => {
-      const d = new Date(Date.UTC(2026, 6, 20));
-      d.setUTCDate(d.getUTCDate() - (months - 1 - i) * 30);
-      return run(5, Math.round(startPace - i * gain), d.toISOString().slice(0, 10));
-    });
+      const base = new Date(Date.UTC(2026, 6, 20));
+      base.setUTCDate(base.getUTCDate() - (months - 1 - i) * 30);
+      const day = (off: number) => {
+        const d = new Date(base); d.setUTCDate(d.getUTCDate() - off);
+        return d.toISOString().slice(0, 10);
+      };
+      return [
+        run(5, Math.round(startPace - i * gain), day(0)),
+        run(10, Math.round(startPace - i * gain) + 60, day(7)),
+        run(12, Math.round(startPace - i * gain) + 90, day(14)),
+      ];
+    }).flat();
 
-  it("serve abbastanza storia per azzardare una tendenza", () => {
-    expect(buildProjection(series(2, 300, 5)).ok).toBe(false);
+  const proj = (runs: Run[]) => computeLevelSystem(runs, null).projection;
+
+  it("serve abbastanza storia per stimare quanto rende il lavoro", () => {
+    expect(proj(series(2, 300, 5)).ok).toBe(false);
   });
 
-  it("una crescita reale diventa tendenza in salita", () => {
-    const p = buildProjection(series(6, 300, 5));
+  it("una crescita reale dà un prezzo in XP al punto di VDOT", () => {
+    const p = proj(series(6, 300, 5));
     expect(p.ok).toBe(true);
     expect(p.trend).toBe("up");
-    expect(p.perMonth).toBeGreaterThan(0);
+    expect(p.xpPerVdot).toBeGreaterThan(0);
+    expect(p.xpPerDay).toBeGreaterThan(0);
+    expect(p.xpPerSession).toBeGreaterThan(0);
   });
 
-  it("una forma piatta non promette miglioramenti", () => {
-    const p = buildProjection(series(6, 280, 0));
-    expect(p.trend).toBe("flat");
-    expect(p.horizons[0].t5k).toBe(p.horizons[2].t5k);
-    expect(p.milestones.every((m) => m.days == null || m.days === 0)).toBe(true);
-  });
-
-  it("un calo resta un calo: niente ottimismo d'ufficio", () => {
-    const p = buildProjection(series(6, 250, -6));
-    expect(p.trend).toBe("down");
-    expect(p.milestones.every((m) => m.days == null)).toBe(true);
-  });
-
-  it("la pendenza è tappata a +1 VDOT al mese", () => {
-    const p = buildProjection(series(6, 360, 20)); // progresso irreale
-    expect(p.perMonth).toBeLessThanOrEqual(1.05);
-  });
-
-  it("i guadagni si appiattiscono: 90 giorni non valgono tre volte 30", () => {
-    const p = buildProjection(series(6, 300, 5));
-    const g30 = p.horizons[0].vdot - p.vdotNow;
-    const g90 = p.horizons[2].vdot - p.vdotNow;
-    expect(g90).toBeGreaterThan(g30);
-    expect(g90).toBeLessThan(g30 * 3);
-  });
-
-  it("tempi e passi non finiscono mai a :60", () => {
-    const p = buildProjection(series(8, 320, 4));
-    for (const h of p.horizons) {
-      expect(h.t5k).not.toMatch(/:60/);
-      expect(h.t10k).not.toMatch(/:60/);
-      expect(h.thrPace).not.toMatch(/:60/);
+  it("ogni livello davanti ha un costo e un ritorno", () => {
+    const p = proj(series(6, 300, 5));
+    expect(p.levels.length).toBeGreaterThan(0);
+    let prevXp = -1;
+    for (const l of p.levels) {
+      expect(l.xpNeeded).toBeGreaterThan(prevXp);   // più avanti = più caro
+      prevXp = l.xpNeeded;
+      expect(l.sessions).toBeGreaterThan(0);
+      expect(l.dVdot).toBeGreaterThanOrEqual(0);
+      expect(l.t5k).not.toMatch(/:60/);
+      expect(l.t10k).not.toMatch(/:60/);
+      expect(l.thrPace).not.toMatch(/:60/);
     }
   });
 
-  it("i traguardi restano su 5 e 10 km", () => {
-    const p = buildProjection(series(6, 300, 5));
-    expect(p.milestones.length).toBeGreaterThan(0);
-    for (const m of p.milestones) expect(["5K", "10K"]).toContain(m.group);
+  it("una forma piatta non promette guadagni comprabili con gli XP", () => {
+    const p = proj(series(6, 280, 0));
+    expect(p.trend).toBe("flat");
+    expect(p.levels[0].dVdot).toBeLessThanOrEqual(0.05);
+    expect(p.milestones.every((m) => m.xpNeeded == null || m.xpNeeded === 0)).toBe(true);
   });
 
-  it("lo storico è ordinato dal più vecchio a oggi", () => {
-    const p = buildProjection(series(6, 300, 5));
-    const days = p.history.map((h) => h.day);
-    expect([...days].sort((a, b) => a - b)).toEqual(days);
-    expect(days[days.length - 1]).toBeLessThanOrEqual(0);
+  it("un calo resta un calo: niente ottimismo d'ufficio", () => {
+    const p = proj(series(6, 250, -6));
+    expect(p.trend).toBe("down");
+    expect(p.milestones.every((m) => m.xpNeeded == null)).toBe(true);
+  });
+
+  it("la pendenza è tappata a +1 VDOT al mese", () => {
+    const p = proj(series(6, 360, 20)); // progresso irreale
+    expect(p.perMonth).toBeLessThanOrEqual(1.05);
+  });
+
+  it("gli XP rendono sempre meno: la curva è concava", () => {
+    const p = proj(series(6, 300, 5));
+    const q = p.points;
+    const first = q[5].vdot - q[0].vdot;
+    const last = q[q.length - 1].vdot - q[q.length - 6].vdot;
+    expect(first).toBeGreaterThan(0);
+    expect(last).toBeLessThan(first);
+  });
+
+  it("i traguardi hanno un prezzo in XP e il livello a cui cadono", () => {
+    const p = proj(series(6, 300, 5));
+    expect(p.milestones.length).toBeGreaterThan(0);
+    for (const m of p.milestones) {
+      expect(["5K", "10K"]).toContain(m.group);
+      if (m.xpNeeded != null) {
+        expect(m.xpNeeded).toBeGreaterThan(0);
+        expect(m.level).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("lo storico arriva a oggi partendo dagli XP già spesi", () => {
+    const p = proj(series(6, 300, 5));
+    const xs = p.history.map((h) => h.xp);
+    expect([...xs].sort((a, b) => a - b)).toEqual(xs);
+    expect(xs[0]).toBeLessThan(0);
+    expect(xs[xs.length - 1]).toBeLessThanOrEqual(0);
   });
 });

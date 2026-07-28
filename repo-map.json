@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-28T06:33:29.858Z",
+  "generated_at": "2026-07-28T06:46:18.759Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2972,10 +2972,12 @@
       "touch_when": [
         "activities",
         "ai",
+        "garmin",
         "layout",
         "profile",
         "statistics",
         "strava",
+        "training",
         "types"
       ],
       "exports": [
@@ -2990,9 +2992,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "858793d1ace83970d86a5e8d99f5013d6c9f2f74d8ea4592d50d468a9d88a415",
-      "last_modified": "2026-07-28T06:31:39.114Z",
-      "size_bytes": 31336
+      "hash": "877886ab47518ccc0afd4769ff802b8d08312bd3a2baca84abc916f9d521a18d",
+      "last_modified": "2026-07-28T06:46:18.760Z",
+      "size_bytes": 33346
     },
     {
       "path": "src/components/gamification/evolutionEngine.test.ts",
@@ -3006,6 +3008,7 @@
         "map",
         "statistics",
         "strava",
+        "training",
         "types"
       ],
       "exports": [],
@@ -3015,9 +3018,9 @@
         "./evolutionEngine",
         "vitest"
       ],
-      "hash": "e21440b9b93521bcfd9fbd7e0eef4791125799c8cc2107d398b25fc37f0b5a51",
-      "last_modified": "2026-07-28T06:06:02.609Z",
-      "size_bytes": 6446
+      "hash": "a66e735f96e4022606741b220b1d7f4a90de8330d6040b9a7e02ab83f74d79a3",
+      "last_modified": "2026-07-28T06:45:17.230Z",
+      "size_bytes": 7487
     },
     {
       "path": "src/components/gamification/evolutionEngine.ts",
@@ -3028,6 +3031,7 @@
         "ai",
         "profile",
         "statistics",
+        "training",
         "types"
       ],
       "exports": [
@@ -3036,13 +3040,13 @@
         "computeLevelSystem",
         "cumXpForLevel",
         "levelFromXp",
+        "LevelGain",
         "LevelNode",
         "LevelSystem",
         "levelTitle",
         "MAX_LEVEL",
-        "MilestoneEta",
+        "MilestoneCost",
         "Projection",
-        "ProjHorizon",
         "ProjPoint",
         "RecentRun",
         "TierState",
@@ -3055,9 +3059,9 @@
       "imports": [
         "../../types/api"
       ],
-      "hash": "6465582b8092136561514a00f88c578d3fd26cc511c67912f37ad931fc0ab230",
-      "last_modified": "2026-07-28T06:09:25.532Z",
-      "size_bytes": 26913
+      "hash": "754f4e6f3095cbde7d8a4e44a639b5550e98b36cc1b9325265ec36a0a5eeb46a",
+      "last_modified": "2026-07-28T06:42:52.167Z",
+      "size_bytes": 31264
     },
     {
       "path": "src/components/gamification/gamiData.ts",
