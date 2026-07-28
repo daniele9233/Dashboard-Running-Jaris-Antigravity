@@ -63,9 +63,12 @@ body {
   display: flex;
 }
 
-/* Custom scrollbar for the activities list */
+/* Custom scrollbar for the activities list.
+   `height` serve alle barre ORIZZONTALI: senza, restavano quelle di sistema e
+   sotto ogni riga scorrevole compariva una barra spessa e grigia. */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -76,6 +79,16 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--app-scrollbar-thumb-hover);
+}
+
+/* Utility usata su carousel e tracce orizzontali: si scorre, non si vede la
+   barra. Era già scritta nel markup ma non esisteva da nessuna parte. */
+.scrollbar-hide {
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* IE/Edge legacy */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 

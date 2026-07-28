@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-28T06:10:30.176Z",
+  "generated_at": "2026-07-28T06:33:29.858Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2990,9 +2990,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "bb0137db92402093279d1d0141832a81b9326857d71297ba42eba887da3b50ac",
-      "last_modified": "2026-07-28T06:10:30.176Z",
-      "size_bytes": 31089
+      "hash": "858793d1ace83970d86a5e8d99f5013d6c9f2f74d8ea4592d50d468a9d88a415",
+      "last_modified": "2026-07-28T06:31:39.114Z",
+      "size_bytes": 31336
     },
     {
       "path": "src/components/gamification/evolutionEngine.test.ts",
@@ -3124,9 +3124,9 @@
         "react-i18next",
         "react-map-gl/mapbox"
       ],
-      "hash": "f89e06a219f2f50b22c9e23919fa89c03d5803b91d49d4498ed27985d133c77d",
-      "last_modified": "2026-07-18T16:36:51.276Z",
-      "size_bytes": 15893
+      "hash": "22b6c9ffc2f5c7b5444b17525ab11fb19b6a18ca79ba4b14a90e98cea4125311",
+      "last_modified": "2026-07-28T06:33:29.859Z",
+      "size_bytes": 16311
     },
     {
       "path": "src/components/gamification/italyRegions.ts",
@@ -4735,9 +4735,9 @@
       "exports": [],
       "routes": [],
       "imports": [],
-      "hash": "fb2175608004f5448af73a9387636da625b58ea2c4288550b61ba71fcbd04d17",
-      "last_modified": "2026-05-03T10:41:29.686Z",
-      "size_bytes": 6198
+      "hash": "2aa1b6d9c3dfc75a3a852fc732daca3013da36846c55bb2c71c398981462a0bf",
+      "last_modified": "2026-07-28T06:33:05.768Z",
+      "size_bytes": 6761
     },
     {
       "path": "src/lib/utils.ts",

@@ -223,6 +223,13 @@ export function GamificationV1() {
         </>
       )}
 
+      {/* Velo sotto il selettore: in modalità evolution la pagina scorre, e senza
+          questa sfumatura il contenuto passava a filo del pill fluttuante. */}
+      {mode === "evolution" && (
+        <div className="pointer-events-none absolute top-0 left-0 right-0 h-20 z-20"
+          style={{ background: "linear-gradient(180deg, #0A0A0A 35%, rgba(10,10,10,0.85) 65%, transparent 100%)" }} />
+      )}
+
       {/* Selettore modalità */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 p-1.5 rounded-2xl border border-white/10 bg-black/70 backdrop-blur-xl">
         {MODES.map((m) => {

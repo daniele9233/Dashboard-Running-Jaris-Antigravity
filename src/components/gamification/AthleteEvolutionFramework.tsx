@@ -296,12 +296,8 @@ function ProjectionChart({ p }: { p: Projection }) {
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label="Proiezione del tempo sui 5 km">
-      <defs>
-        <linearGradient id="aef-fut" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={CHART_SERIES.projected} stopOpacity="0.35" />
-          <stop offset="100%" stopColor={CHART_SERIES.projected} stopOpacity="0" />
-        </linearGradient>
-      </defs>
+      {/* fascia "futuro": una campitura leggera, non un blocco pieno */}
+      <rect x={X(0)} y={T} width={X(90) - X(0)} height={H - T - B} fill={CHART_SERIES.projected} opacity={0.07} />
 
       {ticks.map((t, i) => (
         <g key={i}>
@@ -310,8 +306,6 @@ function ProjectionChart({ p }: { p: Projection }) {
         </g>
       ))}
 
-      {/* area sotto la proiezione */}
-      <path d={`${path(future)} L ${X(90)} ${H - B} L ${X(0)} ${H - B} Z`} fill="url(#aef-fut)" />
       {/* storico misurato */}
       {past.length > 1 && <path d={path(past)} fill="none" stroke={CHART_SERIES.primary} strokeWidth={2.5} strokeLinecap="round" />}
       {past.map((pt, i) => <circle key={i} cx={X(pt.day)} cy={Y(pt.sec)} r={2.6} fill={CHART_SERIES.primary} />)}
@@ -327,6 +321,14 @@ function ProjectionChart({ p }: { p: Projection }) {
       ))}
       <text x={L} y={H - B + 14} textAnchor="start" fill={CHART_TEXT.axis} style={{ fontFamily: MONO, fontSize: 9 }}>−6 mesi</text>
       <circle cx={X(0)} cy={Y(future[0].sec)} r={4} fill="#0A0A0A" stroke={CHART_SERIES.primary} strokeWidth={2.5} />
+
+      {/* dove si arriva: il numero in fondo alla curva, altrimenti la proiezione
+          sembra piatta e non si legge il guadagno */}
+      <circle cx={X(90)} cy={Y(future[future.length - 1].sec)} r={3} fill={CHART_SERIES.projected} />
+      <text x={X(90) - 4} y={Y(future[future.length - 1].sec) - 8} textAnchor="end"
+        fill={CHART_SERIES.projected} style={{ fontFamily: MONO, fontSize: 10, fontWeight: 800 }}>
+        {clock(future[future.length - 1].sec)}
+      </text>
     </svg>
   );
 }
