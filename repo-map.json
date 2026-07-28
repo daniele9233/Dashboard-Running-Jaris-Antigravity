@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-28T07:17:40.275Z",
+  "generated_at": "2026-07-28T07:29:44.174Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2993,9 +2993,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "c9ebf704e849eceb2fe7534a49c4bd9195879f341166e1e4c089b264d02f24c1",
-      "last_modified": "2026-07-28T07:17:40.276Z",
-      "size_bytes": 33508
+      "hash": "8680b2e2ee3c7324400489b8800262715f284f802d31bd7cf1591092829cdddc",
+      "last_modified": "2026-07-28T07:29:44.174Z",
+      "size_bytes": 40293
     },
     {
       "path": "src/components/gamification/evolutionEngine.test.ts",
@@ -3019,9 +3019,9 @@
         "./evolutionEngine",
         "vitest"
       ],
-      "hash": "a66e735f96e4022606741b220b1d7f4a90de8330d6040b9a7e02ab83f74d79a3",
-      "last_modified": "2026-07-28T06:45:17.230Z",
-      "size_bytes": 7487
+      "hash": "f8f097a9300ccd12c5d0b40f53da0eb37f98e00a876455ecafcc1e3271036f88",
+      "last_modified": "2026-07-28T07:27:48.797Z",
+      "size_bytes": 9381
     },
     {
       "path": "src/components/gamification/evolutionEngine.ts",
@@ -3060,9 +3060,9 @@
       "imports": [
         "../../types/api"
       ],
-      "hash": "754f4e6f3095cbde7d8a4e44a639b5550e98b36cc1b9325265ec36a0a5eeb46a",
-      "last_modified": "2026-07-28T06:42:52.167Z",
-      "size_bytes": 31264
+      "hash": "ee790b7a2318a0c1b3adc74a43b001335da7d737b9cb94e7b40ec292953d1b6e",
+      "last_modified": "2026-07-28T07:25:36.914Z",
+      "size_bytes": 32547
     },
     {
       "path": "src/components/gamification/gamiData.ts",

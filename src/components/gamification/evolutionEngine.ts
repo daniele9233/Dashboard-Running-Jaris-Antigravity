@@ -144,7 +144,10 @@ const PROJ_WINDOW = 180;        // la tendenza è quella del blocco in corso, no
 const PROJ_RATE_WINDOW = 90;    // su quanti giorni si misura il ritmo di XP
 
 /** Un punto della curva: XP spesi da oggi → forma che ne esce. */
-export interface ProjPoint { xp: number; vdot: number; sec5k: number; sec10k: number }
+export interface ProjPoint {
+  xp: number; vdot: number; sec5k: number; sec10k: number;
+  level: number; sessions: number; days: number;
+}
 /** Un livello davanti a te: quanto costa e cosa ti restituisce. */
 export interface LevelGain {
   level: number; xpNeeded: number; vdot: number; dVdot: number;
@@ -165,8 +168,10 @@ export interface Projection {
   xpPerDay: number;                       // ritmo attuale
   xpPerSession: number;                   // XP medi per seduta
   xpPerVdot: number | null;               // prezzo di un punto di VDOT, ora
-  /** Misure reali: XP relativi a oggi (negativi) e tempo 5K di allora. */
-  history: { xp: number; vdot: number; sec5k: number }[];
+  daysSinceLastRun: number;               // quanto è vecchio l'ultimo dato
+  stale: boolean;                         // fermo da abbastanza da non fidarsi
+  /** Misure reali: XP e giorni relativi a oggi (negativi), tempo 5K di allora. */
+  history: { xp: number; day: number; vdot: number; sec5k: number }[];
   points: ProjPoint[];
   levels: LevelGain[];
   milestones: MilestoneCost[];
@@ -201,13 +206,16 @@ function runVdot(r: Run): number | null {
 /**
  * @param xpByDay XP guadagnati per giorno (chiave = indice giorno)
  * @param totalXp XP totali dell'atleta, livello compreso di bonus
+ * @param todayIdx giorno di OGGI (non dell'ultima corsa): se smetti di correre
+ *   le finestre scorrono comunque e il ritmo di XP scende, come deve essere
  */
 export function buildProjection(
   runs: Run[], xpByDay: Map<number, number>, totalXp: number, level: number,
+  todayIdx: number = dayIndex(new Date().toISOString()),
 ): Projection {
   const empty: Projection = {
     ok: false, vdotNow: 0, perMonth: 0, trend: "flat", samples: 0,
-    xpPerDay: 0, xpPerSession: 0, xpPerVdot: null,
+    xpPerDay: 0, xpPerSession: 0, xpPerVdot: null, daysSinceLastRun: 0, stale: false,
     history: [], points: [], levels: [], milestones: [], hotDelta5k: 0,
   };
   const efforts = runs
@@ -215,7 +223,10 @@ export function buildProjection(
     .filter((e): e is { day: number; vdot: number } => e.vdot != null);
   if (efforts.length < 3) return empty;
 
-  const today = Math.max(...efforts.map((e) => e.day));
+  const lastRun = Math.max(...runs.map((r) => dayIndex(r.date)), ...efforts.map((e) => e.day));
+  // se l'orologio di sistema è indietro rispetto ai dati, l'ultima corsa vince
+  const today = Math.max(todayIdx, lastRun);
+  const daysSinceLastRun = today - lastRun;
   // finestre di 30 giorni, ognuna col suo miglior effort
   const buckets = new Map<number, number>();
   for (const e of efforts) {
@@ -305,10 +316,16 @@ export function buildProjection(
     Math.round(tauXp / 2),
   );
   const points: ProjPoint[] = [];
-  for (let i = 0; i <= 30; i++) {
-    const xp = (xpMax * i) / 30;
+  const STEPS = 60;
+  for (let i = 0; i <= STEPS; i++) {
+    const xp = (xpMax * i) / STEPS;
     const v = at(xp);
-    points.push({ xp, vdot: v, sec5k: predictSec(5000, v), sec10k: predictSec(10000, v) });
+    points.push({
+      xp, vdot: v, sec5k: predictSec(5000, v), sec10k: predictSec(10000, v),
+      level: levelFromXp(totalXp + xp),
+      sessions: Math.round(xp / Math.max(1, xpPerSession)),
+      days: Math.round(xp / xpPerDay),
+    });
   }
 
   // ── storico: quanti XP erano stati spesi quando la forma era quella ──
@@ -327,9 +344,10 @@ export function buildProjection(
     xpPerDay: Math.round(xpPerDay),
     xpPerSession,
     xpPerVdot: slope > 0 ? Math.round(xpPerDay / slope) : null,
+    daysSinceLastRun, stale: daysSinceLastRun > 21,
     history: history.map((h) => ({
       xp: cumBefore(today + h.day) - totalXp,   // negativo: XP spesi prima di oggi
-      vdot: h.vdot, sec5k: predictSec(5000, h.vdot),
+      day: h.day, vdot: h.vdot, sec5k: predictSec(5000, h.vdot),
     })),
     points, levels, milestones,
     hotDelta5k: Math.round(base5k * heatSlowdownFrac(HOT_TEMP_C, HOT_HUMIDITY, 5)),
@@ -507,13 +525,20 @@ const EMPTY: LevelSystem = {
   tiers: [], levels: [], nextReward: null, currentVdot: 0,
   projection: {
     ok: false, vdotNow: 0, perMonth: 0, trend: "flat", samples: 0,
-    xpPerDay: 0, xpPerSession: 0, xpPerVdot: null,
+    xpPerDay: 0, xpPerSession: 0, xpPerVdot: null, daysSinceLastRun: 0, stale: false,
     history: [], points: [], levels: [], milestones: [], hotDelta5k: 0,
   },
   legend: [], weekBonusXp: 0, recent: [], stats: { totalKm: 0, totalRuns: 0, totalHours: 0 },
 };
 
-export function computeLevelSystem(runsIn: Run[], _profile: Profile | null): LevelSystem {
+/**
+ * @param todayIso data di oggi: passala dal componente e ricalcolala quando la
+ *   pagina torna in primo piano, così un tab lasciato aperto per giorni non
+ *   continua a proiettare dal passato.
+ */
+export function computeLevelSystem(
+  runsIn: Run[], _profile: Profile | null, todayIso?: string,
+): LevelSystem {
   // stessa igiene dei badge: avvii per sbaglio e glitch GPS non sono allenamenti
   const runs = (runsIn ?? []).filter((r) => (r.distance_km || 0) >= 0.5 && (r.duration_minutes || 0) >= 3);
   if (runs.length === 0) return EMPTY;
@@ -559,7 +584,10 @@ export function computeLevelSystem(runsIn: Run[], _profile: Profile | null): Lev
   // forma attuale + proiezione ("se continui così, fra 30 giorni…").
   // Il VDOT mostrato è quello della proiezione (forma recente): un solo numero
   // in pagina, altrimenti il chip in alto e il grafico raccontano storie diverse.
-  const projection = buildProjection(runs, xpByDay, totalXp, level);
+  const projection = buildProjection(
+    runs, xpByDay, totalXp, level,
+    dayIndex(todayIso ?? new Date().toISOString()),
+  );
   const currentVdot = projection.ok ? projection.vdotNow : estimateVdot(runs);
   const legend = buildXpLegend(runs);
 

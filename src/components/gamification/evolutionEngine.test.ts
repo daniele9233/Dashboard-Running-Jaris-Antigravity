@@ -181,4 +181,52 @@ describe("proiezione in XP", () => {
     expect(xs[0]).toBeLessThan(0);
     expect(xs[xs.length - 1]).toBeLessThanOrEqual(0);
   });
+
+  it("ogni punto della curva porta con sé livello, sedute e giorni", () => {
+    const p = proj(series(6, 300, 5));
+    for (const q of p.points) {
+      expect(q.level).toBeGreaterThan(0);
+      expect(q.sessions).toBeGreaterThanOrEqual(0);
+      expect(q.days).toBeGreaterThanOrEqual(0);
+    }
+    const last = p.points[p.points.length - 1];
+    expect(last.level).toBeGreaterThanOrEqual(p.points[0].level);
+    expect(last.sessions).toBeGreaterThan(0);
+  });
+});
+
+describe("il tempo passa anche se non corri", () => {
+  const runs = Array.from({ length: 18 }, (_, i) => {
+    const d = new Date(Date.UTC(2026, 0, 10));
+    d.setUTCDate(d.getUTCDate() + i * 10);
+    return run(i % 3 === 0 ? 5 : 10, 300 - i * 2, d.toISOString().slice(0, 10));
+  });
+  // ultima corsa: 2026-01-10 + 170 giorni = 2026-06-29
+  const at = (iso: string) => computeLevelSystem(runs, null, iso).projection;
+
+  it("il ritmo di XP scende man mano che passano i giorni fermo", () => {
+    const fresh = at("2026-06-30");
+    const rusty = at("2026-08-15");
+    expect(fresh.ok && rusty.ok).toBe(true);
+    expect(rusty.xpPerDay).toBeLessThan(fresh.xpPerDay);
+  });
+
+  it("dopo tre settimane di stop la proiezione si dichiara vecchia", () => {
+    expect(at("2026-06-30").stale).toBe(false);
+    expect(at("2026-08-15").stale).toBe(true);
+    expect(at("2026-08-15").daysSinceLastRun).toBeGreaterThan(21);
+  });
+
+  it("i livelli costano di più in giorni quando il ritmo cala", () => {
+    const fresh = at("2026-06-30").levels[0];
+    const rusty = at("2026-08-15").levels[0];
+    expect(rusty.days).toBeGreaterThan(fresh.days as number);
+    expect(rusty.xpNeeded).toBe(fresh.xpNeeded);   // il prezzo in XP non cambia
+  });
+
+  it("un orologio di sistema indietro non manda la finestra in negativo", () => {
+    const p = at("2020-01-01");
+    expect(p.ok).toBe(true);
+    expect(p.daysSinceLastRun).toBe(0);
+  });
 });

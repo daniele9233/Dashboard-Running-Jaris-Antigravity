@@ -24,7 +24,23 @@ function Panel({ children, className = "", style }: { children: React.ReactNode;
 const LEVEL_KEY = "aef-last-level";
 
 export function AthleteEvolutionFramework({ runs, profile }: { runs: Run[]; profile: Profile | null }) {
-  const sys = useMemo(() => computeLevelSystem(runs, profile), [runs, profile]);
+  // La proiezione dipende da che giorno è oggi: se la pagina resta aperta o il
+  // tab torna in primo piano dopo giorni, la data va rinfrescata o le finestre
+  // (ritmo XP, forma recente) resterebbero ferme al momento del caricamento.
+  const [today, setToday] = useState(() => new Date().toISOString().slice(0, 10));
+  useEffect(() => {
+    const sync = () => setToday(new Date().toISOString().slice(0, 10));
+    const id = window.setInterval(sync, 30 * 60 * 1000);
+    window.addEventListener("focus", sync);
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("focus", sync);
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, []);
+
+  const sys = useMemo(() => computeLevelSystem(runs, profile, today), [runs, profile, today]);
   const rootRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -245,6 +261,13 @@ function ProjectionPanel({ p }: { p: Projection }) {
       <Panel className="p-4 md:p-5">
         <p className="text-[12px] leading-relaxed text-gray-400 mb-4">{headline}</p>
 
+        {p.stale && (
+          <div className="mb-3 rounded-xl border px-3 py-2 text-[10px] leading-snug"
+            style={{ borderColor: `${CHART_SERIES.load}55`, background: `${CHART_SERIES.load}12`, color: CHART_SERIES.load }}>
+            Ultima corsa {p.daysSinceLastRun} giorni fa: il ritmo di XP sta scendendo e con lui questa proiezione.
+          </div>
+        )}
+
         <ProjectionChart p={p} />
 
         <div className="mt-4 grid grid-cols-2 gap-2">
@@ -264,6 +287,7 @@ function ProjectionPanel({ p }: { p: Projection }) {
         </div>
 
         <p className="mt-3 text-[9px] leading-relaxed text-gray-600">
+          Passa il dito o il mouse sulla curva (frecce da tastiera) per leggere cosa compri a ogni quota di XP.
           Prezzi calcolati sul tuo ritmo attuale: {xpFmt(p.xpPerDay)} XP al giorno, {xpFmt(p.xpPerSession)} XP a seduta.
           Tempi a temperatura ideale (con i 20-30°C di Roma aggiungi ~{p.hotDelta5k}s sui 5 km).
           La curva si appiattisce: più sei allenato, più XP costa lo stesso secondo.
@@ -304,9 +328,15 @@ function Row({ k, v }: { k: string; v: string }) {
  * Asse X = XP, non giorni: a sinistra quelli già spesi, a destra quelli che
  * servono. Le tacche verticali sono i livelli, così si legge subito quanto
  * lavoro separa dal prossimo scatto di forma.
+ *
+ * Interattivo: puntatore, dito o frecce muovono un cursore lungo la curva e
+ * mostrano cosa compri con quegli XP. Il click blocca la lettura.
  */
 function ProjectionChart({ p }: { p: Projection }) {
   const W = 360, H = 156, L = 46, R = 14, T = 16, B = 30;
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [cursor, setCursor] = useState<number | null>(null);   // XP sotto al cursore
+  const [pinned, setPinned] = useState(false);
   const xMax = p.points[p.points.length - 1].xp || 1;
   const xMin = Math.min(0, ...p.history.map((h) => h.xp), -xMax * 0.6);
   const past = p.history.map((h) => ({ xp: h.xp, sec: h.sec5k }));
@@ -322,8 +352,59 @@ function ProjectionChart({ p }: { p: Projection }) {
   const ticks = [y0 + (y1 - y0) * 0.15, (y0 + y1) / 2, y1 - (y1 - y0) * 0.15];
   const kxp = (xp: number) => (Math.abs(xp) >= 1000 ? `${(xp / 1000).toFixed(1).replace(".", ",")}k` : String(Math.round(xp)));
 
+  // ── lettura sotto al cursore: futuro dal modello, passato dalle misure ──
+  const read = (xp: number) => {
+    if (xp >= 0) {
+      const pts = p.points;
+      let i = pts.findIndex((q) => q.xp >= xp);
+      if (i < 0) i = pts.length - 1;
+      const a = pts[Math.max(0, i - 1)], b = pts[i];
+      const k = b.xp === a.xp ? 0 : (xp - a.xp) / (b.xp - a.xp);
+      const lerp = (u: number, v: number) => u + (v - u) * k;
+      return {
+        future: true, xp, sec: lerp(a.sec5k, b.sec5k), sec10k: lerp(a.sec10k, b.sec10k),
+        vdot: lerp(a.vdot, b.vdot), level: k < 0.5 ? a.level : b.level,
+        sessions: Math.round(lerp(a.sessions, b.sessions)), days: Math.round(lerp(a.days, b.days)),
+      };
+    }
+    const h = p.history.reduce((best, q) => (Math.abs(q.xp - xp) < Math.abs(best.xp - xp) ? q : best), p.history[0]);
+    return { future: false, xp: h.xp, sec: h.sec5k, sec10k: 0, vdot: h.vdot, level: 0, sessions: 0, days: h.day };
+  };
+  const info = cursor == null ? null : read(cursor);
+
+  const move = (clientX: number) => {
+    const el = svgRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const vx = ((clientX - r.left) / r.width) * W;
+    const xp = xMin + ((vx - L) / (W - L - R)) * (xMax - xMin);
+    setCursor(Math.max(xMin, Math.min(xMax, xp)));
+  };
+  const step = (dir: number) => {
+    const cur = cursor ?? 0;
+    setCursor(Math.max(xMin, Math.min(xMax, cur + dir * (xMax - xMin) / 40)));
+    setPinned(true);
+  };
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label="Forma prevista in base agli XP guadagnati">
+    <svg
+      ref={svgRef}
+      viewBox={`0 0 ${W} ${H}`}
+      className="w-full h-auto touch-none cursor-crosshair focus-visible:outline-none"
+      role="img"
+      tabIndex={0}
+      aria-label={`Forma prevista in base agli XP guadagnati. ${p.levels[0] ? `Prossimo livello ${p.levels[0].level} a ${p.levels[0].xpNeeded} XP.` : ""} Usa le frecce per esplorare la curva.`}
+      onPointerMove={(e) => { if (!pinned) move(e.clientX); }}
+      onPointerLeave={() => { if (!pinned) setCursor(null); }}
+      onPointerDown={(e) => { move(e.clientX); setPinned(true); }}
+      onDoubleClick={() => { setPinned(false); setCursor(null); }}
+      onKeyDown={(e) => {
+        if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
+        else if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
+        else if (e.key === "Escape") { setPinned(false); setCursor(null); }
+      }}
+      onFocus={() => { if (cursor == null) setCursor(0); }}
+    >
       {/* fascia "da guadagnare" */}
       <rect x={X(0)} y={T} width={X(xMax) - X(0)} height={H - T - B} fill={CHART_SERIES.projected} opacity={0.07} />
 
@@ -362,12 +443,78 @@ function ProjectionChart({ p }: { p: Projection }) {
 
       {/* dove si arriva: il numero in fondo alla curva, altrimenti la proiezione
           sembra piatta e non si legge il guadagno */}
-      <circle cx={X(xMax)} cy={Y(future[future.length - 1].sec)} r={3} fill={CHART_SERIES.projected} />
-      <text x={X(xMax) - 4} y={Y(future[future.length - 1].sec) - 8} textAnchor="end"
-        fill={CHART_SERIES.projected} style={{ fontFamily: MONO, fontSize: 10, fontWeight: 800 }}>
-        {clock(future[future.length - 1].sec)}
-      </text>
+      {!info && <>
+        <circle cx={X(xMax)} cy={Y(future[future.length - 1].sec)} r={3} fill={CHART_SERIES.projected} />
+        <text x={X(xMax) - 4} y={Y(future[future.length - 1].sec) - 8} textAnchor="end"
+          fill={CHART_SERIES.projected} style={{ fontFamily: MONO, fontSize: 10, fontWeight: 800 }}>
+          {clock(future[future.length - 1].sec)}
+        </text>
+      </>}
+
+      {/* ── cursore + targhetta ── */}
+      {info && <ChartCursor info={info} X={X} Y={Y} W={W} T={T} B={B} H={H} kxp={kxp} pinned={pinned} />}
     </svg>
+  );
+}
+
+interface CursorInfo {
+  future: boolean; xp: number; sec: number; sec10k: number;
+  vdot: number; level: number; sessions: number; days: number;
+}
+
+/** Targhetta che segue il cursore: si specchia a sinistra quando è a fine corsa. */
+function ChartCursor({ info, X, Y, W, T, B, H, kxp, pinned }: {
+  info: CursorInfo; X: (n: number) => number; Y: (n: number) => number;
+  W: number; T: number; B: number; H: number; kxp: (n: number) => string; pinned: boolean;
+}) {
+  const col = info.future ? CHART_SERIES.projected : CHART_SERIES.primary;
+  const cx = X(info.xp), cy = Y(info.sec);
+  const lines: [string, string][] = info.future
+    ? [
+        ["XP", `+${kxp(info.xp)}`],
+        ["Livello", `${info.level}`],
+        ["VDOT", info.vdot.toFixed(1)],
+        ["5 km", clock(info.sec)],
+        ["10 km", clock(info.sec10k)],
+      ]
+    : [
+        ["Quando", `${Math.round(-info.days / 30)} mesi fa`],
+        ["XP spesi", kxp(info.xp)],
+        ["VDOT", info.vdot.toFixed(1)],
+        ["5 km", clock(info.sec)],
+      ];
+  // lo sforzo sta su una riga sua: con l'etichetta a sinistra finiva sotto al valore
+  const footer = info.future ? `${info.sessions} sedute · ${info.days} gg` : null;
+  const bw = 96, bh = 12 + lines.length * 11 + (footer ? 12 : 0);
+  const flip = cx + bw + 10 > W;
+  const bx = flip ? cx - bw - 8 : cx + 8;
+  const by = Math.max(T, Math.min(H - B - bh, cy - bh / 2));
+
+  return (
+    <g pointerEvents="none">
+      <line x1={cx} x2={cx} y1={T} y2={H - B} stroke={col} strokeOpacity={0.55} strokeWidth={1} />
+      <circle cx={cx} cy={cy} r={4.5} fill="#0A0A0A" stroke={col} strokeWidth={2.5} />
+      <rect x={bx} y={by} width={bw} height={bh} rx={6} fill="#0A0A0Aee" stroke={col} strokeOpacity={0.5} />
+      {lines.map(([k, v], i) => (
+        <g key={k}>
+          <text x={bx + 6} y={by + 14 + i * 11} fill={CHART_TEXT.axis} style={{ fontFamily: MONO, fontSize: 7.5 }}>{k}</text>
+          <text x={bx + bw - 6} y={by + 14 + i * 11} textAnchor="end" fill={i === 0 ? col : "#FFFFFF"}
+            style={{ fontFamily: MONO, fontSize: 8, fontWeight: 800 }}>{v}</text>
+        </g>
+      ))}
+      {footer && (
+        <>
+          <line x1={bx + 5} x2={bx + bw - 5} y1={by + bh - 13} y2={by + bh - 13} stroke={col} strokeOpacity={0.25} />
+          <text x={bx + bw / 2} y={by + bh - 4} textAnchor="middle" fill={col}
+            style={{ fontFamily: MONO, fontSize: 7.5, fontWeight: 800 }}>{footer}</text>
+        </>
+      )}
+      {pinned && (
+        <text x={bx + bw / 2} y={by + bh + 8} textAnchor="middle" fill={CHART_TEXT.faint} style={{ fontFamily: MONO, fontSize: 6.5 }}>
+          doppio click per sbloccare
+        </text>
+      )}
+    </g>
   );
 }
 const clock = (sec: number) => {
