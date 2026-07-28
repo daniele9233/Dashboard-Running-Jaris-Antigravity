@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-27T19:47:19.271Z",
+  "generated_at": "2026-07-28T06:10:30.176Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 192,
+    "files": 193,
     "backend_routes": 68,
     "frontend_routes": 16,
     "api_clients": 73
@@ -2985,13 +2985,39 @@
       "imports": [
         "../../types/api",
         "../celebrations/gsapSetup",
+        "../statistics/chartTheme",
         "./evolutionEngine",
         "lucide-react",
         "react"
       ],
-      "hash": "6b0acfe8ae77c261a5013abc96820d69dc08687e402a56b51580941e5948bc71",
-      "last_modified": "2026-07-18T16:36:51.276Z",
-      "size_bytes": 28793
+      "hash": "bb0137db92402093279d1d0141832a81b9326857d71297ba42eba887da3b50ac",
+      "last_modified": "2026-07-28T06:10:30.176Z",
+      "size_bytes": 31089
+    },
+    {
+      "path": "src/components/gamification/evolutionEngine.test.ts",
+      "kind": "frontend-component",
+      "purpose": "React component evolutionEngine.test.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "garmin",
+        "map",
+        "statistics",
+        "strava",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "./evolutionEngine",
+        "vitest"
+      ],
+      "hash": "e21440b9b93521bcfd9fbd7e0eef4791125799c8cc2107d398b25fc37f0b5a51",
+      "last_modified": "2026-07-28T06:06:02.609Z",
+      "size_bytes": 6446
     },
     {
       "path": "src/components/gamification/evolutionEngine.ts",
@@ -3005,24 +3031,33 @@
         "types"
       ],
       "exports": [
+        "buildProjection",
+        "buildXpLegend",
         "computeLevelSystem",
         "cumXpForLevel",
-        "GoalState",
         "levelFromXp",
         "LevelNode",
         "LevelSystem",
         "levelTitle",
         "MAX_LEVEL",
+        "MilestoneEta",
+        "Projection",
+        "ProjHorizon",
+        "ProjPoint",
         "RecentRun",
-        "TierState"
+        "TierState",
+        "XP_BONUS",
+        "XP_ZONES",
+        "XpExample",
+        "XpZone"
       ],
       "routes": [],
       "imports": [
         "../../types/api"
       ],
-      "hash": "1920bfa73127afa17fb9e169800a8d64b6eef78035ac5d4c4e0d6b0a40937135",
-      "last_modified": "2026-07-18T16:36:51.277Z",
-      "size_bytes": 17721
+      "hash": "6465582b8092136561514a00f88c578d3fd26cc511c67912f37ad931fc0ab230",
+      "last_modified": "2026-07-28T06:09:25.532Z",
+      "size_bytes": 26913
     },
     {
       "path": "src/components/gamification/gamiData.ts",

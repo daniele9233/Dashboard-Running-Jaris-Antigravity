@@ -88,7 +88,7 @@ const fmtClock = (sec: number): string => {
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
 };
 
-// ── 20 obiettivi (distanza · tempo) ───────────────────────────────────────────
+// ── Traguardi di riferimento (distanza · tempo) ───────────────────────────────
 interface GoalDef { id: string; group: string; label: string; m: number; sec: number }
 const GOAL_DEFS: GoalDef[] = [
   { id: "5k-30",  group: "5K", label: "5K Sub 30'", m: 5000, sec: 1800 },
@@ -115,34 +115,150 @@ const GOAL_DEFS: GoalDef[] = [
   { id: "fm-330", group: "Maratona", label: "Maratona Sub 3:30", m: 42195, sec: 12600 },
   { id: "fm-300", group: "Maratona", label: "Maratona Sub 3:00", m: 42195, sec: 10800 },
 ];
-const GOAL_SLOPE = 3.5; // livelli stimati per punto di VDOT oltre la forma attuale
-
-export interface GoalState {
-  id: string; group: string; label: string; reqVdot: number; recLevel: number;
-  xpReq: number; xpGap: number; achieved: boolean; predicted: string; predictedHot: string;
-  gapLabel: string; progress: number;
-}
-
 // Condizioni estive tipiche di Roma (banda 20-30°C): ~27°C, 60% umidità.
 const HOT_TEMP_C = 27, HOT_HUMIDITY = 60;
 
-function buildGoals(currentVdot: number, currentLevel: number, totalXp: number): GoalState[] {
-  return GOAL_DEFS.map((g) => {
-    const reqVdot = vdotFrom(g.m, g.sec);
-    const achieved = currentVdot >= reqVdot;
-    const recLevel = clamp(Math.round(currentLevel + (reqVdot - currentVdot) * GOAL_SLOPE), 1, MAX_LEVEL);
-    const xpReq = cumXpForLevel(recLevel);
-    const xpGap = Math.max(0, xpReq - totalXp);
-    const predicted = predictSec(g.m, currentVdot);
-    const predictedHot = predicted * (1 + heatSlowdownFrac(HOT_TEMP_C, HOT_HUMIDITY, g.m / 1000));
-    const gap = predicted - g.sec;
+// ══ PROIEZIONE ════════════════════════════════════════════════════════════════
+/**
+ * "Se continui così, fra 30 giorni…".
+ *
+ * Il VDOT migliore di ogni finestra di 30 giorni (già normalizzato per il caldo)
+ * dà una serie storica; la pendenza esce da una regressione ai minimi quadrati
+ * sull'ultimo anno. In avanti la crescita NON è lineare: si avvicina a un
+ * asintoto con costante di tempo TAU, perché estrapolare dritto un +1 VDOT/mese
+ * porterebbe a promettere una maratona olimpica in due anni.
+ */
+const PROJ_TAU = 90;            // giorni: oltre, i guadagni si appiattiscono
+const PROJ_MAX_SLOPE = 0.035;   // VDOT/giorno ≈ +1 al mese: tetto fisiologico
+const PROJ_WINDOW = 180;        // la tendenza è quella del blocco in corso, non
+                                // della stagione scorsa: uno stop di due mesi un
+                                // anno fa non deve schiacciare la crescita di oggi
+const PROJ_HORIZONS = [30, 60, 90];
+
+export interface ProjPoint { day: number; vdot: number; sec5k: number; sec10k: number }
+export interface ProjHorizon { days: number; vdot: number; t5k: string; t10k: string; thrPace: string }
+export interface MilestoneEta { id: string; group: string; label: string; days: number | null; reqVdot: number }
+export interface Projection {
+  ok: boolean;
+  vdotNow: number;
+  perMonth: number;                       // pendenza stimata, VDOT al mese
+  trend: "up" | "flat" | "down";
+  samples: number;                        // finestre usate dalla regressione
+  /** Misure reali: giorno relativo a oggi (negativo) e tempo 5K implicito. */
+  history: { day: number; vdot: number; sec5k: number }[];
+  points: ProjPoint[];
+  horizons: ProjHorizon[];
+  milestones: MilestoneEta[];
+  hotDelta5k: number;                     // secondi persi sui 5K con 20-30°C
+}
+
+const dayIndex = (d: string) => Math.floor(new Date(d.slice(0, 10) + "T00:00:00Z").getTime() / 86400000);
+
+/**
+ * Passo di soglia = velocità che regge un'ora di gara (critical speed a 60′),
+ * lo stesso criterio usato nel resto dell'app. Si cerca la distanza che a quel
+ * VDOT si copre in 3600 s e se ne ricava il passo al km.
+ */
+function thresholdPaceSec(vdot: number): number {
+  let lo = 5000, hi = 25000;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (predictSec(mid, vdot) < 3600) lo = mid; else hi = mid;
+  }
+  return 3600 / ((lo + hi) / 2 / 1000);
+}
+
+/** VDOT di una singola corsa, riportato a temperatura ideale. */
+function runVdot(r: Run): number | null {
+  if (r.is_treadmill) return null;
+  const ps = paceToSec(r.avg_pace), dist = r.distance_km || 0;
+  if (!ps || dist < 3 || dist > 25) return null;
+  const coolPace = ps / (1 + heatSlowdownFrac(r.temperature, null, dist));
+  return vdotFrom(dist * 1000, coolPace * dist);
+}
+
+export function buildProjection(runs: Run[]): Projection {
+  const empty: Projection = {
+    ok: false, vdotNow: 0, perMonth: 0, trend: "flat", samples: 0,
+    history: [], points: [], horizons: [], milestones: [], hotDelta5k: 0,
+  };
+  const efforts = runs
+    .map((r) => ({ day: dayIndex(r.date), vdot: runVdot(r) }))
+    .filter((e): e is { day: number; vdot: number } => e.vdot != null);
+  if (efforts.length < 3) return empty;
+
+  const today = Math.max(...efforts.map((e) => e.day));
+  // finestre di 30 giorni, ognuna col suo miglior effort
+  const buckets = new Map<number, number>();
+  for (const e of efforts) {
+    const age = today - e.day;
+    if (age > PROJ_WINDOW) continue;
+    const b = Math.floor(age / 30);
+    buckets.set(b, Math.max(buckets.get(b) ?? 0, e.vdot));
+  }
+  const history = [...buckets.entries()]
+    .map(([b, vdot]) => ({ day: -(b * 30 + 15), vdot }))
+    .sort((a, b) => a.day - b.day);
+  if (history.length < 3) return empty;
+
+  // regressione ai minimi quadrati: pendenza in VDOT/giorno
+  const n = history.length;
+  const mx = history.reduce((s, p) => s + p.day, 0) / n;
+  const my = history.reduce((s, p) => s + p.vdot, 0) / n;
+  const den = history.reduce((s, p) => s + (p.day - mx) ** 2, 0);
+  const raw = den > 0 ? history.reduce((s, p) => s + (p.day - mx) * (p.vdot - my), 0) / den : 0;
+  const slope = clamp(raw, -PROJ_MAX_SLOPE, PROJ_MAX_SLOPE);
+
+  // Si parte dalla FORMA ATTUALE (miglior prova degli ultimi 90 giorni), non dal
+  // primato di sempre: un 5000 corso un anno fa non è la base da cui proiettare.
+  const recent = [0, 1, 2].map((b) => buckets.get(b) ?? 0).filter(Boolean);
+  const vdotNow = recent.length ? Math.max(...recent) : estimateVdot(runs);
+  const at = (t: number) => vdotNow + slope * PROJ_TAU * (1 - Math.exp(-t / PROJ_TAU));
+
+  const points: ProjPoint[] = [];
+  for (let d = 0; d <= 90; d += 5) {
+    const v = at(d);
+    points.push({ day: d, vdot: v, sec5k: predictSec(5000, v), sec10k: predictSec(10000, v) });
+  }
+  const horizons: ProjHorizon[] = PROJ_HORIZONS.map((days) => {
+    const v = at(days);
     return {
-      id: g.id, group: g.group, label: g.label, reqVdot: Math.round(reqVdot * 10) / 10, recLevel, xpReq, xpGap,
-      achieved, predicted: fmtClock(predicted), predictedHot: fmtClock(predictedHot),
-      gapLabel: (gap <= 0 ? "−" : "+") + fmtClock(Math.abs(gap)),
-      progress: achieved ? 100 : clamp(Math.round((totalXp / Math.max(1, xpReq)) * 100), 1, 99),
+      days, vdot: Math.round(v * 10) / 10,
+      t5k: fmtClock(predictSec(5000, v)), t10k: fmtClock(predictSec(10000, v)),
+      thrPace: fmtClock(thresholdPaceSec(v)),
     };
-  }).sort((a, b) => a.reqVdot - b.reqVdot);
+  });
+
+  // quando arriva un traguardo, alla pendenza attuale
+  const eta = (reqVdot: number): number | null => {
+    if (reqVdot <= vdotNow) return 0;
+    if (slope <= 0) return null;
+    const k = (reqVdot - vdotNow) / (slope * PROJ_TAU);
+    if (k >= 1) return null;                       // asintoto sotto il traguardo
+    const t = -PROJ_TAU * Math.log(1 - k);
+    return t > 540 ? null : Math.round(t);         // oltre 18 mesi = non promettere
+  };
+  // solo 5K e 10K: sono le distanze che corre davvero a ritmo. Promettere una
+  // maratona partendo da un VDOT stimato su prove corte sarebbe fuffa.
+  const milestones: MilestoneEta[] = GOAL_DEFS
+    .filter((g) => g.group === "5K" || g.group === "10K")
+    .map((g) => ({ id: g.id, group: g.group, label: g.label, reqVdot: vdotFrom(g.m, g.sec) }))
+    .filter((g) => g.reqVdot > vdotNow)
+    .sort((a, b) => a.reqVdot - b.reqVdot)
+    .slice(0, 4)
+    .map((g) => ({ ...g, reqVdot: Math.round(g.reqVdot * 10) / 10, days: eta(g.reqVdot) }));
+
+  const base5k = predictSec(5000, vdotNow);
+  return {
+    ok: true,
+    vdotNow: Math.round(vdotNow * 10) / 10,
+    perMonth: Math.round(slope * 30 * 100) / 100,
+    trend: slope > 0.003 ? "up" : slope < -0.003 ? "down" : "flat",
+    samples: n,
+    history: history.map((h) => ({ ...h, sec5k: predictSec(5000, h.vdot) })),
+    points, horizons, milestones,
+    hotDelta5k: Math.round(base5k * heatSlowdownFrac(HOT_TEMP_C, HOT_HUMIDITY, 5)),
+  };
 }
 
 // ══ TIPI ESPORTATI ════════════════════════════════════════════════════════════
@@ -160,7 +276,7 @@ export interface LevelSystem {
   totalXp: number; level: number; maxLevel: number; title: string; tierIdx: number; tier: TierState;
   levelFloor: number; levelCeil: number; intoLevel: number; spanLevel: number; pct: number; xpToNext: number; maxed: boolean;
   tiers: TierState[]; levels: LevelNode[]; nextReward: TierState | null;
-  goals: GoalState[]; goalsAchieved: number; currentVdot: number;
+  currentVdot: number; projection: Projection; legend: XpExample[]; weekBonusXp: number;
   recent: RecentRun[];
   stats: { totalKm: number; totalRuns: number; totalHours: number };
 }
@@ -217,19 +333,82 @@ function intensityOf(r: Run, bestPaceSec: number | null): number {
   return TYPE_INT[(r.run_type ?? "easy").toLowerCase()] ?? 0.7;
 }
 
-/** XP per corsa — bilanciato volume + intensità. La durata conta (i lunghi
- *  restano premianti), ma l'intensità pesa in modo non lineare (i²·⁵-ish) così
- *  una prova dura e corta non è più schiacciata da un lento lungo. */
+/**
+ * Le cinque zone di lavoro. Il moltiplicatore è per MINUTO: un'ora di lento e
+ * dieci minuti di ripetute non possono valere uguale, ma il bonus di seduta fa
+ * sì che una prova corta e dura resti una seduta importante e non una briciola.
+ */
+export interface XpZone { id: string; name: string; color: string; perMin: number; bonus: number; hint: string }
+export const XP_ZONES: XpZone[] = [
+  { id: "recovery", name: "Recupero", color: "#A78BFA", perMin: 0.35, bonus: 0, hint: "corsa rigenerante, sotto il lento" },
+  { id: "easy", name: "Lento", color: "#22D3EE", perMin: 0.6, bonus: 0, hint: "il fondo aerobico, la base di tutto" },
+  { id: "medium", name: "Medio", color: "#A3E635", perMin: 1.1, bonus: 0, hint: "andatura controllata, sotto soglia" },
+  { id: "threshold", name: "Soglia", color: "#FBBF24", perMin: 1.7, bonus: 35, hint: "tempo run e ritmo gara lunga" },
+  { id: "vo2", name: "Ripetute", color: "#F43F5E", perMin: 2.4, bonus: 70, hint: "VO2max, ripetute, prove a tutta" },
+];
+export const XP_BONUS = { pb: 70, race: 100, week35: 110, week50: 160 };
+
+/** Confini di zona: FC% quando c'è, altrimenti passo relativo al proprio meglio. */
+function zoneOf(r: Run, bestPaceSec: number | null): XpZone {
+  if (r.avg_hr_pct) {
+    const h = r.avg_hr_pct;
+    return XP_ZONES[h < 70 ? 0 : h < 79 ? 1 : h < 85 ? 2 : h < 91 ? 3 : 4];
+  }
+  const ps = paceToSec(r.avg_pace);
+  if (ps && bestPaceSec) {
+    const q = bestPaceSec / ps; // 1 = al proprio massimo sostenuto
+    return XP_ZONES[q < 0.68 ? 0 : q < 0.78 ? 1 : q < 0.86 ? 2 : q < 0.93 ? 3 : 4];
+  }
+  const i = intensityOf(r, bestPaceSec);
+  return XP_ZONES[i < 0.62 ? 0 : i < 0.72 ? 1 : i < 0.8 ? 2 : i < 0.88 ? 3 : 4];
+}
+
+/** XP di una corsa: minuti nella sua zona + km, più i bonus di seduta. */
 function runXp(r: Run, isPB: boolean, bestPaceSec: number | null): number {
   const dur = r.duration_minutes || 0, dist = r.distance_km || 0;
-  const i = intensityOf(r, bestPaceSec);
+  const z = zoneOf(r, bestPaceSec);
   const isRace = (r.run_type ?? "").toLowerCase() === "race" || !!r.event;
-  let xp = dur * (0.5 + 1.3 * Math.pow(i, 1.5)) + dist * 1.7;
-  if (isRace) xp += 100;
-  else if (isPB) xp += 70;
-  else if (i >= 0.85 && dur >= 15) xp += 30;
-  else if (i >= 0.78 && dur >= 15) xp += 15;
+  let xp = dur * z.perMin + dist * 3;
+  if (dur >= 12) xp += z.bonus;
+  if (isRace) xp += XP_BONUS.race;
+  else if (isPB) xp += XP_BONUS.pb;
   return Math.max(1, Math.round(xp));
+}
+
+/** Bonus di costanza: una settimana piena vale più della somma delle sue corse. */
+function weeklyBonusXp(runs: Run[]): number {
+  const byWeek: Record<string, number> = {};
+  for (const r of runs) {
+    const dt = new Date(r.date.slice(0, 10) + "T00:00:00Z");
+    dt.setUTCDate(dt.getUTCDate() - ((dt.getUTCDay() + 6) % 7));
+    const k = dt.toISOString().slice(0, 10);
+    byWeek[k] = (byWeek[k] || 0) + (r.distance_km || 0);
+  }
+  return Object.values(byWeek).reduce(
+    (s, km) => s + (km >= 50 ? XP_BONUS.week50 : km >= 35 ? XP_BONUS.week35 : 0), 0,
+  );
+}
+
+/** Righe della leggenda: esempi calcolati con la formula vera, sui suoi ritmi. */
+export interface XpExample { zone: XpZone; label: string; detail: string; xp: number }
+export function buildXpLegend(runs: Run[]): XpExample[] {
+  const best = bestSustainedPaceSec(runs) ?? 240;
+  const fmtPace = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec) % 60).padStart(2, "0")}`;
+  // un esempio per zona, al passo che quella zona vale PER LUI
+  const specs: { zi: number; q: number; km: number; label: (p: string) => string }[] = [
+    { zi: 4, q: 0.99, km: 3, label: (p) => `3 km di ripetute a ${p}/km` },
+    { zi: 3, q: 0.90, km: 8, label: (p) => `8 km in soglia a ${p}/km` },
+    { zi: 2, q: 0.82, km: 10, label: (p) => `10 km in medio a ${p}/km` },
+    { zi: 1, q: 0.73, km: 15, label: (p) => `15 km lenti a ${p}/km` },
+    { zi: 0, q: 0.63, km: 8, label: (p) => `8 km di recupero a ${p}/km` },
+  ];
+  return specs.map(({ zi, q, km, label }) => {
+    const zone = XP_ZONES[zi];
+    const paceSec = best / q;
+    const min = (paceSec * km) / 60;
+    const xp = Math.round(min * zone.perMin + km * 3 + (min >= 12 ? zone.bonus : 0));
+    return { zone, label: label(fmtPace(paceSec)), detail: `${Math.round(min)} min · ${zone.perMin} XP/min`, xp };
+  });
 }
 
 // ══ ENGINE ════════════════════════════════════════════════════════════════════
@@ -238,18 +417,22 @@ const EMPTY: LevelSystem = {
   ok: false, totalXp: 0, level: 1, maxLevel: MAX_LEVEL, title: levelTitle(1), tierIdx: 0,
   tier: { idx: 0, ...TIER_DEFS[0], levelStart: 1, levelEnd: 10, xpStart: 0, state: "current", unlockedLevels: 0 },
   levelFloor: 0, levelCeil: cumXpForLevel(2), intoLevel: 0, spanLevel: cumXpForLevel(2), pct: 0, xpToNext: cumXpForLevel(2), maxed: false,
-  tiers: [], levels: [], nextReward: null, goals: [], goalsAchieved: 0, currentVdot: 0, recent: [], stats: { totalKm: 0, totalRuns: 0, totalHours: 0 },
+  tiers: [], levels: [], nextReward: null, currentVdot: 0,
+  projection: { ok: false, vdotNow: 0, perMonth: 0, trend: "flat", samples: 0, history: [], points: [], horizons: [], milestones: [], hotDelta5k: 0 },
+  legend: [], weekBonusXp: 0, recent: [], stats: { totalKm: 0, totalRuns: 0, totalHours: 0 },
 };
 
 export function computeLevelSystem(runsIn: Run[], _profile: Profile | null): LevelSystem {
-  const runs = (runsIn ?? []).filter((r) => (r.distance_km || 0) > 0.3);
+  // stessa igiene dei badge: avvii per sbaglio e glitch GPS non sono allenamenti
+  const runs = (runsIn ?? []).filter((r) => (r.distance_km || 0) >= 0.5 && (r.duration_minutes || 0) >= 3);
   if (runs.length === 0) return EMPTY;
 
   const pb = pbIds(runs);
   const bestPaceSec = bestSustainedPaceSec(runs);
   let totalXp = 0, totalKm = 0, totalMin = 0;
   for (const r of runs) { totalXp += runXp(r, pb.has(r.id), bestPaceSec); totalKm += r.distance_km || 0; totalMin += r.duration_minutes || 0; }
-  totalXp = Math.round(totalXp);
+  const weekBonusXp = weeklyBonusXp(runs);
+  totalXp = Math.round(totalXp + weekBonusXp);
 
   const level = levelFromXp(totalXp);
   const maxed = level >= MAX_LEVEL;
@@ -270,11 +453,12 @@ export function computeLevelSystem(runsIn: Run[], _profile: Profile | null): Lev
   });
   const nextReward = tiers.find((t) => t.state === "locked") ?? null;
 
-  // obiettivi: TUTTI visibili — quelli già alla portata restano in lista con la
-  // spunta verde (nasconderli faceva "sparire" 5K Sub 20, 10K Sub 42, ecc.)
-  const currentVdot = estimateVdot(runs);
-  const goals = buildGoals(currentVdot, level, totalXp);
-  const goalsAchieved = goals.filter((g) => g.achieved).length;
+  // forma attuale + proiezione ("se continui così, fra 30 giorni…").
+  // Il VDOT mostrato è quello della proiezione (forma recente): un solo numero
+  // in pagina, altrimenti il chip in alto e il grafico raccontano storie diverse.
+  const projection = buildProjection(runs);
+  const currentVdot = projection.ok ? projection.vdotNow : estimateVdot(runs);
+  const legend = buildXpLegend(runs);
 
   // 100 livelli
   const levels: LevelNode[] = [];
@@ -293,7 +477,8 @@ export function computeLevelSystem(runsIn: Run[], _profile: Profile | null): Lev
   return {
     ok: true, totalXp, level, maxLevel: MAX_LEVEL, title: levelTitle(level), tierIdx, tier: tiers[tierIdx],
     levelFloor, levelCeil, intoLevel, spanLevel, pct, xpToNext, maxed,
-    tiers, levels, nextReward, goals, goalsAchieved, currentVdot: Math.round(currentVdot * 10) / 10, recent,
+    tiers, levels, nextReward, currentVdot: Math.round(currentVdot * 10) / 10,
+    projection, legend, weekBonusXp, recent,
     stats: { totalKm: Math.round(totalKm), totalRuns: runs.length, totalHours: Math.round(totalMin / 60) },
   };
 }
