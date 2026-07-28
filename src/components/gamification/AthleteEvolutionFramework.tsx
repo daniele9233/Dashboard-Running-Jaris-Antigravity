@@ -70,7 +70,9 @@ export function AthleteEvolutionFramework({ runs, profile }: { runs: Run[]; prof
   );
 
   return (
-    <div ref={rootRef} className="mx-auto max-w-6xl px-4 md:px-6 pt-20 pb-16 text-white">
+    // stessa larghezza delle altre pagine (Badge, Ranking, Runner DNA): con
+    // max-w-6xl questa restava una colonna stretta persa in mezzo allo schermo
+    <div ref={rootRef} className="mx-auto max-w-[1500px] px-4 md:px-6 pt-20 pb-16 text-white">
       <Hero sys={sys} />
 
       {/* colonna sinistra = dove stai andando · destra = come ci arrivi */}

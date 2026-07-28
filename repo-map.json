@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-28T06:46:18.759Z",
+  "generated_at": "2026-07-28T07:17:40.275Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2975,6 +2975,7 @@
         "garmin",
         "layout",
         "profile",
+        "runner-dna",
         "statistics",
         "strava",
         "training",
@@ -2992,9 +2993,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "877886ab47518ccc0afd4769ff802b8d08312bd3a2baca84abc916f9d521a18d",
-      "last_modified": "2026-07-28T06:46:18.760Z",
-      "size_bytes": 33346
+      "hash": "c9ebf704e849eceb2fe7534a49c4bd9195879f341166e1e4c089b264d02f24c1",
+      "last_modified": "2026-07-28T07:17:40.276Z",
+      "size_bytes": 33508
     },
     {
       "path": "src/components/gamification/evolutionEngine.test.ts",
