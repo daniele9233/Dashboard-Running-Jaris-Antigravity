@@ -16,7 +16,33 @@ import type { Session, TrainingPlanResponse, AdaptAdaptation } from "../types/ap
 import {
   KIKKO_SUB20_LEGEND, KIKKO_SUB20_DEFAULT_START,
   buildKikkoSub20Sessions, kikkoSub20RaceDate, kikkoSub20NormalizeStart,
+  tempBandForDate, romeTempForDate,
 } from "../data/kikkoSub20Plan";
+
+const BAND_COLOR: Record<string, string> = { ideale: "#22D3EE", media: "#A3E635", alta: "#F59E0B" };
+
+/**
+ * Perché il target di oggi non è quello di riferimento: la fascia di
+ * temperatura è la ragione, e va detta accanto alla seduta — non sepolta in
+ * fondo alla descrizione.
+ */
+function TempBandChip({ date }: { date: string }) {
+  const band = tempBandForDate(date);
+  const col = BAND_COLOR[band.id] ?? "#A3E635";
+  return (
+    <div className="mb-4 rounded-xl border px-3.5 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1"
+      style={{ borderColor: `${col}44`, background: `${col}0f` }}>
+      <span className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: col }}>
+        Fascia {band.label} · {band.range}
+      </span>
+      <span className="text-[11px] text-gray-400" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+        ~{romeTempForDate(date)}°C attesi
+        {band.paceAdjSec > 0 && ` · +${band.paceAdjSec}s/km sulla qualità · +${band.recAdjSec}s di recupero`}
+      </span>
+      <span className="text-[11px] text-gray-500 basis-full">{band.note}</span>
+    </div>
+  );
+}
 
 const SESSION_COLORS: Record<string, string> = {
   easy:      "#8B5CF6",
@@ -1663,6 +1689,8 @@ export function TrainingGrid() {
                 </div>
               )}
 
+
+              {showSub20 && <TempBandChip date={dayKey} />}
 
               <p className="text-gray-300 leading-relaxed mb-6">{display.description}</p>
 

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-28T07:29:44.174Z",
+  "generated_at": "2026-07-29T05:26:26.891Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -4274,9 +4274,9 @@
         "react",
         "react-i18next"
       ],
-      "hash": "85e033d6efe98cf752c135fbbe266b384b639747f22914c379d0463738d264b7",
-      "last_modified": "2026-07-27T17:50:22.711Z",
-      "size_bytes": 100488
+      "hash": "a3dc33533203d3437e1f08006c99ed2805e13232103daac8fc783b5542149358",
+      "last_modified": "2026-07-29T05:26:26.892Z",
+      "size_bytes": 101750
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -4487,9 +4487,9 @@
         "./kikkoSub20Plan",
         "vitest"
       ],
-      "hash": "b9b38aff9c9644fdd80bb27e12722ee81d7a3f09afaed98d3afe9545eb3c70c0",
-      "last_modified": "2026-07-27T06:02:15.057Z",
-      "size_bytes": 8153
+      "hash": "f5e0faccc9f024766628cf9447a02d5988e7027b9ca99d6d179465d345265c9f",
+      "last_modified": "2026-07-29T05:24:07.854Z",
+      "size_bytes": 9954
     },
     {
       "path": "src/data/kikkoSub20Plan.ts",
@@ -4507,18 +4507,24 @@
         "KIKKO_SUB20_LEGEND",
         "KIKKO_SUB20_META",
         "KIKKO_SUB20_SESSIONS",
+        "KIKKO_SUB20_TEMP_BANDS",
         "KIKKO_SUB20_WEEKLY_KM",
         "kikkoSub20ActualWeeklyKm",
         "kikkoSub20NormalizeStart",
-        "kikkoSub20RaceDate"
+        "kikkoSub20RaceDate",
+        "romeTempForDate",
+        "TempBand",
+        "tempBandForDate",
+        "tempBandForTemp",
+        "TempBandId"
       ],
       "routes": [],
       "imports": [
         "../types/api"
       ],
-      "hash": "02a33d8116360a65d2900b80d0f45e0fd9afcf54c69f6fa7beef522b4d83543b",
-      "last_modified": "2026-07-27T06:18:49.924Z",
-      "size_bytes": 16997
+      "hash": "5d3323ecf467336b02905c46dfa56d161bb0f90f0a186ddc3bba07c8b191801e",
+      "last_modified": "2026-07-29T05:25:25.035Z",
+      "size_bytes": 21870
     },
     {
       "path": "src/data/sub20Plan.ts",
@@ -5121,6 +5127,7 @@
       "purpose": "Shared utility module exporting trainingAdherence.test.",
       "touch_when": [
         "ai",
+        "strava",
         "training",
         "types"
       ],
@@ -5131,9 +5138,9 @@
         "./trainingAdherence",
         "vitest"
       ],
-      "hash": "f4f2a5c3ca491dc21c6e4fa9c8c42a9f87b559c3d575a8d6ff45bc4c39a1d412",
-      "last_modified": "2026-07-27T10:35:22.749Z",
-      "size_bytes": 7991
+      "hash": "d615fbff4c636f1a6b8b65154d4ce9ba9393ff073795eb0eb425e84c5f2ce842",
+      "last_modified": "2026-07-29T05:24:50.243Z",
+      "size_bytes": 10745
     },
     {
       "path": "src/utils/trainingAdherence.ts",
@@ -5142,6 +5149,7 @@
       "touch_when": [
         "activities",
         "ai",
+        "strava",
         "training",
         "types"
       ],
@@ -5162,9 +5170,9 @@
       "imports": [
         "../types/api"
       ],
-      "hash": "347baa0e17286dfaab032c1d7c0dce262f6f06358a149e352c044117276cc7f8",
-      "last_modified": "2026-07-27T10:34:40.654Z",
-      "size_bytes": 14341
+      "hash": "fb1f93ada04211e1aae51c9259d6cc102578f504ff422f1d85e012131dfc280b",
+      "last_modified": "2026-07-29T05:18:43.888Z",
+      "size_bytes": 16469
     },
     {
       "path": "src/utils/weather.ts",

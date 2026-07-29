@@ -179,6 +179,12 @@ export function evaluateSession(session: Session, run: Run | null): SessionEval 
     const lo = (p.repDistM / 1000) * 0.75, hi = (p.repDistM / 1000) * 1.3;
     const m = work.filter((w) => w.km >= lo && w.km <= hi);
     if (m.length) matched = m;
+    else if (work.length === 1 && work[0].km > (p.repDistM / 1000) * 2) {
+      // Un solo giro lungo quanto tutta la seduta: dentro ci sono ripetute e
+      // recuperi mediati insieme. Confrontare quella media col passo delle rep
+      // dava "1/6 a 5:52" su una seduta corsa a 3:53. Meglio dire che non si sa.
+      return { ...base, verdict: 'unrated', repsDone: 0, actualPaceSec: null, deltaPct: null, fadePct: null };
+    }
   }
 
   const repsDone = p.kind === 'tempo' ? (matched.length ? 1 : 0) : matched.length;
@@ -319,17 +325,56 @@ export function diagnose(evals: SessionEval[]): Diagnosis {
 
 // ─── Aggregatore: sessioni del piano + corse reali ───────────────────────────
 
-/** Abbina ogni seduta del piano alla corsa dello stesso giorno e la valuta. */
+/**
+ * Fonde le corse di uno stesso giorno in un'unica seduta.
+ *
+ * Sulle ripetute capita di fermare e far ripartire l'orologio a ogni prova:
+ * Strava le salva come attività separate e la seduta arriva spezzata in sei
+ * pezzi. Prendendo solo "la corsa più lunga" del giorno se ne valutava uno solo
+ * — da qui il famigerato "1/6". Qui i giri vengono rimessi in fila; un'attività
+ * senza giri vale come un giro unico, che è esattamente cosa rappresenta.
+ */
+function mergeDayRuns(dayRuns: Run[]): Run {
+  const sorted = [...dayRuns].sort((a, b) =>
+    (a.start_date_local ?? a.date).localeCompare(b.start_date_local ?? b.date));
+  const main = sorted.reduce((best, r) => ((r.distance_km ?? 0) > (best.distance_km ?? 0) ? r : best), sorted[0]);
+  if (sorted.length === 1) return main;
+
+  const laps: Lap[] = [];
+  for (const r of sorted) {
+    const own = r.laps ?? [];
+    if (own.length) {
+      for (const l of own) laps.push({ ...l, lap_index: laps.length + 1 });
+    } else if ((r.distance_km ?? 0) > 0 && (r.duration_minutes ?? 0) > 0) {
+      const distance = r.distance_km * 1000, moving = r.duration_minutes * 60;
+      laps.push({
+        lap_index: laps.length + 1, distance, moving_time: moving, elapsed_time: moving,
+        average_speed: distance / moving, average_heartrate: r.avg_hr ?? null,
+      });
+    }
+  }
+  return {
+    ...main,
+    laps,
+    distance_km: sorted.reduce((s, r) => s + (r.distance_km ?? 0), 0),
+    duration_minutes: sorted.reduce((s, r) => s + (r.duration_minutes ?? 0), 0),
+  };
+}
+
+/** Abbina ogni seduta del piano alle corse dello stesso giorno e la valuta. */
 export function evaluatePlan(sessions: Session[], runs: Run[], today = new Date()): SessionEval[] {
   const todayStr = today.toISOString().slice(0, 10);
-  const byDate = new Map<string, Run>();
+  const grouped = new Map<string, Run[]>();
   for (const r of runs) {
     const d = r.date?.slice(0, 10);
     if (!d) continue;
-    // Se in un giorno ci sono più corse tiene la più lunga: è la seduta.
-    const prev = byDate.get(d);
-    if (!prev || (r.distance_km ?? 0) > (prev.distance_km ?? 0)) byDate.set(d, r);
+    // fuori i falsi avvii: 200 m in un minuto non fanno parte della seduta
+    if ((r.distance_km ?? 0) < 0.2 || (r.duration_minutes ?? 0) < 0.5) continue;
+    const list = grouped.get(d);
+    if (list) list.push(r); else grouped.set(d, [r]);
   }
+  const byDate = new Map<string, Run>();
+  for (const [d, list] of grouped) byDate.set(d, mergeDayRuns(list));
   return sessions
     .filter((s) => s.type !== 'rest' && s.date && s.date <= todayStr)
     .sort((a, b) => b.date.localeCompare(a.date))

@@ -7,6 +7,7 @@ import {
   kikkoSub20RaceDate,
   buildKikkoSub20Sessions,
   KIKKO_SUB20_DEFAULT_START,
+  tempBandForDate,
 } from "./kikkoSub20Plan";
 
 /**
@@ -16,6 +17,10 @@ import {
  */
 
 const RACE_PACE = "4:00";
+const paceSec = (p: string) => {
+  const [m, s] = p.split(":").map(Number);
+  return m * 60 + s;
+};
 
 function weekOf(index: number): typeof KIKKO_SUB20_SESSIONS {
   const [y, m, d] = KIKKO_SUB20_DEFAULT_START.split("-").map(Number);
@@ -79,11 +84,22 @@ describe("kikkoSub20 — intensità", () => {
     }
   });
 
-  it("gli intervalli brevi vanno tutti a ritmo gara", () => {
-    const paces = new Set(
-      KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals").map((s) => s.target_pace),
-    );
-    expect([...paces]).toEqual([RACE_PACE]);
+  it("gli intervalli vanno a ritmo gara corretto per la temperatura del giorno", () => {
+    const base = paceSec(RACE_PACE);
+    for (const s of KIKKO_SUB20_SESSIONS.filter((x) => x.type === "intervals")) {
+      const band = tempBandForDate(s.date);
+      expect(paceSec(s.target_pace!), `${s.date} · ${s.title}`).toBe(base + band.paceAdjSec);
+    }
+  });
+
+  it("il piano rallenta d'estate e si stringe avvicinandosi alla gara", () => {
+    const hard = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals");
+    const summer = paceSec(hard[0].target_pace!);              // fine luglio
+    const autumn = paceSec(hard[hard.length - 1].target_pace!); // fine settembre
+    const race = paceSec(KIKKO_SUB20_SESSIONS[KIKKO_SUB20_SESSIONS.length - 1].target_pace!);
+    expect(summer, "la prima seduta cade in piena estate").toBeGreaterThan(paceSec(RACE_PACE));
+    expect(autumn, "a settembre il termometro scende").toBeLessThan(summer);
+    expect(race, "il giorno di gara è il target più stretto del piano").toBeLessThanOrEqual(autumn);
   });
 
   it("la seduta 1 progredisce da 6×600 a 10×800", () => {
@@ -93,9 +109,9 @@ describe("kikkoSub20 — intensità", () => {
   });
 
   it("il taper tiene il ritmo gara ma dimezza le ripetute", () => {
-    const titles = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals").map((s) => s.title);
-    expect(titles[9]).toContain("5×800");
-    expect(titles[9]).toContain(RACE_PACE);
+    const taper = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals")[9];
+    expect(taper.title).toContain("5×800");
+    expect(paceSec(taper.target_pace!)).toBe(paceSec(RACE_PACE) + tempBandForDate(taper.date).paceAdjSec);
   });
 
   it("ogni seduta di ripetute dichiara il recupero nel titolo", () => {
@@ -105,21 +121,35 @@ describe("kikkoSub20 — intensità", () => {
     }
   });
 
-  it("il recupero degli intervalli sta fra 1:0.6 e 1:1 del lavoro", () => {
-    // Daniels: sul lavoro a ritmo intervallo il recupero non deve superare la
-    // durata della ripetuta, altrimenti diventa lavoro di velocità pura.
-    // Sotto ~0.6 la seduta non si regge al ritmo gara richiesto.
-    const hard = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals");
-    for (const s of hard) {
+  it("il recupero degli intervalli resta proporzionato al lavoro", () => {
+    // Daniels: sul lavoro a ritmo intervallo il recupero non deve superare di
+    // molto la durata della ripetuta, altrimenti diventa velocità pura; sotto
+    // ~0.6 la seduta non si regge al ritmo richiesto. Col caldo il recupero si
+    // allunga di proposito, quindi il tetto sale con la fascia.
+    for (const s of KIKKO_SUB20_SESSIONS.filter((x) => x.type === "intervals")) {
       const m = s.title.match(/(\d+)×(\d+) m .*rec (\d+):(\d\d)/);
       expect(m, s.title).not.toBeNull();
       const meters = Number(m![2]);
       const recSec = Number(m![3]) * 60 + Number(m![4]);
-      const workSec = (meters / 1000) * 240; // 240 s/km = ritmo gara
+      const band = tempBandForDate(s.date);
+      const workSec = (meters / 1000) * (paceSec(RACE_PACE) + band.paceAdjSec);
       const ratio = recSec / workSec;
+      const ceiling = 1.05 + band.recAdjSec / workSec;
       expect(ratio, `${s.title} → 1:${ratio.toFixed(2)}`).toBeGreaterThanOrEqual(0.6);
-      expect(ratio, `${s.title} → 1:${ratio.toFixed(2)}`).toBeLessThanOrEqual(1.05);
+      expect(ratio, `${s.title} → 1:${ratio.toFixed(2)}`).toBeLessThanOrEqual(ceiling);
     }
+  });
+
+  it("la fascia di temperatura segue il calendario, non il caso", () => {
+    expect(tempBandForDate("2026-08-04").id, "agosto a Roma").toBe("alta");
+    expect(tempBandForDate("2026-10-04").id, "gara di ottobre").toBe("media");
+    expect(tempBandForDate("2026-01-15").id, "gennaio").toBe("ideale");
+  });
+
+  it("le sedute d'estate spiegano perché il target non è 4:00", () => {
+    const hot = KIKKO_SUB20_SESSIONS.find((s) => s.type === "intervals" && s.date.startsWith("2026-08"))!;
+    expect(hot.description).toContain("Riferimento a freddo 4:00/km");
+    expect(hot.description).toMatch(/fascia alta/);
   });
 
   it("dentro ogni blocco il recupero si accorcia", () => {

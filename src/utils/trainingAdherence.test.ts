@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parsePrescription, evaluateSession, diagnose, type SessionEval } from './trainingAdherence';
+import { parsePrescription, evaluateSession, evaluatePlan, diagnose, type SessionEval } from './trainingAdherence';
 import type { Run, Session, Lap } from '../types/api';
 
 // ─── helper di comodo ────────────────────────────────────────────────────────
@@ -181,5 +181,66 @@ describe('diagnose', () => {
   it('i lenti non entrano nel giudizio sul target', () => {
     const d = diagnose([ev({ kind: 'easy', verdict: 'on_target' }), ev({ kind: 'easy', verdict: 'on_target' })]);
     expect(d.considered).toBe(0);
+  });
+});
+
+// ─── LA SEDUTA REALE: 6×600 spezzata dall'orologio ───────────────────────────
+
+describe('sedute registrate a pezzi', () => {
+  const sixByHundreds = sess(
+    '6×600 m @ 4:00 · rec 2:20',
+    '2 km di riscaldamento + 3 allunghi, poi 6×600 m a 4:00/km con 2:20 di jog lento.',
+    '4:00',
+  );
+
+  /** Attività Strava senza giri: distanza e durata di una singola prova. */
+  const activity = (km: number, minutes: number, start: string): Run =>
+    ({
+      id: `a${start}`, date: '2026-08-11', start_date_local: `2026-08-11T${start}:00Z`,
+      distance_km: km, duration_minutes: minutes, laps: [], temperature: 24,
+    } as unknown as Run);
+
+  it('una sola traccia che mischia lavoro e recupero non viene giudicata a caso', () => {
+    // Un giro unico da 4,8 km a 5:52/km: dentro ci sono le rep e i recuperi.
+    // Prima diventava "1/6 a 5:52" su una seduta corsa a 3:53.
+    const e = evaluateSession(sixByHundreds, run([lap(4800, 4800 * 0.352)]));
+    expect(e.verdict).toBe('unrated');
+    expect(e.repsDone).toBe(0);
+    expect(e.actualPaceSec).toBeNull();
+  });
+
+  it('legge i parziali veri: due prove da 600 con i recuperi in mezzo', () => {
+    // I giri della foto: 600@3:53 · 350 rec · 600@3:53 · 360 rec · 120 finale
+    const e = evaluateSession(sixByHundreds, run([
+      lap(600, 140), lap(350, 140), lap(600, 140), lap(360, 140), lap(120, 28),
+    ]));
+    expect(e.repsDone).toBe(2);
+    expect(e.repsPrescribed).toBe(6);
+    expect(Math.round(e.actualPaceSec!)).toBe(233);       // 3:53/km, non 5:52
+    expect(e.deltaPct!).toBeLessThan(0);                  // più veloce del target
+    expect(e.verdict).toBe('not_completed');              // due prove su sei
+  });
+
+  it('sei attività separate sono una seduta sola', () => {
+    const day = [
+      activity(0.6, 2.33, '08:00'), activity(0.35, 2.33, '08:03'),
+      activity(0.6, 2.33, '08:06'), activity(0.35, 2.33, '08:09'),
+      activity(0.6, 2.33, '08:12'), activity(0.35, 2.33, '08:15'),
+      activity(0.6, 2.33, '08:18'), activity(0.35, 2.33, '08:21'),
+      activity(0.6, 2.33, '08:24'), activity(0.35, 2.33, '08:27'),
+      activity(0.6, 2.33, '08:30'),
+    ];
+    const [e] = evaluatePlan([sixByHundreds], day, new Date('2026-08-20'));
+    expect(e.repsDone, 'sei prove da 600 m, non una').toBe(6);
+    expect(e.verdict).toBe('on_target');
+  });
+
+  it('gli avvii per sbaglio non contano come prove', () => {
+    const day = [
+      activity(0.6, 2.33, '08:00'), activity(0.02, 0.1, '08:01'),
+      activity(0.6, 2.33, '08:06'), activity(0.01, 0.05, '08:07'),
+    ];
+    const [e] = evaluatePlan([sixByHundreds], day, new Date('2026-08-20'));
+    expect(e.repsDone).toBe(2);
   });
 });

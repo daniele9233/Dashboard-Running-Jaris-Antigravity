@@ -74,10 +74,107 @@ export const KIKKO_SUB20_META = {
   startDate: "2026-07-27", // lunedì di riferimento della settimana 1
 };
 
-const RG5K = "4:00";   // ritmo gara 5K
+const RG5K = "4:00";   // ritmo gara 5K, a temperatura ideale
 const SOGLIA = "4:18"; // soglia ~RG + 18 sec/km
 const EASY = "5:40";
 const LONG = "5:30";
+
+/* ── TEMPERATURA ────────────────────────────────────────────────────────────
+ * I ritmi scritti sopra valgono al fresco. A 26°C nessuno chiude 6×600 a
+ * 4:00/km: il sangue va alla pelle a raffreddare invece che ai muscoli, e
+ * inseguire un target scritto per novembre a luglio significa solo fallire la
+ * seduta o cuocersi. Il piano quindi si scrive nella temperatura del giorno.
+ *
+ * Il rallentamento segue il modello di Ely (2007), lo stesso del generatore di
+ * piani del backend: nullo fino a 15°C, +1,2 s/km per grado fino a 22°C, +1,8
+ * fino a 28°C, +2,5 oltre. Applicato al centro di ogni fascia.
+ */
+export type TempBandId = "ideale" | "media" | "alta";
+export interface TempBand {
+  id: TempBandId;
+  label: string;
+  range: string;
+  /** Secondi/km da aggiungere ai ritmi di qualità. */
+  paceAdjSec: number;
+  /** Secondi/km sui lenti: il caldo pesa anche lì, ma meno. */
+  easyAdjSec: number;
+  /** Secondi in più di recupero fra le ripetute. */
+  recAdjSec: number;
+  note: string;
+}
+
+export const KIKKO_SUB20_TEMP_BANDS: TempBand[] = [
+  {
+    id: "ideale", label: "Ideale", range: "5-11°C",
+    paceAdjSec: 0, easyAdjSec: 0, recAdjSec: 0,
+    note: "Condizioni da primato: i ritmi del piano sono scritti qui.",
+  },
+  {
+    id: "media", label: "Media", range: "12-19°C",
+    paceAdjSec: 3, easyAdjSec: 5, recAdjSec: 10,
+    note: "Si perde qualche secondo al km, il recupero si allunga di dieci.",
+  },
+  {
+    id: "alta", label: "Alta", range: "20-30°C",
+    paceAdjSec: 16, easyAdjSec: 20, recAdjSec: 30,
+    note: "La qualità va spostata all'alba. Se il passo scivola oltre il target, chiudi la serie una ripetuta prima: il caldo è già lo stimolo.",
+  },
+];
+
+/**
+ * Temperatura mese per mese, mediana delle SUE corse a Roma (485 uscite con
+ * dato meteo, all'ora in cui si allena davvero). Meglio di una media climatica
+ * generica: chi corre alle 8 del mattino non vive i 33°C del pomeriggio.
+ * Dicembre e gennaio hanno pochi dati e sono allineati a febbraio/novembre.
+ */
+const ROME_MONTH_C = [5, 7, 10, 12, 15, 22, 21, 23, 16, 13, 9, 6];
+
+export function romeTempForDate(iso: string): number {
+  const m = Number(iso.slice(5, 7));
+  return ROME_MONTH_C[Math.min(11, Math.max(0, m - 1))] ?? 18;
+}
+
+export function tempBandForTemp(tempC: number): TempBand {
+  if (tempC <= 11) return KIKKO_SUB20_TEMP_BANDS[0];
+  if (tempC <= 19) return KIKKO_SUB20_TEMP_BANDS[1];
+  return KIKKO_SUB20_TEMP_BANDS[2];
+}
+
+/** Fascia attesa nel giorno della seduta, dalle medie climatiche di Roma. */
+export function tempBandForDate(iso: string): TempBand {
+  return tempBandForTemp(romeTempForDate(iso));
+}
+
+const paceToSec = (p: string): number => {
+  const [m, s] = p.split(":").map(Number);
+  return m * 60 + s;
+};
+const secToPace = (sec: number): string => {
+  const total = Math.round(sec);           // arrotonda il totale: mai ":60"
+  return `${Math.floor(total / 60)}:${pad(total % 60)}`;
+};
+const shiftPace = (p: string, sec: number): string => secToPace(paceToSec(p) + sec);
+
+/** I ritmi del giorno, già corretti per la fascia. */
+interface Paces { band: TempBand; rg: string; soglia: string; easy: string; long: string; tempC: number }
+
+function pacesFor(iso: string): Paces {
+  const tempC = romeTempForDate(iso);
+  const band = tempBandForTemp(tempC);
+  return {
+    band, tempC,
+    rg: shiftPace(RG5K, band.paceAdjSec),
+    soglia: shiftPace(SOGLIA, band.paceAdjSec),
+    easy: shiftPace(EASY, band.easyAdjSec),
+    long: shiftPace(LONG, band.easyAdjSec),
+  };
+}
+
+/** Frase che spiega perché il ritmo del giorno non è quello di riferimento. */
+function heatNote(p: Paces, base: string, adjusted: string): string {
+  if (p.band.paceAdjSec === 0) return "";
+  return ` Riferimento a freddo ${base}/km: oggi si corre a ${adjusted} perché a Roma in questo periodo si trovano ~${p.tempC}°C (fascia ${p.band.label.toLowerCase()}, ${p.band.range}).`;
+}
 
 const IT_DAYS = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"];
 
@@ -122,6 +219,8 @@ export function kikkoSub20NormalizeStart(iso?: string | null): string {
 }
 
 type Cell = { title: string; dist: number; pace: string | null; desc: string };
+/** Una seduta si scrive solo quando si sa che temperatura farà quel giorno. */
+type CellFn = (p: Paces) => Cell;
 
 /** Le quattro uscite, per offset dal lunedì della settimana. */
 const SLOTS = [
@@ -137,25 +236,27 @@ type WeekDef = {
   /** Volume atteso, verificato dai test contro la somma reale delle sedute. */
   totalKm: number;
   /** [qualità 1, qualità 2, lenta, lungo] */
-  cells: [Cell, Cell, Cell, Cell];
+  cells: [CellFn, CellFn, CellFn, CellFn];
 };
 
-const easy = (dist: number, extra = ""): Cell => ({
+const easy = (dist: number, extra = ""): CellFn => (p) => ({
   title: `Lenta ${dist} km`,
   dist,
-  pace: EASY,
+  pace: p.easy,
   desc:
-    `${dist} km davvero lenti (5:30-5:55). Esiste per sostenere le due sedute di qualità, non per aggiungere ` +
-    `fatica: devi poter parlare a frasi intere dall'inizio alla fine.${extra ? " " + extra : ""}`,
+    `${dist} km davvero lenti (${p.easy}-${shiftPace(p.easy, 15)}). Esiste per sostenere le due sedute di ` +
+    `qualità, non per aggiungere fatica: devi poter parlare a frasi intere dall'inizio alla fine.` +
+    `${extra ? " " + extra : ""}`,
 });
 
-const longRun = (dist: number, extra = ""): Cell => ({
+const longRun = (dist: number, extra = ""): CellFn => (p) => ({
   title: `Lungo ${dist} km`,
   dist,
-  pace: LONG,
+  pace: p.long,
   desc:
-    `${dist} km in conversazione (5:20-5:45). Base aerobica: è la cilindrata che regge le ripetute del ` +
-    `martedì. Su quattro uscite il lungo porta molto volume, quindi vai piano davvero.${extra ? " " + extra : ""}`,
+    `${dist} km in conversazione (${p.long}-${shiftPace(p.long, 15)}). Base aerobica: è la cilindrata che regge ` +
+    `le ripetute del martedì. Su quattro uscite il lungo porta molto volume, quindi vai piano davvero.` +
+    `${extra ? " " + extra : ""}`,
 });
 
 /**
@@ -163,49 +264,53 @@ const longRun = (dist: number, extra = ""): Cell => ({
  * Il recupero è nel titolo, non solo nella descrizione: senza, la seduta non è
  * eseguibile guardando il calendario.
  */
-const reps = (n: number, meters: number, dist: number, rec: string, extra = ""): Cell => {
-  const workSec = (meters / 1000) * 240; // 240 s/km = ritmo gara
-  const [rm, rs] = rec.split(":").map(Number);
-  const ratio = ((rm * 60 + rs) / workSec).toFixed(2);
+const reps = (n: number, meters: number, dist: number, rec: string, extra = ""): CellFn => (p) => {
+  const workSec = (meters / 1000) * paceToSec(p.rg);
+  const recSec = paceToSec(rec) + p.band.recAdjSec;
+  const recStr = secToPace(recSec);
+  const ratio = (recSec / workSec).toFixed(2);
   return {
-    title: `${n}×${meters} m @ ${RG5K} · rec ${rec}`,
+    title: `${n}×${meters} m @ ${p.rg} · rec ${recStr}`,
     dist,
-    pace: RG5K,
+    pace: p.rg,
     desc:
-      `2 km di riscaldamento + 3 allunghi, poi ${n}×${meters} m a ${RG5K}/km con ${rec} di jog lento fra una ` +
-      `ripetuta e l'altra, 1,5 km di defaticamento. Ogni ripetuta dura circa ` +
-      `${Math.floor(workSec / 60)}:${pad(Math.round(workSec % 60))}, quindi il rapporto lavoro:recupero è 1:${ratio}. ` +
-      `Passo COSTANTE su tutte: se l'ultima è la più veloce hai fatto centro, se la prima è la più veloce sei ` +
-      `partito troppo forte.${extra ? " " + extra : ""}`,
+      `2 km di riscaldamento + 3 allunghi, poi ${n}×${meters} m a ${p.rg}/km con ${recStr} di jog lento fra una ` +
+      `ripetuta e l'altra, 1,5 km di defaticamento. Ogni ripetuta dura circa ${secToPace(workSec)}, quindi il ` +
+      `rapporto lavoro:recupero è 1:${ratio}. Passo COSTANTE su tutte: se l'ultima è la più veloce hai fatto ` +
+      `centro, se la prima è la più veloce sei partito troppo forte.` +
+      `${heatNote(p, RG5K, p.rg)}${extra ? " " + extra : ""}`,
   };
 };
 
 /** Qualità 2 — resistenza al ritmo gara, settimane dispari. */
-const longReps = (rec: string, dist: number, extra = ""): Cell => {
-  const [rm, rs] = rec.split(":").map(Number);
-  const ratio = ((rm * 60 + rs) / 480).toFixed(2); // 2 km a ritmo gara = 8:00
+const longReps = (rec: string, dist: number, extra = ""): CellFn => (p) => {
+  const workSec = 2 * paceToSec(p.rg);
+  const recSec = paceToSec(rec) + p.band.recAdjSec;
+  const recStr = secToPace(recSec);
+  const ratio = (recSec / workSec).toFixed(2);
   return {
-    title: `3×2 km @ ${RG5K} · rec ${rec}`,
+    title: `3×2 km @ ${p.rg} · rec ${recStr}`,
     dist,
-    pace: RG5K,
+    pace: p.rg,
     desc:
-      `2 km di riscaldamento, poi 3×2 km a ${RG5K}/km con ${rec} di recupero fra una serie e l'altra, 1,5 km ` +
-      `di defaticamento. Ogni serie dura 8:00, quindi il rapporto lavoro:recupero è 1:${ratio}: volutamente ` +
+      `2 km di riscaldamento, poi 3×2 km a ${p.rg}/km con ${recStr} di recupero fra una serie e l'altra, 1,5 km ` +
+      `di defaticamento. Ogni serie dura ${secToPace(workSec)}, quindi il rapporto lavoro:recupero è 1:${ratio}: volutamente ` +
       `stretto, perché qui non si cerca il VO2max ma la capacità di RIPRENDERE il ritmo gara con le gambe già ` +
       `cariche — quello che succede al terzo chilometro di gara. Torna ogni 14 giorni con il recupero più ` +
-      `corto.${extra ? " " + extra : ""}`,
+      `corto.${heatNote(p, RG5K, p.rg)}${extra ? " " + extra : ""}`,
   };
 };
 
 /** Qualità 2 — soglia, settimane pari. */
-const tempo = (minutes: number, dist: number, extra = ""): Cell => ({
-  title: `Soglia ${minutes}′ @ ${SOGLIA}`,
+const tempo = (minutes: number, dist: number, extra = ""): CellFn => (p) => ({
+  title: `Soglia ${minutes}′ @ ${p.soglia}`,
   dist,
-  pace: SOGLIA,
+  pace: p.soglia,
   desc:
-    `2 km facili + allunghi, poi ${minutes}′ continui a ${SOGLIA}/km senza pause, 1,5 km di defaticamento. ` +
+    `2 km facili + allunghi, poi ${minutes}′ continui a ${p.soglia}/km senza pause, 1,5 km di defaticamento. ` +
     `Soglia = sforzo che potresti quasi tenere per un'ora. Nelle settimane senza 3×2 km è questa la seconda ` +
-    `seduta di qualità: sostiene il ritmo gara senza un secondo stimolo VO2max da recuperare.${extra ? " " + extra : ""}`,
+    `seduta di qualità: sostiene il ritmo gara senza un secondo stimolo VO2max da recuperare.` +
+    `${heatNote(p, SOGLIA, p.soglia)}${extra ? " " + extra : ""}`,
 });
 
 const WEEKS: WeekDef[] = [
@@ -301,38 +406,44 @@ const WEEKS: WeekDef[] = [
     mon: "2026-09-28", totalKm: 28,
     cells: [
       reps(5, 800, 9, "3:15", "TAPER (−58% sul picco). Metà delle ripetute del picco, stesso ritmo gara e recupero PIÙ LUNGO del solito: qui l'obiettivo è la freschezza, non lo stimolo. L'intensità si tiene, il volume no."),
-      {
-        title: `Sblocco 2×1000 @ ${RG5K} · rec 3:00`,
+      (p) => ({
+        title: `Sblocco 2×1000 @ ${p.rg} · rec 3:00`,
         dist: 7,
-        pace: RG5K,
+        pace: p.rg,
         desc:
-          `2 km di riscaldamento, 2×1000 a ${RG5K}/km con 3′ di recupero, defaticamento sciolto. Ultimo richiamo ` +
+          `2 km di riscaldamento, 2×1000 a ${p.rg}/km con 3′ di recupero, defaticamento sciolto. Ultimo richiamo ` +
           `del passo a gambe fresche: DEVE sembrare facile. Se sembra dura non è un problema di forma, è che il ` +
-          `taper non ha ancora finito il suo lavoro. Da oggi: idratazione, carboidrati, sonno.`,
-      },
-      {
+          `taper non ha ancora finito il suo lavoro. Da oggi: idratazione, carboidrati, sonno.` +
+          `${heatNote(p, RG5K, p.rg)}`,
+      }),
+      (p) => ({
         title: "Sciolto 5 km + 4 allunghi",
         dist: 5,
-        pace: EASY,
+        pace: p.easy,
         desc:
           "5 km sciolti + 4 allunghi progressivi da 80 m. Rifinitura: scarica le gambe e tiene sveglio il " +
           "sistema nervoso. Controlla il meteo di domani e punta all'orario più fresco.",
-      },
-      {
+      }),
+      (p) => ({
+        // il titolo resta l'obiettivo: la previsione onesta sta nel testo
         title: "🏁 GARA 5K · sub 20:00",
         dist: 7,
-        pace: RG5K,
+        pace: p.rg,
         desc:
-          "GIORNO GARA. Riscaldamento 15′ + 4 allunghi (i 7 km comprendono riscaldamento e defaticamento). " +
-          "Strategia a negativo: 4:01-4:02 il primo km (MAI più veloce), 4:00 nei km centrali, dal quarto km " +
-          "svuota tutto. Split ideale 4:02 / 4:00 / 4:00 / 3:59 / a tutta = 19:5x. Con 5-11°C il motore vale la " +
-          "sub-20; sopra i 22°C il caldo si porta via 3-5 sec/km, valuta di spostare di qualche giorno.",
-      },
+          `GIORNO GARA. Riscaldamento 15′ + 4 allunghi (i 7 km comprendono riscaldamento e defaticamento). ` +
+          `Strategia a negativo: ${shiftPace(p.rg, 2)} il primo km (MAI più veloce), ${p.rg} nei km centrali, ` +
+          `dal quarto km svuota tutto. Con 5-11°C il motore vale la sub-20 (4:00/km); a ~${p.tempC}°C il passo ` +
+          `realistico è ${p.rg}/km, cioè ${secToPace(paceToSec(p.rg) * 5)}. Se il meteo del giorno è più fresco ` +
+          `del previsto, il tempo scende con lui: guarda la temperatura la mattina stessa e scegli il passo lì.`,
+      }),
     ],
   },
 ];
 
-function mk(date: string, type: string, c: Cell): Session {
+function mk(date: string, type: string, cell: CellFn): Session {
+  // La seduta si scrive sulla temperatura attesa QUEL giorno: le ripetute di
+  // agosto e quelle di ottobre non possono avere lo stesso target.
+  const c = cell(pacesFor(date));
   return {
     day: itDayName(date),
     date,
@@ -347,11 +458,6 @@ function mk(date: string, type: string, c: Cell): Session {
   };
 }
 
-/** Piano ancorato alla partenza di default. */
-export const KIKKO_SUB20_SESSIONS: Session[] = WEEKS.flatMap((w) =>
-  w.cells.map((cell, i) => mk(addDays(w.mon, SLOTS[i].offset), SLOTS[i].type, cell)),
-);
-
 export const KIKKO_SUB20_DEFAULT_START = KIKKO_SUB20_META.startDate;
 
 /** Giorni fra il lunedì della settimana 1 e la gara: 9 settimane + domenica. */
@@ -361,12 +467,13 @@ const KIKKO_RACE_OFFSET_DAYS = (KIKKO_SUB20_META.weeks - 1) * 7 + 6;
 export function buildKikkoSub20Sessions(startDate?: string | null): Session[] {
   const start = kikkoSub20NormalizeStart(startDate);
   const delta = daysBetween(KIKKO_SUB20_DEFAULT_START, start);
-  if (delta === 0) return KIKKO_SUB20_SESSIONS;
-  return KIKKO_SUB20_SESSIONS.map((s) => {
-    const date = addDays(s.date, delta);
-    return { ...s, date, day: itDayName(date) };
-  });
+  return WEEKS.flatMap((w) =>
+    w.cells.map((cell, i) => mk(addDays(w.mon, SLOTS[i].offset + delta), SLOTS[i].type, cell)),
+  );
 }
+
+/** Piano ancorato alla partenza di default. */
+export const KIKKO_SUB20_SESSIONS: Session[] = buildKikkoSub20Sessions();
 
 /** Data della gara (ultima seduta) per una data partenza. */
 export function kikkoSub20RaceDate(startDate?: string | null): string {
@@ -378,7 +485,9 @@ export const KIKKO_SUB20_WEEKLY_KM: number[] = WEEKS.map((w) => w.totalKm);
 
 /** Somma reale dei km per settimana, ricavata dalle sedute. */
 export function kikkoSub20ActualWeeklyKm(): number[] {
-  return WEEKS.map((w) => w.cells.reduce((sum, c) => sum + c.dist, 0));
+  // le distanze non dipendono dalla temperatura: basta una fascia qualsiasi
+  const ref = pacesFor(WEEKS[0].mon);
+  return WEEKS.map((w) => w.cells.reduce((sum, c) => sum + c(ref).dist, 0));
 }
 
 export const KIKKO_SUB20_LEGEND: { color: string; label: string; opacity?: number }[] = [
