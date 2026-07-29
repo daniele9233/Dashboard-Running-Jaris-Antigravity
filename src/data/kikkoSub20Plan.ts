@@ -1,96 +1,144 @@
 import type { Session } from "../types/api";
 
 /**
- * kikkoSub20 — piano 5K sub-20:00 su 10 settimane.
+ * kikkoSub20 — piano 5K su 10 settimane.
  *
- * Impostazione richiesta dall'atleta:
- *  · QUATTRO uscite a settimana: 2 di qualità + 2 lente.
- *  · Settimana 1 a 32 km, poi sempre a salire con la regola del 10%.
- *  · Seduta 1 — intervalli brevi: da 6×600 m a 10×800 m, sempre a ritmo gara 5K.
- *  · Seduta 2 — resistenza nelle settimane dispari: 3×2 km, con il recupero che
- *    si accorcia ogni 14 giorni. Nelle settimane pari la seconda seduta è una
- *    soglia: tiene il conto di "due qualità" senza aggiungere un secondo
- *    stimolo VO2max, che a questo volume non si recupera.
- *  · Taper negli ultimi 7-10 giorni: volume −58%, intensità INVARIATA a ritmo
- *    gara ma con molte meno ripetizioni.
+ * ── DA DOVE VENGONO I RITMI ─────────────────────────────────────────────────
+ * Non più da costanti scritte a mano: da un VDOT, che è l'unico numero da
+ * toccare. Da lì scendono ritmo gara, ritmo 10K, soglia e lenti, e ogni ritmo
+ * viene poi corretto per l'aria del giorno (indice T + DP).
  *
- * ── I RECUPERI ──────────────────────────────────────────────────────────────
- * Il criterio è il RAPPORTO LAVORO:RECUPERO, non un numero a caso.
+ * Il VDOT di partenza è misurato, non stimato:
  *
- * Sugli intervalli brevi il recupero parte vicino a 1:1 e si accorcia dentro
- * il blocco (Daniels, Running Formula: sul lavoro a ritmo intervallo il
- * recupero non deve superare la durata della ripetuta). Con un recupero
- * incompleto il consumo di ossigeno resta alto anche nella pausa, quindi il
- * tempo utile ad alta intensità si accumula invece di azzerarsi.
+ *   4×1000 m rec 3:00 · 3:59 / 3:56 / 3:57 / 3:50 (GAP 3:55/3:58/3:51/3:48)
+ *   25°C · UR 68% → punto di rugiada 18,7° → indice T + DP 44 (fascia 42-48)
+ *   Seduta MASSIMALE: l'ultima ripetuta chiusa al 100%, nessuna riserva.
  *
- *   600 m  W1 2:20 · W2 2:10 · W3 2:00 · W4 1:50
- *   800 m  W5 3:10 · W6 2:50 · W7 2:35 · W8 2:20 · W9 2:10
+ * GAP medio 3:53/km. Tolta la fascia 42-48 (3-4,5%) si arriva a ~3:45/km al
+ * fresco — ma una seduta portata all'esaurimento sta SOPRA il ritmo
+ * sostenibile: un lavoro a ritmo intervallo dosato bene finisce con una o due
+ * ripetute ancora in canna. Scontando quel 2,5% si ottiene un I-pace reale di
+ * ~3:50/km al fresco, cioè VDOT 51 — 5K in 19:36.
  *
- * Il rapporto si RIAZZERA a ~1:1 quando la ripetuta si allunga da 600 a 800 m
- * (settimana 5): distanza nuova, stimolo nuovo, si riparte dal recupero pieno.
+ * L'obiettivo è 19:10, cioè VDOT 52,4. Servono +1,4 punti in 10 settimane:
+ * dentro il ritmo di miglioramento realistico (1 punto ogni 4-6 settimane).
  *
- * Sui 3×2 km il rapporto è molto più stretto perché lì l'obiettivo non è il
- * VO2max ma la capacità di RIPRENDERE il ritmo con le gambe già cariche.
+ * ⚠ KIKKO_WEEK_VDOT è una PROIEZIONE, non una misura. Dopo ogni test (3 km a
+ * tutta ogni 3-4 settimane) va riscritto con il valore vero: è l'unico posto
+ * da modificare perché tutto il piano si ricalcoli.
  *
- * ── VOLUME ──────────────────────────────────────────────────────────────────
- *   32 · 35 · 38 · 42 · 46 · 50 · 55 · 60 · 66 · 28 (taper)
- * Ogni incremento sta fra +8.6% e +10.6%. Nessuna settimana di scarico: la
- * progressione è monotona fino al picco, poi si scarica solo col taper.
+ * ── STRUTTURA ───────────────────────────────────────────────────────────────
+ *  · QUATTRO uscite: 2 di qualità + 2 lente.
+ *  · Volume 32 → 66 km con la regola del 10%, poi taper.
+ *  · Seduta 1 — intervalli brevi da 6×600 a 10×800, sempre a ritmo gara.
+ *  · Seduta 2 — 3×2 km nelle settimane dispari, soglia in quelle pari.
  *
- * ── SETTIMANA ───────────────────────────────────────────────────────────────
  *   Martedì  → QUALITÀ 1 · intervalli brevi   (intervals · rosso)
  *   Giovedì  → QUALITÀ 2 · resistenza o soglia (tempo · arancio)
  *   Sabato   → lenta                           (recovery · grigio)
  *   Domenica → lungo lento                     (long · verde)
+ *
+ * ── I RECUPERI ──────────────────────────────────────────────────────────────
+ * Sugli intervalli il recupero parte vicino a 1:1 e si accorcia dentro il
+ * blocco (Daniels: sul lavoro a ritmo intervallo il recupero non deve superare
+ * la durata della ripetuta). Si riazzera quando la ripetuta passa da 600 a
+ * 800 m: distanza nuova, si riparte dal recupero pieno.
+ *
+ * Sui 3×2 km il recupero non è un dettaglio, è parte della prescrizione: con
+ * 3:30 (~40% del lavoro) sei recuperato e tieni il ritmo 10K, con 1:45 (~20%)
+ * riparti carico e il ritmo giusto è il T-pace. Il codice interpola invece di
+ * inchiodare una costante — vedi repPaceForRecovery.
  */
 
 export const KIKKO_SUB20_META = {
   weeks: 10,
   phase: "kikkoSub20",
   goalRace: "5K",
-  goalTime: "19:58",
-  racePace: "4:00",
+  goalTime: "19:10",
   runsPerWeek: 4,
   startDate: "2026-07-27", // lunedì di riferimento della settimana 1
 };
 
-/* ── LE BASI DI PARTENZA ────────────────────────────────────────────────────
- * Ritmi al fresco (12-14°C), calcolati sul VDOT REALE attuale 48-49, non su
- * quello che uscirebbe dalle ripetute.
- *
- *   intervalli brevi  4:00/km  → ritmo gara 5K, obiettivo 19:58
- *   3×2 km rec 3:30   4:15/km  → 2 km in 8:30. Con 3:30 di recupero è ritmo
- *                                10K, non soglia continua: 5-8 s/km più veloce
- *                                del T-pace.
- *   soglia 20′        4:22/km  → ~4,58 km coperti
- *
- * Quando il VDOT arriva a 50, i due ritmi della qualità 2 diventano
- * rispettivamente 4:08 e 4:15 (vedi KIKKO_SUB20_VDOT50).
+/* ── VDOT ───────────────────────────────────────────────────────────────────*/
+
+/** VDOT misurato dal 4×1000 massimale, scontato per "seduta a esaurimento". */
+export const KIKKO_VDOT_START = 51.0;
+/** 19:10 sui 5K. */
+export const KIKKO_VDOT_GOAL = 52.4;
+
+/**
+ * VDOT atteso settimana per settimana: salita lineare da 51 a 52,4.
+ * È una previsione. Dopo un test, sovrascrivi i valori da lì in avanti.
  */
-const BASE_PACE = {
-  reps: "4:00",
-  long: "4:15",
-  tempo: "4:22",
-} as const;
+export const KIKKO_WEEK_VDOT: number[] = [
+  51.0, 51.2, 51.3, 51.5, 51.6, 51.8, 51.9, 52.1, 52.2, 52.4,
+];
 
-/** Le stesse basi quando il VDOT reale arriva a 50. */
-export const KIKKO_SUB20_VDOT50 = { reps: "4:00", long: "4:08", tempo: "4:15" } as const;
+/**
+ * Tabelle Daniels, secondi/km, per VDOT intero.
+ *   race = ritmo gara 5K · k10 = ritmo 10K · thr = T-pace (soglia)
+ * Controprova sul valore che l'atleta conosce: VDOT 50 → soglia 4:15 ✓,
+ * gara 5K 19:57 ✓.
+ */
+const VDOT_TABLE: Record<number, { race: number; k10: number; thr: number }> = {
+  46: { race: 257, k10: 267, thr: 273 },
+  47: { race: 252, k10: 262, thr: 269 },
+  48: { race: 248, k10: 257, thr: 264 },
+  49: { race: 244, k10: 253, thr: 260 },
+  50: { race: 239, k10: 248, thr: 255 },
+  51: { race: 235, k10: 244, thr: 251 },
+  52: { race: 231, k10: 240, thr: 247 },
+  53: { race: 228, k10: 236, thr: 244 },
+  54: { race: 224, k10: 232, thr: 240 },
+  55: { race: 220, k10: 229, thr: 237 },
+  56: { race: 217, k10: 226, thr: 233 },
+};
 
-const EASY = "5:40";
-const LONG = "5:30";
+/** I ritmi base di un VDOT, in secondi/km. Interpola fra i valori interi. */
+export interface Bases {
+  vdot: number;
+  /** Ritmo gara 5K: è il ritmo degli intervalli. */
+  race: number;
+  /** Ritmo 10K: il ritmo dei 2 km quando il recupero è pieno. */
+  k10: number;
+  /** T-pace: soglia continua, e i 2 km quando il recupero è corto. */
+  thr: number;
+  easy: number;
+  slow: number;
+}
 
-export type HeatKind = keyof typeof BASE_PACE;
+export function basesFor(vdot: number): Bases {
+  const v = Math.min(56, Math.max(46, vdot));
+  const lo = Math.floor(v);
+  const hi = Math.min(56, lo + 1);
+  const f = v - lo;
+  const mix = (k: "race" | "k10" | "thr") =>
+    VDOT_TABLE[lo][k] + (VDOT_TABLE[hi][k] - VDOT_TABLE[lo][k]) * f;
+  const thr = mix("thr");
+  return {
+    vdot: v,
+    race: mix("race"),
+    k10: mix("k10"),
+    thr,
+    // I lenti seguono la soglia con uno scarto fisso: si allineano da soli
+    // quando il motore migliora, senza diventare mai una seduta.
+    easy: thr + 85,
+    slow: thr + 75,
+  };
+}
 
 /* ── INDICE T + DP ──────────────────────────────────────────────────────────
- * Il caldo non si misura con la sola temperatura: a parità di gradi, l'aria
+ * Il caldo non si misura con la sola temperatura: a parità di gradi l'aria
  * umida non lascia evaporare il sudore e il corpo non si raffredda. L'indice
  * è la SOMMA di temperatura e punto di rugiada, entrambi in °C — il Garmin dà
  * il DP nei dati meteo della sessione.
  *
  * La penalità è una forbice, non un numero secco: il bordo basso della fascia
- * costa meno del bordo alto. I ritmi mostrati sono la forbice applicata alla
- * base della seduta.
+ * costa meno del bordo alto. Più l'impegno è continuo, più il caldo pesa: le
+ * ripetute brevi lasciano smaltire calore nella pausa, la soglia no.
  */
+export type HeatKind = "reps" | "long" | "tempo";
+
 export interface HeatBand {
   id: string;
   /** Estremo inferiore incluso dell'indice T + DP. */
@@ -168,6 +216,18 @@ export function heatBandForDate(iso: string): HeatBand {
   return heatBandForIndex(romeHeatIndexForDate(iso));
 }
 
+/**
+ * Punto di rugiada da temperatura e umidità relativa (Magnus).
+ * Il Garmin dà l'umidità; l'indice vuole il DP.
+ */
+export function dewPoint(tempC: number, humidityPct: number): number {
+  const rh = Math.min(100, Math.max(1, humidityPct));
+  const a = Math.log(rh / 100) + (17.62 * tempC) / (243.12 + tempC);
+  return (243.12 * a) / (17.62 - a);
+}
+
+/* ── FORMATTAZIONE ──────────────────────────────────────────────────────────*/
+
 const pad = (n: number) => String(n).padStart(2, "0");
 
 const paceToSec = (p: string): number => {
@@ -178,7 +238,6 @@ const secToPace = (sec: number): string => {
   const total = Math.round(sec);           // arrotonda il totale: mai ":60"
   return `${Math.floor(total / 60)}:${pad(total % 60)}`;
 };
-const shiftPace = (p: string, sec: number): string => secToPace(paceToSec(p) + sec);
 
 /** "4,58" — i decimali si scrivono all'italiana. */
 export const fmtNum = (n: number, digits = 2): string =>
@@ -187,11 +246,16 @@ export const fmtNum = (n: number, digits = 2): string =>
 /** "8,0 km" → "8 km": sui numeri tondi la coda non serve. */
 const trimZero = (s: string): string => s.replace(/,0$/, "");
 
-/** Il ritmo del giorno per una seduta: forbice della fascia + centro. */
+const fmtPct = (v: number): string => (Number.isInteger(v) ? String(v) : fmtNum(v, 1));
+
+/* ── RITMO DEL GIORNO ───────────────────────────────────────────────────────*/
+
+/** Il ritmo di una seduta corretto per l'aria: forbice della fascia + centro. */
 export interface HeatPace {
   band: HeatBand;
   kind: HeatKind;
-  /** Base al fresco, es. "4:00". */
+  /** Base al fresco, secondi/km. */
+  baseSec: number;
   base: string;
   /** Estremo veloce e lento della forbice, in secondi/km (non arrotondati). */
   fastSec: number;
@@ -201,14 +265,11 @@ export interface HeatPace {
   mid: string;
   /** "4:05-4:07" (o "4:00" quando la fascia non penalizza). */
   range: string;
-  /** "+2-3%" · "0%" */
+  /** "2-3%" · "0%" */
   penLabel: string;
 }
 
-const fmtPct = (v: number): string => (Number.isInteger(v) ? String(v) : fmtNum(v, 1));
-
-export function heatPace(kind: HeatKind, band: HeatBand, base = BASE_PACE[kind]): HeatPace {
-  const baseSec = paceToSec(base);
+export function heatPace(kind: HeatKind, band: HeatBand, baseSec: number): HeatPace {
   const [lo, hi] = band.pen[kind];
   const fastSec = baseSec * (1 + lo / 100);
   const slowSec = baseSec * (1 + hi / 100);
@@ -216,7 +277,8 @@ export function heatPace(kind: HeatKind, band: HeatBand, base = BASE_PACE[kind])
   const fast = secToPace(fastSec);
   const slow = secToPace(slowSec);
   return {
-    band, kind, base, fastSec, slowSec, midSec,
+    band, kind, baseSec, base: secToPace(baseSec),
+    fastSec, slowSec, midSec,
     mid: secToPace(midSec),
     range: fast === slow ? fast : `${fast}-${slow}`,
     // sotto l'indice 26 la penalità è nulla per definizione: la forbice
@@ -225,35 +287,48 @@ export function heatPace(kind: HeatKind, band: HeatBand, base = BASE_PACE[kind])
   };
 }
 
-/** I ritmi del giorno, già corretti per la fascia. */
+/**
+ * Il ritmo dei 2 km in funzione del recupero.
+ *
+ * Con 3:30 di recupero (~41% del lavoro) riparti recuperato e il ritmo giusto
+ * è quello dei 10K. Con 1:45 (~21%) sei al rapporto dei cruise interval di
+ * Daniels e il ritmo giusto è il T-pace. In mezzo si interpola: il recupero
+ * che si accorcia è la progressione, e il cronometro deve saperlo.
+ */
+export function repPaceForRecovery(recSec: number, b: Bases): number {
+  const workSec = 2 * b.thr;                     // riferimento stabile
+  const ratio = recSec / workSec;
+  const blend = Math.min(1, Math.max(0, (ratio - 0.21) / (0.41 - 0.21)));
+  return b.thr - blend * (b.thr - b.k10);
+}
+
+/** I ritmi del giorno: base della settimana + aria attesa. */
 export interface Paces {
   band: HeatBand;
   index: number;
   tempC: number;
   dpC: number;
-  reps: HeatPace;
-  long: HeatPace;
-  tempo: HeatPace;
+  bases: Bases;
   easy: string;
   slow: string;
 }
 
-function pacesFor(iso: string): Paces {
+function pacesFor(iso: string, vdot: number): Paces {
   const tempC = romeTempForDate(iso);
   const dpC = romeDewPointForDate(iso);
   const index = tempC + dpC;
   const band = heatBandForIndex(index);
+  const bases = basesFor(vdot);
   // Sui lenti il caldo pesa, ma la metà: si corre a sensazione, non a target.
-  const easyAdj = Math.round((band.pen.tempo[1] / 2 / 100) * paceToSec(EASY));
+  const adj = 1 + band.pen.tempo[1] / 2 / 100;
   return {
-    band, index, tempC, dpC,
-    reps: heatPace("reps", band),
-    long: heatPace("long", band),
-    tempo: heatPace("tempo", band),
-    easy: shiftPace(EASY, easyAdj),
-    slow: shiftPace(LONG, easyAdj),
+    band, index, tempC, dpC, bases,
+    easy: secToPace(bases.easy * adj),
+    slow: secToPace(bases.slow * adj),
   };
 }
+
+/* ── CALENDARIO ─────────────────────────────────────────────────────────────*/
 
 const IT_DAYS = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"];
 
@@ -292,8 +367,21 @@ export function kikkoSub20NormalizeStart(iso?: string | null): string {
   return addDays(base, -backToMonday);
 }
 
-type Cell = { title: string; dist: number; pace: string | null; desc: string; kind?: HeatKind };
-/** Una seduta si scrive solo quando si sa che aria ci sarà quel giorno. */
+/* ── LE SEDUTE ──────────────────────────────────────────────────────────────
+ * Le descrizioni stanno in una riga: struttura e numeri, niente spiegazioni.
+ * Il "perché" del ritmo del giorno sta nella tabella T + DP accanto alla
+ * seduta, non dentro il testo.
+ */
+
+type Cell = {
+  title: string;
+  dist: number;
+  pace: string | null;
+  desc: string;
+  /** Tipo di ritmo e base al fresco: servono alla tabella T + DP nella UI. */
+  kind?: HeatKind;
+  baseSec?: number;
+};
 type CellFn = (p: Paces) => Cell;
 
 /** Le quattro uscite, per offset dal lunedì della settimana. */
@@ -313,35 +401,31 @@ type WeekDef = {
   cells: [CellFn, CellFn, CellFn, CellFn];
 };
 
-/* ── LE SEDUTE ──────────────────────────────────────────────────────────────
- * Le descrizioni stanno in una riga: struttura e numeri, niente spiegazioni.
- * Il "perché" del ritmo del giorno sta nella tabella T + DP accanto alla
- * seduta, non dentro il testo.
- */
-
 const easy = (dist: number): CellFn => (p) => ({
   title: `Lenta ${dist} km`,
   dist,
   pace: p.easy,
-  desc: `${dist} km a ${p.easy}-${shiftPace(p.easy, 15)}. Conversazione piena.`,
+  desc: `${dist} km a ${p.easy}-${secToPace(paceToSec(p.easy) + 15)}. Conversazione piena.`,
 });
 
 const longRun = (dist: number): CellFn => (p) => ({
   title: `Lungo ${dist} km`,
   dist,
   pace: p.slow,
-  desc: `${dist} km a ${p.slow}-${shiftPace(p.slow, 15)}. Base aerobica: piano davvero.`,
+  desc: `${dist} km a ${p.slow}-${secToPace(paceToSec(p.slow) + 15)}. Base aerobica: piano davvero.`,
 });
 
 /** Qualità 1 — intervalli brevi a ritmo gara. */
 const reps = (n: number, meters: number, dist: number, rec: string, note = ""): CellFn => (p) => {
-  const workSec = (meters / 1000) * p.reps.midSec;
+  const hp = heatPace("reps", p.band, p.bases.race);
+  const workSec = (meters / 1000) * hp.midSec;
   const ratio = (paceToSec(rec) / workSec).toFixed(2);
   return {
-    title: `${n}×${meters} m @ ${p.reps.mid} · rec ${rec}`,
+    title: `${n}×${meters} m @ ${hp.mid} · rec ${rec}`,
     dist,
-    pace: p.reps.mid,
+    pace: hp.mid,
     kind: "reps",
+    baseSec: p.bases.race,
     desc:
       `Risc. 2 km + 3 allunghi, def. 1,5 km. Ripetuta ~${secToPace(workSec)}, rec ${rec} di jog ` +
       `(1:${ratio}). ${trimZero(fmtNum((n * meters) / 1000, 1))} km a ritmo gara, passo costante.` +
@@ -349,15 +433,18 @@ const reps = (n: number, meters: number, dist: number, rec: string, note = ""): 
   };
 };
 
-/** Qualità 2 — resistenza a ritmo 10K, settimane dispari. */
+/** Qualità 2 — resistenza sui 2 km, settimane dispari. */
 const longReps = (rec: string, dist: number, note = ""): CellFn => (p) => {
-  const workSec = 2 * p.long.midSec;
+  const baseSec = repPaceForRecovery(paceToSec(rec), p.bases);
+  const hp = heatPace("long", p.band, baseSec);
+  const workSec = 2 * hp.midSec;
   const ratio = (paceToSec(rec) / workSec).toFixed(2);
   return {
-    title: `3×2 km @ ${p.long.mid} · rec ${rec}`,
+    title: `3×2 km @ ${hp.mid} · rec ${rec}`,
     dist,
-    pace: p.long.mid,
+    pace: hp.mid,
     kind: "long",
+    baseSec,
     desc:
       `Risc. 2 km, def. 1,5 km. Serie da ~${secToPace(workSec)}, rec ${rec} (1:${ratio}). ` +
       `Riprendere il ritmo a gambe cariche.${note ? " " + note : ""}`,
@@ -365,15 +452,19 @@ const longReps = (rec: string, dist: number, note = ""): CellFn => (p) => {
 };
 
 /** Qualità 2 — soglia, settimane pari. */
-const tempo = (minutes: number, dist: number, note = ""): CellFn => (p) => ({
-  title: `Soglia ${minutes}′ @ ${p.tempo.mid}`,
-  dist,
-  pace: p.tempo.mid,
-  kind: "tempo",
-  desc:
-    `Risc. 2 km + allunghi, def. 1,5 km. ${minutes}′ continui senza pause: ` +
-    `~${fmtNum((minutes * 60) / p.tempo.midSec)} km.${note ? " " + note : ""}`,
-});
+const tempo = (minutes: number, dist: number, note = ""): CellFn => (p) => {
+  const hp = heatPace("tempo", p.band, p.bases.thr);
+  return {
+    title: `Soglia ${minutes}′ @ ${hp.mid}`,
+    dist,
+    pace: hp.mid,
+    kind: "tempo",
+    baseSec: p.bases.thr,
+    desc:
+      `Risc. 2 km + allunghi, def. 1,5 km. ${minutes}′ continui senza pause: ` +
+      `~${fmtNum((minutes * 60) / hp.midSec)} km.${note ? " " + note : ""}`,
+  };
+};
 
 const WEEKS: WeekDef[] = [
   // ═══ BLOCCO 1 · INGRESSO · ripetute da 600 m ══════════════════════════════
@@ -456,7 +547,7 @@ const WEEKS: WeekDef[] = [
   {
     mon: "2026-09-21", totalKm: 66,
     cells: [
-      reps(10, 800, 14, "2:10", "La seduta del piano: se regge il passo, la sub-20 c'è."),
+      reps(10, 800, 14, "2:10", "Seduta chiave: se il passo scivola, chiudi a 8."),
       longReps("1:45", 10, "Recupero minimo: test della tenuta."),
       easy(19),
       longRun(23),
@@ -468,36 +559,47 @@ const WEEKS: WeekDef[] = [
     mon: "2026-09-28", totalKm: 28,
     cells: [
       reps(5, 800, 9, "3:15", "Taper: metà ripetute, stesso ritmo, recupero più lungo."),
-      (p) => ({
-        title: `Sblocco 2×1000 @ ${p.reps.mid} · rec 3:00`,
-        dist: 7,
-        pace: p.reps.mid,
-        kind: "reps",
-        desc: "Risc. 2 km, def. sciolto. Ultimo richiamo del passo: deve sembrare facile.",
-      }),
+      (p) => {
+        const hp = heatPace("reps", p.band, p.bases.race);
+        return {
+          title: `Sblocco 2×1000 @ ${hp.mid} · rec 3:00`,
+          dist: 7,
+          pace: hp.mid,
+          kind: "reps" as HeatKind,
+          baseSec: p.bases.race,
+          desc: "Risc. 2 km, def. sciolto. Ultimo richiamo del passo: deve sembrare facile.",
+        };
+      },
       (p) => ({
         title: "Sciolto 5 km + 4 allunghi",
         dist: 5,
         pace: p.easy,
-        desc: "5 km sciolti + 4 allunghi da 80 m. Controlla il meteo di domani.",
+        desc: "5 km sciolti + 4 allunghi da 80 m. Controlla temperatura e DP di domani.",
       }),
-      (p) => ({
-        title: "🏁 GARA 5K · sub 20:00",
-        dist: 7,
-        pace: p.reps.mid,
-        kind: "reps",
-        desc:
-          `Risc. 15′ + 4 allunghi (i 7 km li comprendono). Primo km ${shiftPace(p.reps.mid, 2)}, ` +
-          `poi ${p.reps.mid}, dal 4° svuota. Previsione con l'aria attesa: ${secToPace(p.reps.midSec * 5)}.`,
-      }),
+      (p) => {
+        const hp = heatPace("reps", p.band, p.bases.race);
+        return {
+          title: `🏁 GARA 5K · ${KIKKO_SUB20_META.goalTime}`,
+          dist: 7,
+          pace: hp.mid,
+          kind: "reps" as HeatKind,
+          baseSec: p.bases.race,
+          desc:
+            `Risc. 15′ + 4 allunghi (i 7 km li comprendono). Primo km ${secToPace(hp.midSec + 2)}, ` +
+            `poi ${hp.mid}, dal 4° svuota. Previsione con l'aria attesa: ${secToPace(hp.midSec * 5)}.`,
+        };
+      },
     ],
   },
 ];
 
-function mk(date: string, type: string, cell: CellFn): Session {
-  // La seduta si scrive sull'aria attesa QUEL giorno: le ripetute di agosto e
-  // quelle di ottobre non possono avere lo stesso target.
-  const c = cell(pacesFor(date));
+/* ── COSTRUZIONE ────────────────────────────────────────────────────────────*/
+
+function mk(date: string, type: string, cell: CellFn, vdot: number): Session {
+  // La seduta si scrive sul VDOT di quella settimana e sull'aria attesa QUEL
+  // giorno: le ripetute di agosto e quelle di ottobre non possono avere lo
+  // stesso target.
+  const c = cell(pacesFor(date, vdot));
   return {
     day: itDayName(date),
     date,
@@ -521,30 +623,15 @@ const KIKKO_RACE_OFFSET_DAYS = (KIKKO_SUB20_META.weeks - 1) * 7 + 6;
 export function buildKikkoSub20Sessions(startDate?: string | null): Session[] {
   const start = kikkoSub20NormalizeStart(startDate);
   const delta = daysBetween(KIKKO_SUB20_DEFAULT_START, start);
-  return WEEKS.flatMap((w) =>
-    w.cells.map((cell, i) => mk(addDays(w.mon, SLOTS[i].offset + delta), SLOTS[i].type, cell)),
+  return WEEKS.flatMap((w, wi) =>
+    w.cells.map((cell, i) =>
+      mk(addDays(w.mon, SLOTS[i].offset + delta), SLOTS[i].type, cell, KIKKO_WEEK_VDOT[wi]),
+    ),
   );
 }
 
 /** Piano ancorato alla partenza di default. */
 export const KIKKO_SUB20_SESSIONS: Session[] = buildKikkoSub20Sessions();
-
-/**
- * Tipo di ritmo che comanda la seduta di quel giorno: serve alla tabella
- * T + DP per mostrare la riga giusta (e nessuna, sulle lente).
- */
-export function kikkoSub20HeatKind(iso: string, startDate?: string | null): HeatKind | null {
-  const start = kikkoSub20NormalizeStart(startDate);
-  const delta = daysBetween(KIKKO_SUB20_DEFAULT_START, start);
-  for (const w of WEEKS) {
-    for (let i = 0; i < w.cells.length; i++) {
-      if (addDays(w.mon, SLOTS[i].offset + delta) === iso) {
-        return w.cells[i](pacesFor(iso)).kind ?? null;
-      }
-    }
-  }
-  return null;
-}
 
 /** Data della gara (ultima seduta) per una data partenza. */
 export function kikkoSub20RaceDate(startDate?: string | null): string {
@@ -556,24 +643,12 @@ export const KIKKO_SUB20_WEEKLY_KM: number[] = WEEKS.map((w) => w.totalKm);
 
 /** Somma reale dei km per settimana, ricavata dalle sedute. */
 export function kikkoSub20ActualWeeklyKm(): number[] {
-  // le distanze non dipendono dall'aria: basta una fascia qualsiasi
-  const ref = pacesFor(WEEKS[0].mon);
+  // le distanze non dipendono né dall'aria né dal VDOT: basta un riferimento
+  const ref = pacesFor(WEEKS[0].mon, KIKKO_WEEK_VDOT[0]);
   return WEEKS.map((w) => w.cells.reduce((sum, c) => sum + c(ref).dist, 0));
 }
 
-/**
- * Riga della tabella T + DP per una seduta: ritmo e riferimento pratico
- * (tempo sui 600 m, tempo sui 2 km, distanza in 20′).
- */
-export interface HeatRow {
-  band: HeatBand;
-  /** "4:05-4:07" */
-  pace: string;
-  /** "2:27-2:28" · "8:42-8:48" · "4,40-4,47 km" */
-  reference: string;
-  penLabel: string;
-  skip: boolean;
-}
+/* ── TABELLA T + DP PER LA UI ───────────────────────────────────────────────*/
 
 /**
  * Il riferimento pratico della seduta: il tempo sulla ripetuta o la strada
@@ -597,11 +672,21 @@ export function heatReferenceLabel(kind: HeatKind): string {
   return REFERENCE[kind].label;
 }
 
+export interface HeatRow {
+  band: HeatBand;
+  /** "4:05-4:07" */
+  pace: string;
+  /** "2:27-2:28" · "8:42-8:48" · "4,40-4,47" */
+  reference: string;
+  penLabel: string;
+  skip: boolean;
+}
+
 /** La tabella completa per un tipo di seduta: una riga per fascia. */
-export function heatTable(kind: HeatKind): HeatRow[] {
+export function heatTable(kind: HeatKind, baseSec: number): HeatRow[] {
   const ref = REFERENCE[kind];
   return KIKKO_SUB20_HEAT_BANDS.map((band) => {
-    const p = heatPace(kind, band);
+    const p = heatPace(kind, band, baseSec);
     const a = ref.of(ref.fromRounded ? Math.round(p.fastSec) : p.fastSec);
     const b = ref.of(ref.fromRounded ? Math.round(p.slowSec) : p.slowSec);
     const [lo, hi] = ref.reverse ? [b, a] : [a, b];
@@ -615,18 +700,34 @@ export function heatTable(kind: HeatKind): HeatRow[] {
   });
 }
 
-/** Il quadro dell'aria attesa in un giorno, per la UI. */
-export function kikkoSub20HeatInfo(iso: string, kind: HeatKind | null) {
+/**
+ * Il quadro dell'aria attesa in un giorno, con la base di QUELLA settimana.
+ * Senza la base giusta la tabella mostrerebbe i ritmi di un'altra settimana.
+ */
+export function kikkoSub20HeatInfo(iso: string, startDate?: string | null) {
+  const start = kikkoSub20NormalizeStart(startDate);
+  const delta = daysBetween(KIKKO_SUB20_DEFAULT_START, start);
   const tempC = romeTempForDate(iso);
   const dpC = romeDewPointForDate(iso);
   const index = tempC + dpC;
   const band = heatBandForIndex(index);
-  return {
-    tempC, dpC, index, band,
-    kind,
-    pace: kind ? heatPace(kind, band) : null,
-    base: kind ? BASE_PACE[kind] : null,
-  };
+
+  for (let wi = 0; wi < WEEKS.length; wi++) {
+    const w = WEEKS[wi];
+    for (let i = 0; i < w.cells.length; i++) {
+      if (addDays(w.mon, SLOTS[i].offset + delta) !== iso) continue;
+      const cell = w.cells[i](pacesFor(iso, KIKKO_WEEK_VDOT[wi]));
+      const kind = cell.kind ?? null;
+      return {
+        tempC, dpC, index, band, kind,
+        vdot: KIKKO_WEEK_VDOT[wi],
+        baseSec: cell.baseSec ?? null,
+        base: cell.baseSec != null ? secToPace(cell.baseSec) : null,
+        pace: kind && cell.baseSec != null ? heatPace(kind, band, cell.baseSec) : null,
+      };
+    }
+  }
+  return { tempC, dpC, index, band, kind: null, vdot: null, baseSec: null, base: null, pace: null };
 }
 
 export const KIKKO_SUB20_LEGEND: { color: string; label: string; opacity?: number }[] = [

@@ -12,6 +12,13 @@ import {
   heatPace,
   heatTable,
   romeHeatIndexForDate,
+  kikkoSub20HeatInfo,
+  basesFor,
+  repPaceForRecovery,
+  dewPoint,
+  KIKKO_WEEK_VDOT,
+  KIKKO_VDOT_START,
+  KIKKO_VDOT_GOAL,
 } from "./kikkoSub20Plan";
 
 /**
@@ -20,7 +27,6 @@ import {
  * una terza seduta intensa senza che nessuno se ne accorga.
  */
 
-const RACE_PACE = "4:00";
 const paceSec = (p: string) => {
   const [m, s] = p.split(":").map(Number);
   return m * 60 + s;
@@ -88,24 +94,37 @@ describe("kikkoSub20 — intensità", () => {
     }
   });
 
-  it("gli intervalli vanno a ritmo gara corretto per l'indice T + DP del giorno", () => {
+  it("gli intervalli vanno a ritmo gara del VDOT della settimana, corretto per l'aria", () => {
     for (const s of KIKKO_SUB20_SESSIONS.filter((x) => x.type === "intervals")) {
-      const p = heatPace("reps", heatBandForDate(s.date));
-      expect(s.target_pace, `${s.date} · ${s.title}`).toBe(p.mid);
+      const info = kikkoSub20HeatInfo(s.date);
+      expect(info.pace, `${s.date} · ${s.title}`).not.toBeNull();
+      expect(s.target_pace, `${s.date} · ${s.title}`).toBe(info.pace!.mid);
+      // la base è il ritmo gara del VDOT di quella settimana, non una costante
+      expect(info.baseSec).toBeCloseTo(basesFor(info.vdot!).race, 5);
       // il target sta sempre dentro la forbice della fascia
-      expect(paceSec(s.target_pace!)).toBeGreaterThanOrEqual(Math.floor(p.fastSec));
-      expect(paceSec(s.target_pace!)).toBeLessThanOrEqual(Math.ceil(p.slowSec));
+      expect(paceSec(s.target_pace!)).toBeGreaterThanOrEqual(Math.floor(info.pace!.fastSec));
+      expect(paceSec(s.target_pace!)).toBeLessThanOrEqual(Math.ceil(info.pace!.slowSec));
     }
   });
 
-  it("il piano rallenta d'estate e si stringe avvicinandosi alla gara", () => {
+  it("il piano accelera lungo il blocco: aria che scende e VDOT che sale", () => {
     const hard = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals");
     const summer = paceSec(hard[0].target_pace!);              // fine luglio
     const autumn = paceSec(hard[hard.length - 1].target_pace!); // fine settembre
     const race = paceSec(KIKKO_SUB20_SESSIONS[KIKKO_SUB20_SESSIONS.length - 1].target_pace!);
-    expect(summer, "la prima seduta cade in piena estate").toBeGreaterThan(paceSec(RACE_PACE));
-    expect(autumn, "a settembre il termometro scende").toBeLessThan(summer);
+    expect(autumn, "a settembre l'aria scende e il motore è cresciuto").toBeLessThan(summer);
     expect(race, "il giorno di gara è il target più stretto del piano").toBeLessThanOrEqual(autumn);
+  });
+
+  it("nessuna seduta chiede più di quanto il VDOT della settimana consenta", () => {
+    // Il ritmo gara non può mai finire sotto il ritmo gara dell'obiettivo:
+    // se succede, la base è tarata su un VDOT che non esiste ancora.
+    const goalRace = basesFor(KIKKO_VDOT_GOAL).race;
+    for (const s of KIKKO_SUB20_SESSIONS.filter((x) => x.type === "intervals")) {
+      expect(paceSec(s.target_pace!), `${s.date} · ${s.title}`).toBeGreaterThanOrEqual(
+        Math.floor(goalRace * 0.99),
+      );
+    }
   });
 
   it("la seduta 1 progredisce da 6×600 a 10×800", () => {
@@ -117,7 +136,7 @@ describe("kikkoSub20 — intensità", () => {
   it("il taper tiene il ritmo gara ma dimezza le ripetute", () => {
     const taper = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals")[9];
     expect(taper.title).toContain("5×800");
-    expect(taper.target_pace).toBe(heatPace("reps", heatBandForDate(taper.date)).mid);
+    expect(taper.target_pace).toBe(kikkoSub20HeatInfo(taper.date).pace!.mid);
   });
 
   it("ogni seduta di ripetute dichiara il recupero nel titolo", () => {
@@ -130,17 +149,21 @@ describe("kikkoSub20 — intensità", () => {
   it("il recupero degli intervalli resta proporzionato al lavoro", () => {
     // Daniels: sul lavoro a ritmo intervallo il recupero non deve superare di
     // molto la durata della ripetuta, altrimenti diventa velocità pura; sotto
-    // ~0.6 la seduta non si regge al ritmo richiesto.
-    for (const s of KIKKO_SUB20_SESSIONS.filter((x) => x.type === "intervals")) {
+    // ~0.6 la seduta non si regge al ritmo richiesto. Il taper è l'eccezione
+    // voluta: lì il recupero è LUNGO di proposito, perché serve la freschezza
+    // e non lo stimolo.
+    const all = KIKKO_SUB20_SESSIONS.filter((x) => x.type === "intervals");
+    all.forEach((s, i) => {
       const m = s.title.match(/(\d+)×(\d+) m .*rec (\d+):(\d\d)/);
       expect(m, s.title).not.toBeNull();
       const meters = Number(m![2]);
       const recSec = Number(m![3]) * 60 + Number(m![4]);
       const workSec = (meters / 1000) * paceSec(s.target_pace!);
       const ratio = recSec / workSec;
+      const ceiling = i === all.length - 1 ? 1.15 : 1.05;   // ultima = taper
       expect(ratio, `${s.title} → 1:${ratio.toFixed(2)}`).toBeGreaterThanOrEqual(0.6);
-      expect(ratio, `${s.title} → 1:${ratio.toFixed(2)}`).toBeLessThanOrEqual(1.05);
-    }
+      expect(ratio, `${s.title} → 1:${ratio.toFixed(2)}`).toBeLessThanOrEqual(ceiling);
+    });
   });
 
   it("la descrizione resta corta: struttura e numeri, non un tema", () => {
@@ -191,8 +214,12 @@ describe("kikkoSub20 — indice T + DP", () => {
    * qui sono trascritte riga per riga come le ha scritte l'atleta. Se un
    * ritocco alle penalità sposta anche un solo secondo, questo test lo dice.
    */
+  // Le basi storiche su cui le tabelle sono state scritte (VDOT 48-49):
+  // il modello delle penalità va verificato su quelle, indipendentemente dal
+  // VDOT con cui il piano gira oggi.
+  const LEGACY = { reps: 240, long: 255, tempo: 262 };
   const row = (kind: "reps" | "long" | "tempo", id: string) =>
-    heatTable(kind).find((r) => r.band.id === id)!;
+    heatTable(kind, LEGACY[kind]).find((r) => r.band.id === id)!;
 
   it("tabella intervalli, base 4:00/km", () => {
     expect([row("reps", "b0").penLabel, row("reps", "b0").pace, row("reps", "b0").reference]).toEqual(["0%", "3:58-4:00", "2:23-2:24"]);
@@ -238,6 +265,67 @@ describe("kikkoSub20 — indice T + DP", () => {
     expect(romeHeatIndexForDate("2026-08-04"), "agosto").toBe(40);
     expect(romeHeatIndexForDate("2026-10-04"), "gara di ottobre").toBe(24);
     expect(heatBandForDate("2026-01-15").label, "gennaio").toBe("< 26");
+  });
+});
+
+describe("kikkoSub20 — taratura sul 4×1000 reale", () => {
+  /**
+   * La seduta di riferimento: 4×1000 rec 3:00, 25°C e UR 68%, massimale.
+   * Se questi controlli cadono, il piano non è più agganciato al dato vero.
+   */
+  it("da 25°C e 68% di umidità esce un punto di rugiada di ~18,7°", () => {
+    expect(dewPoint(25, 68)).toBeCloseTo(18.7, 1);
+  });
+
+  it("quella seduta cadeva in fascia 42-48, più dura di ogni giorno del piano", () => {
+    const index = 25 + dewPoint(25, 68);
+    expect(heatBandForIndex(index).label).toBe("42-48");
+    const worst = Math.max(...KIKKO_SUB20_SESSIONS.map((s) => romeHeatIndexForDate(s.date)));
+    expect(worst, "il piano non programma nulla in quella fascia").toBeLessThan(42);
+  });
+
+  it("il VDOT parte dal misurato e arriva all'obiettivo", () => {
+    expect(KIKKO_WEEK_VDOT).toHaveLength(KIKKO_SUB20_META.weeks);
+    expect(KIKKO_WEEK_VDOT[0]).toBe(KIKKO_VDOT_START);
+    expect(KIKKO_WEEK_VDOT[KIKKO_WEEK_VDOT.length - 1]).toBe(KIKKO_VDOT_GOAL);
+    for (let i = 1; i < KIKKO_WEEK_VDOT.length; i++) {
+      expect(KIKKO_WEEK_VDOT[i], `settimana ${i + 1}`).toBeGreaterThanOrEqual(KIKKO_WEEK_VDOT[i - 1]);
+    }
+  });
+
+  it("il VDOT obiettivo vale davvero il tempo dichiarato", () => {
+    const race5k = basesFor(KIKKO_VDOT_GOAL).race * 5;
+    const [m, s] = KIKKO_SUB20_META.goalTime.split(":").map(Number);
+    expect(race5k, "5K al ritmo gara del VDOT obiettivo").toBeCloseTo(m * 60 + s, -0.5);
+  });
+
+  it("le basi Daniels tornano sui valori che l'atleta conosce", () => {
+    expect(Math.round(basesFor(50).thr)).toBe(255);        // soglia 4:15
+    expect(Math.round(basesFor(50).race * 5)).toBe(1195);  // 5K 19:55 ≈ 19:57
+    expect(Math.round(basesFor(48.5).thr)).toBe(262);      // soglia 4:22
+  });
+
+  it("il ritmo dei 2 km segue il recupero: 10K col pieno, T-pace col corto", () => {
+    const b = basesFor(51);
+    const work = 2 * b.thr;
+    expect(repPaceForRecovery(0.41 * work, b), "rec 3:30 → ritmo 10K").toBeCloseTo(b.k10, 1);
+    expect(repPaceForRecovery(0.21 * work, b), "rec 1:45 → T-pace").toBeCloseTo(b.thr, 1);
+    // e in mezzo si interpola, mai fuori dai due estremi
+    const mid = repPaceForRecovery(0.30 * work, b);
+    expect(mid).toBeGreaterThan(b.k10);
+    expect(mid).toBeLessThan(b.thr);
+  });
+
+  it("i 3×2 km rallentano quando il recupero si accorcia, a parità di settimana", () => {
+    // Confronto a VDOT fisso: isola l'effetto del solo recupero.
+    const b = basesFor(51);
+    const paces = ["3:00", "2:30", "2:15", "2:00", "1:45"].map((r) => {
+      const [m, s] = r.split(":").map(Number);
+      return repPaceForRecovery(m * 60 + s, b);
+    });
+    for (let i = 1; i < paces.length; i++) {
+      expect(paces[i], `recupero ${i}`).toBeGreaterThan(paces[i - 1]);
+    }
   });
 });
 

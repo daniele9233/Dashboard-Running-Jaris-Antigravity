@@ -16,7 +16,7 @@ import type { Session, TrainingPlanResponse, AdaptAdaptation } from "../types/ap
 import {
   KIKKO_SUB20_LEGEND, KIKKO_SUB20_DEFAULT_START,
   buildKikkoSub20Sessions, kikkoSub20RaceDate, kikkoSub20NormalizeStart,
-  kikkoSub20HeatKind, kikkoSub20HeatInfo, heatTable, heatReferenceLabel,
+  kikkoSub20HeatInfo, heatTable, heatReferenceLabel,
 } from "../data/kikkoSub20Plan";
 
 /** Verde finché l'aria non conta, ambra quando inizia a costare, rosso oltre. */
@@ -34,10 +34,12 @@ const HEAT_COLOR: Record<string, string> = {
  * paga. La tabella sta accanto alla seduta, non sepolta nella descrizione.
  */
 function HeatPanel({ date, startDate }: { date: string; startDate: string }) {
-  const kind = kikkoSub20HeatKind(date, startDate);
-  const info = kikkoSub20HeatInfo(date, kind);
+  const info = kikkoSub20HeatInfo(date, startDate);
+  const { kind, baseSec } = info;
   const col = HEAT_COLOR[info.band.id] ?? "#A3E635";
-  const rows = kind ? heatTable(kind) : [];
+  // La tabella usa la base di QUELLA settimana: il VDOT sale lungo il piano,
+  // quindi le stesse fasce danno ritmi diversi a luglio e a settembre.
+  const rows = kind && baseSec != null ? heatTable(kind, baseSec) : [];
   const mono = { fontFamily: "'JetBrains Mono', monospace" };
 
   return (
@@ -54,6 +56,9 @@ function HeatPanel({ date, startDate }: { date: string; startDate: string }) {
           <span className="text-[11px] text-gray-400" style={mono}>
             base {info.base} → <span className="font-bold" style={{ color: col }}>{info.pace.range}</span>
           </span>
+        )}
+        {info.vdot != null && (
+          <span className="text-[11px] text-gray-500" style={mono}>VDOT {info.vdot.toFixed(1)}</span>
         )}
         {info.band.skip && (
           <span className="text-[11px] font-bold text-[#EF4444] basis-full">
