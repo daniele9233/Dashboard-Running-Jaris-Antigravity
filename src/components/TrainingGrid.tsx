@@ -16,30 +16,85 @@ import type { Session, TrainingPlanResponse, AdaptAdaptation } from "../types/ap
 import {
   KIKKO_SUB20_LEGEND, KIKKO_SUB20_DEFAULT_START,
   buildKikkoSub20Sessions, kikkoSub20RaceDate, kikkoSub20NormalizeStart,
-  tempBandForDate, romeTempForDate,
+  kikkoSub20HeatKind, kikkoSub20HeatInfo, heatTable, heatReferenceLabel,
 } from "../data/kikkoSub20Plan";
 
-const BAND_COLOR: Record<string, string> = { ideale: "#22D3EE", media: "#A3E635", alta: "#F59E0B" };
+/** Verde finché l'aria non conta, ambra quando inizia a costare, rosso oltre. */
+const HEAT_COLOR: Record<string, string> = {
+  b0: "#22D3EE", b1: "#A3E635", b2: "#C0FF00",
+  b3: "#F59E0B", b4: "#F97316", b5: "#EF4444", b6: "#EF4444",
+};
 
 /**
- * Perché il target di oggi non è quello di riferimento: la fascia di
- * temperatura è la ragione, e va detta accanto alla seduta — non sepolta in
- * fondo alla descrizione.
+ * Perché il target di oggi non è quello di riferimento.
+ *
+ * Non è la temperatura da sola: è l'indice T + DP (temperatura + punto di
+ * rugiada, entrambi in °C — il Garmin dà il DP nei dati meteo della sessione).
+ * A parità di gradi l'aria umida non lascia evaporare il sudore, e il ritmo
+ * paga. La tabella sta accanto alla seduta, non sepolta nella descrizione.
  */
-function TempBandChip({ date }: { date: string }) {
-  const band = tempBandForDate(date);
-  const col = BAND_COLOR[band.id] ?? "#A3E635";
+function HeatPanel({ date, startDate }: { date: string; startDate: string }) {
+  const kind = kikkoSub20HeatKind(date, startDate);
+  const info = kikkoSub20HeatInfo(date, kind);
+  const col = HEAT_COLOR[info.band.id] ?? "#A3E635";
+  const rows = kind ? heatTable(kind) : [];
+  const mono = { fontFamily: "'JetBrains Mono', monospace" };
+
   return (
-    <div className="mb-4 rounded-xl border px-3.5 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1"
-      style={{ borderColor: `${col}44`, background: `${col}0f` }}>
-      <span className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: col }}>
-        Fascia {band.label} · {band.range}
-      </span>
-      <span className="text-[11px] text-gray-400" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-        ~{romeTempForDate(date)}°C attesi
-        {band.paceAdjSec > 0 && ` · +${band.paceAdjSec}s/km sulla qualità · +${band.recAdjSec}s di recupero`}
-      </span>
-      <span className="text-[11px] text-gray-500 basis-full">{band.note}</span>
+    <div className="mb-6 rounded-xl border overflow-hidden" style={{ borderColor: `${col}44`, background: `${col}0d` }}>
+      <div className="px-3.5 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: col }}>
+          Indice T + DP {info.index}
+        </span>
+        <span className="text-[11px] text-gray-400" style={mono}>
+          ~{info.tempC}°C + DP {info.dpC}° · fascia {info.band.label}
+          {info.pace && ` · penalità ${info.pace.penLabel}`}
+        </span>
+        {info.pace && info.base && (
+          <span className="text-[11px] text-gray-400" style={mono}>
+            base {info.base} → <span className="font-bold" style={{ color: col }}>{info.pace.range}</span>
+          </span>
+        )}
+        {info.band.skip && (
+          <span className="text-[11px] font-bold text-[#EF4444] basis-full">
+            Oltre 59: seduta da spostare all'alba o da rimandare.
+          </span>
+        )}
+      </div>
+
+      {rows.length > 0 && (
+        <div className="overflow-x-auto border-t" style={{ borderColor: `${col}22` }}>
+          <table className="w-full text-[11px]" style={mono}>
+            <thead>
+              <tr className="text-gray-500">
+                <th className="text-left font-bold px-3.5 py-1.5">T + DP</th>
+                <th className="text-left font-bold px-2 py-1.5">Esempio</th>
+                <th className="text-left font-bold px-2 py-1.5">Penalità</th>
+                <th className="text-left font-bold px-2 py-1.5">Passo/km</th>
+                <th className="text-left font-bold px-3.5 py-1.5">{heatReferenceLabel(kind!)}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => {
+                const here = r.band.id === info.band.id;
+                return (
+                  <tr
+                    key={r.band.id}
+                    className={here ? "text-white font-bold" : "text-gray-500"}
+                    style={here ? { background: `${col}1a` } : undefined}
+                  >
+                    <td className="px-3.5 py-1.5 whitespace-nowrap" style={here ? { color: col } : undefined}>{r.band.label}</td>
+                    <td className="px-2 py-1.5 whitespace-nowrap">{r.band.example}</td>
+                    <td className="px-2 py-1.5 whitespace-nowrap">{r.penLabel}</td>
+                    <td className="px-2 py-1.5 whitespace-nowrap">{r.pace}</td>
+                    <td className="px-3.5 py-1.5 whitespace-nowrap">{r.reference}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -1312,7 +1367,13 @@ export function TrainingGrid() {
   const { t } = useTranslation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'Day' | 'Week' | 'Month' | 'Year'>('Year');
-  const [previousView, setPreviousView] = useState<'Week' | 'Month' | 'Year' | null>(null);
+  /**
+   * Giorno aperto a schermo intero. Prima cliccare una seduta portava alla
+   * vista "Day", che restava dentro la pagina: header, legenda e diagnosi
+   * continuavano a leggersi dietro il pannello semitrasparente. La seduta si
+   * apre invece sopra tutto, su fondo pieno, senza niente che filtri.
+   */
+  const [detailDate, setDetailDate] = useState<Date | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showAdaptModal, setShowAdaptModal] = useState(false);
   /**
@@ -1334,16 +1395,22 @@ export function TrainingGrid() {
   // Bozza dal date-picker: si applica solo premendo "Ricalcola".
   const [sub20StartDraft, setSub20StartDraft] = useState<string>(KIKKO_SUB20_DEFAULT_START);
 
-  const goToDay = (date: Date, fromView: 'Week' | 'Month' | 'Year') => {
-    setCurrentDate(date);
-    setPreviousView(fromView);
-    setView('Day');
-  };
+  const openDay = (date: Date) => setDetailDate(date);
+  const closeDay = useCallback(() => setDetailDate(null), []);
 
-  const goBack = () => {
-    setView(previousView ?? 'Month');
-    setPreviousView(null);
-  };
+  // Esc chiude, e finché il dettaglio è aperto la pagina sotto non scrolla:
+  // altrimenti la rotellina muove il calendario dietro invece della seduta.
+  useEffect(() => {
+    if (!detailDate) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeDay(); };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [detailDate, closeDay]);
 
   const { data: planData, refetch: refetchPlan } = useApi<TrainingPlanResponse>(getTrainingPlan, { cacheKey: API_CACHE.TRAINING_PLAN });
 
@@ -1519,7 +1586,7 @@ export function TrainingGrid() {
               <div
                 key={`${year}-${month}-${day}`}
                 className="bg-[#181818] min-h-[120px] p-2 flex flex-col group hover:bg-[#1E1E1E] transition-colors cursor-pointer"
-                onClick={() => goToDay(new Date(year, month, day), 'Month')}
+                onClick={() => openDay(new Date(year, month, day))}
               >
                 <span className={`text-sm font-medium mb-2 w-7 h-7 flex items-center justify-center rounded-full ${isToday ? 'bg-[#3B82F6] text-white' : 'text-gray-400'}`}>
                   {day}
@@ -1573,7 +1640,7 @@ export function TrainingGrid() {
               <div
                 key={date.toISOString()}
                 className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 flex flex-col cursor-pointer hover:border-white/[0.2] transition-colors"
-                onClick={() => goToDay(date, 'Week')}
+                onClick={() => openDay(date)}
               >
                 <div className="text-center mb-6 pb-4 border-b border-[#2A2A2A]">
                   <div className="text-xs font-semibold text-gray-500 tracking-wider mb-2">{dayNames[date.getDay()]}</div>
@@ -1606,35 +1673,35 @@ export function TrainingGrid() {
     );
   };
 
-  // ── Day View ────────────────────────────────────────────────────────────────
-  const renderDayView = () => {
-    const session = getSession(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+  // ── Dettaglio del giorno ────────────────────────────────────────────────────
+  // Usato sia dalla vista "Day" sia dal pannello a schermo intero che si apre
+  // cliccando una seduta: stesso contenuto, fondo PIENO in entrambi i casi.
+  const renderDayDetail = (date: Date, onClose?: () => void) => {
+    const session = getSession(date.getFullYear(), date.getMonth(), date.getDate());
     const display = toDisplay(session);
-    const dayKey = keyOf(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
-    const st = sub20StatusOf(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+    const dayKey = keyOf(date.getFullYear(), date.getMonth(), date.getDate());
+    const st = sub20StatusOf(date.getFullYear(), date.getMonth(), date.getDate());
     const done = st === 'done' || (!showSub20 && display?.completed);
     const failed = st === 'failed';
 
     return (
-      <div className="h-full flex items-start justify-center pt-10">
-        <div className="w-full max-w-2xl rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-8">
-          {/* Back button */}
-          {previousView && (
+      <div className="w-full max-w-2xl mx-auto rounded-2xl border border-white/[0.12] shadow-[0_8px_40px_rgba(0,0,0,0.85)] bg-[#141414] p-8">
+          {onClose && (
             <button
               type="button"
-              onClick={goBack}
+              onClick={onClose}
               className="flex items-center gap-2 text-gray-400 hover:text-white mb-6 group transition-colors"
             >
               <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-              <span className="text-sm font-medium">Torna a {previousView === 'Month' ? 'Mese' : previousView === 'Week' ? 'Settimana' : 'Anno'}</span>
+              <span className="text-sm font-medium">Chiudi</span>
             </button>
           )}
           <h2 className="text-3xl font-bold text-white mb-8 text-center capitalize">
-            {currentDate.toLocaleDateString('it-IT', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+            {date.toLocaleDateString('it-IT', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
           </h2>
 
           {display ? (
-            <div className={`rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-8 border-l-4 ${done ? 'opacity-75' : ''}`} style={{ borderLeftColor: failed ? '#EF4444' : display.color }}>
+            <div className={`rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.6)] bg-[#1A1A1A] p-8 border-l-4 ${done ? 'opacity-75' : ''}`} style={{ borderLeftColor: failed ? '#EF4444' : display.color }}>
               <div className="flex items-center justify-between mb-8 pb-6 border-b border-[#2A2A2A]">
                 <h3 className="text-2xl font-bold text-gray-200">{display.title}</h3>
                 <span className={`px-4 py-1.5 rounded-full text-sm font-medium border ${
@@ -1690,9 +1757,9 @@ export function TrainingGrid() {
               )}
 
 
-              {showSub20 && <TempBandChip date={dayKey} />}
-
               <p className="text-gray-300 leading-relaxed mb-6">{display.description}</p>
+
+              {showSub20 && <HeatPanel date={dayKey} startDate={sub20StartDate} />}
 
               {display.details.length > 0 && (
                 <div className="flex flex-wrap gap-3">
@@ -1772,10 +1839,15 @@ export function TrainingGrid() {
               );
             })()
           )}
-        </div>
       </div>
     );
   };
+
+  const renderDayView = () => (
+    <div className="h-full flex items-start justify-center pt-10">
+      {renderDayDetail(currentDate)}
+    </div>
+  );
 
   // ── Year View ───────────────────────────────────────────────────────────────
   const renderYearView = () => {
@@ -1811,7 +1883,10 @@ export function TrainingGrid() {
                   return (
                     <div
                       key={`${year}-${month}-${day}`}
-                      className="aspect-square rounded-sm"
+                      // Sul quadratino di una seduta il click apre quella seduta,
+                      // non il mese: è il gesto che ci si aspetta.
+                      className={`aspect-square rounded-sm ${display ? 'cursor-pointer hover:ring-1 hover:ring-white/50' : ''}`}
+                      onClick={display ? (e) => { e.stopPropagation(); openDay(new Date(year, month, day)); } : undefined}
                       style={{
                         backgroundColor: failed ? '#EF4444' : display ? display.color : '#2A2A2A',
                         opacity: display ? (done ? 0.45 : 0.9) : 0.3,
@@ -1967,6 +2042,21 @@ export function TrainingGrid() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Dettaglio seduta — copre tutto: niente scritte che filtrano da dietro */}
+      {detailDate && (
+        <div
+          className="fixed inset-0 z-[70] bg-[#0A0A0A] overflow-y-auto"
+          onClick={closeDay}
+          role="presentation"
+        >
+          <div className="min-h-full flex items-start justify-center p-4 sm:p-8">
+            <div className="w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
+              {renderDayDetail(detailDate, closeDay)}
+            </div>
+          </div>
         </div>
       )}
 

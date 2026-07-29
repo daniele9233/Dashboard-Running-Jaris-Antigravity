@@ -7,7 +7,11 @@ import {
   kikkoSub20RaceDate,
   buildKikkoSub20Sessions,
   KIKKO_SUB20_DEFAULT_START,
-  tempBandForDate,
+  heatBandForDate,
+  heatBandForIndex,
+  heatPace,
+  heatTable,
+  romeHeatIndexForDate,
 } from "./kikkoSub20Plan";
 
 /**
@@ -84,11 +88,13 @@ describe("kikkoSub20 — intensità", () => {
     }
   });
 
-  it("gli intervalli vanno a ritmo gara corretto per la temperatura del giorno", () => {
-    const base = paceSec(RACE_PACE);
+  it("gli intervalli vanno a ritmo gara corretto per l'indice T + DP del giorno", () => {
     for (const s of KIKKO_SUB20_SESSIONS.filter((x) => x.type === "intervals")) {
-      const band = tempBandForDate(s.date);
-      expect(paceSec(s.target_pace!), `${s.date} · ${s.title}`).toBe(base + band.paceAdjSec);
+      const p = heatPace("reps", heatBandForDate(s.date));
+      expect(s.target_pace, `${s.date} · ${s.title}`).toBe(p.mid);
+      // il target sta sempre dentro la forbice della fascia
+      expect(paceSec(s.target_pace!)).toBeGreaterThanOrEqual(Math.floor(p.fastSec));
+      expect(paceSec(s.target_pace!)).toBeLessThanOrEqual(Math.ceil(p.slowSec));
     }
   });
 
@@ -111,7 +117,7 @@ describe("kikkoSub20 — intensità", () => {
   it("il taper tiene il ritmo gara ma dimezza le ripetute", () => {
     const taper = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals")[9];
     expect(taper.title).toContain("5×800");
-    expect(paceSec(taper.target_pace!)).toBe(paceSec(RACE_PACE) + tempBandForDate(taper.date).paceAdjSec);
+    expect(taper.target_pace).toBe(heatPace("reps", heatBandForDate(taper.date)).mid);
   });
 
   it("ogni seduta di ripetute dichiara il recupero nel titolo", () => {
@@ -124,32 +130,23 @@ describe("kikkoSub20 — intensità", () => {
   it("il recupero degli intervalli resta proporzionato al lavoro", () => {
     // Daniels: sul lavoro a ritmo intervallo il recupero non deve superare di
     // molto la durata della ripetuta, altrimenti diventa velocità pura; sotto
-    // ~0.6 la seduta non si regge al ritmo richiesto. Col caldo il recupero si
-    // allunga di proposito, quindi il tetto sale con la fascia.
+    // ~0.6 la seduta non si regge al ritmo richiesto.
     for (const s of KIKKO_SUB20_SESSIONS.filter((x) => x.type === "intervals")) {
       const m = s.title.match(/(\d+)×(\d+) m .*rec (\d+):(\d\d)/);
       expect(m, s.title).not.toBeNull();
       const meters = Number(m![2]);
       const recSec = Number(m![3]) * 60 + Number(m![4]);
-      const band = tempBandForDate(s.date);
-      const workSec = (meters / 1000) * (paceSec(RACE_PACE) + band.paceAdjSec);
+      const workSec = (meters / 1000) * paceSec(s.target_pace!);
       const ratio = recSec / workSec;
-      const ceiling = 1.05 + band.recAdjSec / workSec;
       expect(ratio, `${s.title} → 1:${ratio.toFixed(2)}`).toBeGreaterThanOrEqual(0.6);
-      expect(ratio, `${s.title} → 1:${ratio.toFixed(2)}`).toBeLessThanOrEqual(ceiling);
+      expect(ratio, `${s.title} → 1:${ratio.toFixed(2)}`).toBeLessThanOrEqual(1.05);
     }
   });
 
-  it("la fascia di temperatura segue il calendario, non il caso", () => {
-    expect(tempBandForDate("2026-08-04").id, "agosto a Roma").toBe("alta");
-    expect(tempBandForDate("2026-10-04").id, "gara di ottobre").toBe("media");
-    expect(tempBandForDate("2026-01-15").id, "gennaio").toBe("ideale");
-  });
-
-  it("le sedute d'estate spiegano perché il target non è 4:00", () => {
-    const hot = KIKKO_SUB20_SESSIONS.find((s) => s.type === "intervals" && s.date.startsWith("2026-08"))!;
-    expect(hot.description).toContain("Riferimento a freddo 4:00/km");
-    expect(hot.description).toMatch(/fascia alta/);
+  it("la descrizione resta corta: struttura e numeri, non un tema", () => {
+    for (const s of KIKKO_SUB20_SESSIONS) {
+      expect(s.description.length, `${s.date} · ${s.title}`).toBeLessThanOrEqual(180);
+    }
   });
 
   it("dentro ogni blocco il recupero si accorcia", () => {
@@ -185,6 +182,62 @@ describe("kikkoSub20 — intensità", () => {
     for (let i = 1; i < recoveries.length; i++) {
       expect(recoveries[i]).toBeLessThan(recoveries[i - 1]);
     }
+  });
+});
+
+describe("kikkoSub20 — indice T + DP", () => {
+  /**
+   * Le tre tabelle sono la specifica, non un effetto collaterale del codice:
+   * qui sono trascritte riga per riga come le ha scritte l'atleta. Se un
+   * ritocco alle penalità sposta anche un solo secondo, questo test lo dice.
+   */
+  const row = (kind: "reps" | "long" | "tempo", id: string) =>
+    heatTable(kind).find((r) => r.band.id === id)!;
+
+  it("tabella intervalli, base 4:00/km", () => {
+    expect([row("reps", "b0").penLabel, row("reps", "b0").pace, row("reps", "b0").reference]).toEqual(["0%", "3:58-4:00", "2:23-2:24"]);
+    expect([row("reps", "b1").penLabel, row("reps", "b1").pace, row("reps", "b1").reference]).toEqual(["0,5-1,5%", "4:01-4:04", "2:25-2:26"]);
+    expect([row("reps", "b2").penLabel, row("reps", "b2").pace, row("reps", "b2").reference]).toEqual(["2-3%", "4:05-4:07", "2:27-2:28"]);
+    expect([row("reps", "b3").penLabel, row("reps", "b3").pace, row("reps", "b3").reference]).toEqual(["3-4,5%", "4:07-4:11", "2:28-2:31"]);
+    expect([row("reps", "b4").penLabel, row("reps", "b4").pace, row("reps", "b4").reference]).toEqual(["4,5-6%", "4:11-4:14", "2:31-2:32"]);
+    expect([row("reps", "b5").penLabel, row("reps", "b5").pace, row("reps", "b5").reference]).toEqual(["6-8%", "4:14-4:19", "2:32-2:35"]);
+    expect([row("reps", "b6").pace, row("reps", "b6").reference]).toEqual(["—", "seduta da spostare"]);
+  });
+
+  it("tabella 3×2 km rec 3:30, base 4:15/km", () => {
+    expect([row("long", "b0").penLabel, row("long", "b0").pace, row("long", "b0").reference]).toEqual(["0%", "4:15", "8:30"]);
+    expect([row("long", "b1").penLabel, row("long", "b1").pace, row("long", "b1").reference]).toEqual(["0,5-2%", "4:16-4:20", "8:32-8:40"]);
+    expect([row("long", "b2").penLabel, row("long", "b2").pace, row("long", "b2").reference]).toEqual(["2,5-3,5%", "4:21-4:24", "8:42-8:48"]);
+    expect([row("long", "b3").penLabel, row("long", "b3").pace, row("long", "b3").reference]).toEqual(["3,5-5%", "4:24-4:28", "8:48-8:56"]);
+    expect([row("long", "b4").penLabel, row("long", "b4").pace, row("long", "b4").reference]).toEqual(["5-7%", "4:28-4:33", "8:56-9:06"]);
+    expect([row("long", "b5").penLabel, row("long", "b5").pace, row("long", "b5").reference]).toEqual(["7-9%", "4:33-4:38", "9:06-9:16"]);
+    expect(row("long", "b6").reference).toBe("seduta da spostare");
+  });
+
+  it("tabella soglia 20′, base 4:22/km", () => {
+    expect([row("tempo", "b0").penLabel, row("tempo", "b0").pace, row("tempo", "b0").reference]).toEqual(["0%", "4:22", "4,58"]);
+    expect([row("tempo", "b1").penLabel, row("tempo", "b1").pace, row("tempo", "b1").reference]).toEqual(["0,5-2%", "4:23-4:27", "4,49-4,56"]);
+    expect([row("tempo", "b2").penLabel, row("tempo", "b2").pace, row("tempo", "b2").reference]).toEqual(["2,5-4%", "4:29-4:32", "4,40-4,47"]);
+    expect([row("tempo", "b3").penLabel, row("tempo", "b3").pace, row("tempo", "b3").reference]).toEqual(["4-6%", "4:32-4:38", "4,32-4,40"]);
+    expect([row("tempo", "b4").penLabel, row("tempo", "b4").pace, row("tempo", "b4").reference]).toEqual(["6-8%", "4:38-4:43", "4,24-4,32"]);
+    expect([row("tempo", "b5").penLabel, row("tempo", "b5").pace, row("tempo", "b5").reference]).toEqual(["8-10%", "4:43-4:48", "4,16-4,24"]);
+    expect(row("tempo", "b6").reference).toBe("seduta da spostare");
+  });
+
+  it("le fasce si leggono sull'indice, non sui gradi", () => {
+    expect(heatBandForIndex(25).label).toBe("< 26");   // 15° + DP 10°
+    expect(heatBandForIndex(34).label).toBe("26-37");  // 20° + DP 14°
+    expect(heatBandForIndex(41).label).toBe("37-42");  // 24° + DP 17°
+    expect(heatBandForIndex(46).label).toBe("42-48");  // 28° + DP 18°
+    expect(heatBandForIndex(50).label).toBe("48-53");  // 31° + DP 19°
+    expect(heatBandForIndex(54).label).toBe("53-59");  // 34° + DP 20°
+    expect(heatBandForIndex(59).skip, "oltre 59 la seduta si sposta").toBe(true);
+  });
+
+  it("l'indice segue il calendario di Roma", () => {
+    expect(romeHeatIndexForDate("2026-08-04"), "agosto").toBe(40);
+    expect(romeHeatIndexForDate("2026-10-04"), "gara di ottobre").toBe(24);
+    expect(heatBandForDate("2026-01-15").label, "gennaio").toBe("< 26");
   });
 });
 
