@@ -72,8 +72,7 @@ function HeatPanel({ date, startDate }: { date: string; startDate: string }) {
           <table className="w-full text-[11px]" style={mono}>
             <thead>
               <tr className="text-gray-500">
-                <th className="text-left font-bold px-3.5 py-1.5">T + DP</th>
-                <th className="text-left font-bold px-2 py-1.5">Esempio</th>
+                <th className="text-left font-bold px-3.5 py-1.5">Esempio</th>
                 <th className="text-left font-bold px-2 py-1.5">Penalità</th>
                 <th className="text-left font-bold px-2 py-1.5">Passo/km</th>
                 <th className="text-left font-bold px-3.5 py-1.5">{heatReferenceLabel(kind!)}</th>
@@ -88,8 +87,7 @@ function HeatPanel({ date, startDate }: { date: string; startDate: string }) {
                     className={here ? "text-white font-bold" : "text-gray-500"}
                     style={here ? { background: `${col}1a` } : undefined}
                   >
-                    <td className="px-3.5 py-1.5 whitespace-nowrap" style={here ? { color: col } : undefined}>{r.band.label}</td>
-                    <td className="px-2 py-1.5 whitespace-nowrap">{r.band.example}</td>
+                    <td className="px-3.5 py-1.5 whitespace-nowrap" style={here ? { color: col } : undefined}>{r.band.example}</td>
                     <td className="px-2 py-1.5 whitespace-nowrap">{r.penLabel}</td>
                     <td className="px-2 py-1.5 whitespace-nowrap">{r.pace}</td>
                     <td className="px-3.5 py-1.5 whitespace-nowrap">{r.reference}</td>

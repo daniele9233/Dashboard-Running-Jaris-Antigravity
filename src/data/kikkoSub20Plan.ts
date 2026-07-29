@@ -147,7 +147,10 @@ export interface HeatBand {
   max: number | null;
   /** "26-37", "> 59", … */
   label: string;
-  /** Combinazione tipica a Roma che cade in questa fascia. */
+  /**
+   * Temperatura tipica a Roma che cade in questa fascia. È solo un'etichetta
+   * di lettura: la riga giusta la sceglie l'indice T + DP, non i gradi.
+   */
   example: string;
   /** Penalità % [min, max] sul ritmo, per tipo di seduta. */
   pen: Record<HeatKind, [number, number]>;
@@ -155,22 +158,29 @@ export interface HeatBand {
   skip?: boolean;
 }
 
+/**
+ * Le temperatura d'esempio sono la metà alta di ogni fascia, con il punto di
+ * rugiada che le accompagna a Roma:
+ *   15°+DP 10° · 20°+DP 14° · 24°+DP 17° · 28°+DP 18° · 31°+DP 19° ·
+ *   34°+DP 20° · 37°+DP 22°
+ * In tabella si mostra solo la temperatura, ma la fascia la decide la somma.
+ */
 export const KIKKO_SUB20_HEAT_BANDS: HeatBand[] = [
   // Sotto 26 l'aria non è mai il limite: sugli intervalli si può anche
   // scendere di un paio di secondi rispetto alla base.
-  { id: "b0", min: -Infinity, max: 26, label: "< 26",  example: "15° + DP 10°",
+  { id: "b0", min: -Infinity, max: 26, label: "< 26",  example: "15°",
     pen: { reps: [-0.8, 0],  long: [0, 0],     tempo: [0, 0]     } },
-  { id: "b1", min: 26, max: 37, label: "26-37", example: "20° + DP 14°",
+  { id: "b1", min: 26, max: 37, label: "26-37", example: "20°",
     pen: { reps: [0.5, 1.5], long: [0.5, 2],   tempo: [0.5, 2]   } },
-  { id: "b2", min: 37, max: 42, label: "37-42", example: "24° + DP 17°",
+  { id: "b2", min: 37, max: 42, label: "37-42", example: "24°",
     pen: { reps: [2, 3],     long: [2.5, 3.5], tempo: [2.5, 4]   } },
-  { id: "b3", min: 42, max: 48, label: "42-48", example: "28° + DP 18°",
+  { id: "b3", min: 42, max: 48, label: "42-48", example: "28°",
     pen: { reps: [3, 4.5],   long: [3.5, 5],   tempo: [4, 6]     } },
-  { id: "b4", min: 48, max: 53, label: "48-53", example: "31° + DP 19°",
+  { id: "b4", min: 48, max: 53, label: "48-53", example: "31°",
     pen: { reps: [4.5, 6],   long: [5, 7],     tempo: [6, 8]     } },
-  { id: "b5", min: 53, max: 59, label: "53-59", example: "34° + DP 20°",
+  { id: "b5", min: 53, max: 59, label: "53-59", example: "34°",
     pen: { reps: [6, 8],     long: [7, 9],     tempo: [8, 10]    } },
-  { id: "b6", min: 59, max: null, label: "> 59", example: "37° + DP 22°", skip: true,
+  { id: "b6", min: 59, max: null, label: "> 59", example: "37°", skip: true,
     pen: { reps: [8, 12],    long: [8, 12],    tempo: [8, 12]    } },
 ];
 
