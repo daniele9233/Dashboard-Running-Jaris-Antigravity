@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-07-29T05:26:26.891Z",
+  "generated_at": "2026-08-01T14:50:14.028Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -3882,9 +3882,9 @@
         "react",
         "recharts"
       ],
-      "hash": "40e166c25151a545fe12cab3758dd74b8acc21be08cb3c0af581f6eda2dadfcd",
-      "last_modified": "2026-07-26T11:13:56.209Z",
-      "size_bytes": 41457
+      "hash": "4207639493d9e9a8e0fafce1c97b1ff04953e48ad90c48ed282dd687e5e9ed7e",
+      "last_modified": "2026-08-01T14:50:14.029Z",
+      "size_bytes": 46468
     },
     {
       "path": "src/components/statistics/ChartFullscreenModal.tsx",
@@ -4252,6 +4252,7 @@
       "touch_when": [
         "activities",
         "ai",
+        "garmin",
         "layout",
         "profile",
         "strava",
@@ -4274,9 +4275,9 @@
         "react",
         "react-i18next"
       ],
-      "hash": "a3dc33533203d3437e1f08006c99ed2805e13232103daac8fc783b5542149358",
-      "last_modified": "2026-07-29T05:26:26.892Z",
-      "size_bytes": 101750
+      "hash": "76b01c4d95855113d127194fd9c7fbc4df4f9787afda3ba332c85a675578b59d",
+      "last_modified": "2026-08-01T14:37:58.317Z",
+      "size_bytes": 106067
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -4487,9 +4488,9 @@
         "./kikkoSub20Plan",
         "vitest"
       ],
-      "hash": "f5e0faccc9f024766628cf9447a02d5988e7027b9ca99d6d179465d345265c9f",
-      "last_modified": "2026-07-29T05:24:07.854Z",
-      "size_bytes": 9954
+      "hash": "dfce80f03b63b1878d2e22484e450f32237eeb2f796252f7077648c2cb1598ad",
+      "last_modified": "2026-08-01T14:37:58.317Z",
+      "size_bytes": 17986
     },
     {
       "path": "src/data/kikkoSub20Plan.ts",
@@ -4498,33 +4499,51 @@
       "touch_when": [
         "activities",
         "ai",
+        "garmin",
         "training",
         "types"
       ],
       "exports": [
+        "Bases",
+        "basesFor",
         "buildKikkoSub20Sessions",
+        "dewPoint",
+        "fmtNum",
+        "HeatBand",
+        "heatBandForDate",
+        "heatBandForIndex",
+        "HeatKind",
+        "heatPace",
+        "HeatPace",
+        "heatReferenceLabel",
+        "HeatRow",
+        "heatTable",
         "KIKKO_SUB20_DEFAULT_START",
+        "KIKKO_SUB20_HEAT_BANDS",
         "KIKKO_SUB20_LEGEND",
         "KIKKO_SUB20_META",
         "KIKKO_SUB20_SESSIONS",
-        "KIKKO_SUB20_TEMP_BANDS",
         "KIKKO_SUB20_WEEKLY_KM",
+        "KIKKO_VDOT_GOAL",
+        "KIKKO_VDOT_START",
+        "KIKKO_WEEK_VDOT",
         "kikkoSub20ActualWeeklyKm",
+        "kikkoSub20HeatInfo",
         "kikkoSub20NormalizeStart",
         "kikkoSub20RaceDate",
-        "romeTempForDate",
-        "TempBand",
-        "tempBandForDate",
-        "tempBandForTemp",
-        "TempBandId"
+        "Paces",
+        "repPaceForRecovery",
+        "romeDewPointForDate",
+        "romeHeatIndexForDate",
+        "romeTempForDate"
       ],
       "routes": [],
       "imports": [
         "../types/api"
       ],
-      "hash": "5d3323ecf467336b02905c46dfa56d161bb0f90f0a186ddc3bba07c8b191801e",
-      "last_modified": "2026-07-29T05:25:25.035Z",
-      "size_bytes": 21870
+      "hash": "624858e7d6b6aef51d352145cf340401d85fab8a9969854c3b9d45b9be8f4e6d",
+      "last_modified": "2026-08-01T14:37:58.318Z",
+      "size_bytes": 29458
     },
     {
       "path": "src/data/sub20Plan.ts",

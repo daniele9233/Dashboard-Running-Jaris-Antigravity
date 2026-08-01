@@ -20,9 +20,22 @@ export interface CaricoFormaV2Props {
 
 const CHART_LINES = [
   { key: "ctl" as const, label: "Condizione fisica", short: "Condizione", color: CHART_SERIES.load, gradId: "v2CtlGrad" },
-  { key: "atl" as const, label: "Affaticamento",     short: "Affatica.",  color: "#F43F5E", gradId: "v2AtlGrad" },
-  { key: "tsb" as const, label: "Forma",             short: "Forma",      color: "#C0FF00", gradId: "v2TsbGrad" },
+  { key: "atl" as const, label: "Affaticamento",     short: "Affatica.",  color: CHART_SERIES.risk, gradId: "v2AtlGrad" },
+  { key: "tsb" as const, label: "Forma",             short: "Forma",      color: CHART_SERIES.positive, gradId: "v2TsbGrad" },
 ] as const;
+
+/**
+ * Le fasce di forma (TSB) secondo Coggan. Servono a dare un nome al numero:
+ * −6 da solo non dice niente, "zona di lavoro produttivo" sì.
+ */
+const TSB_ZONES = [
+  { min: 25, label: "scarico", color: CHART_SERIES.compare },
+  { min: 5, label: "fresco", color: CHART_SERIES.positive },
+  { min: -10, label: "equilibrio", color: CHART_SERIES.primary },
+  { min: -30, label: "carico produttivo", color: CHART_SERIES.load },
+  { min: -Infinity, label: "rischio", color: CHART_SERIES.risk },
+];
+const tsbZone = (v: number) => TSB_ZONES.find((z) => v >= z.min) ?? TSB_ZONES[TSB_ZONES.length - 1];
 
 function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
   const [range, setRange] = useState<FFRange>("3m");
@@ -38,38 +51,65 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [ff, range]);
 
-  const W = 1000, H = 260;
-  const padL = 44, padR = 20, padT = 20, padB = 30;
+  /*
+   * IL FIUME.
+   *
+   * Tre curve sovrapposte erano tre cose da leggere e nessuna da capire. Qui
+   * la curva è UNA — la condizione — e l'affaticamento è il suo argine: la
+   * fascia fra le due È la forma, perché forma = condizione − affaticamento.
+   *
+   *   fascia VERDE  → l'affaticamento sta sotto la condizione: stai assorbendo
+   *   fascia ROSSA  → l'affaticamento sta sopra: stai scavando nel serbatoio
+   *   spessore      → quanto, in punti di forma
+   *
+   * Niente linea tratteggiata da inseguire: il colore e lo spessore dicono
+   * tutto a colpo d'occhio, e il numero esatto lo dà il cursore.
+   */
+  const W = 1000, H = 300;
+  const padL = 44, padR = 62, padT = 26, padB = 30;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
+  const top = padT, bot = padT + plotH;
 
-  const { maxY, minY } = useMemo(() => {
-    if (!data.length) return { maxY: 80, minY: -30 };
-    const all = data.flatMap(d => [d.ctl, d.atl, d.tsb]);
-    const mx = Math.ceil((Math.max(...all) + 8) / 10) * 10;
-    const mn = Math.floor((Math.min(...all) - 8) / 10) * 10;
-    return { maxY: Math.max(mx, 20), minY: Math.min(mn, -10) };
+  const maxLoad = useMemo(() => {
+    if (!data.length) return 60;
+    const mx = Math.max(...data.flatMap(d => [d.ctl, d.atl]));
+    return Math.max(20, Math.ceil((mx * 1.12) / 10) * 10);
   }, [data]);
 
-  const x  = (i: number) => padL + (data.length <= 1 ? plotW / 2 : (i / (data.length - 1)) * plotW);
-  const y  = (v: number) => padT + (1 - (v - minY) / (maxY - minY || 1)) * plotH;
-  const y0 = y(0);
+  const x = (i: number) => padL + (data.length <= 1 ? plotW / 2 : (i / (data.length - 1)) * plotW);
+  /** Il carico parte da zero: non esiste un carico negativo. */
+  const y = (v: number) => bot - (v / (maxLoad || 1)) * plotH;
 
-  const buildLine = (key: "ctl" | "atl" | "tsb") =>
-    data.map((d, i) => `${i === 0 ? "M" : "L"} ${x(i).toFixed(1)} ${y(d[key]).toFixed(1)}`).join(" ");
-
-  const buildArea = (key: "ctl" | "atl") => {
-    if (!data.length) return "";
-    const top = data.map((d, i) => `${i === 0 ? "M" : "L"} ${x(i).toFixed(1)} ${y(d[key]).toFixed(1)}`).join(" ");
-    return `${top} L ${x(data.length - 1).toFixed(1)} ${y0} L ${padL.toFixed(1)} ${y0} Z`;
+  const path = (key: "ctl" | "atl", reverse = false) => {
+    const pts = reverse ? [...data].reverse() : data;
+    const idx = (i: number) => (reverse ? data.length - 1 - i : i);
+    return pts.map((d, i) => `${i === 0 && !reverse ? "M" : "L"} ${x(idx(i)).toFixed(1)} ${y(d[key]).toFixed(1)}`).join(" ");
   };
 
-  const yTicks = useMemo(() => {
-    const step = Math.max(10, Math.ceil((maxY - minY) / 5 / 10) * 10);
+  const ctlPath = useMemo(() => path("ctl"), [data, maxLoad]);      // eslint-disable-line react-hooks/exhaustive-deps
+  const atlPath = useMemo(() => path("atl"), [data, maxLoad]);      // eslint-disable-line react-hooks/exhaustive-deps
+  /** La fascia: condizione all'andata, affaticamento al ritorno. */
+  const ribbon = useMemo(
+    () => (data.length ? `${ctlPath} ${path("atl", true)} Z` : ""),
+    [ctlPath, data, maxLoad],                                       // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  /** Sotto la condizione = fascia verde · sopra = fascia rossa. Due ritagli. */
+  const clipUnder = useMemo(
+    () => (data.length ? `${ctlPath} L ${x(data.length - 1).toFixed(1)} ${bot} L ${padL} ${bot} Z` : ""),
+    [ctlPath, data.length],                                         // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const clipOver = useMemo(
+    () => (data.length ? `${ctlPath} L ${x(data.length - 1).toFixed(1)} ${top} L ${padL} ${top} Z` : ""),
+    [ctlPath, data.length],                                         // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
+  const loadTicks = useMemo(() => {
+    const step = Math.max(10, Math.ceil(maxLoad / 4 / 10) * 10);
     const arr: number[] = [];
-    for (let v = minY; v <= maxY; v += step) arr.push(v);
+    for (let v = step; v <= maxLoad; v += step) arr.push(v);
     return arr;
-  }, [maxY, minY]);
+  }, [maxLoad]);
 
   const xLabels = useMemo(() => {
     if (data.length < 2) return [] as { i: number; label: string }[];
@@ -84,7 +124,7 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
     return out;
   }, [data]);
 
-  const onMove = (e: React.MouseEvent<SVGSVGElement>) => {
+  const onMove = (e: React.PointerEvent<SVGSVGElement>) => {
     if (!data.length || !svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
     const px = ((e.clientX - rect.left) / rect.width) * W;
@@ -93,18 +133,21 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
   };
 
   const hov = hoverIdx !== null ? data[hoverIdx] ?? null : null;
+  /** Punto letto dai numeri in alto: quello sotto al cursore, altrimenti oggi. */
+  const shown = hov ?? (data.length ? data[data.length - 1] : null);
+  const shownIdx = hoverIdx ?? (data.length - 1);
+  const zone = shown ? tsbZone(shown.tsb) : null;
 
-  // KPI: ultimo valore + delta rispetto a 7 punti fa
+  // Delta sui 7 giorni precedenti al punto mostrato: si aggiorna scorrendo.
   const kpi = useMemo(() => {
-    if (!data.length) return null;
-    const last = data[data.length - 1];
-    const prev = data[Math.max(0, data.length - 8)];
+    if (!data.length || !shown) return null;
+    const prev = data[Math.max(0, shownIdx - 7)];
     return CHART_LINES.map(l => ({
       ...l,
-      current: last[l.key],
-      delta: last[l.key] - prev[l.key],
+      current: shown[l.key],
+      delta: shown[l.key] - prev[l.key],
     }));
-  }, [data]);
+  }, [data, shown, shownIdx]);
 
   return (
     <div
@@ -114,7 +157,11 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h3 className="text-white text-lg font-black tracking-tight">Condizione · Affaticamento · Forma</h3>
-          <p className="text-[#555] text-[11px] tracking-wide mt-0.5">Andamento nel tempo</p>
+          <p className="text-[#555] text-[11px] tracking-wide mt-0.5">
+            {shown
+              ? <>La fascia fra le due curve è la tua forma · <span style={{ color: zone?.color }}>{zone?.label}</span></>
+              : "Andamento nel tempo"}
+          </p>
         </div>
         <div className="flex gap-1 bg-white/5 rounded-lg p-1">
           {(["1m", "3m", "6m", "1y", "2y"] as FFRange[]).map(k => (
@@ -144,7 +191,7 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
             >
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-black tabular-nums" style={{ color: k.color, fontFamily: "JetBrains Mono, monospace" }}>
-                  {k.current >= 0 ? "" : ""}{k.current.toFixed(1)}
+                  {k.key === "tsb" && k.current > 0 ? "+" : ""}{k.current.toFixed(1)}
                 </span>
                 <span
                   className="text-[10px] font-black tabular-nums"
@@ -171,86 +218,110 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
           <svg
             ref={svgRef}
             viewBox={`0 0 ${W} ${H}`}
-            preserveAspectRatio="none"
-            className="w-full h-full"
-            style={{ cursor: "crosshair", minHeight: 260 }}
-            onMouseMove={onMove}
-            onMouseLeave={() => setHoverIdx(null)}
+            className="w-full h-auto touch-none"
+            style={{ cursor: "crosshair" }}
+            onPointerMove={onMove}
+            onPointerLeave={() => setHoverIdx(null)}
           >
             <defs>
-              {CHART_LINES.map(l => (
-                <linearGradient key={l.gradId} id={l.gradId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"   stopColor={l.color} stopOpacity="0.22" />
-                  <stop offset="100%" stopColor={l.color} stopOpacity="0.01" />
-                </linearGradient>
-              ))}
+              <clipPath id="v2Under"><path d={clipUnder} /></clipPath>
+              <clipPath id="v2Over"><path d={clipOver} /></clipPath>
+              <linearGradient id="v2Spine" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={CHART_SERIES.load} stopOpacity="0.20" />
+                <stop offset="100%" stopColor={CHART_SERIES.load} stopOpacity="0" />
+              </linearGradient>
+              <filter id="v2Glow" x="-20%" y="-40%" width="140%" height="180%">
+                <feGaussianBlur stdDeviation="4" result="b" />
+                <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
             </defs>
 
-            {/* Y grid lines + labels */}
-            {yTicks.map(v => (
+            {/* griglia essenziale: solo orizzontali, dietro a tutto */}
+            {loadTicks.map(v => (
               <g key={v}>
-                <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke="#252528" strokeWidth={1} vectorEffect="non-scaling-stroke" />
-                <text x={padL - 7} y={y(v) + 4} textAnchor="end" fontSize="9" fill="#555" fontFamily="JetBrains Mono, monospace">{v}</text>
+                <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke="#191919" strokeWidth={1} />
+                <text x={padL - 8} y={y(v) + 3.5} textAnchor="end" fontSize="10" fill="#7A7A7A" fontFamily="JetBrains Mono, monospace">{v}</text>
               </g>
             ))}
+            <line x1={padL} x2={W - padR} y1={bot} y2={bot} stroke="#2A2A2A" strokeWidth={1} />
 
-            {/* Zero reference */}
-            <line x1={padL} x2={W - padR} y1={y0} y2={y0} stroke="#3a3a3f" strokeWidth={1.5} strokeDasharray="5 4" vectorEffect="non-scaling-stroke" />
+            <g key={range} className="animate-in fade-in duration-700">
+              {/* velo sotto la condizione: dà corpo al fiume senza sporcare */}
+              <path d={clipUnder} fill="url(#v2Spine)" />
 
-            {/* CTL area */}
-            {(focus === "all" || focus === "ctl") && (
-              <g style={{ opacity: focus === "ctl" ? 1 : 0.7, transition: "opacity .3s" }}>
-                <path d={buildArea("ctl")} fill="url(#v2CtlGrad)" />
-                <path d={buildLine("ctl")} fill="none" stroke={CHART_SERIES.load} strokeWidth={2.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+              {/* LA FASCIA — verde dove assorbi, rossa dove scavi */}
+              {(focus === "all" || focus === "tsb") && (
+                <>
+                  <g clipPath="url(#v2Under)">
+                    <path d={ribbon} fill={CHART_SERIES.positive} fillOpacity={0.34} />
+                  </g>
+                  <g clipPath="url(#v2Over)">
+                    <path d={ribbon} fill={CHART_SERIES.risk} fillOpacity={0.34} />
+                  </g>
+                </>
+              )}
+
+              {/* argine: l'affaticamento è un bordo, non una seconda curva urlata */}
+              {(focus === "all" || focus === "atl") && (
+                <path d={atlPath} fill="none" stroke={CHART_SERIES.risk} strokeWidth={1.4} strokeOpacity={0.75}
+                  strokeLinejoin="round" strokeLinecap="round" />
+              )}
+
+              {/* la spina dorsale: la condizione */}
+              {(focus === "all" || focus === "ctl") && (
+                <path d={ctlPath} fill="none" stroke={CHART_SERIES.load} strokeWidth={3}
+                  strokeLinejoin="round" strokeLinecap="round" filter="url(#v2Glow)" />
+              )}
+            </g>
+
+            {/* oggi: pallino + valore fuori dal riquadro, sempre leggibile */}
+            {data.length > 0 && (
+              <g pointerEvents="none">
+                <circle cx={x(data.length - 1)} cy={y(data[data.length - 1].ctl)} r={4.5}
+                  fill="#0A0A0A" stroke={CHART_SERIES.load} strokeWidth={2.5} />
+                <text x={W - padR + 8} y={y(data[data.length - 1].ctl) + 4} fontSize="13" fontWeight="800"
+                  fill={CHART_SERIES.load} fontFamily="JetBrains Mono, monospace">
+                  {data[data.length - 1].ctl.toFixed(0)}
+                </text>
               </g>
             )}
 
-            {/* ATL area */}
-            {(focus === "all" || focus === "atl") && (
-              <g style={{ opacity: focus === "atl" ? 1 : 0.65, transition: "opacity .3s" }}>
-                <path d={buildArea("atl")} fill="url(#v2AtlGrad)" />
-                <path d={buildLine("atl")} fill="none" stroke="#F43F5E" strokeWidth={2.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-              </g>
-            )}
-
-            {/* TSB line only */}
-            {(focus === "all" || focus === "tsb") && (
-              <g style={{ opacity: focus === "tsb" ? 1 : 0.9, transition: "opacity .3s" }}>
-                <path d={buildLine("tsb")} fill="none" stroke="#C0FF00" strokeWidth={2} strokeLinejoin="round" strokeDasharray="6 3" vectorEffect="non-scaling-stroke" />
-              </g>
-            )}
-
-            {/* X axis labels */}
+            {/* asse dei tempi */}
             {xLabels.map((lbl, k) => (
-              <text key={k} x={x(lbl.i)} y={H - 8} textAnchor="middle" fontSize="9" fill="#666" fontFamily="JetBrains Mono, monospace">
+              <text key={k} x={x(lbl.i)} y={H - 9} textAnchor="middle" fontSize="10" fill="#7A7A7A" fontFamily="JetBrains Mono, monospace">
                 {lbl.label}
               </text>
             ))}
 
-            {/* Hover crosshair + dots */}
+            {/* cursore: la fascia del giorno si accende */}
             {hov && hoverIdx !== null && (
-              <g>
-                <line x1={x(hoverIdx)} x2={x(hoverIdx)} y1={padT} y2={padT + plotH} stroke="rgba(255,255,255,0.12)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-                {CHART_LINES.map(l => {
-                  if (focus !== "all" && focus !== l.key) return null;
-                  const v = hov[l.key];
-                  return (
-                    <g key={l.key}>
-                      <circle cx={x(hoverIdx)} cy={y(v)} r={12} fill={l.color} fillOpacity="0.15" />
-                      <circle cx={x(hoverIdx)} cy={y(v)} r={4.5} fill={l.color} stroke="#111" strokeWidth={2} vectorEffect="non-scaling-stroke" />
-                    </g>
-                  );
-                })}
+              <g pointerEvents="none">
+                <line x1={x(hoverIdx)} x2={x(hoverIdx)} y1={y(Math.max(hov.ctl, hov.atl))} y2={bot}
+                  stroke="rgba(255,255,255,0.16)" strokeWidth={1} />
+                <line x1={x(hoverIdx)} x2={x(hoverIdx)} y1={y(hov.ctl)} y2={y(hov.atl)}
+                  stroke={hov.tsb >= 0 ? CHART_SERIES.positive : CHART_SERIES.risk} strokeWidth={3} strokeOpacity={0.9} />
+                <circle cx={x(hoverIdx)} cy={y(hov.atl)} r={3.5} fill="#0A0A0A" stroke={CHART_SERIES.risk} strokeWidth={2} />
+                <circle cx={x(hoverIdx)} cy={y(hov.ctl)} r={4.5} fill="#0A0A0A" stroke={CHART_SERIES.load} strokeWidth={2.5} />
               </g>
             )}
           </svg>
         )}
 
-        {/* Hover tooltip */}
+        {/* Targhetta: si sposta a sinistra se il cursore è nella metà destra */}
         {hov && hoverIdx !== null && (
-          <div className="absolute top-2 right-2 bg-[#111] border border-white/[0.08] rounded-2xl px-4 py-3 pointer-events-none min-w-[190px] shadow-2xl">
-            <div className="text-[10px] text-[#A0A0A0] font-black tracking-widest uppercase mb-2">
-              {new Date(hov.date).toLocaleDateString("it", { day: "numeric", month: "short", year: "numeric" })}
+          <div
+            className={`absolute top-2 bg-[#0E0E0E]/95 border rounded-2xl px-4 py-3 pointer-events-none min-w-[200px] shadow-2xl ${
+              hoverIdx > data.length / 2 ? "left-2" : "right-2"
+            }`}
+            style={{ borderColor: `${zone?.color ?? "#2A2A2A"}55` }}
+          >
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <span className="text-[10px] text-[#A0A0A0] font-black tracking-widest uppercase">
+                {new Date(hov.date).toLocaleDateString("it", { day: "numeric", month: "short", year: "numeric" })}
+              </span>
+              <span className="text-[9px] font-black tracking-widest uppercase" style={{ color: zone?.color }}>
+                {zone?.label}
+              </span>
             </div>
             {CHART_LINES.map(l => (
               <div key={l.key} className="flex items-center justify-between py-0.5">
@@ -259,12 +330,29 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
                   <span className="text-[11px] font-black" style={{ color: l.color }}>{l.short}</span>
                 </div>
                 <span className="text-white text-sm font-black tabular-nums" style={{ fontFamily: "JetBrains Mono, monospace" }}>
-                  {hov[l.key] >= 0 ? "+" : ""}{hov[l.key].toFixed(1)}
+                  {l.key === "tsb" && hov.tsb > 0 ? "+" : ""}{hov[l.key].toFixed(1)}
                 </span>
               </div>
             ))}
           </div>
         )}
+      </div>
+
+      {/* Come si legge: senza questa riga il verde e il rosso restano decorazione */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[10px] text-[#7A7A7A]">
+        <span className="flex items-center gap-1.5">
+          <span className="w-4 h-2 rounded-sm" style={{ background: CHART_SERIES.positive, opacity: 0.55 }} />
+          affaticamento sotto la condizione — stai assorbendo
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-4 h-2 rounded-sm" style={{ background: CHART_SERIES.risk, opacity: 0.55 }} />
+          affaticamento sopra — stai scavando nel serbatoio
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-4 h-[3px] rounded-full" style={{ background: CHART_SERIES.load }} />
+          condizione fisica
+        </span>
+        <span className="ml-auto text-[#5A5A5A]">Scorri sul grafico per leggere un giorno</span>
       </div>
     </div>
   );
