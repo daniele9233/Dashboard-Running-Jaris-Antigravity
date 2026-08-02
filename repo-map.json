@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-08-01T14:50:14.028Z",
+  "generated_at": "2026-08-02T15:49:21.254Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2798,9 +2798,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "627622515d8f310f7b3949ee1135ac126aa9e5365be144cd7ba1bfc30a635496",
-      "last_modified": "2026-07-27T05:27:02.019Z",
-      "size_bytes": 16903
+      "hash": "4dceb0a1f9545dcbbfa8fe17f8661e000ed061a69e9324afbaaa0e94de08ae0a",
+      "last_modified": "2026-08-02T15:48:52.564Z",
+      "size_bytes": 21595
     },
     {
       "path": "src/components/DashboardView.tsx",
@@ -4747,9 +4747,9 @@
       ],
       "routes": [],
       "imports": [],
-      "hash": "3ccb513058d00d38e8a95964fee7ba54311a2d21d440fc65e65c99cf61d4a645",
-      "last_modified": "2026-07-27T19:45:31.772Z",
-      "size_bytes": 27207
+      "hash": "2e71167e6dc6629ce5e31ce50a283fe76032ae57af6b1660acc64cb0cae379e3",
+      "last_modified": "2026-08-02T15:49:21.255Z",
+      "size_bytes": 27384
     },
     {
       "path": "src/index.css",

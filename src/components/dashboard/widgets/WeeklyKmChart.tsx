@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { Footprints, Pencil } from "lucide-react";
+import { Footprints, Pencil, ChevronDown } from "lucide-react";
 import type { Run } from "../../../types/api";
 import { useApi, invalidateCache } from "../../../hooks/useApi";
 import { getWeeklyGoal, putWeeklyGoal, type WeeklyGoalResponse } from "../../../api";
@@ -13,7 +13,11 @@ import { getWeeklyGoal, putWeeklyGoal, type WeeklyGoalResponse } from "../../../
  */
 
 const GOAL_KEY = "weekly-km-goal";
+const AVG_KEY = "weekly-km-avg-window";
 const DEFAULT_GOAL = 40;
+/** Finestre disponibili per la media settimanale. */
+const AVG_WINDOWS = [4, 6, 8, 10] as const;
+type AvgWindow = (typeof AVG_WINDOWS)[number];
 const DAY_LETTERS = ["L", "M", "M", "G", "V", "S", "D"];
 const DAY_SHORT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 const LIME = "#C0FF00";
@@ -172,6 +176,46 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
   const fmtKmDetailed = (km: number) =>
     km.toLocaleString(i18n.language === "en" ? "en-GB" : "it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  // ── Media delle ultime N settimane ──
+  // Conta solo le settimane CHIUSE: includere quella in corso (spesso ferma a
+  // metà) abbasserebbe la media di parecchi km e farebbe sembrare un calo.
+  const [avgWeeks, setAvgWeeks] = useState<AvgWindow>(() => {
+    const raw = typeof window !== "undefined" ? Number(localStorage.getItem(AVG_KEY)) : NaN;
+    return (AVG_WINDOWS as readonly number[]).includes(raw) ? (raw as AvgWindow) : 4;
+  });
+  const [avgOpen, setAvgOpen] = useState(false);
+  const avgRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!avgOpen) return;
+    const close = (e: MouseEvent) => {
+      if (avgRef.current && !avgRef.current.contains(e.target as Node)) setAvgOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setAvgOpen(false); };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", esc); };
+  }, [avgOpen]);
+
+  const avg = useMemo(() => {
+    const closed = weeklyVolumes.slice(1, avgWeeks + 1);   // salta la settimana in corso
+    if (!closed.length) return { km: 0, weeks: 0, delta: null as number | null };
+    const km = closed.reduce((s, w) => s + w.km, 0) / closed.length;
+    // confronto con la finestra precedente della stessa ampiezza
+    const before = weeklyVolumes.slice(avgWeeks + 1, avgWeeks * 2 + 1);
+    const prev = before.length === avgWeeks ? before.reduce((s, w) => s + w.km, 0) / before.length : null;
+    return {
+      km: Math.round(km * 10) / 10,
+      weeks: closed.length,
+      delta: prev != null ? Math.round((km - prev) * 10) / 10 : null,
+    };
+  }, [weeklyVolumes, avgWeeks]);
+
+  const pickAvg = (n: AvgWindow) => {
+    setAvgWeeks(n);
+    setAvgOpen(false);
+    if (typeof window !== "undefined") localStorage.setItem(AVG_KEY, String(n));
+  };
+
   return (
     <div className="h-full rounded-[24px] p-6 flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
       {/* Header + tab periodo */}
@@ -240,7 +284,7 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
               <div className="text-[10px] font-bold mt-1" style={{ color: pct >= 100 ? LIME : "#8A8A8A" }}>
                 {pct >= 100 ? t("dashboard.goalReached") : `${t("dashboard.toGo", { km: remaining })} · ${pct}%`}
               </div>
-              <div className="flex gap-4 mt-3">
+              <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3">
                 <div>
                   <div className="text-white text-sm font-black tabular-nums leading-none">{fmtDuration(week.totalMin)}</div>
                   <div className="text-[9px] font-black tracking-widest uppercase text-gray-600 mt-0.5">{t("dashboard.weekTime")}</div>
@@ -248,6 +292,58 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
                 <div>
                   <div className="text-white text-sm font-black tabular-nums leading-none">{week.totalElev} m</div>
                   <div className="text-[9px] font-black tracking-widest uppercase text-gray-600 mt-0.5">{t("dashboard.weekElevation")}</div>
+                </div>
+
+                {/* Media delle ultime N settimane, con la finestra scegliibile */}
+                <div className="relative" ref={avgRef}>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-white text-sm font-black tabular-nums leading-none">{avg.km} km</span>
+                    {avg.delta != null && avg.delta !== 0 && (
+                      <span className="text-[10px] font-black tabular-nums"
+                        style={{ color: avg.delta > 0 ? LIME : "#F43F5E" }}>
+                        {avg.delta > 0 ? "+" : ""}{avg.delta}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAvgOpen(v => !v)}
+                    aria-haspopup="listbox"
+                    aria-expanded={avgOpen}
+                    className="mt-0.5 inline-flex items-center gap-1 text-[9px] font-black tracking-widest uppercase text-gray-600 hover:text-white transition-colors"
+                  >
+                    {t("dashboard.avgOverWeeks", { weeks: avgWeeks })}
+                    <ChevronDown className={`w-3 h-3 transition-transform ${avgOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {avgOpen && (
+                    <div
+                      role="listbox"
+                      className="absolute left-0 top-full mt-1.5 z-30 min-w-[132px] rounded-xl border border-white/10 bg-[#0E0E0E]/98 backdrop-blur-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150"
+                    >
+                      {AVG_WINDOWS.map(n => (
+                        <button
+                          key={n}
+                          type="button"
+                          role="option"
+                          aria-selected={n === avgWeeks}
+                          onClick={() => pickAvg(n)}
+                          className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-[11px] font-bold transition-colors ${
+                            n === avgWeeks ? "text-black" : "text-gray-300 hover:bg-white/[0.06]"
+                          }`}
+                          style={n === avgWeeks ? { background: LIME } : undefined}
+                        >
+                          <span>{t("dashboard.lastNWeeks", { weeks: n })}</span>
+                          <span className="tabular-nums opacity-70">
+                            {(() => {
+                              const w = weeklyVolumes.slice(1, n + 1);
+                              return w.length ? `${Math.round((w.reduce((s, v) => s + v.km, 0) / w.length) * 10) / 10}` : "—";
+                            })()}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
