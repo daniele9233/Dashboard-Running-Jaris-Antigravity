@@ -4056,11 +4056,26 @@ def _vdot_from_effort(
 
     # ── Layer 3: HR as validator, not blind driver ───────────────────────────
     # A sub-maximal tempo run legitimately implies a HIGHER VDOT than its pace
-    # alone (run easy, high engine). HR scaling unlocks that. We deliberately do
-    # NOT clamp the HR-scaled value to the pace-only ceiling — that would strip
-    # the real signal out of every tempo/threshold run and understate VDOT.
-    # Unreliable HR (sensor dropout) is handled downstream by per-run confidence
-    # weighting and the confidence-gated recency anchor, not by clipping here.
+    # alone (run easy, high engine): HR scaling unlocks that, and that part
+    # stays. What does NOT stay is letting it run away unbounded.
+    #
+    # The HR→%VO2max mapping is only as good as the assumed HRmax, and when
+    # that is wrong the error has no ceiling. Real case: 17/06/2026, 5 km in
+    # 21:00 at 20.1C — the athlete's personal best, an all-out effort. Avg HR
+    # 155 against a profile HRmax of 180 reads as 86%, so the model called a
+    # maximal race "sub-maximal" and returned VDOT 55.3 instead of ~49. On the
+    # dashboard that became a predicted 5 km of 18:55 against a real 21:00.
+    # The tell: on that PB he peaked at 168 bpm, nowhere near the nominal 180,
+    # so the HR scale itself is miscalibrated for him.
+    #
+    # The cap is graded on how hard the run was: the closer the effort is to
+    # maximal, the more the pace already tells the whole story and the less the
+    # HR is allowed to add. Easy running (75% HRmax) keeps the full 5% uplift,
+    # because there the pace genuinely understates the engine; from 88% up the
+    # uplift goes to zero, because at that point the performance IS the test.
+    HR_UPLIFT_MAX = 0.05
+    HR_PCT_FLOOR, HR_PCT_MAXIMAL = 0.75, 0.88
+    vdot_pace_only = vo2 / pct_max_duration if pct_max_duration > 0 else None
     if avg_hr and max_hr > 0:
         hr_pct = avg_hr / max_hr
         if hr_pct < 0.75:
@@ -4076,7 +4091,18 @@ def _vdot_from_effort(
 
     if pct_max <= 0:
         return None
-    return vo2 / pct_max
+    value = vo2 / pct_max
+    # Il tetto vale solo su una PRESTAZIONE: uno sforzo continuo abbastanza
+    # lungo da valere come test (≥4 km e ≥15′). Il blocco veloce dentro una
+    # seduta di ripetute non è una prestazione — lì il passo da solo sottostima
+    # il motore e l'FC resta l'unico segnale utile.
+    is_performance = dist_km >= 4 and duration_min >= 15
+    if is_performance and vdot_pace_only and avg_hr and max_hr > 0:
+        hr_pct = avg_hr / max_hr
+        span = HR_PCT_MAXIMAL - HR_PCT_FLOOR
+        room = max(0.0, min(1.0, (HR_PCT_MAXIMAL - hr_pct) / span))
+        value = min(value, vdot_pace_only * (1 + HR_UPLIFT_MAX * room))
+    return value
 
 
 def _interval_vdot_from_splits(run: dict, max_hr: int) -> Optional[float]:
