@@ -1,48 +1,35 @@
 import type { Session } from "../types/api";
 
 /**
- * kikkoSub20 — piano 5K su 10 settimane.
+ * kikkoSub20 — piano 5K su 12 settimane.
  *
  * ── DA DOVE VENGONO I RITMI ─────────────────────────────────────────────────
- * Non più da costanti scritte a mano: da un VDOT, che è l'unico numero da
- * toccare. Da lì scendono ritmo gara, ritmo 10K, soglia e lenti, e ogni ritmo
- * viene poi corretto per l'aria del giorno (indice T + DP).
- *
- * Il VDOT di partenza è misurato, non stimato:
- *
- *   4×1000 m rec 3:00 · 3:59 / 3:56 / 3:57 / 3:50 (GAP 3:55/3:58/3:51/3:48)
- *   25°C · UR 68% → punto di rugiada 18,7° → indice T + DP 44 (fascia 42-48)
- *   Seduta MASSIMALE: l'ultima ripetuta chiusa al 100%, nessuna riserva.
- *
- * GAP medio 3:53/km. Tolta la fascia 42-48 (3-4,5%) si arriva a ~3:45/km al
- * fresco — ma una seduta portata all'esaurimento sta SOPRA il ritmo
- * sostenibile: un lavoro a ritmo intervallo dosato bene finisce con una o due
- * ripetute ancora in canna. Scontando quel 2,5% si ottiene un I-pace reale di
- * ~3:50/km al fresco, cioè VDOT 51 — 5K in 19:36.
- *
- * L'obiettivo è 19:10, cioè VDOT 52,4. Servono +1,4 punti in 10 settimane:
- * dentro il ritmo di miglioramento realistico (1 punto ogni 4-6 settimane).
- *
- * ⚠ KIKKO_WEEK_VDOT è una PROIEZIONE, non una misura. Dopo ogni test (3 km a
- * tutta ogni 3-4 settimane) va riscritto con il valore vero: è l'unico posto
- * da modificare perché tutto il piano si ricalcoli.
+ * Da un VDOT, che è l'unico numero da toccare: da lì scendono ritmo gara,
+ * ritmo 10K, soglia e lenti, e ogni ritmo viene poi corretto per l'aria del
+ * giorno (indice T + DP). Il VDOT di partenza è ancorato alla prestazione
+ * reale sui 5 km, non alle ripetute — vedi KIKKO_VDOT_START.
  *
  * ── STRUTTURA ───────────────────────────────────────────────────────────────
- *  · QUATTRO uscite: 2 di qualità + 2 lente.
- *  · Volume 32 → 66 km con la regola del 10%, poi taper.
- *  · Seduta 1 — intervalli brevi da 6×600 a 10×800, sempre a ritmo gara.
- *  · Seduta 2 — 3×2 km nelle settimane dispari, soglia in quelle pari.
+ *  · QUATTRO uscite: UNA di qualità + tre in scioltezza.
+ *  · Tre blocchi da "3 settimane di carico + 1 di scarico":
+ *      34 → 35 → 36 → 27 · 38 → 40 → 41 → 30 · 43 → 44 → 45 → 33 (gara)
+ *  · La qualità del martedì progredisce da 6×600 a 10×800, poi 3×2 km
+ *    specifici e taper.
  *
- *   Martedì  → QUALITÀ 1 · intervalli brevi   (intervals · rosso)
- *   Giovedì  → QUALITÀ 2 · resistenza o soglia (tempo · arancio)
- *   Sabato   → lenta                           (recovery · grigio)
- *   Domenica → lungo lento                     (long · verde)
+ *   Martedì  → QUALITÀ · intervalli a ritmo gara (intervals · rosso)
+ *   Giovedì  → lenta                             (recovery · grigio)
+ *   Sabato   → lenta                             (recovery · grigio)
+ *   Domenica → lungo lento                       (long · verde)
+ *
+ * Perché una sola qualità: su quattro uscite, due sedute dure lasciavano due
+ * soli giorni per assorbirle. Il lavoro che sposta il 5K arrivava sempre a
+ * gambe cariche, e il volume che lo sostiene non c'era.
  *
  * ── I RECUPERI ──────────────────────────────────────────────────────────────
  * Sugli intervalli il recupero parte vicino a 1:1 e si accorcia dentro il
  * blocco (Daniels: sul lavoro a ritmo intervallo il recupero non deve superare
  * la durata della ripetuta). Si riazzera quando la ripetuta passa da 600 a
- * 800 m: distanza nuova, si riparte dal recupero pieno.
+ * 800 m, e si allunga di proposito nelle settimane di scarico e nel taper.
  *
  * Sui 3×2 km il recupero non è un dettaglio, è parte della prescrizione: con
  * 3:30 (~40% del lavoro) sei recuperato e tieni il ritmo 10K, con 1:45 (~20%)
@@ -51,27 +38,46 @@ import type { Session } from "../types/api";
  */
 
 export const KIKKO_SUB20_META = {
-  weeks: 10,
+  weeks: 12,
   phase: "kikkoSub20",
   goalRace: "5K",
-  goalTime: "19:10",
+  goalTime: "19:23",
   runsPerWeek: 4,
   startDate: "2026-07-27", // lunedì di riferimento della settimana 1
 };
 
 /* ── VDOT ───────────────────────────────────────────────────────────────────*/
 
-/** VDOT misurato dal 4×1000 massimale, scontato per "seduta a esaurimento". */
-export const KIKKO_VDOT_START = 51.0;
-/** 19:10 sui 5K. */
-export const KIKKO_VDOT_GOAL = 52.4;
+/**
+ * Ancorato alla PRESTAZIONE, non alle ripetute.
+ *
+ *   17/06/2026 · 5 km in 21:00 · 20,1°C · UR 79% (DP ~16,4 → indice T+DP 36,5)
+ *   Personal best, sforzo massimale.
+ *
+ * 21:00 tal quale vale VDOT 47,0. Tolta la penalità della fascia 26-37 (~1,5%
+ * su uno sforzo continuo) si arriva a ~20:41 al fresco, cioè VDOT 48,5.
+ *
+ * Il 4×1000 di luglio (3:59/3:56/3:57/3:50 a 25°C) suggerirebbe 51: le
+ * ripetute con recupero pieno sovrastimano sempre la tenuta continua, ed è la
+ * gara a comandare. Con sei settimane di lavoro fra le due prove, 49,5 è il
+ * punto onesto — sopra il 5K di giugno, sotto la promessa delle ripetute.
+ *
+ * ⚠ Dopo ogni test (3 km a tutta ogni 3-4 settimane) riscrivi KIKKO_WEEK_VDOT
+ * da lì in avanti: è l'unico posto da toccare perché tutto il piano si
+ * ricalcoli.
+ */
+export const KIKKO_VDOT_START = 49.5;
+/** 19:23 sui 5K: +2,1 punti in 12 settimane, il massimo credibile da qui. */
+export const KIKKO_VDOT_GOAL = 51.6;
 
 /**
- * VDOT atteso settimana per settimana: salita lineare da 51 a 52,4.
- * È una previsione. Dopo un test, sovrascrivi i valori da lì in avanti.
+ * VDOT atteso settimana per settimana. Nelle settimane di scarico non sale:
+ * l'adattamento arriva dopo il carico, non durante.
  */
 export const KIKKO_WEEK_VDOT: number[] = [
-  51.0, 51.2, 51.3, 51.5, 51.6, 51.8, 51.9, 52.1, 52.2, 52.4,
+  49.5, 49.7, 49.9, 49.9,   // blocco 1 + scarico
+  50.2, 50.5, 50.7, 50.7,   // blocco 2 + scarico
+  51.0, 51.3, 51.6, 51.6,   // blocco 3 + gara
 ];
 
 /**
@@ -394,10 +400,18 @@ type Cell = {
 };
 type CellFn = (p: Paces) => Cell;
 
-/** Le quattro uscite, per offset dal lunedì della settimana. */
+/**
+ * Le quattro uscite, per offset dal lunedì.
+ *
+ * UNA sola seduta di qualità a settimana. Con due (ripetute il martedì +
+ * soglia il giovedì) su quattro uscite totali metà della settimana era dura:
+ * niente spazio per assorbire, e il lavoro vero — quello che sposta il 5K —
+ * arrivava sempre con le gambe già cariche. Ora il martedì è l'unico giorno
+ * intenso e il resto serve a reggerlo.
+ */
 const SLOTS = [
-  { offset: 1, type: "intervals" }, // martedì  · QUALITÀ 1
-  { offset: 3, type: "tempo" },     // giovedì  · QUALITÀ 2
+  { offset: 1, type: "intervals" }, // martedì  · L'UNICA QUALITÀ
+  { offset: 3, type: "recovery" },  // giovedì  · lenta
   { offset: 5, type: "recovery" },  // sabato   · lenta
   { offset: 6, type: "long" },      // domenica · lungo
 ] as const;
@@ -476,110 +490,127 @@ const tempo = (minutes: number, dist: number, note = ""): CellFn => (p) => {
   };
 };
 
+/**
+ * Tre blocchi da "3 di carico + 1 di scarico". Il volume non sale all'infinito
+ * come prima (32 → 66 era una curva che nessuno regge su quattro uscite): ogni
+ * blocco cresce di poco, scarica, e riparte sopra il blocco precedente.
+ *
+ *   blocco 1 · 34 → 35 → 36 → 27
+ *   blocco 2 · 38 → 40 → 41 → 30
+ *   blocco 3 · 43 → 44 → 45 → 33 (gara)
+ */
 const WEEKS: WeekDef[] = [
   // ═══ BLOCCO 1 · INGRESSO · ripetute da 600 m ══════════════════════════════
   {
-    mon: "2026-07-27", totalKm: 32,
+    mon: "2026-07-27", totalKm: 34,
     cells: [
       reps(6, 600, 9, "2:20", "Prima seduta: deve finire con due ripetute in tasca."),
-      longReps("3:00", 10, "Recupero pieno: si impara il ritmo."),
-      easy(6),
-      longRun(7),
+      easy(7),
+      easy(7),
+      longRun(11),
     ],
   },
   {
     mon: "2026-08-03", totalKm: 35,
     cells: [
-      reps(7, 600, 10, "2:10", "Una ripetuta in più, 10″ di recupero in meno."),
-      tempo(20, 8),
+      reps(7, 600, 9, "2:10", "Una ripetuta in più, 10″ di recupero in meno."),
+      easy(7),
       easy(8),
-      longRun(9),
+      longRun(11),
     ],
   },
   {
-    mon: "2026-08-10", totalKm: 38,
+    mon: "2026-08-10", totalKm: 36,
     cells: [
       reps(8, 600, 10, "2:00"),
-      longReps("2:30", 10),
+      easy(7),
       easy(8),
-      longRun(10),
+      longRun(11),
     ],
   },
   {
-    mon: "2026-08-17", totalKm: 42,
+    mon: "2026-08-17", totalKm: 27,
     cells: [
-      reps(9, 600, 11, "1:50", "Ultima sui 600."),
-      tempo(25, 9),
-      easy(10),
-      longRun(12),
+      reps(5, 600, 8, "2:30", "Settimana di scarico: meno ripetute, stesso ritmo."),
+      easy(6),
+      easy(6),
+      longRun(7),
     ],
   },
 
   // ═══ BLOCCO 2 · si passa agli 800 m ═══════════════════════════════════════
   {
-    mon: "2026-08-24", totalKm: 46,
+    mon: "2026-08-24", totalKm: 38,
     cells: [
-      reps(6, 800, 10, "3:10", "Distanza nuova: si riparte da 6 e col recupero pieno."),
-      longReps("2:15", 10),
-      easy(12),
+      reps(6, 800, 10, "3:00", "Distanza nuova: si riparte da 6 e col recupero pieno."),
+      easy(8),
+      easy(8),
+      longRun(12),
+    ],
+  },
+  {
+    mon: "2026-08-31", totalKm: 40,
+    cells: [
+      reps(7, 800, 11, "2:45"),
+      easy(8),
+      easy(8),
+      longRun(13),
+    ],
+  },
+  {
+    mon: "2026-09-07", totalKm: 41,
+    cells: [
+      reps(8, 800, 11, "2:30"),
+      easy(8),
+      easy(9),
+      longRun(13),
+    ],
+  },
+  {
+    mon: "2026-09-14", totalKm: 30,
+    cells: [
+      reps(5, 800, 8, "3:00", "Scarico prima del blocco finale: si arriva freschi al picco."),
+      easy(7),
+      easy(7),
+      longRun(8),
+    ],
+  },
+
+  // ═══ BLOCCO 3 · PICCO E GARA ══════════════════════════════════════════════
+  {
+    mon: "2026-09-21", totalKm: 43,
+    cells: [
+      reps(9, 800, 12, "2:20"),
+      easy(9),
+      easy(9),
+      longRun(13),
+    ],
+  },
+  {
+    mon: "2026-09-28", totalKm: 44,
+    cells: [
+      reps(10, 800, 12, "2:10", "Seduta chiave: se il passo scivola, chiudi a 8."),
+      easy(9),
+      easy(9),
       longRun(14),
     ],
   },
   {
-    mon: "2026-08-31", totalKm: 50,
+    mon: "2026-10-05", totalKm: 45,
     cells: [
-      reps(7, 800, 11, "2:50"),
-      tempo(30, 11),
-      easy(13),
-      longRun(15),
-    ],
-  },
-  {
-    mon: "2026-09-07", totalKm: 55,
-    cells: [
-      reps(8, 800, 12, "2:35"),
-      longReps("2:00", 10),
-      easy(15),
-      longRun(18),
-    ],
-  },
-  {
-    mon: "2026-09-14", totalKm: 60,
-    cells: [
-      reps(9, 800, 13, "2:20"),
-      tempo(30, 11),
-      easy(16),
-      longRun(20),
+      longReps("2:00", 12, "Ritmo gara a gambe cariche: la prova più vicina alla gara."),
+      easy(9),
+      easy(10),
+      longRun(14),
     ],
   },
 
-  // ═══ BLOCCO 3 · PICCO ═════════════════════════════════════════════════════
+  // ═══ SETTIMANA 12 · TAPER + GARA ══════════════════════════════════════════
   {
-    mon: "2026-09-21", totalKm: 66,
-    cells: [
-      reps(10, 800, 14, "2:10", "Seduta chiave: se il passo scivola, chiudi a 8."),
-      longReps("1:45", 10, "Recupero minimo: test della tenuta."),
-      easy(19),
-      longRun(23),
-    ],
-  },
-
-  // ═══ SETTIMANA 10 · TAPER + GARA ══════════════════════════════════════════
-  {
-    mon: "2026-09-28", totalKm: 28,
+    mon: "2026-10-12", totalKm: 33,
     cells: [
       reps(5, 800, 9, "3:15", "Taper: metà ripetute, stesso ritmo, recupero più lungo."),
-      (p) => {
-        const hp = heatPace("reps", p.band, p.bases.race);
-        return {
-          title: `Sblocco 2×1000 @ ${hp.mid} · rec 3:00`,
-          dist: 7,
-          pace: hp.mid,
-          kind: "reps" as HeatKind,
-          baseSec: p.bases.race,
-          desc: "Risc. 2 km, def. sciolto. Ultimo richiamo del passo: deve sembrare facile.",
-        };
-      },
+      easy(8),
       (p) => ({
         title: "Sciolto 5 km + 4 allunghi",
         dist: 5,
@@ -590,7 +621,7 @@ const WEEKS: WeekDef[] = [
         const hp = heatPace("reps", p.band, p.bases.race);
         return {
           title: `🏁 GARA 5K · ${KIKKO_SUB20_META.goalTime}`,
-          dist: 7,
+          dist: 11,
           pace: hp.mid,
           kind: "reps" as HeatKind,
           baseSec: p.bases.race,

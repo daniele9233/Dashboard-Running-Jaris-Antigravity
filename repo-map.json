@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-08-02T15:49:21.254Z",
+  "generated_at": "2026-08-02T15:57:19.518Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -4488,9 +4488,9 @@
         "./kikkoSub20Plan",
         "vitest"
       ],
-      "hash": "dfce80f03b63b1878d2e22484e450f32237eeb2f796252f7077648c2cb1598ad",
-      "last_modified": "2026-08-01T14:37:58.317Z",
-      "size_bytes": 17986
+      "hash": "980e2c715851354290532730539d85568bf5951ffc5fbf7a3d4511a7e7df70dd",
+      "last_modified": "2026-08-02T15:56:37.215Z",
+      "size_bytes": 18854
     },
     {
       "path": "src/data/kikkoSub20Plan.ts",
@@ -4541,9 +4541,9 @@
       "imports": [
         "../types/api"
       ],
-      "hash": "624858e7d6b6aef51d352145cf340401d85fab8a9969854c3b9d45b9be8f4e6d",
-      "last_modified": "2026-08-01T14:37:58.318Z",
-      "size_bytes": 29458
+      "hash": "7fae6e51b968b0ba14bcd37af4d09f6929658f7605624ff4db97fccdc134d81c",
+      "last_modified": "2026-08-02T15:57:19.518Z",
+      "size_bytes": 29551
     },
     {
       "path": "src/data/sub20Plan.ts",

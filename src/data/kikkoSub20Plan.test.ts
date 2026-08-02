@@ -48,32 +48,39 @@ describe("kikkoSub20 — volume", () => {
     expect(kikkoSub20ActualWeeklyKm()).toEqual(KIKKO_SUB20_WEEKLY_KM);
   });
 
-  it("parte da 32 km come richiesto", () => {
-    expect(KIKKO_SUB20_WEEKLY_KM[0]).toBe(32);
+  it("rispetta i chilometraggi dei tre blocchi", () => {
+    expect(KIKKO_SUB20_WEEKLY_KM).toEqual([34, 35, 36, 27, 38, 40, 41, 30, 43, 44, 45, 33]);
   });
 
-  it("sale a ogni settimana fino al picco, senza scarichi", () => {
+  it("dentro ogni blocco il volume sale, la quarta settimana scarica", () => {
     const km = KIKKO_SUB20_WEEKLY_KM;
-    for (let i = 1; i <= 8; i++) {
-      expect(km[i], `settimana ${i + 1} deve superare la ${i}`).toBeGreaterThan(km[i - 1]);
+    for (const b of [0, 4, 8]) {
+      expect(km[b + 1], `blocco ${b / 4 + 1}, seconda settimana`).toBeGreaterThan(km[b]);
+      expect(km[b + 2], `blocco ${b / 4 + 1}, terza settimana`).toBeGreaterThan(km[b + 1]);
+      const cut = ((km[b + 2] - km[b + 3]) / km[b + 2]) * 100;
+      expect(cut, `blocco ${b / 4 + 1}, scarico`).toBeGreaterThanOrEqual(20);
+      expect(cut, `blocco ${b / 4 + 1}, scarico`).toBeLessThanOrEqual(30);
     }
   });
 
-  it("ogni incremento resta dentro la regola del 10%", () => {
+  it("gli incrementi di carico restano piccoli, blocco per blocco", () => {
     const km = KIKKO_SUB20_WEEKLY_KM;
-    for (let i = 1; i <= 8; i++) {
-      const growth = ((km[i] - km[i - 1]) / km[i - 1]) * 100;
-      expect(growth, `settimana ${i + 1}`).toBeGreaterThanOrEqual(8);
-      expect(growth, `settimana ${i + 1}`).toBeLessThanOrEqual(11);
+    for (const b of [0, 4, 8]) {
+      for (const i of [b + 1, b + 2]) {
+        const growth = ((km[i] - km[i - 1]) / km[i - 1]) * 100;
+        expect(growth, `settimana ${i + 1}`).toBeGreaterThan(0);
+        expect(growth, `settimana ${i + 1}`).toBeLessThanOrEqual(10);
+      }
     }
   });
 
-  it("il taper riduce il volume fra il 41% e il 60% del picco", () => {
+  it("ogni blocco riparte sopra il precedente senza strappi", () => {
     const km = KIKKO_SUB20_WEEKLY_KM;
-    const peak = Math.max(...km);
-    const cut = ((peak - km[9]) / peak) * 100;
-    expect(cut).toBeGreaterThanOrEqual(41);
-    expect(cut).toBeLessThanOrEqual(60);
+    for (const [prevPeak, nextPeak] of [[km[2], km[6]], [km[6], km[10]]]) {
+      const growth = ((nextPeak - prevPeak) / prevPeak) * 100;
+      expect(growth).toBeGreaterThan(0);
+      expect(growth).toBeLessThanOrEqual(15);
+    }
   });
 });
 
@@ -84,13 +91,13 @@ describe("kikkoSub20 — intensità", () => {
     }
   });
 
-  it("ogni settimana ha due qualità e due lente", () => {
+  it("una sola seduta di qualità a settimana, il resto in scioltezza", () => {
     for (let i = 0; i < KIKKO_SUB20_META.weeks; i++) {
       const week = weekOf(i);
       const hard = week.filter((s) => s.type === "intervals" || s.type === "tempo");
       const soft = week.filter((s) => s.type === "recovery" || s.type === "long");
-      expect(hard, `settimana ${i + 1} — qualità`).toHaveLength(2);
-      expect(soft, `settimana ${i + 1} — lente`).toHaveLength(2);
+      expect(hard, `settimana ${i + 1} — qualità`).toHaveLength(1);
+      expect(soft, `settimana ${i + 1} — lente`).toHaveLength(3);
     }
   });
 
@@ -99,8 +106,11 @@ describe("kikkoSub20 — intensità", () => {
       const info = kikkoSub20HeatInfo(s.date);
       expect(info.pace, `${s.date} · ${s.title}`).not.toBeNull();
       expect(s.target_pace, `${s.date} · ${s.title}`).toBe(info.pace!.mid);
-      // la base è il ritmo gara del VDOT di quella settimana, non una costante
-      expect(info.baseSec).toBeCloseTo(basesFor(info.vdot!).race, 5);
+      // la base esce dal VDOT della settimana: ritmo gara sulle ripetute brevi,
+      // fra 10K e soglia sui 2 km (dipende da quanto recupero c'è in mezzo)
+      const b = basesFor(info.vdot!);
+      expect(info.baseSec!, `${s.date} · ${s.title}`).toBeGreaterThanOrEqual(b.race - 0.01);
+      expect(info.baseSec!, `${s.date} · ${s.title}`).toBeLessThanOrEqual(b.thr + 0.01);
       // il target sta sempre dentro la forbice della fascia
       expect(paceSec(s.target_pace!)).toBeGreaterThanOrEqual(Math.floor(info.pace!.fastSec));
       expect(paceSec(s.target_pace!)).toBeLessThanOrEqual(Math.ceil(info.pace!.slowSec));
@@ -127,14 +137,16 @@ describe("kikkoSub20 — intensità", () => {
     }
   });
 
-  it("la seduta 1 progredisce da 6×600 a 10×800", () => {
+  it("la seduta di qualità progredisce da 6×600 a 10×800", () => {
     const titles = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals").map((s) => s.title);
     expect(titles[0]).toContain("6×600");
-    expect(titles[8]).toContain("10×800"); // settimana 9 = picco
+    expect(titles[9]).toContain("10×800");   // settimana 10 = picco
+    expect(titles[10]).toContain("3×2 km");  // settimana 11 = specifica gara
   });
 
   it("il taper tiene il ritmo gara ma dimezza le ripetute", () => {
-    const taper = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals")[9];
+    const hard = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals");
+    const taper = hard[hard.length - 1];
     expect(taper.title).toContain("5×800");
     expect(taper.target_pace).toBe(kikkoSub20HeatInfo(taper.date).pace!.mid);
   });
@@ -155,7 +167,7 @@ describe("kikkoSub20 — intensità", () => {
     const all = KIKKO_SUB20_SESSIONS.filter((x) => x.type === "intervals");
     all.forEach((s, i) => {
       const m = s.title.match(/(\d+)×(\d+) m .*rec (\d+):(\d\d)/);
-      expect(m, s.title).not.toBeNull();
+      if (!m) return;   // i 3×2 km hanno una loro logica di recupero
       const meters = Number(m![2]);
       const recSec = Number(m![3]) * 60 + Number(m![4]);
       const workSec = (meters / 1000) * paceSec(s.target_pace!);
@@ -172,17 +184,19 @@ describe("kikkoSub20 — intensità", () => {
     }
   });
 
-  it("dentro ogni blocco il recupero si accorcia", () => {
+  it("dentro ogni blocco di carico il recupero si accorcia", () => {
     const recOf = (t: string) => {
       const m = t.match(/rec (\d+):(\d\d)/);
       return m ? Number(m[1]) * 60 + Number(m[2]) : NaN;
     };
     const titles = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals").map((s) => s.title);
-    const block600 = titles.filter((t) => t.includes("×600")).map(recOf);
-    const block800 = titles.filter((t) => t.includes("×800")).slice(0, -1).map(recOf); // esclude il taper
-    for (const block of [block600, block800]) {
-      for (let i = 1; i < block.length; i++) {
-        expect(block[i]).toBeLessThan(block[i - 1]);
+    // Solo le tre settimane di carico di ogni blocco: nello scarico e nel taper
+    // il recupero si allunga di proposito.
+    const blocks = [titles.slice(0, 3), titles.slice(4, 7), titles.slice(8, 10)];
+    for (const block of blocks) {
+      const rec = block.map(recOf);
+      for (let i = 1; i < rec.length; i++) {
+        expect(rec[i], `${block[i]} dopo ${block[i - 1]}`).toBeLessThan(rec[i - 1]);
       }
     }
   });
@@ -193,18 +207,19 @@ describe("kikkoSub20 — intensità", () => {
       const m = t.match(/rec (\d+):(\d\d)/);
       return m ? Number(m[1]) * 60 + Number(m[2]) : NaN;
     };
-    expect(recOf(titles[9])).toBeGreaterThan(recOf(titles[8]));
+    // il taper è l'ultima seduta di ripetute; prima c'è il picco da 10×800
+    const reps800 = titles.filter((t) => t.includes("×800 m"));
+    expect(recOf(reps800[reps800.length - 1])).toBeGreaterThan(recOf(reps800[reps800.length - 2]));
   });
 
-  it("i 3×2 km tornano a settimane alterne con recupero sempre più corto", () => {
-    const recoveries = KIKKO_SUB20_SESSIONS.filter((s) => s.title.includes("3×2 km")).map((s) => {
-      const m = s.title.match(/rec (\d+):(\d+)/);
-      return m ? Number(m[1]) * 60 + Number(m[2]) : NaN;
-    });
-    expect(recoveries).toHaveLength(5); // settimane 1, 3, 5, 7, 9
-    for (let i = 1; i < recoveries.length; i++) {
-      expect(recoveries[i]).toBeLessThan(recoveries[i - 1]);
-    }
+  it("i 3×2 km arrivano una volta sola, a ridosso della gara", () => {
+    // Con una sola qualità a settimana il lavoro specifico non si alterna più:
+    // si spende dove serve, nella settimana di picco prima del taper.
+    const specific = KIKKO_SUB20_SESSIONS.filter((s) => s.title.includes("3×2 km"));
+    expect(specific).toHaveLength(1);
+    const idx = KIKKO_SUB20_SESSIONS.indexOf(specific[0]);
+    const race = KIKKO_SUB20_SESSIONS.length - 1;
+    expect(race - idx, "sta nelle due settimane prima della gara").toBeLessThanOrEqual(8);
   });
 });
 
@@ -343,7 +358,7 @@ describe("kikkoSub20 — calendario", () => {
     const shifted = buildKikkoSub20Sessions("2026-08-03"); // +7 giorni
     expect(shifted[0].date).toBe("2026-08-04");
     expect(shifted[0].day).toBe("Martedì");
-    expect(kikkoSub20RaceDate("2026-08-03")).toBe("2026-10-11");
+    expect(kikkoSub20RaceDate("2026-08-03")).toBe("2026-10-25");
     expect(shifted).toHaveLength(KIKKO_SUB20_SESSIONS.length);
   });
 
