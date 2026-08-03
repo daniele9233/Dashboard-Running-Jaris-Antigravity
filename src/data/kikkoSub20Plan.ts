@@ -44,7 +44,7 @@ export const KIKKO_SUB20_META = {
   weeks: 12,
   phase: "kikkoSub20",
   goalRace: "5K",
-  goalTime: "19:23",
+  goalTime: "19:53",
   runsPerWeek: 4,
   startDate: "2026-07-27", // lunedì di riferimento della settimana 1
 };
@@ -54,33 +54,34 @@ export const KIKKO_SUB20_META = {
 /**
  * Ancorato alla PRESTAZIONE, non alle ripetute.
  *
- *   17/06/2026 · 5 km in 21:00 · 20,1°C · UR 79% (DP ~16,4 → indice T+DP 36,5)
+ *   17/06/2026 · 5,02 km in 21:04 · 23°C · UR 60% (DP ~14,8 → indice T+DP 37,8)
  *   Personal best, sforzo massimale.
  *
- * 21:00 tal quale vale VDOT 47,0. Tolta la penalità della fascia 26-37 (~1,5%
- * su uno sforzo continuo) si arriva a ~20:41 al fresco, cioè VDOT 48,5.
+ * 21:04 tal quale vale VDOT 47,1. Tolta la penalità della fascia 37-42 (2,5-4%
+ * su uno sforzo continuo) si arriva a ~20:20 al fresco, cioè VDOT 48,9.
  *
  * Il 4×1000 di luglio (3:59/3:56/3:57/3:50 a 25°C) suggerirebbe 51: le
  * ripetute con recupero pieno sovrastimano sempre la tenuta continua, ed è la
- * gara a comandare. Con sei settimane di lavoro fra le due prove, 49,5 è il
- * punto onesto — sopra il 5K di giugno, sotto la promessa delle ripetute.
+ * gara a comandare. 48,0 è il punto onesto — sopra il 5K di giugno, sotto la
+ * promessa delle ripetute, e allineato al valore che il backend calcola sulle
+ * stesse corse (47,7): un solo numero in tutta l'app, non due.
  *
  * ⚠ Dopo ogni test (3 km a tutta ogni 3-4 settimane) riscrivi KIKKO_WEEK_VDOT
  * da lì in avanti: è l'unico posto da toccare perché tutto il piano si
  * ricalcoli.
  */
-export const KIKKO_VDOT_START = 49.5;
-/** 19:23 sui 5K: +2,1 punti in 12 settimane, il massimo credibile da qui. */
-export const KIKKO_VDOT_GOAL = 51.6;
+export const KIKKO_VDOT_START = 48.0;
+/** 19:53 sui 5K — la sub-20 del nome. +2,1 punti in 12 settimane. */
+export const KIKKO_VDOT_GOAL = 50.1;
 
 /**
  * VDOT atteso settimana per settimana. Nelle settimane di scarico non sale:
  * l'adattamento arriva dopo il carico, non durante.
  */
 export const KIKKO_WEEK_VDOT: number[] = [
-  49.5, 49.7, 49.9, 49.9,   // blocco 1 + scarico
-  50.2, 50.5, 50.7, 50.7,   // blocco 2 + scarico
-  51.0, 51.3, 51.6, 51.6,   // blocco 3 + gara
+  48.0, 48.2, 48.4, 48.4,   // blocco 1 + scarico
+  48.7, 49.0, 49.2, 49.2,   // blocco 2 + scarico
+  49.5, 49.8, 50.1, 50.1,   // blocco 3 + gara
 ];
 
 /**

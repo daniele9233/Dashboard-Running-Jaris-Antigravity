@@ -4383,6 +4383,27 @@ def _calc_vdot_with_history(runs: list, max_hr: int = 190,
             current = max(current or anchor, anchor)
     else:
         current = max(v for _, v in run_vdots) if run_vdots else None
+
+    # ── Pavimento sulla PRESTAZIONE ──────────────────────────────────────────
+    # La media pesata guarda tutte le uscite recenti, comprese quelle lente, e
+    # può finire SOTTO quello che l'atleta ha davvero corso. Caso reale:
+    # 5 km in 21:04 a 23°C/60% (equivalente al fresco ~20:20, cioè VDOT ~48,9)
+    # e la stima usciva 46,6 — un valore che quella corsa smentisce da sola.
+    # La forma attuale non può essere inferiore alla migliore prestazione
+    # recente: si prende la media delle due migliori degli ultimi quattro mesi,
+    # così un singolo dato sballato non alza il livello da solo.
+    # Finestra corta: solo prestazioni ancora rappresentative (~ultimi 2 mesi).
+    # Più larga, il pavimento avrebbe reso inutile il decadimento per recency.
+    floor_window = [
+        v for r, v in run_vdots
+        if _vdot_recency_weight(r, today) >= 0.55
+    ]
+    if len(floor_window) >= 2:
+        best_two = sorted(floor_window, reverse=True)[:2]
+        current = max(current or 0, sum(best_two) / 2)
+    elif floor_window:
+        current = max(current or 0, floor_window[0])
+
     current = round(current, 1) if current else None
 
     # Peak: all-time best
@@ -4709,9 +4730,21 @@ def _compute_race_fractions(longest: float, drift: float, ctl_val: float) -> dic
     Bonus per training match (longest_recent, CTL ≥50).
     Penalità per cardiac drift alto (efficienza scarsa peggiora lunghe).
     """
+    # Il 5K non prende sconto di resistenza.
+    #
+    # Il VDOT qui non è un VO2max di laboratorio: è STIMATO dalle sue corse,
+    # sui 5 km compresi. Applicargli poi un 0,92 significa scontare due volte
+    # la stessa cosa e prevedere più lento di quanto ha già corso: con 5 km in
+    # 21:04 a 23°C il modello prometteva 23:43 nella stessa fascia di caldo,
+    # due minuti e mezzo peggio della realtà. Sulle distanze lunghe lo sconto
+    # resta: lì la resistenza specifica manca davvero e il VDOT da prove brevi
+    # non la garantisce.
+    # Il 10K sta a 0,93 e non a 0,88 perché è la frazione che l'atleta MOSTRA:
+    # 10 km a 4:33/km valgono VDOT 44,7 contro i 48,3 dei suoi 5 km, cioè 0,925.
+    # Con 0,88 il modello prevedeva 47:17 su una distanza già coperta in 45:30.
     fractions = {
-        5.0:     0.92,
-        10.0:    0.88,
+        5.0:     1.00,
+        10.0:    0.93,
         21.0975: 0.85,
         42.195:  0.77,
     }
