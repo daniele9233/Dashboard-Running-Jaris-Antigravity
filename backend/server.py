@@ -4092,11 +4092,13 @@ def _vdot_from_effort(
     if pct_max <= 0:
         return None
     value = vo2 / pct_max
-    # Il tetto vale solo su una PRESTAZIONE: uno sforzo continuo abbastanza
-    # lungo da valere come test (≥4 km e ≥15′). Il blocco veloce dentro una
-    # seduta di ripetute non è una prestazione — lì il passo da solo sottostima
-    # il motore e l'FC resta l'unico segnale utile.
-    is_performance = dist_km >= 4 and duration_min >= 15
+    # Il tetto vale su qualunque sforzo continuo abbastanza lungo da valere
+    # come prova: 3 km e 10 minuti sono le stesse soglie che il modulo usa per
+    # accettare un blocco di lavoro. Ci rientrano quindi anche i blocchi veloci
+    # dentro le ripetute — ed è lì che serviva: i valori più alti dell'atleta
+    # (56,2 · 56,1 · 55,0) uscivano tutti da finestre di 3-4 km dentro sedute
+    # di ripetute, dove l'FC media resta bassa perché include i recuperi.
+    is_performance = dist_km >= 3 and duration_min >= 10
     if is_performance and vdot_pace_only and avg_hr and max_hr > 0:
         hr_pct = avg_hr / max_hr
         span = HR_PCT_MAXIMAL - HR_PCT_FLOOR
