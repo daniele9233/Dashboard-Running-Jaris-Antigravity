@@ -13,10 +13,13 @@ import type { Session } from "../types/api";
  *  · QUATTRO uscite: UNA di qualità + tre in scioltezza.
  *  · Tre blocchi da "3 settimane di carico + 1 di scarico":
  *      34 → 35 → 36 → 27 · 38 → 40 → 41 → 30 · 43 → 44 → 45 → 33 (gara)
- *  · La qualità del martedì progredisce da 6×600 a 10×800, poi 3×2 km
- *    specifici e taper.
+ *  · Il martedì ALTERNA soglia e ripetute, una settimana ciascuna:
+ *      soglia 5,5 → rip 6×600 → soglia 6 → rip 5×600 → soglia 6,5 → rip 7×600
+ *      → soglia 7 → rip 5×800 → soglia 7,5 → rip 8×800 → soglia 8 → taper.
+ *    La soglia cresce di mezzo km alla volta: è quella che regge il ritmo
+ *    gara, le ripetute ci mettono sopra la velocità.
  *
- *   Martedì  → QUALITÀ · intervalli a ritmo gara (intervals · rosso)
+ *   Martedì  → QUALITÀ · soglia o ripetute     (tempo arancio / intervals rosso)
  *   Giovedì  → lenta                             (recovery · grigio)
  *   Sabato   → lenta                             (recovery · grigio)
  *   Domenica → lungo lento                       (long · verde)
@@ -491,6 +494,28 @@ const tempo = (minutes: number, dist: number, note = ""): CellFn => (p) => {
 };
 
 /**
+ * Soglia misurata in CHILOMETRI, non in minuti.
+ *
+ * "30′ continui" cambia lunghezza col passo del giorno; "6 km continui" no, e
+ * la progressione si legge da sola: 5,5 → 6 → 6,5 → 7 → 7,5 → 8.
+ */
+const soglia = (workKm: number, dist: number, note = ""): CellFn => (p) => {
+  const hp = heatPace("tempo", p.band, p.bases.thr);
+  const minutes = (workKm * hp.midSec) / 60;
+  return {
+    title: `Soglia ${trimZero(fmtNum(workKm, 1))} km @ ${hp.mid}`,
+    dist,
+    pace: hp.mid,
+    kind: "tempo",
+    baseSec: p.bases.thr,
+    desc:
+      `Risc. 2 km + allunghi, def. 1,5 km. ${trimZero(fmtNum(workKm, 1))} km continui senza ` +
+      `pause: ~${Math.round(minutes)}′ allo sforzo che reggeresti quasi un'ora.` +
+      `${note ? " " + note : ""}`,
+  };
+};
+
+/**
  * Tre blocchi da "3 di carico + 1 di scarico". Il volume non sale all'infinito
  * come prima (32 → 66 era una curva che nessuno regge su quattro uscite): ogni
  * blocco cresce di poco, scarica, e riparte sopra il blocco precedente.
@@ -500,109 +525,54 @@ const tempo = (minutes: number, dist: number, note = ""): CellFn => (p) => {
  *   blocco 3 · 43 → 44 → 45 → 33 (gara)
  */
 const WEEKS: WeekDef[] = [
-  // ═══ BLOCCO 1 · INGRESSO · ripetute da 600 m ══════════════════════════════
+  // ═══ BLOCCO 1 · 34 → 35 → 36 → 27 ═════════════════════════════════════════
   {
     mon: "2026-07-27", totalKm: 34,
-    cells: [
-      reps(6, 600, 9, "2:20", "Prima seduta: deve finire con due ripetute in tasca."),
-      easy(7),
-      easy(7),
-      longRun(11),
-    ],
+    cells: [soglia(5.5, 9, "Si apre con la soglia: è il motore che regge il ritmo gara."), easy(7), easy(7), longRun(11)],
   },
   {
     mon: "2026-08-03", totalKm: 35,
-    cells: [
-      reps(7, 600, 9, "2:10", "Una ripetuta in più, 10″ di recupero in meno."),
-      easy(7),
-      easy(8),
-      longRun(11),
-    ],
+    cells: [reps(6, 600, 9, "2:20", "Prima seduta di ripetute: deve finire con due in tasca."), easy(7), easy(8), longRun(11)],
   },
   {
     mon: "2026-08-10", totalKm: 36,
-    cells: [
-      reps(8, 600, 10, "2:00"),
-      easy(7),
-      easy(8),
-      longRun(11),
-    ],
+    cells: [soglia(6, 10), easy(7), easy(8), longRun(11)],
   },
   {
     mon: "2026-08-17", totalKm: 27,
-    cells: [
-      reps(5, 600, 8, "2:30", "Settimana di scarico: meno ripetute, stesso ritmo."),
-      easy(6),
-      easy(6),
-      longRun(7),
-    ],
+    cells: [reps(5, 600, 8, "2:30", "Scarico: meno ripetute, stesso ritmo."), easy(6), easy(6), longRun(7)],
   },
 
-  // ═══ BLOCCO 2 · si passa agli 800 m ═══════════════════════════════════════
+  // ═══ BLOCCO 2 · 38 → 40 → 41 → 30 ═════════════════════════════════════════
   {
     mon: "2026-08-24", totalKm: 38,
-    cells: [
-      reps(6, 800, 10, "3:00", "Distanza nuova: si riparte da 6 e col recupero pieno."),
-      easy(8),
-      easy(8),
-      longRun(12),
-    ],
+    cells: [soglia(6.5, 10), easy(8), easy(8), longRun(12)],
   },
   {
     mon: "2026-08-31", totalKm: 40,
-    cells: [
-      reps(7, 800, 11, "2:45"),
-      easy(8),
-      easy(8),
-      longRun(13),
-    ],
+    cells: [reps(7, 600, 11, "2:10"), easy(8), easy(8), longRun(13)],
   },
   {
     mon: "2026-09-07", totalKm: 41,
-    cells: [
-      reps(8, 800, 11, "2:30"),
-      easy(8),
-      easy(9),
-      longRun(13),
-    ],
+    cells: [soglia(7, 11), easy(8), easy(9), longRun(13)],
   },
   {
     mon: "2026-09-14", totalKm: 30,
-    cells: [
-      reps(5, 800, 8, "3:00", "Scarico prima del blocco finale: si arriva freschi al picco."),
-      easy(7),
-      easy(7),
-      longRun(8),
-    ],
+    cells: [reps(5, 800, 8, "3:00", "Scarico: la ripetuta si allunga, il numero scende."), easy(7), easy(7), longRun(8)],
   },
 
-  // ═══ BLOCCO 3 · PICCO E GARA ══════════════════════════════════════════════
+  // ═══ BLOCCO 3 · 43 → 44 → 45 → 33 (gara) ══════════════════════════════════
   {
     mon: "2026-09-21", totalKm: 43,
-    cells: [
-      reps(9, 800, 12, "2:20"),
-      easy(9),
-      easy(9),
-      longRun(13),
-    ],
+    cells: [soglia(7.5, 12), easy(9), easy(9), longRun(13)],
   },
   {
     mon: "2026-09-28", totalKm: 44,
-    cells: [
-      reps(10, 800, 12, "2:10", "Seduta chiave: se il passo scivola, chiudi a 8."),
-      easy(9),
-      easy(9),
-      longRun(14),
-    ],
+    cells: [reps(8, 800, 12, "2:20", "Seduta chiave: se il passo scivola, chiudi a 6."), easy(9), easy(9), longRun(14)],
   },
   {
     mon: "2026-10-05", totalKm: 45,
-    cells: [
-      longReps("2:00", 12, "Ritmo gara a gambe cariche: la prova più vicina alla gara."),
-      easy(9),
-      easy(10),
-      longRun(14),
-    ],
+    cells: [soglia(8, 12, "L'ultima soglia lunga: da qui si scarica verso la gara."), easy(9), easy(10), longRun(14)],
   },
 
   // ═══ SETTIMANA 12 · TAPER + GARA ══════════════════════════════════════════
@@ -644,7 +614,9 @@ function mk(date: string, type: string, cell: CellFn, vdot: number): Session {
   return {
     day: itDayName(date),
     date,
-    type,
+    // Il martedì alterna soglia e ripetute: il colore lo decide la seduta, non
+    // lo slot, altrimenti in calendario una soglia sembrerebbe una ripetuta.
+    type: c.kind === "tempo" ? "tempo" : type,
     title: c.title,
     description: c.desc,
     target_distance_km: c.dist,

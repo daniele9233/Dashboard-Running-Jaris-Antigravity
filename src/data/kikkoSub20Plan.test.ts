@@ -137,11 +137,28 @@ describe("kikkoSub20 — intensità", () => {
     }
   });
 
-  it("la seduta di qualità progredisce da 6×600 a 10×800", () => {
+  it("la qualità alterna soglia e ripetute, una a settimana", () => {
+    const quality = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals" || s.type === "tempo");
+    expect(quality).toHaveLength(KIKKO_SUB20_META.weeks);
+    // dispari = soglia, pari = ripetute; l'ultima è il taper prima della gara
+    quality.slice(0, -1).forEach((s, i) => {
+      const atteso = i % 2 === 0 ? "tempo" : "intervals";
+      expect(s.type, `settimana ${i + 1} · ${s.title}`).toBe(atteso);
+    });
+  });
+
+  it("la soglia cresce di mezzo chilometro alla volta", () => {
+    const km = KIKKO_SUB20_SESSIONS
+      .filter((s) => s.type === "tempo")
+      .map((s) => Number(s.title.match(/Soglia ([\d,]+) km/)![1].replace(",", ".")));
+    expect(km).toEqual([5.5, 6, 6.5, 7, 7.5, 8]);
+  });
+
+  it("le ripetute crescono e passano dai 600 agli 800", () => {
     const titles = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals").map((s) => s.title);
     expect(titles[0]).toContain("6×600");
-    expect(titles[9]).toContain("10×800");   // settimana 10 = picco
-    expect(titles[10]).toContain("3×2 km");  // settimana 11 = specifica gara
+    expect(titles[titles.length - 2]).toContain("8×800");
+    expect(titles[titles.length - 1]).toContain("5×800");   // taper
   });
 
   it("il taper tiene il ritmo gara ma dimezza le ripetute", () => {
@@ -192,7 +209,11 @@ describe("kikkoSub20 — intensità", () => {
     const titles = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "intervals").map((s) => s.title);
     // Solo le tre settimane di carico di ogni blocco: nello scarico e nel taper
     // il recupero si allunga di proposito.
-    const blocks = [titles.slice(0, 3), titles.slice(4, 7), titles.slice(8, 10)];
+    // Solo le sedute di CARICO, e solo a parità di distanza della ripetuta:
+    // lo scarico e il taper allungano il recupero di proposito, e il passaggio
+    // dai 600 agli 800 lo riazzera (distanza nuova, si riparte pieni).
+    const carico = titles.filter((t) => !/^5×/.test(t));
+    const blocks = [carico.filter((t) => t.includes("×600")), carico.filter((t) => t.includes("×800"))];
     for (const block of blocks) {
       const rec = block.map(recOf);
       for (let i = 1; i < rec.length; i++) {
@@ -212,14 +233,13 @@ describe("kikkoSub20 — intensità", () => {
     expect(recOf(reps800[reps800.length - 1])).toBeGreaterThan(recOf(reps800[reps800.length - 2]));
   });
 
-  it("i 3×2 km arrivano una volta sola, a ridosso della gara", () => {
-    // Con una sola qualità a settimana il lavoro specifico non si alterna più:
-    // si spende dove serve, nella settimana di picco prima del taper.
-    const specific = KIKKO_SUB20_SESSIONS.filter((s) => s.title.includes("3×2 km"));
-    expect(specific).toHaveLength(1);
-    const idx = KIKKO_SUB20_SESSIONS.indexOf(specific[0]);
+  it("l'ultima soglia è la più lunga e sta a ridosso della gara", () => {
+    const soglie = KIKKO_SUB20_SESSIONS.filter((s) => s.type === "tempo");
+    const ultima = soglie[soglie.length - 1];
     const race = KIKKO_SUB20_SESSIONS.length - 1;
-    expect(race - idx, "sta nelle due settimane prima della gara").toBeLessThanOrEqual(8);
+    expect(ultima.title).toContain("Soglia 8 km");
+    expect(race - KIKKO_SUB20_SESSIONS.indexOf(ultima), "una settimana prima della gara")
+      .toBeLessThanOrEqual(8);
   });
 });
 
