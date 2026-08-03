@@ -4739,12 +4739,14 @@ def _compute_race_fractions(longest: float, drift: float, ctl_val: float) -> dic
     # due minuti e mezzo peggio della realtà. Sulle distanze lunghe lo sconto
     # resta: lì la resistenza specifica manca davvero e il VDOT da prove brevi
     # non la garantisce.
-    # Il 10K sta a 0,93 e non a 0,88 perché è la frazione che l'atleta MOSTRA:
-    # 10 km a 4:33/km valgono VDOT 44,7 contro i 48,3 dei suoi 5 km, cioè 0,925.
-    # Con 0,88 il modello prevedeva 47:17 su una distanza già coperta in 45:30.
+    # Il 10K non ha una prova recente su cui tararsi: l'unico 10 km veloce è
+    # un test vecchio di un anno, quindi non fa testo. Resta uno sconto di
+    # struttura — chi non fa lavoro specifico sui 10 non esprime lì tutto il
+    # VDOT — ma leggero: 0,95, non lo 0,88 di prima, che prevedeva più lento
+    # di quanto l'atleta avesse già corso un anno fa.
     fractions = {
         5.0:     1.00,
-        10.0:    0.93,
+        10.0:    0.95,
         21.0975: 0.85,
         42.195:  0.77,
     }

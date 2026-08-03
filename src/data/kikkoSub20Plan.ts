@@ -44,7 +44,7 @@ export const KIKKO_SUB20_META = {
   weeks: 12,
   phase: "kikkoSub20",
   goalRace: "5K",
-  goalTime: "19:53",
+  goalTime: "19:33",
   runsPerWeek: 4,
   startDate: "2026-07-27", // lunedì di riferimento della settimana 1
 };
@@ -52,36 +52,42 @@ export const KIKKO_SUB20_META = {
 /* ── VDOT ───────────────────────────────────────────────────────────────────*/
 
 /**
- * Ancorato alla PRESTAZIONE, non alle ripetute.
+ * Ancorato a DUE prestazioni massimali, non a una stima.
  *
- *   17/06/2026 · 5,02 km in 21:04 · 23°C · UR 60% (DP ~14,8 → indice T+DP 37,8)
- *   Personal best, sforzo massimale.
+ * 1) 17/06/2026 · 5,02 km in 21:04 · 23°C · UR 60%
+ *    DP 14,8° → indice T+DP 37,8 (fascia 37-42, penalità 2,5-4% sul continuo).
+ *    21:04 tal quale vale VDOT 47,1; al fresco diventa ~20:20, cioè 48,9.
  *
- * 21:04 tal quale vale VDOT 47,1. Tolta la penalità della fascia 37-42 (2,5-4%
- * su uno sforzo continuo) si arriva a ~20:20 al fresco, cioè VDOT 48,9.
+ * 2) Luglio 2026 · 4×1000 a 3:55 di media · rec 3′ camminando · 26,1°C · UR 70%
+ *    DP 20,2° → indice T+DP 46,3 (fascia 42-48, penalità 3-4,5% sulle ripetute).
+ *    3:55 al fresco vale ~3:46/km. Ma tre minuti di CAMMINATA sono un recupero
+ *    generoso: un lavoro dosato per la gara si chiude con più riserva, quindi
+ *    si sconta un altro 2,5% e resta un I-pace reale di ~3:51/km → VDOT ~50.
  *
- * Il 4×1000 di luglio (3:59/3:56/3:57/3:50 a 25°C) suggerirebbe 51: le
- * ripetute con recupero pieno sovrastimano sempre la tenuta continua, ed è la
- * gara a comandare. 48,0 è il punto onesto — sopra il 5K di giugno, sotto la
- * promessa delle ripetute, e allineato al valore che il backend calcola sulle
- * stesse corse (47,7): un solo numero in tutta l'app, non due.
+ * Le due prove dicono 48,9 (giugno, continuo) e ~50 (luglio, frazionato). Il
+ * frazionato promette sempre più di quanto la gara mantenga, ma è più recente
+ * e il lavoro in mezzo c'è stato: 49,0 è il punto onesto fra i due.
+ *
+ * Il backend ne calcola 47,7 sulle stesse corse: legge male le sedute di
+ * ripetute, perché gli split al km mescolano prova e recupero. Dove i due
+ * numeri divergono comanda la prestazione misurata, non la media pesata.
  *
  * ⚠ Dopo ogni test (3 km a tutta ogni 3-4 settimane) riscrivi KIKKO_WEEK_VDOT
  * da lì in avanti: è l'unico posto da toccare perché tutto il piano si
  * ricalcoli.
  */
-export const KIKKO_VDOT_START = 48.0;
-/** 19:53 sui 5K — la sub-20 del nome. +2,1 punti in 12 settimane. */
-export const KIKKO_VDOT_GOAL = 50.1;
+export const KIKKO_VDOT_START = 49.0;
+/** 19:33 sui 5K: +2,1 punti in 12 settimane. La sub-20 cade già a metà piano. */
+export const KIKKO_VDOT_GOAL = 51.1;
 
 /**
  * VDOT atteso settimana per settimana. Nelle settimane di scarico non sale:
  * l'adattamento arriva dopo il carico, non durante.
  */
 export const KIKKO_WEEK_VDOT: number[] = [
-  48.0, 48.2, 48.4, 48.4,   // blocco 1 + scarico
-  48.7, 49.0, 49.2, 49.2,   // blocco 2 + scarico
-  49.5, 49.8, 50.1, 50.1,   // blocco 3 + gara
+  49.0, 49.2, 49.4, 49.4,   // blocco 1 + scarico
+  49.7, 50.0, 50.2, 50.2,   // blocco 2 + scarico  → qui cade la sub-20
+  50.5, 50.8, 51.1, 51.1,   // blocco 3 + gara
 ];
 
 /**
