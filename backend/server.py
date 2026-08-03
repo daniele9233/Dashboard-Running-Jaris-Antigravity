@@ -4107,6 +4107,78 @@ def _vdot_from_effort(
     return value
 
 
+def _interval_vdot_from_laps(run: dict) -> Optional[float]:
+    """VDOT di una seduta di ripetute letta dai GIRI, non dagli split al km.
+
+    Sugli split automatici ogni chilometro mescola prova e recupero: 4×1000 a
+    3:55 con tre minuti di camminata in mezzo escono come un 6:00/km medio, e
+    la seduta migliore dell'atleta finisce per valere meno di un lento. I giri
+    dell'orologio separano invece lavoro e recupero — è lo stesso dato che usa
+    il motore dell'aderenza per contare le ripetute.
+
+    Dalla media dei giri di lavoro si risale al VDOT così:
+      · si riporta il passo al fresco (stessa correzione ambientale del resto);
+      · si aggiunge lo sconto del recupero. Due cose si sommano: le ripetute
+        si corrono di suo ~2,5% più veloci del ritmo gara (I-pace di Daniels
+        sta sotto il passo 5K), e una pausa generosa fa tenere ancora di più.
+        Da qui 3% con recuperi corti fino al 6% quando la pausa vale quanto
+        la prova. Controprova: senza questo sconto il 4×1000 dell'atleta
+        valeva VDOT 51,4 contro i 48,9 del suo 5 km reale — le ripetute
+        promettevano due punti e mezzo che la gara non ha mai mantenuto;
+      · il passo che ne esce si legge come ritmo gara 5K e si inverte Daniels.
+
+    Esempio reale: 4×1000 a 3:55 con rec 3′ camminando, 26,1°C e UR 70% →
+    ~3:46/km al fresco → sconto 5,3% → ~3:58/km → VDOT ~49,8, in linea con il
+    48,9 del suo 5 km e appena sopra, com'è giusto per una prova più recente.
+    """
+    laps = run.get("laps") or []
+    valid = [
+        (float(l.get("distance") or 0), float(l.get("moving_time") or 0))
+        for l in laps
+        if _coerce_float(l.get("distance")) and _coerce_float(l.get("moving_time"))
+    ]
+    valid = [(d, t) for d, t in valid if d >= 200 and t > 0]
+    if len(valid) < 4:            # 3 prove + 1 recupero è il minimo per un contrasto
+        return None
+
+    paces = sorted(t / (d / 1000.0) for d, t in valid)
+    fastest, slowest = paces[0], paces[-1]
+    if slowest / fastest < 1.20:
+        return None               # nessun contrasto: non è una seduta a ripetute
+    cut = fastest + (slowest - fastest) * 0.40
+    work = [(d, t) for d, t in valid if t / (d / 1000.0) <= cut]
+    rest = [(d, t) for d, t in valid if t / (d / 1000.0) > cut]
+    if len(work) < 3:
+        return None
+
+    work_km = sum(d for d, _ in work) / 1000.0
+    work_sec = sum(t for _, t in work)
+    if work_km < 2.0 or work_sec <= 0:
+        return None
+    rep_pace = work_sec / work_km
+
+    # Al fresco, con la stessa correzione ambientale usata ovunque.
+    cool_pace = max(120.0, rep_pace - _environmental_pace_adjustment_sec_per_km(run))
+
+    # Quanto è generoso il recupero, in rapporto al lavoro.
+    rest_sec = sum(t for _, t in rest)
+    ratio = (rest_sec / len(rest)) / (work_sec / len(work)) if rest and work_sec else 0.6
+    discount = min(0.060, max(0.030, 0.030 + 0.030 * min(1.0, ratio)))
+    race_pace = cool_pace * (1.0 + discount)
+
+    total_s = race_pace * 5.0
+    t_min = total_s / 60.0
+    if t_min <= 0:
+        return None
+    v = 5000.0 / t_min
+    vo2 = -4.60 + 0.182258 * v + 0.000104 * v ** 2
+    pct = (0.8 + 0.1894393 * math.exp(-0.012778 * t_min)
+           + 0.2989558 * math.exp(-0.1932605 * t_min))
+    if pct <= 0:
+        return None
+    return vo2 / pct
+
+
 def _interval_vdot_from_splits(run: dict, max_hr: int) -> Optional[float]:
     if not _is_interval_session(run):
         return None
@@ -4184,7 +4256,8 @@ def _vdot_from_run(r: dict, max_hr: int = 190, resting_hr: int = 50) -> Optional
         avg_hr = max(avg_hr, steady_hr)
     total_vdot = _vdot_from_effort(r, dist, duration_min, pace_s, avg_hr, max_hr)
     interval_vdot = _interval_vdot_from_splits(r, max_hr)
-    candidates = [v for v in (total_vdot, interval_vdot) if v]
+    lap_vdot = _interval_vdot_from_laps(r)
+    candidates = [v for v in (total_vdot, interval_vdot, lap_vdot) if v]
     return max(candidates) if candidates else None
 
 def _run_cardiac_drift_pct(run: dict) -> Optional[float]:
