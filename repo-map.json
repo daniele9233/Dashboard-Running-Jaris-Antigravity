@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-08-03T11:50:26.788Z",
+  "generated_at": "2026-08-04T15:28:53.635Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,9 +14,9 @@
     ]
   },
   "counts": {
-    "files": 193,
+    "files": 205,
     "backend_routes": 68,
-    "frontend_routes": 16,
+    "frontend_routes": 19,
     "api_clients": 73
   },
   "files": [
@@ -1817,6 +1817,9 @@
         "/badges",
         "/biometrics",
         "/gamification-v1",
+        "/gamification-v2",
+        "/gamification-v3",
+        "/gamification-v4",
         "/insights",
         "/profile",
         "/ranking",
@@ -1842,9 +1845,9 @@
         "react-i18next",
         "react-router-dom"
       ],
-      "hash": "adb406d639d2094bebbcbf94bc81aa777f1ba0beaf40ab10c81ac0cccff096bb",
-      "last_modified": "2026-06-15T11:14:12.808Z",
-      "size_bytes": 10933
+      "hash": "a3a616dc51eaff6485ea7b9f6b435b3e49ea18f718903d27a589ff45fe5059e5",
+      "last_modified": "2026-08-04T15:04:58.559Z",
+      "size_bytes": 11726
     },
     {
       "path": "src/components/ActivitiesView.tsx",
@@ -2990,12 +2993,13 @@
         "../celebrations/gsapSetup",
         "../statistics/chartTheme",
         "./evolutionEngine",
+        "./useAthleteVdot",
         "lucide-react",
         "react"
       ],
-      "hash": "8680b2e2ee3c7324400489b8800262715f284f802d31bd7cf1591092829cdddc",
-      "last_modified": "2026-07-28T07:29:44.174Z",
-      "size_bytes": 40293
+      "hash": "b77055d1f4d7f94d20c78fe3c3cbeea786f8726e778f779496c76c96424b3160",
+      "last_modified": "2026-08-04T14:51:28.680Z",
+      "size_bytes": 40483
     },
     {
       "path": "src/components/gamification/evolutionEngine.test.ts",
@@ -3030,8 +3034,11 @@
       "touch_when": [
         "activities",
         "ai",
+        "api",
+        "dashboard",
         "profile",
         "statistics",
+        "strava",
         "training",
         "types"
       ],
@@ -3060,9 +3067,81 @@
       "imports": [
         "../../types/api"
       ],
-      "hash": "ee790b7a2318a0c1b3adc74a43b001335da7d737b9cb94e7b40ec292953d1b6e",
-      "last_modified": "2026-07-28T07:25:36.914Z",
-      "size_bytes": 32547
+      "hash": "39d7289ead8f36b56e0b1b919ad15aca2c1a8a8edade299a458f7f039a6b9c22",
+      "last_modified": "2026-08-04T14:51:11.756Z",
+      "size_bytes": 33492
+    },
+    {
+      "path": "src/components/gamification/gamiCore.test.ts",
+      "kind": "frontend-component",
+      "purpose": "React component gamiCore.test.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "garmin",
+        "map",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "./gamiCore",
+        "vitest"
+      ],
+      "hash": "1778d533ad3c8e65b0cb82dd92241d23155cfe9a20701c18d9ab783250a2c7ca",
+      "last_modified": "2026-08-04T15:28:20.431Z",
+      "size_bytes": 5859
+    },
+    {
+      "path": "src/components/gamification/gamiCore.ts",
+      "kind": "frontend-component",
+      "purpose": "React component gamiCore.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "bestSustainedPaceSec",
+        "clamp",
+        "cleanRuns",
+        "coolPaceSec",
+        "dayIndex",
+        "DaySession",
+        "daySessions",
+        "dayToIso",
+        "fmtClock",
+        "fmtPace",
+        "heatSlowdownFrac",
+        "intervalPaceSec",
+        "isQualityZone",
+        "isRace",
+        "isRealRun",
+        "median",
+        "paceToSec",
+        "predictSec",
+        "runVdot",
+        "thresholdPaceSec",
+        "vdotFrom",
+        "weekStart",
+        "ZoneDef",
+        "ZoneId",
+        "zoneOf",
+        "ZONES"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api"
+      ],
+      "hash": "d5452da9995d1e5d71d888f749bc97f5a15bef323ce345ca3374c25040a1bf7f",
+      "last_modified": "2026-08-04T15:18:12.105Z",
+      "size_bytes": 11835
     },
     {
       "path": "src/components/gamification/gamiData.ts",
@@ -3134,6 +3213,99 @@
       "size_bytes": 16311
     },
     {
+      "path": "src/components/gamification/GamificationV2.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component GamificationV2.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "layout",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "GamificationV2"
+      ],
+      "routes": [],
+      "imports": [
+        "../../api",
+        "../../hooks/apiCacheKeys",
+        "../../hooks/useApi",
+        "../../types/api",
+        "../celebrations/gsapSetup",
+        "../statistics/chartTheme",
+        "./gamiCore",
+        "./leagueEngine",
+        "./useAthleteVdot",
+        "lucide-react",
+        "react"
+      ],
+      "hash": "0883a7c756858ed2e40c1af968e85ac80db5b6a1798d08bf40bbb798349f33f8",
+      "last_modified": "2026-08-04T15:22:57.828Z",
+      "size_bytes": 21179
+    },
+    {
+      "path": "src/components/gamification/GamificationV3.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component GamificationV3.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "layout",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "GamificationV3"
+      ],
+      "routes": [],
+      "imports": [
+        "../../api",
+        "../../hooks/apiCacheKeys",
+        "../../hooks/useApi",
+        "../../types/api",
+        "../celebrations/gsapSetup",
+        "./skillTreeEngine",
+        "lucide-react",
+        "react"
+      ],
+      "hash": "7534fcd986e27a1338570902ca23bd40f2c186d79b671a7ad91abf0746542de2",
+      "last_modified": "2026-08-04T15:23:30.020Z",
+      "size_bytes": 19657
+    },
+    {
+      "path": "src/components/gamification/GamificationV4.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component GamificationV4.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "layout",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "GamificationV4"
+      ],
+      "routes": [],
+      "imports": [
+        "../../api",
+        "../../hooks/apiCacheKeys",
+        "../../hooks/useApi",
+        "../../types/api",
+        "../celebrations/gsapSetup",
+        "../statistics/chartTheme",
+        "./momentumEngine",
+        "lucide-react",
+        "react"
+      ],
+      "hash": "8826668c99071bcdfeded9706ece3e478fd1fef6bbfe6c045a0b5074939f6e53",
+      "last_modified": "2026-08-04T15:24:36.141Z",
+      "size_bytes": 20804
+    },
+    {
       "path": "src/components/gamification/italyRegions.ts",
       "kind": "frontend-component",
       "purpose": "React component italyRegions.",
@@ -3155,6 +3327,212 @@
       "hash": "925ecd50e8eebce012b54ad224ba03e0a7873b52d5bd7672d101795723c4eabb",
       "last_modified": "2026-07-18T16:36:51.277Z",
       "size_bytes": 3150
+    },
+    {
+      "path": "src/components/gamification/leagueEngine.test.ts",
+      "kind": "frontend-component",
+      "purpose": "React component leagueEngine.test.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "garmin",
+        "map",
+        "strava",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "./leagueEngine",
+        "vitest"
+      ],
+      "hash": "93273c74cb6b3bdb522ea48c60dba6ac803c799c450ea4bcf64db033a59be823",
+      "last_modified": "2026-08-04T15:22:33.813Z",
+      "size_bytes": 8508
+    },
+    {
+      "path": "src/components/gamification/leagueEngine.ts",
+      "kind": "frontend-component",
+      "purpose": "React component leagueEngine.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "buildLeague",
+        "DECAY_GRACE",
+        "decayOn",
+        "DivisionDef",
+        "divisionOf",
+        "DIVISIONS",
+        "IdleDrop",
+        "LeagueMatch",
+        "LeagueState",
+        "RATING_FLOOR",
+        "RATING_START",
+        "SessionOdds"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "./gamiCore"
+      ],
+      "hash": "0a69b70940d6fed6ca9268bb0aac0a001a40e8b64e43e44567a32d75adbacd1b",
+      "last_modified": "2026-08-04T15:22:05.925Z",
+      "size_bytes": 21716
+    },
+    {
+      "path": "src/components/gamification/momentumEngine.test.ts",
+      "kind": "frontend-component",
+      "purpose": "React component momentumEngine.test.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "garmin",
+        "layout",
+        "map",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "./momentumEngine",
+        "vitest"
+      ],
+      "hash": "b5cf7e02a3e5c45fe3dc44d4a40153be38556fbd82e7e603cce18f6891b9aebd",
+      "last_modified": "2026-08-04T15:25:32.564Z",
+      "size_bytes": 8462
+    },
+    {
+      "path": "src/components/gamification/momentumEngine.ts",
+      "kind": "frontend-component",
+      "purpose": "React component momentumEngine.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "layout",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "BankedRun",
+        "buildMomentum",
+        "Chapter",
+        "CHAPTERS",
+        "chargeOf",
+        "MOM_DECAY_PER_REST_DAY",
+        "MOM_MAX",
+        "MomentumPoint",
+        "MomentumState",
+        "multiplierOf",
+        "SEASON_WEEKS",
+        "SessionSpec",
+        "Slot",
+        "windowFactor"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "./gamiCore"
+      ],
+      "hash": "693d70ca4e9fabcbfd334f033d12d41b1f3c4b0eb1c3c0b0d6e4e1ad226c16fb",
+      "last_modified": "2026-08-04T15:28:20.431Z",
+      "size_bytes": 15263
+    },
+    {
+      "path": "src/components/gamification/skillTreeEngine.test.ts",
+      "kind": "frontend-component",
+      "purpose": "React component skillTreeEngine.test.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "garmin",
+        "map",
+        "strava",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "./gamiCore",
+        "./skillTreeEngine",
+        "vitest"
+      ],
+      "hash": "2cb9e5813fb48738c71a07fddb0aee38ac51b3c7521c9446e50792f06e9c1bc0",
+      "last_modified": "2026-08-04T15:15:15.545Z",
+      "size_bytes": 7304
+    },
+    {
+      "path": "src/components/gamification/skillTreeEngine.ts",
+      "kind": "frontend-component",
+      "purpose": "React component skillTreeEngine.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "buildTree",
+        "NodeDef",
+        "NodeState",
+        "Play",
+        "RES_ORDER",
+        "ResDef",
+        "ResId",
+        "RESOURCES",
+        "runYield",
+        "RunYieldRow",
+        "TREE",
+        "TreeState",
+        "Yield"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "./gamiCore"
+      ],
+      "hash": "6f1ad9c461ecfd322cd9cccec087f6b3c1c5308a0153afa560c30417b26747ba",
+      "last_modified": "2026-08-04T15:28:53.636Z",
+      "size_bytes": 18259
+    },
+    {
+      "path": "src/components/gamification/useAthleteVdot.ts",
+      "kind": "frontend-component",
+      "purpose": "React component useAthleteVdot.",
+      "touch_when": [
+        "ai",
+        "api",
+        "dashboard",
+        "types"
+      ],
+      "exports": [
+        "useAthleteVdot"
+      ],
+      "routes": [],
+      "imports": [
+        "../../api",
+        "../../hooks/apiCacheKeys",
+        "../../hooks/useApi",
+        "../../types/api"
+      ],
+      "hash": "0dd0fe770c3cfa81d7f0eaad49d587cba84047a9503718b14f487f08bee77e1a",
+      "last_modified": "2026-08-04T14:51:20.352Z",
+      "size_bytes": 1027
     },
     {
       "path": "src/components/GridCard.tsx",
@@ -5749,97 +6127,115 @@
       "path": "*",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 204
+      "line": 213
     },
     {
       "path": "/",
       "element": "DashboardView",
       "file": "src/App.tsx",
-      "line": 189
+      "line": 195
     },
     {
       "path": "/activities",
       "element": "ActivitiesView",
       "file": "src/App.tsx",
-      "line": 190
+      "line": 196
     },
     {
       "path": "/activities/:runId",
       "element": "RoutesViewWrapper",
       "file": "src/App.tsx",
-      "line": 191
+      "line": 197
     },
     {
       "path": "/badges",
       "element": "BadgesView",
       "file": "src/App.tsx",
-      "line": 197
+      "line": 203
     },
     {
       "path": "/biometrics",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 202
+      "line": 211
     },
     {
       "path": "/gamification-v1",
       "element": "GamificationV1",
       "file": "src/App.tsx",
-      "line": 198
+      "line": 204
+    },
+    {
+      "path": "/gamification-v2",
+      "element": "GamificationV2",
+      "file": "src/App.tsx",
+      "line": 205
+    },
+    {
+      "path": "/gamification-v3",
+      "element": "GamificationV3",
+      "file": "src/App.tsx",
+      "line": 206
+    },
+    {
+      "path": "/gamification-v4",
+      "element": "GamificationV4",
+      "file": "src/App.tsx",
+      "line": 207
     },
     {
       "path": "/insights",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 203
+      "line": 212
     },
     {
       "path": "/profile",
       "element": "ProfileView",
       "file": "src/App.tsx",
-      "line": 200
+      "line": 209
     },
     {
       "path": "/ranking",
       "element": "RankingView",
       "file": "src/App.tsx",
-      "line": 196
+      "line": 202
     },
     {
       "path": "/recovery",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 201
+      "line": 210
     },
     {
       "path": "/runner-dna",
       "element": "RunnerDnaView",
       "file": "src/App.tsx",
-      "line": 193
+      "line": 199
     },
     {
       "path": "/runner-dna-v1",
       "element": "Navigate",
       "file": "src/App.tsx",
-      "line": 194
+      "line": 200
     },
     {
       "path": "/runner-dna-v2",
       "element": "Navigate",
       "file": "src/App.tsx",
-      "line": 195
+      "line": 201
     },
     {
       "path": "/statistics",
       "element": "StatisticsView",
       "file": "src/App.tsx",
-      "line": 199
+      "line": 208
     },
     {
       "path": "/training",
       "element": "TrainingView",
       "file": "src/App.tsx",
-      "line": 192
+      "line": 198
     }
   ],
   "api_clients": [

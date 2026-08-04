@@ -12,6 +12,7 @@ import {
   type LevelSystem, type TierState, type LevelNode, type Projection, type XpExample,
   type LevelGain,
 } from "./evolutionEngine";
+import { useAthleteVdot } from "./useAthleteVdot";
 
 const MONO = "'JetBrains Mono', monospace";
 const ICONS: Record<string, LucideIcon> = { Footprints, Sparkles, Flame, Zap, Medal, Award, Target, Trophy, Gem, Crown };
@@ -24,6 +25,8 @@ function Panel({ children, className = "", style }: { children: React.ReactNode;
 const LEVEL_KEY = "aef-last-level";
 
 export function AthleteEvolutionFramework({ runs, profile }: { runs: Run[]; profile: Profile | null }) {
+  // VDOT canonico del backend: senza, questa pagina mostrava un numero suo
+  const vdotAnchor = useAthleteVdot();
   // La proiezione dipende da che giorno è oggi: se la pagina resta aperta o il
   // tab torna in primo piano dopo giorni, la data va rinfrescata o le finestre
   // (ritmo XP, forma recente) resterebbero ferme al momento del caricamento.
@@ -40,7 +43,7 @@ export function AthleteEvolutionFramework({ runs, profile }: { runs: Run[]; prof
     };
   }, []);
 
-  const sys = useMemo(() => computeLevelSystem(runs, profile, today), [runs, profile, today]);
+  const sys = useMemo(() => computeLevelSystem(runs, profile, today, vdotAnchor), [runs, profile, today, vdotAnchor]);
   const rootRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
 

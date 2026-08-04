@@ -208,10 +208,16 @@ function runVdot(r: Run): number | null {
  * @param totalXp XP totali dell'atleta, livello compreso di bonus
  * @param todayIdx giorno di OGGI (non dell'ultima corsa): se smetti di correre
  *   le finestre scorrono comunque e il ritmo di XP scende, come deve essere
+ * @param vdotAnchor VDOT ufficiale del backend (/api/vdot/paces). Lo stimatore
+ *   di questo file è una versione grezza di quello del server: legge il passo
+ *   medio della corsa, non i giri, quindi su una seduta di ripetute sottostima.
+ *   Quando l'ancora c'è, l'intera serie viene TRASLATA della differenza di oggi:
+ *   il numero mostrato è quello canonico e la pendenza storica resta la sua.
  */
 export function buildProjection(
   runs: Run[], xpByDay: Map<number, number>, totalXp: number, level: number,
   todayIdx: number = dayIndex(new Date().toISOString()),
+  vdotAnchor?: number | null,
 ): Projection {
   const empty: Projection = {
     ok: false, vdotNow: 0, perMonth: 0, trend: "flat", samples: 0,
@@ -251,7 +257,11 @@ export function buildProjection(
   // Si parte dalla FORMA ATTUALE (miglior prova degli ultimi 90 giorni), non dal
   // primato di sempre: un 5000 corso un anno fa non è la base da cui proiettare.
   const recent = [0, 1, 2].map((b) => buckets.get(b) ?? 0).filter(Boolean);
-  const vdotNow = recent.length ? Math.max(...recent) : estimateVdot(runs);
+  const rawNow = recent.length ? Math.max(...recent) : estimateVdot(runs);
+  // traslazione sull'ancora: sposta il livello, non la tendenza
+  const shift = vdotAnchor && vdotAnchor > 0 ? vdotAnchor - rawNow : 0;
+  const vdotNow = rawNow + shift;
+  for (const h of history) h.vdot += shift;
   // ── il cambio: quanti XP costa un punto di VDOT ──
   const xpIn = (fromDay: number) => {
     let s = 0;
@@ -535,9 +545,13 @@ const EMPTY: LevelSystem = {
  * @param todayIso data di oggi: passala dal componente e ricalcolala quando la
  *   pagina torna in primo piano, così un tab lasciato aperto per giorni non
  *   continua a proiettare dal passato.
+ * @param vdotAnchor VDOT del backend: è la fonte di verità dell'app (dashboard,
+ *   zone di Daniels, previsioni gara). Senza, questa pagina mostrava un secondo
+ *   numero, più basso, calcolato solo sul passo medio.
  */
 export function computeLevelSystem(
   runsIn: Run[], _profile: Profile | null, todayIso?: string,
+  vdotAnchor?: number | null,
 ): LevelSystem {
   // stessa igiene dei badge: avvii per sbaglio e glitch GPS non sono allenamenti
   const runs = (runsIn ?? []).filter((r) => (r.distance_km || 0) >= 0.5 && (r.duration_minutes || 0) >= 3);
@@ -587,8 +601,9 @@ export function computeLevelSystem(
   const projection = buildProjection(
     runs, xpByDay, totalXp, level,
     dayIndex(todayIso ?? new Date().toISOString()),
+    vdotAnchor,
   );
-  const currentVdot = projection.ok ? projection.vdotNow : estimateVdot(runs);
+  const currentVdot = projection.ok ? projection.vdotNow : (vdotAnchor || estimateVdot(runs));
   const legend = buildXpLegend(runs);
 
   // 100 livelli
