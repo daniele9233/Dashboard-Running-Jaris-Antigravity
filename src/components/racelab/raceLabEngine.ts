@@ -4,7 +4,7 @@ import {
   predictSec, vdotFrom,
 } from "../gamification/gamiCore";
 import {
-  etaUnderPlan, planToDose, timeAtDay, walkPlan,
+  planToDose, timeAtDay, walkPlan,
   type PhysioModel, type SystemLevels, type WeeklyPlan,
 } from "../gamification/physioEngine";
 import {
@@ -243,6 +243,96 @@ export function whatIf(base: Effort, target: Conditions, distM: number): WhatIf 
   };
 }
 
+// ── LE CONDIZIONI DEL GIORNO DELLA GARA ───────────────────────────────────────
+/**
+ * Con cosa la corri, l'obiettivo.
+ *
+ * C'è una trappola qui, e va detta: il VDOT su cui poggia tutto il modello viene
+ * dalle corse dell'atleta, che sono state corse con le SUE scarpe. Applicare il
+ * guadagno di una super scarpa rispetto a una flat da gara conterebbe due volte
+ * quello che è già dentro il numero di partenza. Il confronto quindi è sempre
+ * rispetto alla calzatura abituale — e per la stessa ragione il taper e i
+ * nitrati partono da "no", perché così sono state corse le prove da cui il
+ * modello ha imparato.
+ */
+export interface RaceSetup {
+  shoeId: string;
+  /** La scarpa con cui hai corso le prove da cui il modello ha imparato. */
+  baselineShoeId: string;
+  taper: TaperKind;
+  nitrate: boolean;
+  /** Temperatura della gara. Null = quella tipica del mese in cui cade. */
+  tempC: number | null;
+  pack: boolean;
+}
+
+export const defaultSetup = (baselineShoeId: string): RaceSetup => ({
+  shoeId: baselineShoeId, baselineShoeId, taper: "none", nitrate: false, tempC: null, pack: false,
+});
+
+/**
+ * Quanto quelle condizioni moltiplicano il tempo che il modello fisiologico
+ * prevede per quel giorno. Sotto 1 = correresti più forte della previsione nuda.
+ */
+export function raceFactor(
+  setup: RaceSetup, distKm: number, dayTempC: number, refPaceSec: number, vdot: number,
+): { factor: number; factors: Factor[]; uncertaintyPct: number } {
+  const factors: Factor[] = [];
+  const push = (id: string, label: string, detail: string, gainPct: number, unc: number) => {
+    if (Math.abs(gainPct) < 0.01) return;
+    factors.push({ id, label, detail, gainPct, secPerKm: (refPaceSec * gainPct) / 100, uncertaintyPct: unc });
+  };
+
+  const baseShoe = shoeById(setup.baselineShoeId) ?? shoeById("flat")!;
+  const raceShoe = shoeById(setup.shoeId) ?? baseShoe;
+  if (raceShoe.id !== baseShoe.id) {
+    push("shoe", `${raceShoe.brand} ${raceShoe.name}`.trim(),
+      `Rispetto alle tue ${baseShoe.name}, con cui hai corso le prove da cui viene la stima.`,
+      shoeGainPct(baseShoe, raceShoe, refPaceSec),
+      Math.sqrt(raceShoe.uncertaintyPct ** 2 + baseShoe.uncertaintyPct ** 2) * 0.75);
+  }
+
+  const taper = taperById(setup.taper);
+  push("taper", `Taper: ${taper.label.toLowerCase()}`, taper.detail, taper.gainPct, taper.uncertaintyPct);
+
+  if (setup.nitrate) {
+    push("nitrate", "Nitrati (succo di barbabietola)",
+      "Meno ossigeno per la stessa velocità: al tuo livello vale questo, e cala man mano che sali.",
+      nitrateGainPct(vdot), NITRATE_UNCERTAINTY);
+  }
+  if (setup.pack) push("pack", "In gara, non da solo", "Aria e ritmo tenuti da altri.", PACK_GAIN_PCT, 0.4);
+
+  // la temperatura sostituisce quella del mese, non ci si somma
+  let tempRatio = 1;
+  if (setup.tempC != null && Math.abs(setup.tempC - dayTempC) > 0.5) {
+    const race = heatSlowdownFrac(setup.tempC, null, distKm);
+    const day = heatSlowdownFrac(dayTempC, null, distKm);
+    tempRatio = (1 + race) / (1 + day);
+    push("temp", `${Math.round(setup.tempC)}°C invece dei ${Math.round(dayTempC)}° tipici`,
+      "La previsione usa il clima medio del mese: qui stai chiedendo una giornata precisa.",
+      (1 - tempRatio) * 100, 0.5);
+  }
+
+  const gains = factors.filter((f) => f.id !== "temp");
+  const factor = gains.reduce((f, x) => f / (1 + x.gainPct / 100), 1) * tempRatio;
+  return {
+    factor, factors,
+    uncertaintyPct: Math.sqrt(factors.reduce((s, x) => s + x.uncertaintyPct ** 2, 0)),
+  };
+}
+
+/** Come {@link walkPlan}, ma il tempo che passa a `visit` è già quello di gara. */
+function walkRace(
+  model: PhysioModel, dose: SystemLevels, distM: number, setup: RaceSetup, vdot: number, days: number,
+  visit: (i: number, raceSec: number, tempC: number) => boolean | void,
+): void {
+  const distKm = distM / 1000;
+  walkPlan(model, dose, distM, days, (i, sec, dayTemp) => {
+    const { factor } = raceFactor(setup, distKm, dayTemp, sec / distKm, vdot);
+    return visit(i, sec * factor, setup.tempC ?? dayTemp);
+  });
+}
+
 // ── L'OBIETTIVO ───────────────────────────────────────────────────────────────
 export interface GoalPlanResult {
   /** Data prevista al carico attuale, e sotto il piano proposto. */
@@ -253,6 +343,10 @@ export interface GoalPlanResult {
   etaSafe: { days: number; iso: string; tempC: number } | null;
   /** Tempo previsto alla data-obiettivo, se c'è. */
   atTarget: { sec: number; tempC: number } | null;
+  /** Che tempo faresti OGGI in quelle condizioni: il controllo di realtà. */
+  todaySec: number;
+  /** Da dove vengono i secondi che le condizioni scelte regalano o tolgono. */
+  factors: Factor[];
   /** Probabilità di farcela alla data-obiettivo (o all'ETA del piano). */
   probability: number;
   /** Quanto manca, in secondi, alla data di riferimento. */
@@ -304,16 +398,42 @@ export function successProbability(predictedSec: number, targetSec: number, hori
  */
 export function etaAtConfidence(
   model: PhysioModel, dose: SystemLevels, distM: number, targetSec: number,
-  confidence: number, days = 540,
+  confidence: number, setup: RaceSetup, vdot: number, days = 540,
 ): { days: number; iso: string; tempC: number } | null {
   let hit: { days: number; iso: string; tempC: number } | null = null;
-  walkPlan(model, dose, distM, days, (i, sec, temp) => {
+  walkRace(model, dose, distM, setup, vdot, days, (i, sec, temp) => {
     if (successProbability(sec, targetSec, i) >= confidence) {
       hit = { days: i, iso: dayToIso(model.today + i), tempC: Math.round(temp) };
       return true;
     }
   });
   return hit;
+}
+
+/** Il primo giorno in cui il piano, in quelle condizioni, tocca il tempo. */
+export function raceEta(
+  model: PhysioModel, dose: SystemLevels, distM: number, targetSec: number,
+  setup: RaceSetup, vdot: number, days = 540,
+): { days: number; iso: string; tempC: number } | null {
+  let hit: { days: number; iso: string; tempC: number } | null = null;
+  walkRace(model, dose, distM, setup, vdot, days, (i, sec, temp) => {
+    if (sec <= targetSec) {
+      hit = { days: i, iso: dayToIso(model.today + i), tempC: Math.round(temp) };
+      return true;
+    }
+  });
+  return hit;
+}
+
+/** Che tempo faresti fra `dayOffset` giorni, in quelle condizioni. */
+export function raceTimeAtDay(
+  model: PhysioModel, dose: SystemLevels, distM: number, dayOffset: number,
+  setup: RaceSetup, vdot: number,
+): { sec: number; tempC: number; factors: Factor[]; uncertaintyPct: number } {
+  const plain = timeAtDay(model, dose, distM, dayOffset);
+  const distKm = distM / 1000;
+  const { factor, factors, uncertaintyPct } = raceFactor(setup, distKm, plain.tempC, plain.sec / distKm, vdot);
+  return { sec: plain.sec * factor, tempC: setup.tempC ?? plain.tempC, factors, uncertaintyPct };
 }
 
 /** Il carico attuale espresso come piano, per confrontarlo con quello proposto. */
@@ -340,7 +460,7 @@ export function currentPlan(weeklyKm: number, weeklyQualityMin: number, longRunM
  */
 export function solvePlan(
   model: PhysioModel, distM: number, targetSec: number, deadlineDays: number | null,
-  easyPaceSec: number, from: WeeklyPlan, minProbability = 0.8,
+  easyPaceSec: number, from: WeeklyPlan, setup: RaceSetup, vdot: number, minProbability = 0.8,
 ): WeeklyPlan | null {
   const kmSteps = [from.km, from.km + 10, from.km + 20, from.km + 30, from.km + 45, from.km + 60]
     .map((k) => clamp(Math.round(k), 20, 140));
@@ -358,9 +478,9 @@ export function solvePlan(
         };
         const dose = planToDose(plan, easyPaceSec);
         if (deadlineDays != null) {
-          const at = timeAtDay(model, dose, distM, deadlineDays);
+          const at = raceTimeAtDay(model, dose, distM, deadlineDays, setup, vdot);
           if (successProbability(at.sec, targetSec, deadlineDays) < minProbability) continue;
-        } else if (!etaAtConfidence(model, dose, distM, targetSec, minProbability)) {
+        } else if (!etaAtConfidence(model, dose, distM, targetSec, minProbability, setup, vdot)) {
           // senza scadenza basta che il piano ci arrivi con quella confidenza,
           // prima o poi: chiederlo alla data di crossing sarebbe impossibile
           continue;
@@ -377,30 +497,37 @@ export function solvePlan(
 
 export function planGoal(
   model: PhysioModel, distM: number, targetSec: number,
-  opt: { deadlineDays: number | null; easyPaceSec: number; current: WeeklyPlan; plan: WeeklyPlan },
+  opt: {
+    deadlineDays: number | null; easyPaceSec: number;
+    current: WeeklyPlan; plan: WeeklyPlan; setup: RaceSetup; vdot: number;
+  },
 ): GoalPlanResult {
   const doseNow = planToDose(opt.current, opt.easyPaceSec);
   const dosePlan = planToDose(opt.plan, opt.easyPaceSec);
+  const { setup, vdot } = opt;
 
-  const etaNow = etaUnderPlan(model, doseNow, distM, targetSec);
-  const etaPlan = etaUnderPlan(model, dosePlan, distM, targetSec);
-  const etaSafe = etaAtConfidence(model, dosePlan, distM, targetSec, 0.8);
+  const etaNow = raceEta(model, doseNow, distM, targetSec, setup, vdot);
+  const etaPlan = raceEta(model, dosePlan, distM, targetSec, setup, vdot);
+  const etaSafe = etaAtConfidence(model, dosePlan, distM, targetSec, 0.8, setup, vdot);
 
   // senza una data di gara la probabilità si legge dove serve: alla data in cui
   // il piano diventa affidabile, non a quella in cui è una monetina
   const horizon = opt.deadlineDays ?? etaSafe?.days ?? etaPlan?.days ?? 365;
-  const at = timeAtDay(model, dosePlan, distM, horizon);
+  const at = raceTimeAtDay(model, dosePlan, distM, horizon, setup, vdot);
   const probability = successProbability(at.sec, targetSec, horizon);
+  const todayRace = raceTimeAtDay(model, dosePlan, distM, 0, setup, vdot);
 
   return {
     etaNow, etaPlan, etaSafe,
-    atTarget: opt.deadlineDays != null ? at : null,
+    atTarget: opt.deadlineDays != null ? { sec: at.sec, tempC: at.tempC } : null,
+    todaySec: todayRace.sec,
+    factors: todayRace.factors,
     probability,
     gapSec: Math.round(at.sec - targetSec),
-    suggested: solvePlan(model, distM, targetSec, opt.deadlineDays, opt.easyPaceSec, opt.current),
+    suggested: solvePlan(model, distM, targetSec, opt.deadlineDays, opt.easyPaceSec, opt.current, setup, vdot),
     blocker: etaPlan
       ? null
-      : "Con questo piano i sistemi si stabilizzano prima del tempo obiettivo: serve più carico, o più tempo.",
+      : "Con questo piano, in queste condizioni, i sistemi si stabilizzano prima del tempo obiettivo: serve più carico, più tempo, o una giornata migliore.",
   };
 }
 

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
-  REFERENCE, conditionFactors, currentPlan, fastEfforts, planGoal, solvePlan,
-  successProbability, whatIf, type Conditions, type Effort,
+  REFERENCE, conditionFactors, currentPlan, defaultSetup, fastEfforts, planGoal, raceFactor,
+  solvePlan, successProbability, whatIf, type Conditions, type Effort,
 } from "./raceLabEngine";
 import { ECON_TO_PACE, SHOES, nitrateGainPct, rpeMaxGainPct, shoeGainPct, shoeById } from "./shoeLab";
 import { buildPhysio } from "../gamification/physioEngine";
@@ -256,7 +256,63 @@ const season = (weeks: number, endIso: string) => {
 describe("quando arrivo all'obiettivo, e cosa devo fare", () => {
   const TODAY = "2026-11-15";
   const physio = buildPhysio(season(20, TODAY), TODAY, 48);
+  const SETUP = defaultSetup("superblast3");
   const now = currentPlan(physio.weeklyKm, physio.weeklyZone.threshold + physio.weeklyZone.vo2, 105, 12);
+
+  it("la scarpa abituale non regala niente: sarebbe contata due volte", () => {
+    // il VDOT su cui poggia tutto viene da corse fatte con QUELLE scarpe
+    const same = raceFactor(SETUP, 5, 20, 250, 48);
+    expect(same.factor).toBeCloseTo(1, 4);
+    expect(same.factors).toHaveLength(0);
+
+    const better = raceFactor({ ...SETUP, shoeId: "alphafly3" }, 5, 20, 250, 48);
+    expect(better.factor).toBeLessThan(1);
+    // solo la DIFFERENZA fra Alphafly e Superblast, non il vantaggio pieno
+    const gain = better.factors.find((f) => f.id === "shoe")!.gainPct;
+    expect(gain).toBeGreaterThan(0.8);
+    expect(gain).toBeLessThan(2.2);
+  });
+
+  it("scegliere la temperatura sostituisce quella del mese, non ci si somma", () => {
+    const fresco = raceFactor({ ...SETUP, tempC: 10 }, 5, 26, 250, 48);
+    const uguale = raceFactor({ ...SETUP, tempC: 26 }, 5, 26, 250, 48);
+    expect(fresco.factor).toBeLessThan(1);          // 10° invece di 26° = più veloce
+    expect(uguale.factor).toBeCloseTo(1, 3);        // stessa temperatura = nessun effetto
+    const caldo = raceFactor({ ...SETUP, tempC: 32 }, 5, 12, 250, 48);
+    expect(caldo.factor).toBeGreaterThan(1);
+  });
+
+  it("l'obiettivo tiene conto delle condizioni: al fresco arriva prima", () => {
+    const target = 1200;
+    const goal = (tempC: number) => planGoal(physio.model, 5000, target, {
+      deadlineDays: null, easyPaceSec: 340, setup: { ...SETUP, tempC }, vdot: 48, current: now, plan: now,
+    });
+    const caldo = goal(28), fresco = goal(10);
+    expect(fresco.todaySec).toBeLessThan(caldo.todaySec);
+    if (caldo.etaPlan && fresco.etaPlan) expect(fresco.etaPlan.days).toBeLessThanOrEqual(caldo.etaPlan.days);
+  });
+
+  it("sotto i 12 gradi il modello smette di regalare: il freddo non è gratis", () => {
+    // il modello del caldo dell'app tratta ~12 °C come ottimale e non premia il
+    // gelo. Chiedere 2 °C invece di 10 non deve far comparire secondi dal nulla.
+    const a = raceFactor({ ...SETUP, tempC: 10 }, 5, 12, 250, 48);
+    const b = raceFactor({ ...SETUP, tempC: 2 }, 5, 12, 250, 48);
+    expect(a.factor).toBeCloseTo(1, 4);
+    expect(b.factor).toBeCloseTo(1, 4);
+  });
+
+  it("con scarpa, taper e barbabietola il traguardo si avvicina ancora", () => {
+    const nudo = planGoal(physio.model, 5000, 1190, {
+      deadlineDays: null, easyPaceSec: 340, setup: SETUP, vdot: 48, current: now, plan: now,
+    });
+    const armato = planGoal(physio.model, 5000, 1190, {
+      deadlineDays: null, easyPaceSec: 340, vdot: 48, current: now, plan: now,
+      setup: { ...SETUP, shoeId: "alphafly3", taper: "full", nitrate: true, tempC: 10 },
+    });
+    expect(armato.todaySec).toBeLessThan(nudo.todaySec);
+    expect(armato.probability).toBeGreaterThanOrEqual(nudo.probability);
+    expect(armato.factors.length).toBeGreaterThan(2);
+  });
 
   it("la probabilità è una probabilità, non una promessa", () => {
     expect(successProbability(1200, 1200, 90)).toBeCloseTo(0.5, 1);
@@ -276,14 +332,14 @@ describe("quando arrivo all'obiettivo, e cosa devo fare", () => {
   it("allenarsi di più anticipa la data", () => {
     const heavier = { ...now, km: now.km + 35, qualitySessions: 2, qualityMinutes: 28, longRunMinutes: 110 };
     const r = planGoal(physio.model, 10000, 2520, {
-      deadlineDays: null, easyPaceSec: 340, current: now, plan: heavier,
+      deadlineDays: null, easyPaceSec: 340, setup: SETUP, vdot: 48, current: now, plan: heavier,
     });
     if (r.etaNow && r.etaPlan) expect(r.etaPlan.days).toBeLessThanOrEqual(r.etaNow.days);
   });
 
   it("il piano suggerito è il più leggero che basta, non il più pesante possibile", () => {
-    const easy = solvePlan(physio.model, 10000, 3000, 240, 340, now);   // 10K in 50', comodo
-    const hard = solvePlan(physio.model, 10000, 2400, 240, 340, now);   // 10K in 40', duro
+    const easy = solvePlan(physio.model, 10000, 3000, 240, 340, now, SETUP, 48);   // 10K in 50', comodo
+    const hard = solvePlan(physio.model, 10000, 2400, 240, 340, now, SETUP, 48);   // 10K in 40', duro
     if (easy && hard) {
       expect(hard.km + hard.qualitySessions * 10).toBeGreaterThanOrEqual(easy.km + easy.qualitySessions * 10);
     }
@@ -298,7 +354,7 @@ describe("quando arrivo all'obiettivo, e cosa devo fare", () => {
     // la prima è il giorno in cui la previsione tocca il tempo: metà delle volte
     // basta. La seconda è quella su cui ha senso prenotare un pettorale
     const r = planGoal(physio.model, 5000, 1200, {
-      deadlineDays: null, easyPaceSec: 340, current: now,
+      deadlineDays: null, easyPaceSec: 340, setup: SETUP, vdot: 48, current: now,
       plan: { ...now, km: now.km + 25, qualitySessions: 2, qualityMinutes: 26, longRunMinutes: 110 },
     });
     if (r.etaPlan && r.etaSafe) {
@@ -312,7 +368,7 @@ describe("quando arrivo all'obiettivo, e cosa devo fare", () => {
     // ragionevole ci arriva": chiedeva l'80% alla data che per costruzione è al 50%
     for (const target of [1200, 1260, 1320]) {
       const r = planGoal(physio.model, 5000, target, {
-        deadlineDays: null, easyPaceSec: 340, current: now, plan: now,
+        deadlineDays: null, easyPaceSec: 340, setup: SETUP, vdot: 48, current: now, plan: now,
       });
       if (r.etaSafe) expect(r.suggested, `obiettivo ${target}s`).not.toBeNull();
     }
@@ -320,17 +376,17 @@ describe("quando arrivo all'obiettivo, e cosa devo fare", () => {
 
   it("un obiettivo fuori portata viene detto, non addolcito", () => {
     const r = planGoal(physio.model, 10000, 1500, {     // 10K in 25 minuti
-      deadlineDays: 60, easyPaceSec: 340, current: now, plan: now,
+      deadlineDays: 60, easyPaceSec: 340, setup: SETUP, vdot: 48, current: now, plan: now,
     });
     expect(r.etaPlan).toBeNull();
     expect(r.blocker).not.toBeNull();
     expect(r.probability).toBeLessThan(0.05);
-    expect(solvePlan(physio.model, 10000, 1500, 60, 340, now)).toBeNull();
+    expect(solvePlan(physio.model, 10000, 1500, 60, 340, now, SETUP, 48)).toBeNull();
   });
 
   it("con una data si dice anche che tempo faresti quel giorno", () => {
     const r = planGoal(physio.model, 5000, 1200, {
-      deadlineDays: 120, easyPaceSec: 340, current: now, plan: now,
+      deadlineDays: 120, easyPaceSec: 340, setup: SETUP, vdot: 48, current: now, plan: now,
     });
     expect(r.atTarget).not.toBeNull();
     expect(r.atTarget!.sec).toBeGreaterThan(0);
