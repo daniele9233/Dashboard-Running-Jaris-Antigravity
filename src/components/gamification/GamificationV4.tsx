@@ -10,6 +10,8 @@ import {
   buildMomentum, chargeOf, CHAPTERS, MOM_DECAY_PER_REST_DAY, MOM_MAX, SEASON_WEEKS,
   type MomentumState, type Slot,
 } from "./momentumEngine";
+import { PhysioVerdict, SessionImpactList } from "./PhysioVerdict";
+import { fmtDate, usePhysio } from "./usePhysio";
 
 const MONO = "'JetBrains Mono', monospace";
 const HOT = "#F97316", COOL = "#22D3EE";
@@ -85,6 +87,7 @@ export function GamificationV4() {
     return () => window.removeEventListener("focus", sync);
   }, []);
   const st = useMemo(() => buildMomentum(runs, today), [runs, today]);
+  const physio = usePhysio(runs);
   const [pick, setPick] = useState<Slot | null>(null);
   const root = useRef<HTMLDivElement>(null);
 
@@ -112,6 +115,10 @@ export function GamificationV4() {
   return (
     <main ref={root} className="flex-1 overflow-y-auto bg-black">
       <div className="mx-auto max-w-[1500px] px-4 md:px-6 py-8 text-white">
+
+        {/* Il momentum dice QUANDO uscire. Il verdetto dice perché ne vale la
+            pena: senza, la griglia è un gioco senza posta. */}
+        <div className="mo-rise mb-5"><PhysioVerdict p={physio} /></div>
 
         {/* ── STATO ──────────────────────────────────────────────────────── */}
         <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr] items-stretch">
@@ -166,7 +173,7 @@ export function GamificationV4() {
                     <div className="text-[11px] text-gray-400 mt-1">
                       mancano <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>{st.toNext}</b> SP
                       {st.etaIso
-                        ? <> · lo tocchi il <b className="text-white">{st.etaIso}</b>{!st.etaInSeason && <span className="text-[#F43F5E]"> — fuori stagione</span>}</>
+                        ? <> · lo tocchi il <b className="text-white">{fmtDate(st.etaIso)}</b>{!st.etaInSeason && <span className="text-[#F43F5E]"> — fuori stagione</span>}</>
                         : <span className="text-[#F43F5E]"> · fermo, non ci arrivi</span>}
                     </div>
                     <div className="text-[11px] text-gray-500 mt-2 leading-snug">{st.nextChapter.meaning}</div>
@@ -293,6 +300,11 @@ export function GamificationV4() {
             </div>
           </Card>
         </div>
+
+        {/* Il banco di sopra giudica il TEMPISMO. Questo dice cosa quelle stesse
+            sedute hanno lasciato nel corpo — le due letture insieme sono il
+            motivo per cui una corsa ben piazzata vale più di una corsa in più. */}
+        <div className="mo-rise mt-5"><SessionImpactList p={physio} /></div>
       </div>
     </main>
   );

@@ -1,6 +1,7 @@
 import type { Run } from "../../types/api";
 import {
-  ZONES, type ZoneDef, bestSustainedPaceSec, clamp, cleanRuns, dayIndex, daySessions, weekStart,
+  ZONES, type ZoneDef, type ZoneMinutes, bestSustainedPaceSec, clamp, cleanRuns, dayIndex,
+  daySessions, weekStart,
 } from "./gamiCore";
 
 /**
@@ -37,21 +38,56 @@ export const RES_ORDER: ResId[] = ["fondo", "potenza", "soglia", "costanza", "te
 export type Yield = Partial<Record<ResId, number>>;
 
 // ── quanto rende una corsa ────────────────────────────────────────────────────
-/** Quota di seduta che è davvero lavoro: nelle ripetute i recuperi non contano. */
+/**
+ * Quota di seduta che è davvero lavoro, quando gli split non ci sono.
+ *
+ * Era una supposizione necessaria: senza vedere dentro la seduta, di un 5×1000
+ * da 55 minuti si poteva solo dire "diciamo che 25 erano lavoro". Adesso, quando
+ * gli split ci sono, i minuti si contano invece di stimarli — e questi due
+ * numeri restano solo per le corse che gli split non ce l'hanno.
+ */
 const WORK_FRACTION = { vo2: 0.45, threshold: 0.7 };
 const KM_PER_FONDO = 5;      // 5 km aerobici = 1 Fondo
 const MIN_PER_POTENZA = 6;   // 6 minuti di lavoro duro = 1 Potenza
 const MIN_PER_SOGLIA = 8;
 
+/** Tenuta: la dà la durata, non l'intensità. */
+function enduranceBonus(min: number): number {
+  return min >= 100 ? 3 : min >= 70 ? 2 : min >= 55 ? 1 : 0;
+}
+
 /**
  * I materiali prodotti da UNA seduta. È la funzione che risponde a "quanto pesa
  * questa corsa": non un numero solo, ma dove va a finire.
+ *
+ * Con `zm` — i minuti per zona letti split per split — il conto è esatto: una
+ * seduta mista produce Potenza per i minuti di ripetute, Soglia per quelli in
+ * soglia e Fondo per il riscaldamento, invece di essere schiacciata sull'unica
+ * etichetta della giornata. Senza, si ricade sulle frazioni stimate: meno
+ * preciso, ma nessuna corsa resta senza peso.
  *
  * Prende km e minuti sciolti, non una `Run`, perché la stessa formula deve
  * girare su tre cose diverse: lo storico, la seduta del giorno (che può essere
  * la somma di più attività Strava) e le sedute ipotetiche del pannello.
  */
-export function runYield(km: number, min: number, zone: ZoneDef): Yield {
+export function runYield(km: number, min: number, zone: ZoneDef, zm?: ZoneMinutes): Yield {
+  const covered = zm ? zm.recovery + zm.easy + zm.medium + zm.threshold + zm.vo2 : 0;
+  if (zm && covered > 0) {
+    const y: Yield = {};
+    const hard = zm.vo2 + zm.threshold;
+    const aerobicShare = (zm.recovery + zm.easy + zm.medium) / covered;
+    if (zm.vo2 > 0) y.potenza = round1(zm.vo2 / MIN_PER_POTENZA);
+    const sogliaMin = zm.threshold + zm.medium * 0.3;
+    if (sogliaMin > 0) y.soglia = round1(sogliaMin / MIN_PER_SOGLIA);
+    // i chilometri della parte dura contano come fondo a un terzo: correre forte
+    // resta correre, ma non è quello che costruisce la base
+    y.fondo = round1((km * (aerobicShare + 0.3 * (1 - aerobicShare))) / KM_PER_FONDO);
+    const t = enduranceBonus(min);
+    if (t) y.tenuta = t;
+    void hard;
+    return y;
+  }
+
   const y: Yield = {};
   if (zone.id === "vo2") {
     y.potenza = round1((min * WORK_FRACTION.vo2) / MIN_PER_POTENZA);
@@ -64,10 +100,8 @@ export function runYield(km: number, min: number, zone: ZoneDef): Yield {
     // un medio lungo lavora sulla soglia anche se non è una seduta di soglia
     if (zone.id === "medium" && min >= 35) y.soglia = round1((min * 0.25) / MIN_PER_SOGLIA);
   }
-  // Tenuta: la dà la durata, non l'intensità
-  if (min >= 100) y.tenuta = (y.tenuta ?? 0) + 3;
-  else if (min >= 70) y.tenuta = (y.tenuta ?? 0) + 2;
-  else if (min >= 55) y.tenuta = (y.tenuta ?? 0) + 1;
+  const t = enduranceBonus(min);
+  if (t) y.tenuta = (y.tenuta ?? 0) + t;
   return y;
 }
 
@@ -254,7 +288,10 @@ export function buildTree(runsIn: Run[], todayIso: string = new Date().toISOStri
   // per-seduta (= per giorno: i frammenti Strava dello stesso allenamento
   // vanno sommati, altrimenti tre spezzoni da 40 minuti non danno Tenuta)
   for (const s of sessions) {
-    const y = runYield(s.km, s.minutes, s.zone);
+    // il conto esatto solo quando gli intertempi coprono almeno metà seduta:
+    // sotto, la ripartizione è ricostruita e le frazioni stimate sono più oneste
+    const detailed = s.splitMinutes >= s.minutes * 0.5;
+    const y = runYield(s.km, s.minutes, s.zone, detailed ? s.zoneMinutes : undefined);
     for (const k of RES_ORDER) {
       const v = y[k] ?? 0;
       res[k] += v;

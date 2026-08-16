@@ -15,6 +15,8 @@ import {
   type LeagueState, type LeagueMatch, type SessionOdds,
 } from "./leagueEngine";
 import { dayToIso } from "./gamiCore";
+import { PhysioVerdict } from "./PhysioVerdict";
+import { usePhysio } from "./usePhysio";
 
 const MONO = "'JetBrains Mono', monospace";
 
@@ -160,6 +162,7 @@ export function GamificationV2() {
   }, []);
 
   const st = useMemo(() => buildLeague(runs, today, vdot), [runs, today, vdot]);
+  const physio = usePhysio(runs);
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const c = gsap.context(() => {
@@ -182,6 +185,10 @@ export function GamificationV2() {
   return (
     <main ref={root} className="flex-1 overflow-y-auto bg-black">
       <div className="mx-auto max-w-[1500px] px-4 md:px-6 py-8 text-white">
+
+        {/* Il punteggio dice come stai andando rispetto a te stesso; il verdetto
+            dice dove porta. Servono tutti e due, ma in quest'ordine. */}
+        <div className="lg-rise mb-5"><PhysioVerdict p={physio} /></div>
 
         {/* ── STEMMA ─────────────────────────────────────────────────────── */}
         <Card className="lg-rise p-5 md:p-6 relative overflow-hidden">

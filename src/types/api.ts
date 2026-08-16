@@ -117,6 +117,8 @@ export interface Run {
   elapsed_time?: number | null;
   weather?: string | null;
   temperature?: number | null;
+  /** Umidità relativa %, salvata dalla pipeline meteo insieme a `temperature`. */
+  humidity?: number | null;
   /** PBP a livello corsa: passo corretto per la pendenza, in secondi/km. */
   gap_pace_sec?: number | null;
   /** Stesso valore già formattato "m:ss". */

@@ -13,6 +13,8 @@ import {
   type LevelGain,
 } from "./evolutionEngine";
 import { useAthleteVdot } from "./useAthleteVdot";
+import { GoalTimeline, PhysioVerdict } from "./PhysioVerdict";
+import { usePhysio } from "./usePhysio";
 
 const MONO = "'JetBrains Mono', monospace";
 const ICONS: Record<string, LucideIcon> = { Footprints, Sparkles, Flame, Zap, Medal, Award, Target, Trophy, Gem, Crown };
@@ -44,6 +46,7 @@ export function AthleteEvolutionFramework({ runs, profile }: { runs: Run[]; prof
   }, []);
 
   const sys = useMemo(() => computeLevelSystem(runs, profile, today, vdotAnchor), [runs, profile, today, vdotAnchor]);
+  const physio = usePhysio(runs);
   const rootRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -92,18 +95,27 @@ export function AthleteEvolutionFramework({ runs, profile }: { runs: Run[]; prof
     // stessa larghezza delle altre pagine (Badge, Ranking, Runner DNA): con
     // max-w-6xl questa restava una colonna stretta persa in mezzo allo schermo
     <div ref={rootRef} className="mx-auto max-w-[1500px] px-4 md:px-6 pt-20 pb-16 text-white">
-      <Hero sys={sys} />
+      {/* Prima il verdetto, poi il gioco. Chi apre questa pagina vuole sapere a
+          che punto è: il livello è il modo in cui glielo raccontiamo, non la
+          risposta. */}
+      <div className="aef-rise"><PhysioVerdict p={physio} /></div>
 
-      {/* colonna sinistra = dove stai andando · destra = come ci arrivi */}
+      <div className="mt-5"><Hero sys={sys} /></div>
+
+      {/* colonna sinistra = dove stai andando · destra = quando ci arrivi */}
       <div className="mt-5 grid gap-5 lg:grid-cols-[1.15fr_0.85fr] items-start">
         <ProjectionPanel p={sys.projection} />
-        <XpLegendPanel sys={sys} />
+        <div className="aef-rise"><GoalTimeline p={physio} /></div>
       </div>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[1.15fr_0.85fr] items-start">
         <PathPanel sys={sys} trackRef={trackRef} />
         <RecentRuns sys={sys} />
       </div>
+
+      {/* le regole degli XP restano leggibili ma smettono di occupare il posto
+          buono: sono il "come si contano i punti", non "a che punto sei" */}
+      <div className="mt-5"><XpLegendPanel sys={sys} /></div>
 
       {levelUp && <LevelUpOverlay info={levelUp} tier={sys.tier} onClose={() => setLevelUp(null)} />}
     </div>

@@ -115,6 +115,70 @@ describe("zone", () => {
   });
 });
 
+/**
+ * La lettura per intertempi è un'arma a doppio taglio: vede la struttura di una
+ * seduta, ma per farlo ha bisogno di una scala assoluta — il passo di soglia —
+ * che senza l'ancora del backend è solo una stima. Su una seduta uniforme quella
+ * stima diventerebbe l'unica cosa che decide, e un lento da 12 km finirebbe
+ * classificato come lavoro sopra soglia. Da qui i due lati del contratto.
+ */
+describe("gli intertempi vedono la struttura, non decidono la scala", () => {
+  const sp = (km: number, paceSec: number, elev = 0) => ({
+    km, pace: pace(paceSec), hr: null, cadence: null,
+    distance: 1000, elapsed_time: paceSec, elevation_difference: elev,
+  });
+  const withSplits = (date: string, paces: number[], over: Partial<Run> = {}) => {
+    const tot = paces.reduce((s, p) => s + p, 0);
+    return mkRun({
+      date, distance_km: paces.length, duration_minutes: tot / 60,
+      avg_pace: pace(Math.round(tot / paces.length)),
+      splits: paces.map((p, i) => sp(i + 1, p)),
+      ...over,
+    });
+  };
+
+  it("un blocco veloce dentro una seduta lenta comanda la zona", () => {
+    // 3 di riscaldamento, 5 a ritmo ripetute, 2 di defaticamento: la media è
+    // un medio qualunque, ma dentro c'è mezz'ora di lavoro vero
+    const runs = [
+      withSplits("2026-05-04", [330, 330, 330, 240, 240, 240, 240, 240, 340, 340]),
+      ...Array.from({ length: 5 }, (_, i) => withSplits(`2026-05-0${i + 5}`, Array(10).fill(335))),
+    ];
+    const s = daySessions(runs).find((x) => x.date === "2026-05-04")!;
+    expect(["threshold", "vo2"]).toContain(s.zone.id);
+    expect(s.qualityMinutes).toBeGreaterThan(15);
+    expect(s.zoneMinutes.easy + s.zoneMinutes.recovery).toBeGreaterThan(10);
+  });
+
+  it("una seduta tutta allo stesso passo non viene riclassificata", () => {
+    // qui gli intertempi non aggiungono niente alla media: se la scala stimata
+    // fosse un po' bassa, riclassificare vorrebbe dire solo sbagliare meglio
+    const runs = Array.from({ length: 6 }, (_, i) =>
+      withSplits(`2026-05-0${i + 1}`, Array(12).fill(330), { run_type: "easy", avg_hr_pct: 72 }));
+    for (const s of daySessions(runs)) expect(s.zone.id).toBe("easy");
+  });
+
+  it("una corsa senza intertempi non finge un dettaglio che non ha", () => {
+    const runs = Array.from({ length: 6 }, (_, i) => part(`2026-05-0${i + 1}`, 12, 330, { avg_hr_pct: 72 }));
+    for (const s of daySessions(runs)) {
+      expect(s.splitMinutes).toBe(0);
+      // tutti i minuti nella zona della seduta, nessuna ripartizione inventata
+      expect(s.zoneMinutes[s.zone.id]).toBeCloseTo(s.minutes, 5);
+      expect(s.qualityMinutes).toBe(0);
+    }
+  });
+
+  it("i minuti per zona coprono la seduta quando gli intertempi ci sono", () => {
+    const runs = Array.from({ length: 6 }, (_, i) =>
+      withSplits(`2026-05-0${i + 1}`, [330, 330, 250, 250, 250, 340]));
+    for (const s of daySessions(runs)) {
+      const tot = Object.values(s.zoneMinutes).reduce((a, b) => a + b, 0);
+      expect(tot).toBeCloseTo(s.minutes, 1);
+      expect(s.splitMinutes).toBeGreaterThan(0);
+    }
+  });
+});
+
 describe("utilità", () => {
   it("la mediana regge un valore storto meglio della media", () => {
     expect(median([5, 5, 5, 5, 500])).toBe(5);

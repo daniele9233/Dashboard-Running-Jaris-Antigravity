@@ -8,9 +8,14 @@ import type { RunsResponse } from "../../types/api";
 import {
   buildTree, RESOURCES, RES_ORDER, type NodeState, type Play, type ResId, type TreeState,
 } from "./skillTreeEngine";
+import { PhysioVerdict, PrescriptionList } from "./PhysioVerdict";
+import { usePhysio } from "./usePhysio";
 
 const MONO = "'JetBrains Mono', monospace";
 const CAPSTONE_COLOR = "#C0FF00";
+
+/** "1 settimana", non "1 settimane": un plurale sbagliato fa sembrare finto tutto il resto. */
+const weeks = (n: number) => `${n} ${n === 1 ? "settimana" : "settimane"}`;
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <div className={`rounded-2xl border border-white/10 bg-white/[0.03] ${className}`}>{children}</div>;
@@ -123,6 +128,7 @@ export function GamificationV3() {
   const { data } = useApi<RunsResponse>(getRuns, { cacheKey: API_CACHE.RUNS });
   const runs = useMemo(() => data?.runs ?? [], [data]);
   const st = useMemo(() => buildTree(runs), [runs]);
+  const physio = usePhysio(runs);
   const [selId, setSelId] = useState<string>("");
   const root = useRef<HTMLDivElement>(null);
 
@@ -149,6 +155,10 @@ export function GamificationV3() {
   return (
     <main ref={root} className="flex-1 overflow-y-auto bg-black">
       <div className="mx-auto max-w-[1500px] px-4 md:px-6 py-8 text-white">
+
+        {/* L'albero dice cosa ti manca in materiali; il verdetto dice cosa ti
+            manca in fisiologia, e le due cose devono combaciare. */}
+        <div className="tr-rise mb-5"><PhysioVerdict p={physio} /></div>
 
         {/* ── MATERIALI ──────────────────────────────────────────────────── */}
         <Card className="tr-rise p-5">
@@ -206,7 +216,7 @@ export function GamificationV3() {
                       <span className="text-[13px] font-black tabular-nums" style={{ fontFamily: MONO, color: branchColor(n.branch) }}>{n.pct}%</span>
                     </div>
                     <div className="mt-1 ml-4 text-[10px] text-gray-500">
-                      {n.weeks != null ? `≈ ${n.weeks} settimane al tuo ritmo` : `fermo: non stai producendo ${n.blockedBy?.name}`}
+                      {n.weeks != null ? `≈ ${weeks(n.weeks)} al tuo ritmo` : `fermo: non stai producendo ${n.blockedBy?.name}`}
                     </div>
                   </button>
                 ))}
@@ -232,12 +242,16 @@ export function GamificationV3() {
                 </div>
                 <div className="text-[10.5px] text-gray-400 leading-snug">{n.effect}</div>
                 <div className="text-[10px] mt-1.5" style={{ color: n.unlocked ? "#22C55E" : "#8A8A8A", fontFamily: MONO }}>
-                  {n.unlocked ? "aperto" : n.weeks != null ? `≈ ${n.weeks} settimane` : `manca ${n.blockedBy?.name}`}
+                  {n.unlocked ? "aperto" : n.weeks != null ? `≈ ${weeks(n.weeks)}` : `manca ${n.blockedBy?.name}`}
                 </div>
               </button>
             ))}
           </div>
         </Card>
+
+        {/* L'albero dice quale ramo è indietro. Questo dice la seduta esatta che
+            lo alimenta, e quanti giorni toglie al primo traguardo. */}
+        <div className="tr-rise mt-5"><PrescriptionList p={physio} /></div>
 
         {/* ── COSA PRODUCE UNA SEDUTA + STORICO ──────────────────────────── */}
         <div className="mt-5 grid gap-5 lg:grid-cols-2 items-start">
@@ -324,7 +338,7 @@ function NodeDetail({ n }: { n: NodeState }) {
           {n.unlocked
             ? <span className="text-[#22C55E] font-bold">Nodo aperto.</span>
             : n.weeks != null
-              ? <>Al ritmo delle ultime 8 settimane si apre fra <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>{n.weeks}</b> settimane. A frenare è <b style={{ color: n.blockedBy?.color }}>{n.blockedBy?.name}</b>.</>
+              ? <>Al ritmo delle ultime 8 settimane si apre fra <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>{weeks(n.weeks)}</b>. A frenare è <b style={{ color: n.blockedBy?.color }}>{n.blockedBy?.name}</b>.</>
               : <span className="text-[#F43F5E]">Fermo: non stai producendo <b>{n.blockedBy?.name}</b>. Senza quel tipo di seduta questo nodo non si apre mai.</span>}
         </div>
       </div>

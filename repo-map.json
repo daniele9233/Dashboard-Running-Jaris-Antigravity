@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-08-16T17:03:05.795Z",
+  "generated_at": "2026-08-16T18:02:26.184Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 205,
+    "files": 209,
     "backend_routes": 68,
     "frontend_routes": 19,
     "api_clients": 73
@@ -2993,13 +2993,15 @@
         "../celebrations/gsapSetup",
         "../statistics/chartTheme",
         "./evolutionEngine",
+        "./PhysioVerdict",
         "./useAthleteVdot",
+        "./usePhysio",
         "lucide-react",
         "react"
       ],
-      "hash": "b77055d1f4d7f94d20c78fe3c3cbeea786f8726e778f779496c76c96424b3160",
-      "last_modified": "2026-08-04T14:51:28.680Z",
-      "size_bytes": 40483
+      "hash": "00e8e5d4e5a623f927bd5aece4dfb3b55b14eeb3b3a4e291f752225f1b6d06bc",
+      "last_modified": "2026-08-16T18:02:26.182Z",
+      "size_bytes": 41877
     },
     {
       "path": "src/components/gamification/evolutionEngine.test.ts",
@@ -3092,9 +3094,9 @@
         "./gamiCore",
         "vitest"
       ],
-      "hash": "1778d533ad3c8e65b0cb82dd92241d23155cfe9a20701c18d9ab783250a2c7ca",
-      "last_modified": "2026-08-04T15:28:20.431Z",
-      "size_bytes": 5859
+      "hash": "4a7712d194275c187246efcf7d789fb436edf6fc1c123d75183b807001d2d6a5",
+      "last_modified": "2026-08-16T18:02:26.183Z",
+      "size_bytes": 9002
     },
     {
       "path": "src/components/gamification/gamiCore.ts",
@@ -3103,11 +3105,13 @@
       "touch_when": [
         "activities",
         "ai",
+        "garmin",
         "strava",
         "training",
         "types"
       ],
       "exports": [
+        "apparentTempC",
         "bestSustainedPaceSec",
         "clamp",
         "cleanRuns",
@@ -3116,32 +3120,41 @@
         "DaySession",
         "daySessions",
         "dayToIso",
+        "emptyZoneMinutes",
+        "estimateThresholdPaceSec",
         "fmtClock",
         "fmtPace",
+        "gradeFactor",
         "heatSlowdownFrac",
+        "humidityOf",
         "intervalPaceSec",
         "isQualityZone",
         "isRace",
         "isRealRun",
         "median",
+        "NormSplit",
         "paceToSec",
         "predictSec",
+        "readSplits",
         "runVdot",
+        "runZoneMinutes",
         "thresholdPaceSec",
         "vdotFrom",
         "weekStart",
         "ZoneDef",
         "ZoneId",
+        "ZoneMinutes",
         "zoneOf",
+        "zoneOfRatio",
         "ZONES"
       ],
       "routes": [],
       "imports": [
         "../../types/api"
       ],
-      "hash": "d5452da9995d1e5d71d888f749bc97f5a15bef323ce345ca3374c25040a1bf7f",
-      "last_modified": "2026-08-04T15:18:12.105Z",
-      "size_bytes": 11835
+      "hash": "45b359a2bf6189a0858fe660cdf24f33ac48b3cd82930b28e9ce23676a61a9bc",
+      "last_modified": "2026-08-16T18:02:26.184Z",
+      "size_bytes": 21634
     },
     {
       "path": "src/components/gamification/gamiData.ts",
@@ -3237,13 +3250,15 @@
         "../statistics/chartTheme",
         "./gamiCore",
         "./leagueEngine",
+        "./PhysioVerdict",
         "./useAthleteVdot",
+        "./usePhysio",
         "lucide-react",
         "react"
       ],
-      "hash": "0883a7c756858ed2e40c1af968e85ac80db5b6a1798d08bf40bbb798349f33f8",
-      "last_modified": "2026-08-04T15:22:57.828Z",
-      "size_bytes": 21179
+      "hash": "96dce0eff791e1bbdbe2690ff8cd044d2042dac330d3400acbbed034697cc777",
+      "last_modified": "2026-08-16T18:02:26.182Z",
+      "size_bytes": 21914
     },
     {
       "path": "src/components/gamification/GamificationV3.tsx",
@@ -3266,13 +3281,15 @@
         "../../hooks/useApi",
         "../../types/api",
         "../celebrations/gsapSetup",
+        "./PhysioVerdict",
         "./skillTreeEngine",
+        "./usePhysio",
         "lucide-react",
         "react"
       ],
-      "hash": "7534fcd986e27a1338570902ca23bd40f2c186d79b671a7ad91abf0746542de2",
-      "last_modified": "2026-08-04T15:23:30.020Z",
-      "size_bytes": 19657
+      "hash": "6e45a4126b0392634d0ec822dbd3ebac96acadea4c251167960470f41fce7571",
+      "last_modified": "2026-08-16T18:02:26.183Z",
+      "size_bytes": 20792
     },
     {
       "path": "src/components/gamification/GamificationV4.tsx",
@@ -3298,12 +3315,14 @@
         "../celebrations/gsapSetup",
         "../statistics/chartTheme",
         "./momentumEngine",
+        "./PhysioVerdict",
+        "./usePhysio",
         "lucide-react",
         "react"
       ],
-      "hash": "8826668c99071bcdfeded9706ece3e478fd1fef6bbfe6c045a0b5074939f6e53",
-      "last_modified": "2026-08-04T15:24:36.141Z",
-      "size_bytes": 20804
+      "hash": "47da0821b7a71b2367918bd4463083e8925b608563853d5d7d1661ef07b3f3f5",
+      "last_modified": "2026-08-16T18:02:26.183Z",
+      "size_bytes": 21865
     },
     {
       "path": "src/components/gamification/italyRegions.ts",
@@ -3451,6 +3470,99 @@
       "size_bytes": 15263
     },
     {
+      "path": "src/components/gamification/physioEngine.test.ts",
+      "kind": "frontend-component",
+      "purpose": "React component physioEngine.test.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "garmin",
+        "map",
+        "profile",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "./physioEngine",
+        "vitest"
+      ],
+      "hash": "714770875b32def25aff0ee8e3e3964dc71e925ccd88959750cc38b29a35df27",
+      "last_modified": "2026-08-16T18:00:59.646Z",
+      "size_bytes": 18591
+    },
+    {
+      "path": "src/components/gamification/physioEngine.ts",
+      "kind": "frontend-component",
+      "purpose": "React component physioEngine.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "buildDayLoads",
+        "buildPhysio",
+        "DayLoad",
+        "dosesOf",
+        "GoalDef",
+        "GoalEta",
+        "GOALS",
+        "humanDays",
+        "monthlyClimate",
+        "PhysioForecast",
+        "PhysioState",
+        "Prescription",
+        "SessionImpact",
+        "SYSTEM_ORDER",
+        "SystemDef",
+        "SystemId",
+        "SystemLevels",
+        "SYSTEMS",
+        "SystemState"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "./gamiCore"
+      ],
+      "hash": "86854a3912fe46ba8ce296d3b3d21aad20a769358ead0b08d7fc9bb0cd0730ac",
+      "last_modified": "2026-08-16T18:00:46.648Z",
+      "size_bytes": 38706
+    },
+    {
+      "path": "src/components/gamification/PhysioVerdict.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component PhysioVerdict.",
+      "touch_when": [
+        "ai",
+        "layout",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "GoalTimeline",
+        "PhysioVerdict",
+        "PrescriptionList",
+        "SessionImpactList"
+      ],
+      "routes": [],
+      "imports": [
+        "./gamiCore",
+        "./physioEngine",
+        "./usePhysio",
+        "lucide-react"
+      ],
+      "hash": "48e3f5e13787a339a63163aadf2f0c6763b68d5ff01828870ca0dbe9b29083f3",
+      "last_modified": "2026-08-16T17:59:20.403Z",
+      "size_bytes": 17717
+    },
+    {
       "path": "src/components/gamification/skillTreeEngine.test.ts",
       "kind": "frontend-component",
       "purpose": "React component skillTreeEngine.test.",
@@ -3506,9 +3618,9 @@
         "../../types/api",
         "./gamiCore"
       ],
-      "hash": "6f1ad9c461ecfd322cd9cccec087f6b3c1c5308a0153afa560c30417b26747ba",
-      "last_modified": "2026-08-04T15:28:53.636Z",
-      "size_bytes": 18259
+      "hash": "9679306db7e7bf63ebb0e2a3a6ccd70e80ae854a2e2db12152784378dbc086ca",
+      "last_modified": "2026-08-16T18:02:26.184Z",
+      "size_bytes": 20059
     },
     {
       "path": "src/components/gamification/useAthleteVdot.ts",
@@ -3533,6 +3645,31 @@
       "hash": "0dd0fe770c3cfa81d7f0eaad49d587cba84047a9503718b14f487f08bee77e1a",
       "last_modified": "2026-08-04T14:51:20.352Z",
       "size_bytes": 1027
+    },
+    {
+      "path": "src/components/gamification/usePhysio.ts",
+      "kind": "frontend-component",
+      "purpose": "React component usePhysio.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "fmtDate",
+        "usePhysio"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "./physioEngine",
+        "./useAthleteVdot",
+        "react"
+      ],
+      "hash": "7a4045f44baa3ba930a22ad1ec0d678952cc32253576fa83efea61b2b7d7119e",
+      "last_modified": "2026-08-16T17:53:06.479Z",
+      "size_bytes": 1485
     },
     {
       "path": "src/components/GridCard.tsx",
@@ -5260,9 +5397,9 @@
       ],
       "routes": [],
       "imports": [],
-      "hash": "ee8be9b4d4e62cbdb35502cb227b1c4478457b8ab75ca5af15339243bb288e06",
-      "last_modified": "2026-07-27T05:27:02.022Z",
-      "size_bytes": 16423
+      "hash": "37f414ac4a416bb649d9425b1a74553aa16fa728358f9555cbf0866612fe3f90",
+      "last_modified": "2026-08-16T18:02:26.184Z",
+      "size_bytes": 16537
     },
     {
       "path": "src/types/jarvis.ts",
