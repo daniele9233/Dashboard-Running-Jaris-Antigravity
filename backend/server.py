@@ -6530,10 +6530,22 @@ async def get_vdot_paces():
         net = sum((s.get("elevation_difference") or 0) for s in splits)
         return abs(net) / dist
 
+    # ── Finestra di validità dell'override empirico ───────────────────────────
+    # Senza limite temporale questo blocco pescava le prime 8 corse che passavano
+    # i filtri scorrendo all'indietro: per questo atleta erano tutte fra ottobre
+    # 2025 e marzo 2026 (una si chiama "Fallimento TOTALE"), e la mediana usciva
+    # 4:48/km mentre le sedute di soglia di agosto girano a 4:13-4:18. Un numero
+    # "empirico" vecchio dieci mesi non descrive l'atleta di oggi: meglio nessun
+    # override che un override fossile.
+    EMPIRICAL_WINDOW_DAYS = 180
+    _emp_cutoff = (dt.datetime.utcnow() - dt.timedelta(days=EMPIRICAL_WINDOW_DAYS)).isoformat()
+
     threshold_empirical = None
     tempo_runs = []
     for r in runs:
         if r.get("is_treadmill"):
+            continue
+        if (r.get("date") or "") < _emp_cutoff:
             continue
         hr_pct = r.get("avg_hr_pct")
         if hr_pct is None:
@@ -6559,8 +6571,19 @@ async def get_vdot_paces():
     # Empirical override: solo se mediana tempo runs cade vicino al T-pace
     # race-derived (computed below). Sanity-clamp dopo aver calcolato T.
     if len(tempo_runs) >= 3:
-        paces = sorted(filter(None, [_parse_pace_to_secs(r.get("avg_pace", "")) for r in tempo_runs]))
-        paces = [p for p in paces if p > 0]
+        # Passi riportati a temperatura ideale prima di fare la mediana: senza,
+        # una tempo di gennaio e una di agosto finiscono nello stesso mucchio e
+        # la mediana misura il meteo invece della soglia.
+        _cool = []
+        for r in tempo_runs:
+            p = _parse_pace_to_secs(r.get("avg_pace", ""))
+            if p <= 0:
+                continue
+            t_c = r.get("temperature")
+            frac = (_heat_slowdown_frac(t_c, r.get("humidity"), r.get("distance_km") or 5.0)
+                    if t_c is not None else 0.0)
+            _cool.append(int(round(p / (1 + frac))))
+        paces = sorted(_cool)
         if paces:
             median = paces[len(paces) // 2]
             # Senza anchor T-pace ancora computato: usa clamp largo basato
@@ -6623,18 +6646,59 @@ async def get_vdot_paces():
         # M = passo maratona PREVISTO (endurance-aware), non il teorico dal
         # motore: senza tenuta da maratona il teorico (0.74-0.78) esce 40s/km
         # piu' veloce della previsione gara stessa — incoerenza visibile.
+        # ── T: frazione ADATTIVA, non più fissa a 0.81 ────────────────────────
+        # Lo sconto sulla T nasce da un'osservazione giusta — il VDOT esce da
+        # prove sui 5K, tenere quel motore per un'ora è un'altra cosa — ma
+        # congelato a 0.81 diventa un'accusa permanente. Con VDOT 49.6 dava
+        # 4:35/km, mentre le tre sedute di qualità di giugno-agosto, riportate
+        # al fresco, girano a 4:03-4:07 per venti minuti: 30 secondi al km di
+        # scarto fra quello che l'app prescrive e quello che l'atleta corre.
+        #
+        # La frazione ora segue la tenuta vera (lungo più lungo e deriva
+        # cardiaca degli ultimi 90 giorni), e resta a 0.81 solo quando la tenuta
+        # manca davvero. Il tetto è 0.86, non il classico 0.88: un margine di
+        # prudenza rispetto a Daniels resta, come richiesto.
+        _longest = end_ctx["longest_km"]
+        _drift = end_ctx["drift_pct"]
+        if _longest >= 18 and _drift <= 4:
+            t_pct = 0.86
+        elif _longest >= 14 and _drift <= 6:
+            t_pct = 0.845
+        elif _longest >= 10:
+            t_pct = 0.83
+        else:
+            t_pct = 0.81
+
         m_secs_total = _time_to_seconds(preds_full.get("Marathon"))
         m_pace = (_secs_to_pace_str(int(round(m_secs_total / 42.195)))
                   if m_secs_total else pace_at_vo2_pct(0.74))
         i_pace = pace_at_vo2_pct(0.98) or "4:20"   # I: da VDOT reale (VO2max work)
         i_sec = _parse_pace_to_secs(i_pace)
         r_pace = _secs_to_pace_str(i_sec - 15) if i_sec else "4:05"  # R: I − 15s
+
+        e_pace = pace_at_vo2_pct(0.60)             # E: conversazionale
+        t_pace = pace_at_vo2_pct(t_pct)
+
+        # ── M dentro il corridoio fra T ed E ──────────────────────────────────
+        # Derivare M dalla previsione di maratona sembrava prudente, ma quella
+        # previsione porta uno sconto endurance pesante: usciva 5:40/km contro
+        # un E di 5:49, nove secondi di distanza. Due zone che dovrebbero
+        # stare quaranta secondi l'una dall'altra diventavano la stessa zona, e
+        # la banda M smetteva di voler dire qualcosa. La previsione resta il
+        # riferimento, ma non può uscire dal corridoio T+15 ... E−25.
+        _e_sec, _t_sec, _m_sec = (_parse_pace_to_secs(e_pace or ""),
+                                  _parse_pace_to_secs(t_pace or ""),
+                                  _parse_pace_to_secs(m_pace or ""))
+        if _e_sec and _t_sec and _m_sec:
+            _lo, _hi = _t_sec + 15, _e_sec - 25
+            if _lo <= _hi:
+                m_pace = _secs_to_pace_str(max(_lo, min(_m_sec, _hi)))
+
         paces_out = {
-            "easy":       pace_at_vo2_pct(0.60),   # E: conversazionale; resta la zona
-                                                   # piu' lenta anche con M penalizzato
-            "marathon":   m_pace,                  # M: dalla previsione endurance-aware
-            "threshold":  pace_at_vo2_pct(0.81),   # T: sustainable ~1h
-            "threshold_peak": pace_at_vo2_pct(0.86),  # T Daniels classico (peak)
+            "easy":       e_pace,
+            "marathon":   m_pace,                  # M: previsione, dentro il corridoio
+            "threshold":  t_pace,                  # T: sustainable, frazione adattiva
+            "threshold_peak": pace_at_vo2_pct(0.88),  # T Daniels classico (peak)
             "threshold_empirical": threshold_empirical,
             "interval":   i_pace,        # I: VDOT-driven (motore, confermato sul campo)
             "repetition": r_pace,        # R: I − 15s (sprint/neuromuscular)
