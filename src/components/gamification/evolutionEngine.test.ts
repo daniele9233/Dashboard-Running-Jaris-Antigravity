@@ -90,6 +90,7 @@ describe("proiezione in XP", () => {
    * Ogni mese ha una prova sui 5 km più qualche corsa, altrimenti non ci sono
    * XP da cui ricavare il ritmo di accumulo.
    */
+  const SERIES_TODAY = "2026-07-20";   // giorno dell'ultima corsa di ogni serie
   const series = (months: number, startPace: number, gain: number) =>
     Array.from({ length: months }, (_, i) => {
       const base = new Date(Date.UTC(2026, 6, 20));
@@ -105,7 +106,10 @@ describe("proiezione in XP", () => {
       ];
     }).flat();
 
-  const proj = (runs: Run[]) => computeLevelSystem(runs, null).projection;
+  // "oggi" fissato: le date delle serie sono ancorate, quindi col clock di
+  // sistema i bucket da 30 giorni scivolano e le stesse corse cambiano numero
+  // di campioni giorno dopo giorno (CI rossa il 16/08 su un test verde il 04/08).
+  const proj = (runs: Run[]) => computeLevelSystem(runs, null, SERIES_TODAY).projection;
 
   it("serve abbastanza storia per stimare quanto rende il lavoro", () => {
     expect(proj(series(2, 300, 5)).ok).toBe(false);

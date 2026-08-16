@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-08-16T10:03:12.953Z",
+  "generated_at": "2026-08-16T17:03:05.795Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -3023,9 +3023,9 @@
         "./evolutionEngine",
         "vitest"
       ],
-      "hash": "f8f097a9300ccd12c5d0b40f53da0eb37f98e00a876455ecafcc1e3271036f88",
-      "last_modified": "2026-07-28T07:27:48.797Z",
-      "size_bytes": 9381
+      "hash": "94cb7b4bf0cfcac9484e74522140754ca54882fb92732ed36e5ef7291fdfd257",
+      "last_modified": "2026-08-16T17:03:05.796Z",
+      "size_bytes": 9714
     },
     {
       "path": "src/components/gamification/evolutionEngine.ts",
