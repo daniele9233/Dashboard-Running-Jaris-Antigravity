@@ -304,8 +304,25 @@ export interface PhysioForecast {
   points: { day: number; iso: string; vdot: number; sec5k: number; sec10k: number }[];
 }
 
+/**
+ * Lo stato grezzo del modello, per chi vuole far girare scenari propri.
+ *
+ * Il pianificatore degli obiettivi non può ricostruirsi i serbatoi da capo:
+ * gli serve esattamente quelli di oggi, la calibrazione sull'ancora e il clima
+ * dell'atleta, per poi chiedere "e se mi allenassi così?" senza che i due
+ * pezzi dell'app rispondano con due modelli diversi.
+ */
+export interface PhysioModel {
+  levels: SystemLevels;
+  /** Calibrazione: il VDOT che resta quando tutti i serbatoi sono a zero. */
+  base: number;
+  today: number;
+  climate: number[];
+}
+
 export interface PhysioState {
   ok: boolean;
+  model: PhysioModel;
   /** VDOT di oggi, al fresco: il potenziale, non la prestazione di ferragosto. */
   vdot: number;
   /** Quello che faresti oggi, con la temperatura di oggi. */
@@ -363,7 +380,9 @@ const EMPTY_FORECAST: PhysioForecast = {
 };
 
 const EMPTY: PhysioState = {
-  ok: false, vdot: 0, vdotToday: 0, anchored: false, systems: [],
+  ok: false,
+  model: { levels: emptyLevels(), base: 0, today: 0, climate: ROME_NORMALS },
+  vdot: 0, vdotToday: 0, anchored: false, systems: [],
   byId: {} as Record<SystemId, SystemState>, limiter: null, strongest: null,
   forecast: EMPTY_FORECAST, goals: [], prescriptions: [], history: [], impacts: [],
   weeklyZone: emptyZoneMinutes(), weeklyMinutes: 0, weeklyKm: 0, daysSinceLastRun: 0,
@@ -523,6 +542,7 @@ export function buildPhysio(
 
   return {
     ok: true,
+    model: { levels, base, today, climate },
     vdot: vdotCool, vdotToday: vdotNow, anchored,
     systems, byId,
     limiter: ranked[0] ?? null,
@@ -675,6 +695,149 @@ function walkForward(
       }
     }
   }
+}
+
+// ── scenari: "e se mi allenassi così?" ────────────────────────────────────────
+/**
+ * Un piano settimanale, nei termini in cui un atleta lo pensa davvero: quanti
+ * chilometri, quante sedute di qualità, quanto lungo. Da qui si ricavano le dosi
+ * giornaliere che il modello sa integrare.
+ */
+export interface WeeklyPlan {
+  /** Chilometri a settimana. */
+  km: number;
+  /** Sedute di qualità a settimana (soglia o ripetute). */
+  qualitySessions: number;
+  /** Minuti di lavoro vero per seduta di qualità, recuperi esclusi. */
+  qualityMinutes: number;
+  /** Quanta di quella qualità è sopra soglia (0 = tutta soglia, 1 = tutte ripetute). */
+  vo2Share: number;
+  /** Minuti del lungo settimanale. */
+  longRunMinutes: number;
+  /** Temperatura media a cui ti allenerai: decide l'adattamento al caldo. */
+  trainingTempC: number;
+}
+
+/** Le dosi giornaliere che quel piano produce, sui ritmi di questo atleta. */
+export function planToDose(plan: WeeklyPlan, easyPaceSec: number): SystemLevels {
+  const qualityMin = Math.max(0, plan.qualitySessions * plan.qualityMinutes);
+  // i chilometri di qualità sono corsi più forte: tolgono meno tempo del lento
+  const qualityKm = (qualityMin * 60) / (easyPaceSec * 0.82) / 60;
+  const easyKm = Math.max(0, plan.km - qualityKm);
+  const easyMin = (easyKm * easyPaceSec) / 60;
+
+  const zm = emptyZoneMinutes();
+  zm.vo2 = qualityMin * clamp(plan.vo2Share, 0, 1);
+  zm.threshold = qualityMin - zm.vo2;
+  zm.easy = easyMin;
+
+  const totalMin = easyMin + qualityMin;
+  const perDay = (v: number) => v / 7;
+  const zAvg = emptyZoneMinutes();
+  for (const k of Object.keys(zm) as ZoneId[]) zAvg[k] = perDay(zm[k]);
+
+  const d = dosesOf(zAvg, perDay(totalMin), 0);
+  // la tenuta la dà la LUNGHEZZA del lungo, non i minuti spalmati sulla settimana
+  d.tenuta = Math.max(0, plan.longRunMinutes - 60) / 7 + perDay(totalMin) * 0.12;
+  // l'adattamento al caldo dipende da dove e quando corri
+  const app = plan.trainingTempC;
+  d.caldo = app > 20 ? perDay(totalMin) * clamp((app - 20) / 12, 0, 1) : 0;
+  return d;
+}
+
+/** Un punto della simulazione: che tempo faresti quel giorno, con quel clima. */
+export interface ScenarioPoint { day: number; iso: string; vdotCool: number; sec: number }
+
+/**
+ * Fa girare il modello in avanti sotto un piano, per una distanza.
+ *
+ * Restituisce sia la traiettoria sia il primo giorno in cui il tempo obiettivo
+ * cade — con il clima del mese, perché è quello che separa una previsione da un
+ * numero campato in aria.
+ */
+export function runScenario(
+  model: PhysioModel, dose: SystemLevels, distM: number, days = 540,
+): { points: ScenarioPoint[]; bestSec: number; bestDay: number | null } {
+  let lv = { ...model.levels };
+  let capped = model.base + vdotContribution(pctOf(model.levels), 5);
+  const points: ScenarioPoint[] = [];
+  let bestSec = Infinity, bestDay: number | null = null;
+
+  for (let i = 1; i <= days; i++) {
+    lv = integrate(lv, dose);
+    const rawCool = model.base + vdotContribution(pctOf(lv), 5);
+    capped = Math.min(rawCool, capped + MAX_VDOT_PER_MONTH / 30);
+    const shift = capped - rawCool;
+    const d = model.today + i;
+    const temp = model.climate[monthOfDay(d)];
+    const sec = seasonalTime(lv, model.base + shift, distM, temp);
+    if (sec < bestSec) { bestSec = sec; bestDay = i; }
+    if (i % 7 === 0) {
+      points.push({
+        day: d, iso: dayToIso(d),
+        vdotCool: round1(capped + heatCredit(pctOf(lv).caldo, 12)),
+        sec: Math.round(sec),
+      });
+    }
+  }
+  return { points, bestSec, bestDay };
+}
+
+/**
+ * Cammina in avanti sotto un piano, un giorno alla volta, e passa a `visit` il
+ * tempo che faresti quel giorno. Restituendo `true` si ferma.
+ *
+ * Esiste per una ragione di costo: chi cerca una data deve poterla cercare in
+ * una passata sola. La prima versione richiamava una simulazione completa per
+ * ogni giorno da testare — quadratica, e in pagina si sentiva a ogni tocco di
+ * cursore.
+ */
+export function walkPlan(
+  model: PhysioModel, dose: SystemLevels, distM: number, days: number,
+  visit: (i: number, sec: number, tempC: number) => boolean | void,
+): void {
+  let lv = { ...model.levels };
+  let capped = model.base + vdotContribution(pctOf(model.levels), 5);
+  for (let i = 1; i <= days; i++) {
+    lv = integrate(lv, dose);
+    const rawCool = model.base + vdotContribution(pctOf(lv), 5);
+    capped = Math.min(rawCool, capped + MAX_VDOT_PER_MONTH / 30);
+    const temp = model.climate[monthOfDay(model.today + i)];
+    if (visit(i, seasonalTime(lv, model.base + capped - rawCool, distM, temp), temp)) return;
+  }
+}
+
+/** Il primo giorno in cui il piano porta sotto il tempo, se ci arriva. */
+export function etaUnderPlan(
+  model: PhysioModel, dose: SystemLevels, distM: number, targetSec: number, days = 540,
+): { days: number; iso: string; tempC: number } | null {
+  let hit: { days: number; iso: string; tempC: number } | null = null;
+  walkPlan(model, dose, distM, days, (i, sec, temp) => {
+    if (sec <= targetSec) {
+      hit = { days: i, iso: dayToIso(model.today + i), tempC: Math.round(temp) };
+      return true;
+    }
+  });
+  return hit;
+}
+
+/** Che tempo faresti su quella distanza a una certa data, sotto quel piano. */
+export function timeAtDay(
+  model: PhysioModel, dose: SystemLevels, distM: number, dayOffset: number,
+): { sec: number; tempC: number } {
+  let lv = { ...model.levels };
+  let capped = model.base + vdotContribution(pctOf(model.levels), 5);
+  let rawCool = capped;
+  for (let i = 1; i <= Math.max(0, dayOffset); i++) {
+    lv = integrate(lv, dose);
+    rawCool = model.base + vdotContribution(pctOf(lv), 5);
+    capped = Math.min(rawCool, capped + MAX_VDOT_PER_MONTH / 30);
+  }
+  const temp = model.climate[monthOfDay(model.today + Math.max(0, dayOffset))];
+  return {
+    sec: seasonalTime(lv, model.base + capped - rawCool, distM, temp),
+    tempC: Math.round(temp),
+  };
 }
 
 // ── cosa fare, e quanto serve ─────────────────────────────────────────────────

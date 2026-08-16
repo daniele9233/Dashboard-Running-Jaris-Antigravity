@@ -13,6 +13,7 @@ Endpoints:
 - POST /api/runs/weather/bulk        → snapshot meteo di N corse in una chiamata
 - GET /api/runs/{run_id}/weather     → snapshot meteo salvato
 - POST /api/runs/{run_id}/weather    → salva snapshot meteo
+- PATCH /api/runs/{run_id}/race-lab  → scarpa, taper e RPE di quella prova
 """
 from typing import Optional
 
@@ -338,3 +339,57 @@ async def post_run_weather(
         "updated_at": __import__("datetime").datetime.utcnow().isoformat(),
     })
     return {"ok": True, "inserted": True}
+
+
+# ─── Race Lab: con cosa hai corso quella prova ───────────────────────────────
+_TAPERS = {"none", "short", "full"}
+
+
+@router.patch("/api/runs/{run_id}/race-lab")
+async def patch_race_lab(
+    run_id: str,
+    payload: dict = Body(...),
+    db=Depends(get_db),
+):
+    """Scarpa, taper e RPE di una singola prova.
+
+    Sta sul documento della corsa e non in una collezione a parte perche' il
+    listing di /api/runs proietta via solo gli stream: cosi' l'annotazione
+    arriva al client insieme alla corsa, senza una seconda chiamata e senza
+    rischio che le due liste vadano fuori sincrono.
+
+    L'RPE vive solo qui. Alimentare VDOT o soglia con un numero soggettivo era
+    gia' stato scartato: serve a una cosa sola, sapere quanto margine e' rimasto
+    quando si chiede "e se ci fossi andato a tutta".
+    """
+    doc = await _find_run(db, run_id)
+    if not doc:
+        return JSONResponse({"error": "not_found"}, status_code=404)
+
+    current = doc.get("race_lab") or {}
+    patch = dict(current)
+
+    if "shoe_id" in payload:
+        shoe = payload.get("shoe_id")
+        patch["shoe_id"] = str(shoe) if shoe else None
+    if "taper" in payload:
+        taper = payload.get("taper")
+        if taper not in _TAPERS and taper is not None:
+            return JSONResponse({"error": "bad_taper"}, status_code=400)
+        patch["taper"] = taper
+    if "rpe" in payload:
+        rpe = payload.get("rpe")
+        if rpe is None:
+            patch["rpe"] = None
+        else:
+            try:
+                value = float(rpe)
+            except (TypeError, ValueError):
+                return JSONResponse({"error": "bad_rpe"}, status_code=400)
+            if not 1 <= value <= 10:
+                return JSONResponse({"error": "bad_rpe"}, status_code=400)
+            patch["rpe"] = round(value * 2) / 2
+
+    patch["updated_at"] = __import__("datetime").datetime.utcnow().isoformat()
+    await db.runs.update_one({"_id": doc["_id"]}, {"$set": {"race_lab": patch}})
+    return {"ok": True, "race_lab": patch}

@@ -27,6 +27,7 @@ const GamificationV1 = lazy(() => import("./components/gamification/Gamification
 const GamificationV2 = lazy(() => import("./components/gamification/GamificationV2").then((m) => ({ default: m.GamificationV2 })));
 const GamificationV3 = lazy(() => import("./components/gamification/GamificationV3").then((m) => ({ default: m.GamificationV3 })));
 const GamificationV4 = lazy(() => import("./components/gamification/GamificationV4").then((m) => ({ default: m.GamificationV4 })));
+const RaceLabView = lazy(() => import("./components/racelab/RaceLabView").then((m) => ({ default: m.RaceLabView })));
 import { useParams } from "react-router-dom";
 import { exchangeStravaCode, syncStrava, getProfile } from "./api";
 import { invalidateCache, useApi } from "./hooks/useApi";
@@ -88,6 +89,7 @@ function AppContent() {
     { path: "/gamification-v2", label: "GAMI V2" },
     { path: "/gamification-v3", label: "GAMI V3" },
     { path: "/gamification-v4", label: "GAMI V4" },
+    { path: "/race-lab",    label: "BANCO DI PROVA" },
     { path: "/profile",     label: t("nav.profile")    },
   ];
 
@@ -205,6 +207,7 @@ function AppContent() {
                 <Route path="/gamification-v2"  element={<GamificationV2 />} />
                 <Route path="/gamification-v3"  element={<GamificationV3 />} />
                 <Route path="/gamification-v4"  element={<GamificationV4 />} />
+                <Route path="/race-lab"         element={<RaceLabView />} />
                 <Route path="/statistics"       element={<StatisticsView />} />
                 <Route path="/profile"          element={<ProfileView />} />
                 <Route path="/recovery"         element={<ComingSoonView label="Recovery" />} />

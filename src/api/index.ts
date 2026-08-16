@@ -39,6 +39,12 @@ export const getRun = (id: string) => api.get<RunsResponse['runs'][0]>(`/api/run
 
 export const getRunSplits = (id: string) => api.get<unknown>(`/api/runs/${id}/splits`);
 
+/** Scarpa, taper e RPE di una prova — le annotazioni del banco di prova. */
+export const patchRaceLab = (
+  id: string,
+  data: { shoe_id?: string | null; taper?: "none" | "short" | "full" | null; rpe?: number | null },
+) => api.patch<{ ok: boolean; race_lab: Record<string, unknown> }>(`/api/runs/${id}/race-lab`, data);
+
 // ─── PARZIALI / RIPETUTE ─────────────────────────────────────────────────────
 /** Da dove arrivano i parziali. Va mostrato: i giri veri e una segmentazione
  *  ricavata dai dati non sono la stessa cosa. */

@@ -119,6 +119,17 @@ export interface Run {
   temperature?: number | null;
   /** Umidità relativa %, salvata dalla pipeline meteo insieme a `temperature`. */
   humidity?: number | null;
+  /**
+   * Annotazioni del banco di prova: con che scarpa hai corso, se avevi
+   * scaricato, quanto è costata. L'RPE vive solo qui — non entra in VDOT né in
+   * soglia, serve a sapere quanto margine era rimasto.
+   */
+  race_lab?: {
+    shoe_id?: string | null;
+    taper?: "none" | "short" | "full" | null;
+    rpe?: number | null;
+    updated_at?: string;
+  } | null;
   /** PBP a livello corsa: passo corretto per la pendenza, in secondi/km. */
   gap_pace_sec?: number | null;
   /** Stesso valore già formattato "m:ss". */

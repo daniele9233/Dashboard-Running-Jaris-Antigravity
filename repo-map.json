@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-08-16T18:02:26.184Z",
+  "generated_at": "2026-08-16T18:58:34.882Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,10 +14,10 @@
     ]
   },
   "counts": {
-    "files": 209,
+    "files": 213,
     "backend_routes": 68,
-    "frontend_routes": 19,
-    "api_clients": 73
+    "frontend_routes": 20,
+    "api_clients": 74
   },
   "files": [
     {
@@ -553,6 +553,7 @@
         "get_run_weather",
         "get_runs",
         "get_runs_weather_bulk",
+        "patch_race_lab",
         "post_run_weather"
       ],
       "routes": [],
@@ -568,9 +569,9 @@
         "typing",
         "weather_backfill"
       ],
-      "hash": "0bb475c00f7341559c821299e22e6942dce3a4bf2d28d3ad66fbd1cd4abc9fc9",
-      "last_modified": "2026-07-27T06:22:42.265Z",
-      "size_bytes": 14206
+      "hash": "60d6a9f762c27374b9d1a2a739e8391a15b027a36748b0f1a77bfb2812112971",
+      "last_modified": "2026-08-16T18:50:44.162Z",
+      "size_bytes": 16423
     },
     {
       "path": "backend/server.py",
@@ -1753,6 +1754,7 @@
         "GET /api/weekly-history",
         "GET /api/weekly-report",
         "PATCH /api/profile",
+        "PATCH /api/runs/${id}/race-lab",
         "PATCH /api/strava/active-athlete",
         "PATCH /api/training-plan/session/complete",
         "POST /api/ai/analyze-run",
@@ -1786,9 +1788,9 @@
         "../types/jarvis",
         "./client"
       ],
-      "hash": "114abea5e3236fb3051d9fc83d5452ce2fb30318664fab027e3d0482387ecf9b",
-      "last_modified": "2026-07-27T05:27:02.018Z",
-      "size_bytes": 24180
+      "hash": "c0ce36816882315f71823f029c03f3a036f106d7c7861d532a9201e0efc7b40c",
+      "last_modified": "2026-08-16T18:50:58.468Z",
+      "size_bytes": 24512
     },
     {
       "path": "src/App.tsx",
@@ -1822,6 +1824,7 @@
         "/gamification-v4",
         "/insights",
         "/profile",
+        "/race-lab",
         "/ranking",
         "/recovery",
         "/runner-dna",
@@ -1845,9 +1848,9 @@
         "react-i18next",
         "react-router-dom"
       ],
-      "hash": "a3a616dc51eaff6485ea7b9f6b435b3e49ea18f718903d27a589ff45fe5059e5",
-      "last_modified": "2026-08-04T15:04:58.559Z",
-      "size_bytes": 11726
+      "hash": "4cbdae99830fb4de93fd765cd20d7f6ce6ae20e4718481ece3797b0377b342d8",
+      "last_modified": "2026-08-16T18:54:42.284Z",
+      "size_bytes": 11979
     },
     {
       "path": "src/components/ActivitiesView.tsx",
@@ -3510,30 +3513,38 @@
         "buildPhysio",
         "DayLoad",
         "dosesOf",
+        "etaUnderPlan",
         "GoalDef",
         "GoalEta",
         "GOALS",
         "humanDays",
         "monthlyClimate",
         "PhysioForecast",
+        "PhysioModel",
         "PhysioState",
+        "planToDose",
         "Prescription",
+        "runScenario",
+        "ScenarioPoint",
         "SessionImpact",
         "SYSTEM_ORDER",
         "SystemDef",
         "SystemId",
         "SystemLevels",
         "SYSTEMS",
-        "SystemState"
+        "SystemState",
+        "timeAtDay",
+        "walkPlan",
+        "WeeklyPlan"
       ],
       "routes": [],
       "imports": [
         "../../types/api",
         "./gamiCore"
       ],
-      "hash": "86854a3912fe46ba8ce296d3b3d21aad20a769358ead0b08d7fc9bb0cd0730ac",
-      "last_modified": "2026-08-16T18:00:46.648Z",
-      "size_bytes": 38706
+      "hash": "8bf069f5c025c72c9147ebd9dcf612366c39e52049f939978655b0390bd4227f",
+      "last_modified": "2026-08-16T18:58:21.801Z",
+      "size_bytes": 45379
     },
     {
       "path": "src/components/gamification/PhysioVerdict.tsx",
@@ -3889,6 +3900,145 @@
       "hash": "21a5bd138ee79f618c31c64a6008f69c323eb96afbfc71d5ec6736c4409f00f2",
       "last_modified": "2026-07-27T10:16:15.544Z",
       "size_bytes": 66270
+    },
+    {
+      "path": "src/components/racelab/raceLabEngine.test.ts",
+      "kind": "frontend-component",
+      "purpose": "React component raceLabEngine.test.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "garmin",
+        "map",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "../gamification/gamiCore",
+        "../gamification/physioEngine",
+        "./raceLabEngine",
+        "./shoeLab",
+        "vitest"
+      ],
+      "hash": "1e86a5102cc35d2f7ad1c19511638f8aa4fa80d70cdab0a234134d9e6652fb6d",
+      "last_modified": "2026-08-16T18:57:41.243Z",
+      "size_bytes": 15695
+    },
+    {
+      "path": "src/components/racelab/raceLabEngine.ts",
+      "kind": "frontend-component",
+      "purpose": "React component raceLabEngine.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "annotationOf",
+        "CLASS_LABEL",
+        "conditionFactors",
+        "Conditions",
+        "currentPlan",
+        "Effort",
+        "etaAtConfidence",
+        "Factor",
+        "fastEfforts",
+        "fmtDelta",
+        "fmtPaceSec",
+        "fmtSec",
+        "GoalPlanResult",
+        "planGoal",
+        "REFERENCE",
+        "solvePlan",
+        "successProbability",
+        "whatIf",
+        "WhatIf"
+      ],
+      "routes": [],
+      "imports": [
+        "../../types/api",
+        "../gamification/gamiCore",
+        "../gamification/physioEngine",
+        "./shoeLab"
+      ],
+      "hash": "c7e0a5f58e3000b5a2add72d3de4c88088851a9cac9e713a397e8d7b684af4e2",
+      "last_modified": "2026-08-16T18:58:34.882Z",
+      "size_bytes": 19031
+    },
+    {
+      "path": "src/components/racelab/RaceLabView.tsx",
+      "kind": "frontend-view",
+      "purpose": "Page/view component for RaceLab.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "layout",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "RaceLabView"
+      ],
+      "routes": [],
+      "imports": [
+        "../../api",
+        "../../hooks/apiCacheKeys",
+        "../../hooks/useApi",
+        "../../types/api",
+        "../celebrations/gsapSetup",
+        "../gamification/gamiCore",
+        "../gamification/physioEngine",
+        "../gamification/usePhysio",
+        "./raceLabEngine",
+        "./shoeLab",
+        "lucide-react",
+        "react"
+      ],
+      "hash": "37df3ec206a4f77c0fc7b3f7998b55aff826ddb066c6d5a5504e85c5debd8803",
+      "last_modified": "2026-08-16T18:57:30.965Z",
+      "size_bytes": 33218
+    },
+    {
+      "path": "src/components/racelab/shoeLab.ts",
+      "kind": "frontend-component",
+      "purpose": "React component shoeLab.",
+      "touch_when": [
+        "ai",
+        "types"
+      ],
+      "exports": [
+        "DEFAULT_SHOE_ID",
+        "ECON_TO_PACE",
+        "NITRATE_UNCERTAINTY",
+        "nitrateGainPct",
+        "PACK_GAIN_PCT",
+        "rpeMaxGainPct",
+        "Shoe",
+        "shoeById",
+        "ShoeClass",
+        "shoeGainPct",
+        "SHOES",
+        "shoeSpeedFactor",
+        "SURFACE",
+        "surfaceById",
+        "SurfaceId",
+        "taperById",
+        "TaperDef",
+        "TaperKind",
+        "TAPERS"
+      ],
+      "routes": [],
+      "imports": [],
+      "hash": "a1558bea4082908639d8542af25400800b1e36cd2cdd4d21e184cb9bcef86f5f",
+      "last_modified": "2026-08-16T18:46:14.185Z",
+      "size_bytes": 10408
     },
     {
       "path": "src/components/RacePredictions.tsx",
@@ -5397,9 +5547,9 @@
       ],
       "routes": [],
       "imports": [],
-      "hash": "37f414ac4a416bb649d9425b1a74553aa16fa728358f9555cbf0866612fe3f90",
-      "last_modified": "2026-08-16T18:02:26.184Z",
-      "size_bytes": 16537
+      "hash": "f0885fd37dab507033a710309e61243263d2bacc2eea2f073d883c165cbf1fdd",
+      "last_modified": "2026-08-16T18:50:50.962Z",
+      "size_bytes": 16924
     },
     {
       "path": "src/types/jarvis.ts",
@@ -6264,115 +6414,121 @@
       "path": "*",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 213
+      "line": 216
     },
     {
       "path": "/",
       "element": "DashboardView",
       "file": "src/App.tsx",
-      "line": 195
+      "line": 197
     },
     {
       "path": "/activities",
       "element": "ActivitiesView",
       "file": "src/App.tsx",
-      "line": 196
+      "line": 198
     },
     {
       "path": "/activities/:runId",
       "element": "RoutesViewWrapper",
       "file": "src/App.tsx",
-      "line": 197
+      "line": 199
     },
     {
       "path": "/badges",
       "element": "BadgesView",
       "file": "src/App.tsx",
-      "line": 203
+      "line": 205
     },
     {
       "path": "/biometrics",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 211
+      "line": 214
     },
     {
       "path": "/gamification-v1",
       "element": "GamificationV1",
       "file": "src/App.tsx",
-      "line": 204
+      "line": 206
     },
     {
       "path": "/gamification-v2",
       "element": "GamificationV2",
       "file": "src/App.tsx",
-      "line": 205
+      "line": 207
     },
     {
       "path": "/gamification-v3",
       "element": "GamificationV3",
       "file": "src/App.tsx",
-      "line": 206
+      "line": 208
     },
     {
       "path": "/gamification-v4",
       "element": "GamificationV4",
       "file": "src/App.tsx",
-      "line": 207
+      "line": 209
     },
     {
       "path": "/insights",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 212
+      "line": 215
     },
     {
       "path": "/profile",
       "element": "ProfileView",
       "file": "src/App.tsx",
-      "line": 209
+      "line": 212
+    },
+    {
+      "path": "/race-lab",
+      "element": "RaceLabView",
+      "file": "src/App.tsx",
+      "line": 210
     },
     {
       "path": "/ranking",
       "element": "RankingView",
       "file": "src/App.tsx",
-      "line": 202
+      "line": 204
     },
     {
       "path": "/recovery",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 210
+      "line": 213
     },
     {
       "path": "/runner-dna",
       "element": "RunnerDnaView",
       "file": "src/App.tsx",
-      "line": 199
+      "line": 201
     },
     {
       "path": "/runner-dna-v1",
       "element": "Navigate",
       "file": "src/App.tsx",
-      "line": 200
+      "line": 202
     },
     {
       "path": "/runner-dna-v2",
       "element": "Navigate",
       "file": "src/App.tsx",
-      "line": 201
+      "line": 203
     },
     {
       "path": "/statistics",
       "element": "StatisticsView",
       "file": "src/App.tsx",
-      "line": 208
+      "line": 211
     },
     {
       "path": "/training",
       "element": "TrainingView",
       "file": "src/App.tsx",
-      "line": 198
+      "line": 200
     }
   ],
   "api_clients": [
@@ -6698,6 +6854,12 @@
       "name": "linkGarminCsv",
       "method": "POST",
       "path": "/api/garmin/csv-link",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "patchRaceLab",
+      "method": "PATCH",
+      "path": "/api/runs/${id}/race-lab",
       "file": "src/api/index.ts"
     },
     {
