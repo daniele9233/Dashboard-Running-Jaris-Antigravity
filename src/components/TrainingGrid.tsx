@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer, XCircle, CalendarDays, Target } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer, XCircle, CalendarDays, Target, BookOpen, ChevronDown, Gauge } from "lucide-react";
 import { useApi, invalidateCache } from "../hooks/useApi";
 import { API_CACHE } from "../hooks/apiCacheKeys";
 import { getRuns } from "../api";
@@ -9,15 +9,17 @@ import { evaluatePlan } from "../utils/trainingAdherence";
 import { SessionVerdict, AdherenceStrip } from "./TrainingAdherence";
 import {
   getTrainingPlan, generateTrainingPlan, adaptTrainingPlan, evaluateTest,
-  getSub20Status, putSub20Status, putSub20Window, putSub20Goal,
+  getSub20Status, putSub20Status, putSub20Window, putSub20Goal, putSub20Vdot,
   type Sub20StatusResponse, type Sub20SessionStatus,
 } from "../api";
 import type { Session, TrainingPlanResponse, AdaptAdaptation } from "../types/api";
+import { EVIDENCE, type EvidenceKey } from "../data/kikkoEvidence";
 import {
   KIKKO_SUB20_LEGEND, KIKKO_SUB20_DEFAULT_START,
   buildKikkoSub20Sessions, kikkoSub20RaceDate, kikkoSub20NormalizeStart,
   kikkoSub20HeatInfo, heatTable, heatReferenceLabel,
   kikkoGoalOdds, KIKKO_SUB20_TARGETS, KIKKO_SUB20_PLAN, kikkoWindow, addDays,
+  kikkoVdotOptions, kikkoPlausibleGain, KIKKO_VDOT_MAX_GAIN, type KikkoVdotChoice,
 } from "../data/kikkoSub20Plan";
 import {
   KIKKO_SUB135_LEGEND, KIKKO_SUB135_DEFAULT_START, KIKKO_SUB135_META,
@@ -59,11 +61,14 @@ const HEAT_COLOR: Record<string, string> = {
  * paga. La tabella sta accanto alla seduta, non sepolta nella descrizione.
  */
 function HeatPanel({
-  date, startDate, raceDate, plan,
-}: { date: string; startDate: string; raceDate: string; plan: KikkoPlanId }) {
+  date, startDate, raceDate, plan, vdot,
+}: {
+  date: string; startDate: string; raceDate: string;
+  plan: KikkoPlanId; vdot: KikkoVdotChoice | null;
+}) {
   const info = plan === "sub135"
-    ? kikkoSub135HeatInfo(date, startDate, raceDate)
-    : kikkoSub20HeatInfo(date, startDate, raceDate);
+    ? kikkoSub135HeatInfo(date, startDate, raceDate, vdot)
+    : kikkoSub20HeatInfo(date, startDate, raceDate, vdot);
   const { kind, baseSec } = info;
   const col = HEAT_COLOR[info.band.id] ?? "#A3E635";
   // La tabella usa la base di QUELLA settimana: il VDOT sale lungo il piano,
@@ -248,6 +253,59 @@ function DateField({
         className="bg-transparent border-0 p-0 text-xs font-bold outline-none cursor-pointer"
         style={{ color: accent ?? "#FFFFFF" }}
       />
+    </div>
+  );
+}
+
+/**
+ * PERCHÉ QUESTA SEDUTA HA QUESTA FORMA.
+ *
+ * Non la bibliografia della corsa: proprio i lavori che giustificano la durata
+ * della ripetuta, la lunghezza del recupero e il ritmo scritto su quella riga.
+ * Sta chiuso di default — chi vuole solo correre non deve leggerlo — ma esiste,
+ * perché un piano da cui non puoi discostarti con cognizione è un piano che o
+ * segui alla lettera o butti.
+ */
+function EvidencePanel({ evidence }: { evidence: EvidenceKey }) {
+  const [open, setOpen] = useState(false);
+  const e = EVIDENCE[evidence];
+  if (!e) return null;
+
+  return (
+    <div className="mb-6 rounded-xl border border-[#2A2A2A] bg-[#0F0F0F] overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-start gap-2.5 px-3.5 py-2.5 text-left hover:bg-white/[0.02] transition-colors"
+      >
+        <BookOpen className="w-3.5 h-3.5 shrink-0 mt-0.5 text-gray-500" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[10px] font-black tracking-[0.2em] uppercase text-gray-400">
+            Cosa allena
+          </span>
+          <span className="block text-[12px] text-gray-300 leading-snug mt-0.5">{e.what}</span>
+        </span>
+        <ChevronDown
+          className={`w-4 h-4 shrink-0 text-gray-600 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div className="px-3.5 pb-3.5 space-y-3">
+          <p className="text-[11.5px] text-gray-400 leading-relaxed">{e.why}</p>
+          <div className="space-y-2.5">
+            {e.studies.map((st) => (
+              <div key={st.ref} className="border-l-2 border-[#2A2A2A] pl-3">
+                <div className="text-[11px] font-bold text-gray-300 leading-snug">{st.ref}</div>
+                <div className="text-[11px] text-gray-500 leading-snug mt-0.5">{st.says}</div>
+                {st.caveat && (
+                  <div className="text-[10.5px] text-amber-300/70 leading-snug mt-1">⚠ {st.caveat}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1618,6 +1676,15 @@ export function TrainingGrid() {
    * piano, non una preferenza di questo browser — e finché non arriva valgono
    * quelli scritti dentro i piani.
    */
+  /**
+   * Il VDOT scelto: da dove parti e dove vuoi arrivare, per piano.
+   *
+   * È l'ingresso che cambia tutti i ritmi del calendario. La partenza dovrebbe
+   * uscire da una prova reale — il 3 km a tutta — non da una speranza: se la
+   * si mette troppo alta il piano prescrive ritmi che non si reggono, e ogni
+   * seduta si chiude "fallita" per un errore di taratura.
+   */
+  const [vdots, setVdots] = useState<Record<string, KikkoVdotChoice>>({});
   const [goals, setGoals] = useState<Record<string, number>>({});
   const [goalDraft, setGoalDraft] = useState<string | null>(null);
 
@@ -1628,6 +1695,14 @@ export function TrainingGrid() {
   const activePlan = kikkoPlan === "sub135" ? KIKKO_SUB135_PLAN : KIKKO_SUB20_PLAN;
   const activeAccent = kikkoPlan === "sub135" ? "#00FFAA" : "var(--app-accent)";
 
+  /** Il VDOT del piano acceso: quello scelto, o quello scritto nel piano. */
+  const activeVdot = vdots[kikkoPlan] ?? null;
+  const planVdot = activePlan.weekVdot;
+  const shownVdot: KikkoVdotChoice = activeVdot ?? {
+    start: planVdot[0],
+    target: planVdot[planVdot.length - 1],
+  };
+
   /** Gli obiettivi scritti nel piano, che valgono finché non se ne sceglie uno. */
   const planTargets = kikkoPlan === "sub135" ? KIKKO_SUB135_TARGETS : KIKKO_SUB20_TARGETS;
   const goalSec = goals[kikkoPlan] ?? planTargets[0].sec;
@@ -1635,7 +1710,7 @@ export function TrainingGrid() {
   /**
    * Cosa misura la percentuale: l'obiettivo scelto, più quello di targa del
    * piano se è più ambizioso. Due righe al massimo — la seconda esiste perché
-   * kikkoSub20 punta al 19:33 anche quando l'atleta si accontenta della sub-20,
+   * kikkoSub20 punta al 19:35 anche quando l'atleta si accontenta della sub-20,
    * e nascondere il tetto verso cui sale il VDOT racconterebbe metà storia.
    */
   const activeTargets = useMemo(() => {
@@ -1653,8 +1728,8 @@ export function TrainingGrid() {
    */
   const activeOdds = (dayKey: string) => {
     const info = kikkoPlan === "sub135"
-      ? kikkoSub135HeatInfo(dayKey, activeStart, activeRaceIso)
-      : kikkoSub20HeatInfo(dayKey, activeStart, activeRaceIso);
+      ? kikkoSub135HeatInfo(dayKey, activeStart, activeRaceIso, activeVdot)
+      : kikkoSub20HeatInfo(dayKey, activeStart, activeRaceIso, activeVdot);
     const session = sub20Map[dayKey];
     const isQuality = session?.type === "intervals" || session?.type === "tempo";
     if (!isQuality || info.vdot == null) return null;
@@ -1667,6 +1742,14 @@ export function TrainingGrid() {
         targets={activeTargets}
       />
     );
+  };
+
+  /** Le prove dietro la seduta del giorno, se quel giorno c'è una seduta. */
+  const activeEvidence = (dayKey: string) => {
+    const info = kikkoPlan === "sub135"
+      ? kikkoSub135HeatInfo(dayKey, activeStart, activeRaceIso, activeVdot)
+      : kikkoSub20HeatInfo(dayKey, activeStart, activeRaceIso, activeVdot);
+    return info.evidence ? <EvidencePanel evidence={info.evidence} /> : null;
   };
 
   /** La bozza dei due calendari: quella applicata quando non si sta modificando. */
@@ -1684,12 +1767,23 @@ export function TrainingGrid() {
   );
   const dirty = shownWin.start !== activeWin.start || shownWin.race !== activeWin.race;
 
+  /**
+   * Quanto salto regge la finestra scelta.
+   *
+   * Il tetto non è prudenza mia: è il tasso che la letteratura misura su
+   * atleti già allenati, e serve a dire subito quando si sta chiedendo al
+   * piano più di quanto un piano possa dare.
+   */
+  const plausibleGain = kikkoPlausibleGain(draftWindow.weeksUsed, shownVdot.start);
+  const askedGain = Math.round((shownVdot.target - shownVdot.start) * 10) / 10;
+
+
   // Il piano acceso, dentro la sua finestra.
   const sub20Sessions = useMemo(
     () => (kikkoPlan === "sub135"
-      ? buildKikkoSub135Sessions(sub135Win.start, sub135Win.race)
-      : buildKikkoSub20Sessions(sub20Win.start, sub20Win.race)),
-    [kikkoPlan, sub20Win, sub135Win],
+      ? buildKikkoSub135Sessions(sub135Win.start, sub135Win.race, vdots.sub135 ?? null)
+      : buildKikkoSub20Sessions(sub20Win.start, sub20Win.race, vdots.sub20 ?? null)),
+    [kikkoPlan, sub20Win, sub135Win, vdots],
   );
   const sub20Map = useMemo(() => {
     const map: Record<string, Session> = {};
@@ -1721,6 +1815,7 @@ export function TrainingGrid() {
   useEffect(() => {
     if (sub20StatusData?.statuses) setSub20StatusLocal(sub20StatusData.statuses);
     if (sub20StatusData?.goals) setGoals(sub20StatusData.goals);
+    if (sub20StatusData?.vdots) setVdots(sub20StatusData.vdots as Record<string, KikkoVdotChoice>);
     // Sul DB può esserci la partenza del vecchio piano Sub-20, che era ancorata
     // a un martedì: senza normalizzare, kikkoSub20 slitta di un giorno e le
     // qualità cadono di mercoledì e venerdì.
@@ -1801,6 +1896,22 @@ export function TrainingGrid() {
       /* l'ottimistico resta */
     }
   }, [draft, kikkoPlan, activePlan]);
+
+  /** Salva il VDOT del piano acceso. La partenza trascina l'obiettivo se lo supera. */
+  const saveVdot = useCallback(async (next: KikkoVdotChoice) => {
+    const clean: KikkoVdotChoice = {
+      start: Math.round(next.start * 10) / 10,
+      target: Math.round(Math.min(Math.max(next.target, next.start), next.start + KIKKO_VDOT_MAX_GAIN) * 10) / 10,
+    };
+    setVdots((prev) => ({ ...prev, [kikkoPlan]: clean }));
+    try {
+      const res = await putSub20Vdot(kikkoPlan, clean.start, clean.target);
+      if (res?.vdots) setVdots(res.vdots as Record<string, KikkoVdotChoice>);
+      invalidateCache("sub20-status");
+    } catch {
+      /* l'ottimistico resta */
+    }
+  }, [kikkoPlan]);
 
   /** Salva il tempo obiettivo del piano acceso. Testo non valido: si ignora. */
   const saveGoal = useCallback(async () => {
@@ -2061,8 +2172,14 @@ export function TrainingGrid() {
 
               <p className="text-gray-300 leading-relaxed mb-6">{display.description}</p>
 
-              {showSub20 && <HeatPanel date={dayKey} startDate={activeStart} raceDate={activeRaceIso} plan={kikkoPlan} />}
+              {showSub20 && (
+                <HeatPanel
+                  date={dayKey} startDate={activeStart} raceDate={activeRaceIso}
+                  plan={kikkoPlan} vdot={activeVdot}
+                />
+              )}
               {showSub20 && activeOdds(dayKey)}
+              {showSub20 && activeEvidence(dayKey)}
 
               {display.details.length > 0 && (
                 <div className="flex flex-wrap gap-3">
@@ -2327,6 +2444,62 @@ export function TrainingGrid() {
               </button>
 
               <span className="w-px h-5 bg-[#2A2A2A]" />
+
+              {/* Il VDOT: da dove parti e dove punti.
+                  La partenza dovrebbe uscire da una prova reale, non da una
+                  speranza — messa troppo alta il piano scrive ritmi che non si
+                  reggono e ogni seduta si chiude "fallita" per un errore di
+                  taratura. L'obiettivo si ferma a +2 punti perché è quello che
+                  un blocco può davvero produrre. */}
+              <label
+                className="flex items-center gap-1.5 rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-2 py-1"
+                title="Il VDOT da cui parti. Va ancorato a una prova vera: il 3 km a tutta della prima settimana serve a questo."
+              >
+                <Gauge className="w-3.5 h-3.5 shrink-0 text-gray-500" />
+                <span className="text-[9px] font-black tracking-[0.18em] uppercase text-gray-600">VDOT</span>
+                <input
+                  type="number" step={0.1} min={25} max={85}
+                  value={shownVdot.start}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    if (Number.isFinite(v)) saveVdot({ start: v, target: shownVdot.target });
+                  }}
+                  className="w-[3.2rem] bg-transparent border-0 p-0 text-xs font-bold text-white outline-none"
+                />
+              </label>
+
+              <span className="text-gray-700">→</span>
+
+              <label
+                className="flex items-center gap-1.5 rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-2 py-1"
+                title="Il VDOT a cui punti alla gara. Massimo +2 punti: oltre, nessun blocco lo produce."
+              >
+                <span className="text-[9px] font-black tracking-[0.18em] uppercase text-gray-600">Arrivo</span>
+                <select
+                  value={shownVdot.target}
+                  onChange={(e) => saveVdot({ start: shownVdot.start, target: Number(e.target.value) })}
+                  className="bg-transparent border-0 p-0 text-xs font-bold outline-none cursor-pointer"
+                  style={{ color: activeAccent }}
+                >
+                  {kikkoVdotOptions(shownVdot.start).map((v) => (
+                    <option key={v} value={v} style={{ background: "#0A0A0A" }}>
+                      {v.toFixed(1)}{v > shownVdot.start ? ` (+${(v - shownVdot.start).toFixed(1)})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {/* Il salto chiesto contro quello che la finestra può dare. */}
+              {askedGain > plausibleGain + 0.05 && (
+                <span
+                  className="text-[10px] font-bold whitespace-nowrap"
+                  style={{ color: askedGain > plausibleGain * 1.6 ? "#F43F5E" : "#F59E0B" }}
+                  title={`Su ${draftWindow.weeksUsed} settimane la letteratura misura circa +${plausibleGain.toFixed(1)} punti per un atleta a questo livello (Milanović 2015, Bacon 2013). Chiederne +${askedGain.toFixed(1)} significa scrivere ritmi che potrebbero non arrivare.`}
+                >
+                  +{askedGain.toFixed(1)} in {draftWindow.weeksUsed} sett. · realistico +{plausibleGain.toFixed(1)}
+                </span>
+              )}
+
 
               <label
                 className="flex items-center gap-1.5 rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-2 py-1"

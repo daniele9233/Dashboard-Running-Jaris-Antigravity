@@ -2,7 +2,7 @@ import type { Session } from "../types/api";
 import {
   addDays, basesFor, easy, fmtNum, heatPace, kikkoSub20NormalizeStart,
   buildKikkoPlanSessions, kikkoHeatInfo, longReps, longRun, pacesFor, reps, secToPace, soglia, trimZero,
-  type CellFn, type KikkoPlanDef, type WeekDef,
+  type CellFn, type KikkoPlanDef, type KikkoVdotChoice, type WeekDef,
 } from "./kikkoSub20Plan";
 
 /**
@@ -95,6 +95,7 @@ const longWithRace = (dist: number, fastKm: number, note = ""): CellFn => (p) =>
     pace: p.slow,
     kind: "long",
     baseSec: KIKKO_SUB135_RACE_PACE_SEC,
+    evidence: "lungoGara",
     desc:
       `${trimZero(fmtNum(dist - fastKm, 1))} km a ${p.slow}, poi ${trimZero(fmtNum(fastKm, 1))} km ` +
       `a ${hp.mid} fino alla fine. Il passo non deve scivolare negli ultimi due.` +
@@ -112,6 +113,7 @@ const ritmoGara = (n: number, meters: number, dist: number, rec: string, note = 
     pace: hp.mid,
     kind: "reps",
     baseSec: KIKKO_SUB135_RACE_PACE_SEC,
+    evidence: "ritmoGara",
     desc:
       `Risc. 2 km + 3 allunghi, def. 1,5 km. Ripetuta ~${secToPace(workSec)} al ritmo del 18 ottobre, ` +
       `rec ${rec} di jog. Non più veloce: serve a riconoscerlo, non a batterlo.${note ? " " + note : ""}`,
@@ -197,6 +199,7 @@ const WEEKS: WeekDef[] = [
           pace: hp.mid,
           kind: "long" as const,
           baseSec: KIKKO_SUB135_RACE_PACE_SEC,
+          evidence: "gara" as const,
           desc:
             `Risc. 10′ + 3 allunghi. Primi 3 km ${secToPace(hp.midSec + 4)}, poi ${hp.mid} fino al 16°, ` +
             `da lì quello che resta. Con l'aria attesa: ${hmClock(hp.midSec)}.`,
@@ -236,9 +239,11 @@ export const KIKKO_SUB135_PLAN: KikkoPlanDef = {
 const KIKKO_SUB135_RACE_OFFSET_DAYS = (KIKKO_SUB135_META.weeks - 1) * 7 + 6;
 
 /** Ricostruisce il piano dentro la finestra scelta. */
-export function buildKikkoSub135Sessions(startDate?: string | null, raceDate?: string | null): Session[] {
+export function buildKikkoSub135Sessions(
+  startDate?: string | null, raceDate?: string | null, vdot?: KikkoVdotChoice | null,
+): Session[] {
   const start = kikkoSub20NormalizeStart(startDate ?? KIKKO_SUB135_DEFAULT_START);
-  return buildKikkoPlanSessions(KIKKO_SUB135_PLAN, start, raceDate ?? kikkoSub135RaceDate(start));
+  return buildKikkoPlanSessions(KIKKO_SUB135_PLAN, start, raceDate ?? kikkoSub135RaceDate(start), vdot);
 }
 
 /** Piano ancorato alla partenza di default. */
@@ -250,8 +255,10 @@ export function kikkoSub135RaceDate(startDate?: string | null): string {
 }
 
 /** L'aria attesa e il ritmo del giorno — stesso termometro di kikkoSub20. */
-export function kikkoSub135HeatInfo(iso: string, startDate?: string | null, raceDate?: string | null) {
-  return kikkoHeatInfo(KIKKO_SUB135_PLAN, iso, startDate, raceDate);
+export function kikkoSub135HeatInfo(
+  iso: string, startDate?: string | null, raceDate?: string | null, vdot?: KikkoVdotChoice | null,
+) {
+  return kikkoHeatInfo(KIKKO_SUB135_PLAN, iso, startDate, raceDate, vdot);
 }
 
 /** La legenda dei colori: sulla mezza il lungo è la seduta chiave, non le ripetute. */

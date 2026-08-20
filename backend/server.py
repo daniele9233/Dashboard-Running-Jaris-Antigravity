@@ -9471,6 +9471,7 @@ async def get_sub20_status():
     rpe        = { 'YYYY-MM-DD': 'facile' | 'giusto' | 'duro' }
     start_date = 'YYYY-MM-DD' (martedì settimana 1) | None → default lato client
     goals      = { 'sub20': 1199, ... } tempi obiettivo in secondi, per piano
+    vdots      = { 'sub20': {'start': 50, 'target': 51.5} } forma scelta, per piano
     L'RPE alimenta l'auto-adattamento del piano (motore lato client).
     """
     athlete_id = await _get_athlete_id()
@@ -9481,6 +9482,7 @@ async def get_sub20_status():
         "start_date": (doc or {}).get("start_date"),
         "race_date": (doc or {}).get("race_date"),
         "goals": (doc or {}).get("goals", {}),
+        "vdots": (doc or {}).get("vdots", {}),
     }
 
 
@@ -9494,6 +9496,8 @@ async def set_sub20_status(payload: dict = Body(...)):
       start_date = 'YYYY-MM-DD' — null/altro per tornare al default
       goals      = {'sub20': 1199, 'sub135': 5675} — tempi obiettivo in secondi,
                    per piano; null per tornare a quelli scritti nel piano
+      vdots      = {'sub20': {'start': 50, 'target': 51.5}} — forma di partenza e
+                   obiettivo; il salto viene tagliato a +2 lato server
     """
     athlete_id = await _get_athlete_id()
     q = {"athlete_id": athlete_id}
@@ -9527,6 +9531,32 @@ async def set_sub20_status(payload: dict = Body(...)):
                     await db.sub20_status.update_one(
                         q, {"$unset": {f"goals.{key}": ""}}, upsert=True)
 
+    # I VDOT sono config del piano: partenza e obiettivo, per piano. Il salto
+    # è limitato a due punti perché è quello che un blocco può produrre, non
+    # perché il campo non sappia contare oltre.
+    if "vdots" in payload:
+        vdots = payload.get("vdots")
+        if isinstance(vdots, dict):
+            for plan, choice in vdots.items():
+                key = str(plan)[:16]
+                if not key.isalnum():
+                    continue
+                ok = (
+                    isinstance(choice, dict)
+                    and isinstance(choice.get("start"), (int, float))
+                    and 25 <= choice["start"] <= 85
+                )
+                if not ok:
+                    await db.sub20_status.update_one(
+                        q, {"$unset": {f"vdots.{key}": ""}}, upsert=True)
+                    continue
+                start = round(float(choice["start"]), 1)
+                raw = choice.get("target")
+                target = round(float(raw), 1) if isinstance(raw, (int, float)) else start
+                target = min(max(target, start), start + 2)
+                await db.sub20_status.update_one(
+                    q, {"$set": {f"vdots.{key}": {"start": start, "target": target}}}, upsert=True)
+
     # status / rpe sono per-seduta e richiedono una data valida.
     if "status" in payload or "rpe" in payload:
         date = str(payload.get("date") or "")[:10]
@@ -9553,6 +9583,7 @@ async def set_sub20_status(payload: dict = Body(...)):
         "start_date": (doc or {}).get("start_date"),
         "race_date": (doc or {}).get("race_date"),
         "goals": (doc or {}).get("goals", {}),
+        "vdots": (doc or {}).get("vdots", {}),
     }
 
 

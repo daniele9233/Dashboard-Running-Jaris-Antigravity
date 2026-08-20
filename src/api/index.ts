@@ -494,6 +494,8 @@ export interface Sub20StatusResponse {
   race_date?: string | null;
   /** Tempo obiettivo in secondi, per piano: { sub20: 1199, sub135: 5675 }. */
   goals?: Record<string, number>;
+  /** VDOT di partenza e obiettivo, per piano: { sub20: { start, target } }. */
+  vdots?: Record<string, { start: number; target: number }>;
   ok?: boolean;
 }
 export const getSub20Status = () => api.get<Sub20StatusResponse>('/api/sub20/status');
@@ -511,6 +513,12 @@ export const putSub20Window = (startDate: string | null, raceDate: string | null
 /** Tempo obiettivo di un piano, in secondi. null → torna a quello scritto nel piano. */
 export const putSub20Goal = (plan: string, seconds: number | null) =>
   api.put<Sub20StatusResponse>('/api/sub20/status', { goals: { [plan]: seconds } });
+
+/** VDOT di partenza e obiettivo di un piano. null → torna a quelli del piano. */
+export const putSub20Vdot = (plan: string, start: number | null, target?: number) =>
+  api.put<Sub20StatusResponse>('/api/sub20/status', {
+    vdots: { [plan]: start == null ? null : { start, target } },
+  });
 
 // ─── CONQUISTA D'ITALIA (gamification) ───────────────────────────────────────
 export interface ConquestsResponse {

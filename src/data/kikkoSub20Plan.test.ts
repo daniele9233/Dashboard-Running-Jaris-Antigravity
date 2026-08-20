@@ -6,6 +6,10 @@ import {
   KIKKO_SUB20_TARGETS,
   kikkoGoalOdds,
   kikkoWindow,
+  kikkoVdotProgression,
+  kikkoVdotOptions,
+  kikkoPlausibleGain,
+  KIKKO_VDOT_MAX_GAIN,
   KIKKO_SUB20_PLAN,
   KIKKO_SUB20_META,
   kikkoSub20ActualWeeklyKm,
@@ -552,5 +556,77 @@ describe("kikkoSub20 — la finestra fra inizio e gara", () => {
     const a = kikkoWindow(KIKKO_SUB20_PLAN, "2026-09-10", "2026-10-14");
     const b = kikkoWindow(KIKKO_SUB20_PLAN, "2026-09-07", "2026-10-12");
     expect(a).toEqual(b);
+  });
+});
+
+describe("kikkoSub20 — il VDOT come ingresso", () => {
+  const weeks = KIKKO_SUB20_PLAN.weeks;
+
+  it("la progressione parte dalla forma di partenza e arriva all'obiettivo", () => {
+    const p = kikkoVdotProgression(50, 52, weeks);
+    expect(p).toHaveLength(weeks.length);
+    expect(p[0]).toBe(50);
+    expect(p[p.length - 1]).toBe(52);
+  });
+
+  it("non torna mai indietro", () => {
+    const p = kikkoVdotProgression(48, 50, weeks);
+    for (let i = 1; i < p.length; i++) expect(p[i]).toBeGreaterThanOrEqual(p[i - 1]);
+  });
+
+  it("dopo uno scarico il VDOT resta fermo: quella settimana non ha prodotto stimolo", () => {
+    const p = kikkoVdotProgression(50, 52, weeks);
+    for (const i of KIKKO_SUB20_DELOAD_WEEKS) {
+      if (i + 1 < p.length) {
+        expect(p[i + 1], `settimana dopo lo scarico ${i + 1}`).toBe(p[i]);
+      }
+    }
+  });
+
+  it("un obiettivo uguale alla partenza dà una progressione piatta", () => {
+    expect(new Set(kikkoVdotProgression(50, 50, weeks))).toEqual(new Set([50]));
+  });
+
+  it("le scelte vanno dalla partenza a +2, di mezzo punto", () => {
+    expect(kikkoVdotOptions(50)).toEqual([50, 50.5, 51, 51.5, 52]);
+    expect(kikkoVdotOptions(48.6)).toEqual([48.6, 49.1, 49.6, 50.1, 50.6]);
+    expect(kikkoVdotOptions(50).at(-1)! - 50).toBe(KIKKO_VDOT_MAX_GAIN);
+  });
+
+  it("il salto realistico cresce con le settimane e cala col livello", () => {
+    expect(kikkoPlausibleGain(12, 50)).toBeGreaterThan(kikkoPlausibleGain(6, 50));
+    expect(kikkoPlausibleGain(12, 45)).toBeGreaterThan(kikkoPlausibleGain(12, 58));
+    // dodici settimane a questo livello valgono circa un punto e mezzo, non tre
+    expect(kikkoPlausibleGain(12, 50)).toBeGreaterThan(0.8);
+    expect(kikkoPlausibleGain(12, 50)).toBeLessThan(1.8);
+  });
+
+  it("un VDOT più alto rende ogni ritmo del piano più veloce", () => {
+    const lento = buildKikkoSub20Sessions("2026-07-27", "2026-10-18", { start: 49, target: 49 });
+    const forte = buildKikkoSub20Sessions("2026-07-27", "2026-10-18", { start: 52, target: 52 });
+    const paceOf = (s: (typeof lento)[number]) => {
+      const [m, sec] = (s.target_pace ?? "0:00").split(":").map(Number);
+      return m * 60 + sec;
+    };
+    lento.forEach((s, i) => {
+      if (!s.target_pace) return;
+      expect(paceOf(forte[i]), `${s.date} · ${s.title}`).toBeLessThan(paceOf(s) + 0.01);
+    });
+    // e almeno una seduta è davvero più veloce, non solo "non più lenta"
+    expect(lento.some((s, i) => s.target_pace && paceOf(forte[i]) < paceOf(s))).toBe(true);
+  });
+
+  it("il VDOT scelto arriva anche nella tabella dell'aria", () => {
+    const info = kikkoSub20HeatInfo("2026-07-28", "2026-07-27", "2026-10-18", { start: 52, target: 52 });
+    expect(info.vdot).toBe(52);
+    expect(info.week).toBe(1);
+  });
+
+  it("ogni seduta dichiara a quale corpo di prove appartiene", () => {
+    const giorni = ["2026-07-28", "2026-07-30", "2026-08-01", "2026-08-02"];
+    for (const d of giorni) {
+      const info = kikkoSub20HeatInfo(d, "2026-07-27", "2026-10-18");
+      expect(info.evidence, d).not.toBeNull();
+    }
   });
 });

@@ -1,4 +1,5 @@
 import type { Session } from "../types/api";
+import type { EvidenceKey } from "./kikkoEvidence";
 
 /**
  * kikkoSub20 — piano 5K su 12 settimane.
@@ -44,7 +45,7 @@ export const KIKKO_SUB20_META = {
   weeks: 12,
   phase: "kikkoSub20",
   goalRace: "5K",
-  goalTime: "19:33",
+  goalTime: "19:35",
   runsPerWeek: 4,
   startDate: "2026-07-27", // lunedì di riferimento della settimana 1
 };
@@ -77,18 +78,83 @@ export const KIKKO_SUB20_META = {
  * ricalcoli.
  */
 export const KIKKO_VDOT_START = 49.0;
-/** 19:33 sui 5K: +2,1 punti in 12 settimane. La sub-20 cade già a metà piano. */
-export const KIKKO_VDOT_GOAL = 51.1;
+/**
+ * 19:35 sui 5K: esattamente +2,0 punti in dodici settimane, e la sub-20 cade
+ * già a metà piano.
+ *
+ * Il due non è arrotondato per bellezza: è il tetto che il selettore del VDOT
+ * consente, e quel tetto viene dalla letteratura (Milanović 2015, Bacon 2013).
+ * Prima qui c'era 51,1 — un decimo oltre — e un piano che di default chiede
+ * più di quanto lui stesso dichiara possibile è un piano che si contraddice
+ * alla prima riga.
+ */
+export const KIKKO_VDOT_GOAL = 51.0;
 
 /**
- * VDOT atteso settimana per settimana. Nelle settimane di scarico non sale:
- * l'adattamento arriva dopo il carico, non durante.
+ * QUANTO SI PUÒ CHIEDERE A UN BLOCCO, IN PUNTI DI VDOT.
+ *
+ * Il tetto non è prudenza: è quello che la letteratura misura. La meta-analisi
+ * di Milanović, Sporiš & Weston (Sports Med 2015;45:1469-81) su 28 studi mostra
+ * che il guadagno di VO₂max si comprime man mano che il soggetto è già
+ * allenato — nei sedentari si contano decine di punti percentuali, in chi corre
+ * da anni si scende a pochi. Bacon, Carter, Ogle & Joyner (PLoS ONE
+ * 2013;8:e73182) arrivano alla stessa conclusione partendo da dati diversi.
+ *
+ * Tradotto in VDOT per un atleta intorno a 50: circa **un punto ogni otto
+ * settimane** di lavoro ben fatto. Due punti si prendono, ma servono dodici
+ * settimane piene e nessuna saltata — ed è per questo che il selettore si ferma
+ * a +2 e la pagina avvisa quando la finestra è troppo corta per il salto
+ * chiesto.
  */
-export const KIKKO_WEEK_VDOT: number[] = [
-  49.0, 49.2, 49.4, 49.4,   // blocco 1 + scarico
-  49.7, 50.0, 50.2, 50.2,   // blocco 2 + scarico  → qui cade la sub-20
-  50.5, 50.8, 51.1, 51.1,   // blocco 3 + gara
-];
+export const KIKKO_VDOT_MAX_GAIN = 2;
+export const KIKKO_VDOT_STEP = 0.5;
+
+/** Punti di VDOT che una finestra di N settimane può ragionevolmente produrre. */
+export function kikkoPlausibleGain(weeks: number, vdotStart: number): number {
+  // il freno del livello: a 60 lo stesso blocco rende meno della metà che a 45
+  const level = Math.min(1.3, Math.max(0.35, (60 - vdotStart) / 12));
+  return Math.round(0.9 * (weeks / 8) * level * 10) / 10;
+}
+
+/** Le scelte possibili di VDOT obiettivo: dalla partenza a +2, di mezzo punto. */
+export function kikkoVdotOptions(start: number): number[] {
+  const out: number[] = [];
+  for (let g = 0; g <= KIKKO_VDOT_MAX_GAIN + 1e-9; g += KIKKO_VDOT_STEP) {
+    out.push(Math.round((start + g) * 10) / 10);
+  }
+  return out;
+}
+
+/**
+ * IL VDOT SETTIMANA PER SETTIMANA, GENERATO INVECE CHE SCRITTO A MANO.
+ *
+ * Due regole, entrambe con un motivo.
+ *
+ * 1. NELLE SETTIMANE DI SCARICO IL VDOT NON SALE PIÙ. Sale ARRIVANDOCI: il
+ *    guadagno del carico si vede quando il carico si toglie, non mentre lo si
+ *    accumula. È la supercompensazione, ed è il motivo per cui la settimana
+ *    dopo uno scarico riparte piatta — quella prima non ha prodotto stimolo.
+ * 2. IL SALTO È DISTRIBUITO SULLE SETTIMANE DI CARICO, non spalmato sul
+ *    calendario. Due piani lunghi uguali ma con scarichi diversi non producono
+ *    lo stesso guadagno, e il numero deve saperlo.
+ *
+ * L'ultima settimana vale esattamente l'obiettivo: è la settimana della gara, e
+ * il piano è costruito per arrivarci con quel motore.
+ */
+export function kikkoVdotProgression(start: number, target: number, weeks: WeekDef[]): number[] {
+  const gain = target - start;
+  // il guadagno di una settimana si vede in quella dopo: il conto guarda
+  // indietro, non al giorno stesso
+  const cum: number[] = [];
+  let acc = 0;
+  for (const w of weeks) {
+    cum.push(acc);
+    if (!w.deload) acc += 1;
+  }
+  const total = cum[cum.length - 1] || 1;
+  return cum.map((c) => Math.round((start + (gain * c) / total) * 10) / 10);
+}
+
 
 /**
  * Tabelle Daniels, secondi/km, per VDOT intero.
@@ -426,6 +492,8 @@ export type Cell = {
   /** Tipo di ritmo e base al fresco: servono alla tabella T + DP nella UI. */
   kind?: HeatKind;
   baseSec?: number;
+  /** A quale corpo di prove appartiene questa seduta — vedi kikkoEvidence.ts. */
+  evidence?: EvidenceKey;
 };
 export type CellFn = (p: Paces) => Cell;
 
@@ -463,6 +531,7 @@ export const easy = (dist: number): CellFn => (p) => ({
   title: `Lenta ${dist} km`,
   dist,
   pace: p.easy,
+  evidence: "lenta" as const,
   desc: `${dist} km a ${p.easy}-${secToPace(paceToSec(p.easy) + 15)}. Conversazione piena.`,
 });
 
@@ -470,6 +539,7 @@ export const longRun = (dist: number): CellFn => (p) => ({
   title: `Lungo ${dist} km`,
   dist,
   pace: p.slow,
+  evidence: "lungo" as const,
   desc: `${dist} km a ${p.slow}-${secToPace(paceToSec(p.slow) + 15)}. Base aerobica: piano davvero.`,
 });
 
@@ -484,6 +554,7 @@ export const reps = (n: number, meters: number, dist: number, rec: string, note 
     pace: hp.mid,
     kind: "reps",
     baseSec: p.bases.race,
+    evidence: "reps",
     desc:
       `Risc. 2 km + 3 allunghi, def. 1,5 km. Ripetuta ~${secToPace(workSec)}, rec ${rec} di jog ` +
       `(1:${ratio}). ${trimZero(fmtNum((n * meters) / 1000, 1))} km a ritmo gara, passo costante.` +
@@ -503,6 +574,7 @@ export const longReps = (rec: string, dist: number, note = ""): CellFn => (p) =>
     pace: hp.mid,
     kind: "long",
     baseSec,
+    evidence: "cruise",
     desc:
       `Risc. 2 km, def. 1,5 km. Serie da ~${secToPace(workSec)}, rec ${rec} (1:${ratio}). ` +
       `Riprendere il ritmo a gambe cariche.${note ? " " + note : ""}`,
@@ -518,6 +590,7 @@ const tempo = (minutes: number, dist: number, note = ""): CellFn => (p) => {
     pace: hp.mid,
     kind: "tempo",
     baseSec: p.bases.thr,
+    evidence: "soglia",
     desc:
       `Risc. 2 km + allunghi, def. 1,5 km. ${minutes}′ continui senza pause: ` +
       `~${fmtNum((minutes * 60) / hp.midSec)} km.${note ? " " + note : ""}`,
@@ -539,6 +612,7 @@ export const soglia = (workKm: number, dist: number, note = ""): CellFn => (p) =
     pace: hp.mid,
     kind: "tempo",
     baseSec: p.bases.thr,
+    evidence: "soglia",
     desc:
       `Risc. 2 km + allunghi, def. 1,5 km. ${trimZero(fmtNum(workKm, 1))} km continui senza ` +
       `pause: ~${Math.round(minutes)}′ allo sforzo che reggeresti quasi un'ora.` +
@@ -644,6 +718,7 @@ const WEEKS: WeekDef[] = [
           pace: hp.mid,
           kind: "reps" as HeatKind,
           baseSec: p.bases.race,
+          evidence: "gara" as const,
           desc:
             `Risc. 15′ + 4 allunghi (i 7 km li comprendono). Primo km ${secToPace(hp.midSec + 2)}, ` +
             `poi ${hp.mid}, dal 4° svuota. Previsione con l'aria attesa: ${secToPace(hp.midSec * 5)}.`,
@@ -678,6 +753,9 @@ export function mk(date: string, type: string, cell: CellFn, vdot: number): Sess
 
 export const KIKKO_SUB20_DEFAULT_START = KIKKO_SUB20_META.startDate;
 
+/** La progressione di riferimento di kikkoSub20, da 49,0 a 51,0. */
+export const KIKKO_WEEK_VDOT: number[] = kikkoVdotProgression(KIKKO_VDOT_START, KIKKO_VDOT_GOAL, WEEKS);
+
 /** Le settimane di kikkoSub20, per chi deve interrogarne il calendario. */
 export const KIKKO_SUB20_PLAN: KikkoPlanDef = {
   get weeks() { return WEEKS; },
@@ -697,9 +775,11 @@ const KIKKO_RACE_OFFSET_DAYS = (KIKKO_SUB20_META.weeks - 1) * 7 + 6;
  * Senza data di gara vale la durata piena a partire dal lunedì indicato: è il
  * comportamento di sempre, e i test lo verificano.
  */
-export function buildKikkoSub20Sessions(startDate?: string | null, raceDate?: string | null): Session[] {
+export function buildKikkoSub20Sessions(
+  startDate?: string | null, raceDate?: string | null, vdot?: KikkoVdotChoice | null,
+): Session[] {
   const start = kikkoSub20NormalizeStart(startDate);
-  return buildKikkoPlanSessions(KIKKO_SUB20_PLAN, start, raceDate ?? kikkoSub20RaceDate(start));
+  return buildKikkoPlanSessions(KIKKO_SUB20_PLAN, start, raceDate ?? kikkoSub20RaceDate(start), vdot);
 }
 
 /** Piano ancorato alla partenza di default. */
@@ -794,6 +874,7 @@ export function kikkoHeatInfo(
   iso: string,
   startDate?: string | null,
   raceDate?: string | null,
+  vdot?: KikkoVdotChoice | null,
 ) {
   const tempC = romeTempForDate(iso);
   const dpC = romeDewPointForDate(iso);
@@ -802,21 +883,30 @@ export function kikkoHeatInfo(
 
   const hit = kikkoLookup(plan, iso, kikkoWindow(plan, startDate, raceDate));
   if (hit) {
-    const cell = plan.weeks[hit.wi].cells[hit.i](pacesFor(iso, plan.weekVdot[hit.wi]));
+    const weekVdot = kikkoWeekVdot(plan, vdot);
+    const cell = plan.weeks[hit.wi].cells[hit.i](pacesFor(iso, weekVdot[hit.wi]));
     const kind = cell.kind ?? null;
     return {
       tempC, dpC, index, band, kind,
-      vdot: plan.weekVdot[hit.wi],
+      vdot: weekVdot[hit.wi],
+      /** Settimana del piano, base 1: serve a dire "settimana 7 di 12". */
+      week: hit.wi + 1,
+      evidence: cell.evidence ?? null,
       baseSec: cell.baseSec ?? null,
       base: cell.baseSec != null ? secToPace(cell.baseSec) : null,
       pace: kind && cell.baseSec != null ? heatPace(kind, band, cell.baseSec) : null,
     };
   }
-  return { tempC, dpC, index, band, kind: null, vdot: null, baseSec: null, base: null, pace: null };
+  return {
+    tempC, dpC, index, band, kind: null, vdot: null, week: null,
+    evidence: null, baseSec: null, base: null, pace: null,
+  };
 }
 
-export function kikkoSub20HeatInfo(iso: string, startDate?: string | null, raceDate?: string | null) {
-  return kikkoHeatInfo(KIKKO_SUB20_PLAN, iso, startDate, raceDate);
+export function kikkoSub20HeatInfo(
+  iso: string, startDate?: string | null, raceDate?: string | null, vdot?: KikkoVdotChoice | null,
+) {
+  return kikkoHeatInfo(KIKKO_SUB20_PLAN, iso, startDate, raceDate, vdot);
 }
 
 /* ── LA FINESTRA: DALL'INIZIO ALLA GARA ─────────────────────────────────────
@@ -842,6 +932,15 @@ export interface KikkoPlanDef {
   defaultStart: string;
   readonly defaultRace: string;
   weekVdot: number[];
+}
+
+/** La forma di partenza e quella a cui si punta, scelte dall'atleta. */
+export interface KikkoVdotChoice { start: number; target: number }
+
+/** La progressione da usare: quella scelta, o quella di riferimento del piano. */
+export function kikkoWeekVdot(plan: KikkoPlanDef, vdot?: KikkoVdotChoice | null): number[] {
+  if (!vdot) return plan.weekVdot;
+  return kikkoVdotProgression(vdot.start, vdot.target, plan.weeks);
 }
 
 export interface KikkoWindow {
@@ -900,13 +999,15 @@ export function buildKikkoPlanSessions(
   plan: KikkoPlanDef,
   startIso?: string | null,
   raceIso?: string | null,
+  vdot?: KikkoVdotChoice | null,
 ): Session[] {
   const w = kikkoWindow(plan, startIso, raceIso);
+  const weekVdot = kikkoWeekVdot(plan, vdot);
   const out: Session[] = [];
   for (let wi = w.weeksSkipped; wi < plan.weeks.length; wi++) {
     const mon = addDays(w.firstMonday, (wi - w.weeksSkipped) * 7);
     plan.weeks[wi].cells.forEach((cell, i) => {
-      out.push(mk(addDays(mon, SLOTS[i].offset), SLOTS[i].type, cell, plan.weekVdot[wi]));
+      out.push(mk(addDays(mon, SLOTS[i].offset), SLOTS[i].type, cell, weekVdot[wi]));
     });
   }
   return out;
@@ -994,12 +1095,12 @@ export function kikkoGoalOdds(opts: {
  * Gli obiettivi di kikkoSub20, in ordine di ambizione.
  *
  * Due, perché il piano ne ha davvero due: la sub-20 cade a metà strada — è
- * quella che dà il nome al piano — e il 19:33 è il tetto verso cui punta la
+ * quella che dà il nome al piano — e il 19:35 è il tetto verso cui punta la
  * progressione del VDOT. Mostrarne uno solo nasconderebbe metà della storia.
  */
 export const KIKKO_SUB20_TARGETS = [
   { label: "sub-20", sec: 19 * 60 + 59 },
-  { label: KIKKO_SUB20_META.goalTime, sec: 19 * 60 + 33 },
+  { label: KIKKO_SUB20_META.goalTime, sec: 19 * 60 + 35 },
 ];
 
 export const KIKKO_SUB20_LEGEND: { color: string; label: string; opacity?: number }[] = [
