@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer, XCircle, Target } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer, XCircle } from "lucide-react";
 import { useApi, invalidateCache } from "../hooks/useApi";
 import { API_CACHE } from "../hooks/apiCacheKeys";
 import { getRuns } from "../api";
 import type { RunsResponse } from "../types/api";
-import { evaluatePlan, diagnose } from "../utils/trainingAdherence";
-import { SessionVerdict, AdherenceBanner, AdherenceStrip } from "./TrainingAdherence";
+import { evaluatePlan } from "../utils/trainingAdherence";
+import { SessionVerdict, AdherenceStrip } from "./TrainingAdherence";
 import {
   getTrainingPlan, generateTrainingPlan, adaptTrainingPlan, evaluateTest,
   getSub20Status, putSub20Status, putSub20StartDate,
@@ -17,10 +17,12 @@ import {
   KIKKO_SUB20_LEGEND, KIKKO_SUB20_DEFAULT_START,
   buildKikkoSub20Sessions, kikkoSub20RaceDate, kikkoSub20NormalizeStart,
   kikkoSub20HeatInfo, heatTable, heatReferenceLabel,
+  kikkoGoalOdds, KIKKO_SUB20_TARGETS, KIKKO_SUB20_META, addDays,
 } from "../data/kikkoSub20Plan";
 import {
   KIKKO_SUB135_LEGEND, KIKKO_SUB135_DEFAULT_START, KIKKO_SUB135_META,
   buildKikkoSub135Sessions, kikkoSub135RaceDate, kikkoSub135HeatInfo,
+  KIKKO_SUB135_TARGETS,
 } from "../data/kikkoSub135Plan";
 
 /**
@@ -117,6 +119,87 @@ function HeatPanel({
       )}
     </div>
   );
+}
+
+/**
+ * SE LA CHIUDI A TARGET, A CHE PUNTO SEI.
+ *
+ * La domanda dopo una seduta dura non è quanti chilometri hai fatto: è se
+ * quella fatica sta portando dove volevi. La percentuale è condizionata —
+ * "chiusa al passo prescritto" — e non è una promessa: è la parte della
+ * distribuzione che cade sotto il tempo obiettivo, con dentro la variabilità
+ * misurata fra gare simili e le settimane che ancora mancano.
+ *
+ * Sale lungo il piano anche chiudendo sempre al target, e non perché il motore
+ * cresca soltanto: perché resta meno ignoto davanti.
+ */
+function OddsPanel({
+  date, vdot, raceIso, targets, distanceKm,
+}: {
+  date: string;
+  vdot: number;
+  raceIso: string;
+  targets: { label: string; sec: number }[];
+  distanceKm: number;
+}) {
+  const mono = { fontFamily: "'JetBrains Mono', monospace" };
+  const odds = targets.map((t) => ({
+    ...t,
+    o: kikkoGoalOdds({ vdot, distanceKm, targetSec: t.sec, raceIso, sessionIso: date }),
+  }));
+  if (!odds.length) return null;
+
+  const colorOf = (p: number) =>
+    p >= 0.7 ? "#22C55E" : p >= 0.45 ? "#C0FF00" : p >= 0.25 ? "#F59E0B" : "#F43F5E";
+
+  return (
+    <div className="mb-6 rounded-xl border border-[#2A2A2A] bg-[#0F0F0F] overflow-hidden">
+      <div className="px-3.5 py-2.5 border-b border-[#2A2A2A]">
+        <span className="text-[10px] font-black tracking-[0.2em] uppercase text-gray-400">
+          Se la chiudi a target
+        </span>
+        <span className="ml-2 text-[11px] text-gray-600" style={mono}>
+          VDOT {vdot.toFixed(1)} · gara fra {Math.round(odds[0].o.weeksLeft)} settimane
+        </span>
+      </div>
+
+      <div className="divide-y divide-[#1E1E1E]">
+        {odds.map(({ label, o }) => {
+          const col = colorOf(o.p);
+          return (
+            <div key={label} className="px-3.5 py-2.5 flex items-center gap-3">
+              <span className="text-[11px] font-bold text-gray-300 w-16 shrink-0">{label}</span>
+              <div className="flex-1 h-1.5 rounded-full bg-[#1E1E1E] overflow-hidden">
+                <div className="h-full rounded-full transition-all"
+                  style={{ width: `${Math.round(o.p * 100)}%`, background: col }} />
+              </div>
+              <span className="text-[15px] font-black tabular-nums w-12 text-right"
+                style={{ ...mono, color: col }}>
+                {Math.round(o.p * 100)}%
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="px-3.5 py-2 border-t border-[#2A2A2A] text-[10px] text-gray-600 leading-snug">
+        Previsione con l'aria attesa il giorno di gara:{" "}
+        <span className="text-gray-400" style={mono}>
+          {odds.map((x) => fmtRaceTime(x.o.predictedSec)).filter((v, i, a) => a.indexOf(v) === i).join(" · ")}
+        </span>
+        . La banda tiene conto dell'1,4% di variabilità fra gare simili dello stesso atleta e di
+        quanto manca alla gara.
+      </div>
+    </div>
+  );
+}
+
+/** "19:47" o "1:34:12". */
+function fmtRaceTime(sec: number): string {
+  const t = Math.round(sec);
+  const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
 const SESSION_COLORS: Record<string, string> = {
@@ -1455,9 +1538,43 @@ export function TrainingGrid() {
   }, [planData]);
 
 
-  /** La bozza del date-picker segue il piano acceso, non una sola data. */
+  /** Tutto quello che dipende dal piano acceso, in un posto solo. */
+  const activeStart = kikkoPlan === "sub135" ? sub135StartDate : sub20StartDate;
+  const activeRaceIso = kikkoPlan === "sub135"
+    ? kikkoSub135RaceDate(sub135StartDate)
+    : kikkoSub20RaceDate(sub20StartDate);
+  const activeWeeks = kikkoPlan === "sub135" ? KIKKO_SUB135_META.weeks : KIKKO_SUB20_META.weeks;
+
+  /**
+   * La probabilità del giorno, se quel giorno ha una qualità.
+   *
+   * Sulle lente non compare: un fondo chiuso al passo giusto non dimostra
+   * niente sull'obiettivo, e un numero che non si muove mai smette di essere
+   * letto.
+   */
+  const activeOdds = (dayKey: string) => {
+    const info = kikkoPlan === "sub135"
+      ? kikkoSub135HeatInfo(dayKey, activeStart)
+      : kikkoSub20HeatInfo(dayKey, activeStart);
+    const session = sub20Map[dayKey];
+    const isQuality = session?.type === "intervals" || session?.type === "tempo";
+    if (!isQuality || info.vdot == null) return null;
+    return (
+      <OddsPanel
+        date={dayKey}
+        vdot={info.vdot}
+        raceIso={activeRaceIso}
+        distanceKm={kikkoPlan === "sub135" ? 21.0975 : 5}
+        targets={kikkoPlan === "sub135" ? KIKKO_SUB135_TARGETS : KIKKO_SUB20_TARGETS}
+      />
+    );
+  };
+
+  /** La bozza dei due calendari segue il piano acceso, non una sola data. */
   const activeDraft = kikkoPlan === "sub135" ? sub135StartDraft : sub20StartDraft;
   const setActiveDraft = kikkoPlan === "sub135" ? setSub135StartDraft : setSub20StartDraft;
+  /** La gara mostrata nel secondo calendario: la domenica dell'ultima settimana. */
+  const draftRaceIso = addDays(activeDraft, (activeWeeks - 1) * 7 + 6);
 
   // Il piano acceso, costruito rispetto alla sua partenza.
   const sub20Sessions = useMemo(
@@ -1489,7 +1606,6 @@ export function TrainingGrid() {
     () => Object.fromEntries(adherence.map((e) => [e.date.slice(0, 10), e])),
     [adherence],
   );
-  const diagnosis = useMemo(() => diagnose(adherence), [adherence]);
 
   // ── Esiti sedute Sub-20 (persistenti su DB) ──
   const { data: sub20StatusData } = useApi<Sub20StatusResponse>(getSub20Status, { cacheKey: "sub20-status" });
@@ -1803,7 +1919,8 @@ export function TrainingGrid() {
 
               <p className="text-gray-300 leading-relaxed mb-6">{display.description}</p>
 
-              {showSub20 && <HeatPanel date={dayKey} startDate={sub20StartDate} plan={kikkoPlan} />}
+              {showSub20 && <HeatPanel date={dayKey} startDate={activeStart} plan={kikkoPlan} />}
+              {showSub20 && activeOdds(dayKey)}
 
               {display.details.length > 0 && (
                 <div className="flex flex-wrap gap-3">
@@ -1972,8 +2089,11 @@ export function TrainingGrid() {
             Genera Piano
           </button>
 
-          {/* I due piani kikko. Toccare quello acceso lo spegne e riporta al
-              piano generato: un solo target per domenica, mai due. */}
+          {/* I due piani kikko.
+              Acceso = pieno, con il pallino. Spento = grigio, senza accento:
+              prima erano due bottoni colorati, uno pieno e uno bordato, e a
+              colpo d'occhio non si capiva quale fosse attivo. Un solo elemento
+              acceso alla volta, e si vede da lontano. */}
           {([
             { id: "sub20", label: "kikkoSub20", accent: "var(--app-accent)", glow: "192,255,0" },
             { id: "sub135", label: KIKKO_SUB135_META.phase, accent: "#00FFAA", glow: "0,255,170" },
@@ -1984,53 +2104,81 @@ export function TrainingGrid() {
                 key={btn.id}
                 type="button"
                 onClick={() => setKikkoPlan(on ? "off" : btn.id)}
-                title={on ? "Torna al piano generato" : `Mostra il piano ${btn.label}`}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-black rounded-lg transition-all"
+                title={on ? "Piano attivo — tocca per tornare al piano generato" : `Attiva ${btn.label}`}
+                aria-pressed={on}
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-black rounded-lg border transition-all ${
+                  on ? "scale-[1.03]" : "hover:border-white/25 hover:text-gray-200"
+                }`}
                 style={
                   on
                     ? {
                         background: btn.accent,
                         color: "#0A0A0A",
-                        boxShadow: `0 0 18px rgba(${btn.glow},0.45)`,
+                        borderColor: btn.accent,
+                        boxShadow: `0 0 22px rgba(${btn.glow},0.55)`,
                       }
                     : {
-                        background: "transparent",
-                        color: btn.accent,
-                        border: `1px solid ${btn.accent}`,
-                        boxShadow: `0 0 12px rgba(${btn.glow},0.18)`,
+                        background: "#1A1A1A",
+                        color: "#6B7280",
+                        borderColor: "#2A2A2A",
                       }
                 }
               >
-                <Target className="w-4 h-4" />
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ background: on ? "#0A0A0A" : "#3F3F46" }}
+                />
                 {btn.label}
               </button>
             );
           })}
 
+          {/* Inizio e gara: due calendari, legati dalla durata del piano.
+              Toccandone uno si sposta l'altro — il piano dura quello che dura,
+              e le settimane non si allungano da sole. */}
           {showSub20 && (
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={activeDraft}
-                onChange={(e) => setActiveDraft(e.target.value)}
-                title="Lunedì di partenza del piano"
-                className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-2.5 py-1.5 text-xs font-bold text-white focus:outline-none focus:border-[#C0FF00]/50"
-              />
+            <div className="flex items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#141414] px-2.5 py-1.5">
+              <label className="flex items-center gap-1.5">
+                <span className="text-[9px] font-black tracking-[0.18em] uppercase text-gray-600">Inizio</span>
+                <input
+                  type="date"
+                  value={activeDraft}
+                  onChange={(e) => setActiveDraft(kikkoSub20NormalizeStart(e.target.value))}
+                  title="Lunedì di partenza del piano"
+                  className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-md px-2 py-1 text-xs font-bold text-white focus:outline-none focus:border-[#C0FF00]/50"
+                />
+              </label>
+
+              <span className="text-gray-700">→</span>
+
+              <label className="flex items-center gap-1.5">
+                <span className="text-[9px] font-black tracking-[0.18em] uppercase text-gray-600">Gara</span>
+                <input
+                  type="date"
+                  value={draftRaceIso}
+                  onChange={(e) => {
+                    // la gara è sempre la domenica dell'ultima settimana:
+                    // si risale al lunedì di quella settimana e si tolgono le
+                    // settimane del piano
+                    const lastMonday = kikkoSub20NormalizeStart(e.target.value);
+                    setActiveDraft(addDays(lastMonday, -(activeWeeks - 1) * 7));
+                  }}
+                  title="Domenica di gara — sposta la partenza di conseguenza"
+                  className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-md px-2 py-1 text-xs font-bold focus:outline-none focus:border-[#C0FF00]/50"
+                  style={{ color: kikkoPlan === "sub135" ? "#00FFAA" : "var(--app-accent)" }}
+                />
+              </label>
+
+              <span className="text-[10px] text-gray-600 whitespace-nowrap">{activeWeeks} sett.</span>
+
               <button
                 type="button"
                 onClick={recalcSub20FromDraft}
-                className="px-3 py-1.5 rounded-lg text-xs font-bold text-gray-300 bg-[#1E1E1E] border border-[#2A2A2A] hover:text-white transition-colors"
+                disabled={activeDraft === activeStart}
+                className="px-3 py-1 rounded-md text-xs font-bold text-gray-300 bg-[#1E1E1E] border border-[#2A2A2A] hover:text-white disabled:opacity-30 disabled:cursor-default transition-colors"
               >
-                Ricalcola
+                Applica
               </button>
-              <span className="text-xs font-bold text-gray-500">
-                gara{" "}
-                <span style={{ color: kikkoPlan === "sub135" ? "#00FFAA" : "var(--app-accent)" }}>
-                  {kikkoPlan === "sub135"
-                    ? kikkoSub135RaceDate(sub135StartDate)
-                    : kikkoSub20RaceDate(sub20StartDate)}
-                </span>
-              </span>
             </div>
           )}
 
@@ -2081,8 +2229,6 @@ export function TrainingGrid() {
       {/* Calendar (piano generico o Sub-20: stesso rendering, dataset diverso) */}
       {(showSub20 || hasPlan || planData === null) && (
         <div className="flex-1 overflow-auto p-6">
-          {/* Diagnosi: parla solo quando c'è un pattern, non a ogni seduta storta */}
-          <AdherenceBanner d={diagnosis} />
           {view === 'Month' && renderMonthView()}
           {view === 'Week' && renderWeekView()}
           {view === 'Day' && renderDayView()}

@@ -3,6 +3,8 @@ import {
   KIKKO_SUB20_SESSIONS,
   KIKKO_SUB20_WEEKLY_KM,
   KIKKO_SUB20_DELOAD_WEEKS,
+  KIKKO_SUB20_TARGETS,
+  kikkoGoalOdds,
   KIKKO_SUB20_META,
   kikkoSub20ActualWeeklyKm,
   kikkoSub20RaceDate,
@@ -419,5 +421,67 @@ describe("kikkoSub20 — calendario", () => {
       );
       expect(gap).toBeGreaterThanOrEqual(2);
     }
+  });
+});
+
+describe("kikkoSub20 — probabilità dell'obiettivo", () => {
+  const race = "2026-10-18";
+  const odds = (vdot: number, sessionIso: string, targetSec = 19 * 60 + 59) =>
+    kikkoGoalOdds({ vdot, distanceKm: 5, targetSec, raceIso: race, sessionIso });
+
+  it("resta una probabilità, mai una certezza", () => {
+    for (const v of [40, 49, 51, 60]) {
+      const p = odds(v, "2026-08-25").p;
+      expect(p).toBeGreaterThan(0);
+      expect(p).toBeLessThan(1);
+    }
+  });
+
+  it("un motore più forte alza la probabilità", () => {
+    expect(odds(51, "2026-09-01").p).toBeGreaterThan(odds(49, "2026-09-01").p);
+  });
+
+  it("a parità di motore la probabilità sale avvicinandosi alla gara", () => {
+    // non perché il motore cresca: perché resta meno ignoto davanti
+    const lontano = odds(50.8, "2026-08-04");
+    const vicino = odds(50.8, "2026-10-13");
+    expect(vicino.weeksLeft).toBeLessThan(lontano.weeksLeft);
+    expect(vicino.sigmaPct).toBeLessThan(lontano.sigmaPct);
+    expect(vicino.p).toBeGreaterThan(lontano.p);
+  });
+
+  it("l'incertezza non scende mai sotto la variabilità misurata fra gare", () => {
+    // Hopkins & Hewson 2001: 1,4% di CV fra gare simili dello stesso fondista
+    expect(odds(51, race).sigmaPct).toBeGreaterThanOrEqual(1.4);
+  });
+
+  it("un obiettivo più ambizioso è sempre meno probabile", () => {
+    const sub20 = odds(50.5, "2026-09-15", KIKKO_SUB20_TARGETS[0].sec);
+    const stretch = odds(50.5, "2026-09-15", KIKKO_SUB20_TARGETS[1].sec);
+    expect(KIKKO_SUB20_TARGETS[1].sec).toBeLessThan(KIKKO_SUB20_TARGETS[0].sec);
+    expect(stretch.p).toBeLessThan(sub20.p);
+  });
+
+  it("il tempo previsto tiene conto dell'aria del giorno di gara", () => {
+    const ottobre = kikkoGoalOdds({ vdot: 50, distanceKm: 5, targetSec: 1199, raceIso: "2026-10-18", sessionIso: "2026-09-01" });
+    const agosto = kikkoGoalOdds({ vdot: 50, distanceKm: 5, targetSec: 1199, raceIso: "2026-08-16", sessionIso: "2026-07-01" });
+    expect(agosto.predictedSec).toBeGreaterThan(ottobre.predictedSec);
+  });
+
+  it("lungo il piano, chiudendo sempre a target, la percentuale sale", () => {
+    const p = KIKKO_WEEK_VDOT.map((v, i) =>
+      odds(v, `2026-${String(7 + Math.floor((i * 7 + 1) / 30)).padStart(2, "0")}-01`).p,
+    );
+    expect(p[p.length - 1]).toBeGreaterThan(p[0]);
+    expect(p[0]).toBeLessThan(0.5);
+    expect(p[p.length - 1]).toBeGreaterThan(0.75);
+  });
+
+  it("la mezza usa il ritmo sostenibile, non la tabella di Daniels", () => {
+    const b = basesFor(50);
+    // Daniels a VDOT 50 promette 4:20/km sulla mezza; qui si resta più prudenti
+    expect(b.hm).toBeGreaterThan(b.thr);
+    expect(b.hm).toBeCloseTo(b.thr + 14, 6);
+    expect(b.hm).toBeGreaterThan(265);
   });
 });

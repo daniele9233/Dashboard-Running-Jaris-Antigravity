@@ -119,6 +119,18 @@ export interface Bases {
   k10: number;
   /** T-pace: soglia continua, e i 2 km quando il recupero è corto. */
   thr: number;
+  /**
+   * Ritmo mezza sostenibile, che NON è quello della tabella di Daniels.
+   *
+   * La tabella dà la mezza di un atleta con la tenuta già allenata: a VDOT 50
+   * promette 1:31:35, cioè 4:20/km, e per chi gira sui 40 km a settimana è
+   * fantascienza. La soglia è il ritmo che regge un'ora; una mezza da 95
+   * minuti ne dura mezz'ora di più, e quella mezz'ora costa. Quattordici
+   * secondi al chilometro è lo scarto che regge il confronto con le
+   * prestazioni vere di questo atleta, ed è la stessa prudenza che il resto
+   * dell'app applica alle previsioni sulle lunghe.
+   */
+  hm: number;
   easy: number;
   slow: number;
 }
@@ -138,6 +150,7 @@ export function basesFor(vdot: number): Bases {
     thr,
     // I lenti seguono la soglia con uno scarto fisso: si allineano da soli
     // quando il motore migliora, senza diventare mai una seduta.
+    hm: thr + 14,
     easy: thr + 85,
     slow: thr + 75,
   };
@@ -806,6 +819,96 @@ export const KIKKO_SUB20_PLAN = {
 export function kikkoSub20HeatInfo(iso: string, startDate?: string | null) {
   return kikkoHeatInfo(KIKKO_SUB20_PLAN, iso, startDate);
 }
+
+/* ── QUANTO SEI VICINO ALL'OBIETTIVO ────────────────────────────────────────
+ *
+ * La domanda che un atleta si fa dopo una seduta dura non è "quanti punti ho
+ * fatto": è "se la chiudo così, ce la faccio?". Qui c'è la risposta, e vale
+ * una regola sola — la percentuale è CONDIZIONATA. Dice: se chiudi questa
+ * seduta al target prescritto, allora sei sulla curva del piano a questa
+ * settimana, e da lì la probabilità di fare il tempo obiettivo è questa.
+ *
+ * Tre ingredienti, nessuno inventato:
+ *
+ *  1. IL MOTORE DEL GIORNO. Il VDOT della settimana, che è quello che la
+ *     seduta dimostra se la chiudi al passo scritto.
+ *  2. L'ARIA DELLA GARA. Il tempo previsto non è al fresco teorico: è
+ *     corretto per l'indice T + DP atteso il giorno della gara, con la stessa
+ *     tabella che corregge i ritmi di ogni seduta.
+ *  3. L'INCERTEZZA. Un pavimento dell'1,4% — la variabilità misurata fra gare
+ *     simili dello stesso fondista (Hopkins & Hewson, MSSE 2001) — più un
+ *     termine che cresce con le settimane che mancano, perché a due mesi dalla
+ *     gara può ancora succedere di tutto e a sei giorni molto meno.
+ *
+ * Da qui la percentuale sale lungo il piano anche chiudendo sempre al target:
+ * non perché il motore cresca soltanto, ma perché resta meno ignoto davanti.
+ */
+
+/** Coda della normale, senza tirarsi dietro una libreria. */
+const normalCdf = (z: number): number => {
+  const sign = z < 0 ? -1 : 1;
+  const a = Math.abs(z) / Math.SQRT2;
+  const t = 1 / (1 + 0.3275911 * a);
+  const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592)
+    * t * Math.exp(-a * a);
+  return 0.5 * (1 + sign * y);
+};
+
+export interface GoalOdds {
+  /** Il tempo obiettivo, in secondi. */
+  targetSec: number;
+  /** Il tempo che quel motore produce nell'aria attesa il giorno di gara. */
+  predictedSec: number;
+  /** Probabilità di stare sotto l'obiettivo, 0-1. */
+  p: number;
+  /** Settimane che separano la seduta dalla gara. */
+  weeksLeft: number;
+  /** Deviazione standard usata, in % del tempo previsto. */
+  sigmaPct: number;
+}
+
+export function kikkoGoalOdds(opts: {
+  vdot: number;
+  distanceKm: number;
+  targetSec: number;
+  /** Data della gara: serve per l'aria attesa quel giorno. */
+  raceIso: string;
+  /** Data della seduta: serve per contare quanto manca. */
+  sessionIso: string;
+}): GoalOdds {
+  const { vdot, distanceKm, targetSec, raceIso, sessionIso } = opts;
+  const b = basesFor(vdot);
+
+  // sotto i 10 km comanda il ritmo gara, sopra la tenuta
+  const short = distanceKm <= 10;
+  const basePace = short ? b.race : b.hm;
+  const band = heatBandForIndex(romeHeatIndexForDate(raceIso));
+  const predictedSec = heatPace(short ? "reps" : "long", band, basePace).midSec * distanceKm;
+
+  const weeksLeft = Math.max(0.5, daysBetween(sessionIso, raceIso) / 7);
+  const sigmaPct = 1.4 + 0.15 * weeksLeft;
+  const p = normalCdf((targetSec - predictedSec) / ((sigmaPct / 100) * predictedSec));
+
+  return {
+    targetSec,
+    predictedSec,
+    p: Math.min(0.99, Math.max(0.01, p)),
+    weeksLeft,
+    sigmaPct,
+  };
+}
+
+/**
+ * Gli obiettivi di kikkoSub20, in ordine di ambizione.
+ *
+ * Due, perché il piano ne ha davvero due: la sub-20 cade a metà strada — è
+ * quella che dà il nome al piano — e il 19:33 è il tetto verso cui punta la
+ * progressione del VDOT. Mostrarne uno solo nasconderebbe metà della storia.
+ */
+export const KIKKO_SUB20_TARGETS = [
+  { label: "sub-20", sec: 19 * 60 + 59 },
+  { label: KIKKO_SUB20_META.goalTime, sec: 19 * 60 + 33 },
+];
 
 export const KIKKO_SUB20_LEGEND: { color: string; label: string; opacity?: number }[] = [
   { color: "#EF4444", label: "Qualità 1 · intervalli a ritmo gara" },

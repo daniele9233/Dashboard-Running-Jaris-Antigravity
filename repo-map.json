@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-08-20T14:26:24.872Z",
+  "generated_at": "2026-08-20T15:03:06.205Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -4754,9 +4754,9 @@
         "react",
         "react-i18next"
       ],
-      "hash": "bff1e129fdf9e66e06ac7cabb58eddd07fd7c9e05fcf916d0eaf38d90d23f6d7",
-      "last_modified": "2026-08-20T14:26:24.873Z",
-      "size_bytes": 108920
+      "hash": "761cd01e24f99e50fbeb707cb1ae55f66bfe12c1f7d6daf7d35bf0b3b178a6ab",
+      "last_modified": "2026-08-20T15:02:45.048Z",
+      "size_bytes": 115493
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -4992,6 +4992,7 @@
         "KIKKO_SUB135_RACE_PACE",
         "KIKKO_SUB135_RACE_PACE_SEC",
         "KIKKO_SUB135_SESSIONS",
+        "KIKKO_SUB135_TARGETS",
         "KIKKO_SUB135_WEEK_VDOT",
         "KIKKO_SUB135_WEEKLY_KM",
         "kikkoSub135ActualWeeklyKm",
@@ -5004,9 +5005,9 @@
         "../types/api",
         "./kikkoSub20Plan"
       ],
-      "hash": "663a287a67fd9b5e037b69139dbd8cc0339741ebb2ec04102b97a9e48736fb97",
-      "last_modified": "2026-08-20T14:21:01.322Z",
-      "size_bytes": 12375
+      "hash": "377d837d35dfe9c849ad5364e3f4465adf77920fa3261cff9e52523d3383e039",
+      "last_modified": "2026-08-20T15:00:07.989Z",
+      "size_bytes": 12547
     },
     {
       "path": "src/data/kikkoSub20Plan.test.ts",
@@ -5023,9 +5024,9 @@
         "./kikkoSub20Plan",
         "vitest"
       ],
-      "hash": "df72518e2d752a87e0dffa3507fc8a715d1bf72082ae31ae4eaa224251000be4",
-      "last_modified": "2026-08-20T14:15:33.824Z",
-      "size_bytes": 21319
+      "hash": "4de3b122e7f3c332280f909d6d81be751aa68ab4ba6005ac78637cec6c6c3a19",
+      "last_modified": "2026-08-20T15:03:06.205Z",
+      "size_bytes": 24145
     },
     {
       "path": "src/data/kikkoSub20Plan.ts",
@@ -5049,6 +5050,7 @@
         "dewPoint",
         "easy",
         "fmtNum",
+        "GoalOdds",
         "HeatBand",
         "heatBandForDate",
         "heatBandForIndex",
@@ -5066,10 +5068,12 @@
         "KIKKO_SUB20_META",
         "KIKKO_SUB20_PLAN",
         "KIKKO_SUB20_SESSIONS",
+        "KIKKO_SUB20_TARGETS",
         "KIKKO_SUB20_WEEKLY_KM",
         "KIKKO_VDOT_GOAL",
         "KIKKO_VDOT_START",
         "KIKKO_WEEK_VDOT",
+        "kikkoGoalOdds",
         "kikkoHeatInfo",
         "kikkoSub20ActualWeeklyKm",
         "kikkoSub20HeatInfo",
@@ -5096,9 +5100,9 @@
       "imports": [
         "../types/api"
       ],
-      "hash": "b4cd9f2c09f94b8735e9e6f4d4a28a607b46cce62181cf096dc7b7baf2579ca9",
-      "last_modified": "2026-08-20T14:21:01.283Z",
-      "size_bytes": 34475
+      "hash": "1d56cf2244fdae462244461a305291b0141a145e22894488713a0f025d5ba4e1",
+      "last_modified": "2026-08-20T14:59:37.242Z",
+      "size_bytes": 38865
     },
     {
       "path": "src/data/sub20Plan.ts",

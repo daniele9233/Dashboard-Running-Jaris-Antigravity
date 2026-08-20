@@ -267,6 +267,11 @@ export const KIKKO_SUB135_LEGEND: { color: string; label: string; opacity?: numb
   { color: "#2A2A2A", label: "Riposo", opacity: 0.3 },
 ];
 
+/** L'obiettivo del piano: uno solo, ed è nel nome. */
+export const KIKKO_SUB135_TARGETS = [
+  { label: KIKKO_SUB135_META.goalTime, sec: KIKKO_SUB135_GOAL_SEC },
+];
+
 /** Il ritmo gara che serve per l'obiettivo, già formattato. */
 export const KIKKO_SUB135_RACE_PACE = secToPace(KIKKO_SUB135_RACE_PACE_SEC);
 
