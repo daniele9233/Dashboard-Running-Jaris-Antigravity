@@ -5,6 +5,8 @@ import {
   KIKKO_SUB20_DELOAD_WEEKS,
   KIKKO_SUB20_TARGETS,
   kikkoGoalOdds,
+  kikkoWindow,
+  KIKKO_SUB20_PLAN,
   KIKKO_SUB20_META,
   kikkoSub20ActualWeeklyKm,
   kikkoSub20RaceDate,
@@ -483,5 +485,72 @@ describe("kikkoSub20 — probabilità dell'obiettivo", () => {
     expect(b.hm).toBeGreaterThan(b.thr);
     expect(b.hm).toBeCloseTo(b.thr + 14, 6);
     expect(b.hm).toBeGreaterThan(265);
+  });
+});
+
+describe("kikkoSub20 — la finestra fra inizio e gara", () => {
+  const total = KIKKO_SUB20_PLAN.weeks.length;
+
+  it("con lo spazio giusto il piano ci sta intero", () => {
+    const w = kikkoWindow(KIKKO_SUB20_PLAN, "2026-07-27", "2026-10-12");
+    expect(w.weeksUsed).toBe(total);
+    expect(w.weeksSkipped).toBe(0);
+    expect(w.firstMonday).toBe("2026-07-27");
+    expect(w.raceIso).toBe("2026-10-18");
+  });
+
+  it("con sei settimane si corrono le ULTIME sei, non le prime", () => {
+    const w = kikkoWindow(KIKKO_SUB20_PLAN, "2026-09-07", "2026-10-18");
+    expect(w.weeksUsed).toBe(6);
+    expect(w.weeksSkipped).toBe(total - 6);
+    expect(w.firstMonday).toBe("2026-09-07");
+
+    const sessions = buildKikkoSub20Sessions("2026-09-07", "2026-10-18");
+    expect(sessions).toHaveLength(6 * 4);
+    // la prima seduta è quella della settimana 7 del piano, non della 1
+    expect(sessions[0].date).toBe("2026-09-08");
+    // e si chiude sempre con la gara
+    expect(sessions[sessions.length - 1].title).toContain("GARA");
+    expect(sessions[sessions.length - 1].date).toBe("2026-10-18");
+  });
+
+  it("tre settimane bastano per taper e gara, e finiscono lì", () => {
+    const sessions = buildKikkoSub20Sessions("2026-09-28", "2026-10-18");
+    expect(sessions).toHaveLength(3 * 4);
+    expect(sessions[sessions.length - 1].date).toBe("2026-10-18");
+    // le tre settimane sono le ultime del piano: volume in discesa verso la gara
+    const km = [0, 1, 2].map((i) =>
+      sessions.slice(i * 4, i * 4 + 4).reduce((sum, x) => sum + x.target_distance_km, 0));
+    expect(km[2]).toBeLessThan(km[0]);
+  });
+
+  it("una finestra più larga del piano non allunga il piano: lo fa cominciare dopo", () => {
+    const w = kikkoWindow(KIKKO_SUB20_PLAN, "2026-06-01", "2026-10-18");
+    expect(w.weeksUsed).toBe(total);
+    expect(w.weeksIdle).toBeGreaterThan(0);
+    expect(w.firstMonday).toBe("2026-07-27");
+    expect(buildKikkoSub20Sessions("2026-06-01", "2026-10-18")).toHaveLength(total * 4);
+  });
+
+  it("la gara si sposta senza trascinarsi dietro la partenza", () => {
+    const prima = buildKikkoSub20Sessions("2026-09-07", "2026-10-18");
+    const dopo = buildKikkoSub20Sessions("2026-09-07", "2026-11-08");
+    // stessa partenza, più settimane in mezzo → più piano
+    expect(dopo.length).toBeGreaterThan(prima.length);
+    expect(dopo[dopo.length - 1].date).toBe("2026-11-08");
+  });
+
+  it("i ritmi seguono la finestra: la settimana giusta, non quella di default", () => {
+    // il 2026-09-08 in una finestra da sei settimane è la settimana 7 del piano
+    const sessions = buildKikkoSub20Sessions("2026-09-07", "2026-10-18");
+    const info = kikkoSub20HeatInfo("2026-09-08", "2026-09-07", "2026-10-18");
+    expect(info.vdot).toBe(KIKKO_WEEK_VDOT[KIKKO_WEEK_VDOT.length - 6]);
+    expect(sessions[0].target_pace).toBe(info.pace!.mid);
+  });
+
+  it("date non lunedì vengono riportate alla loro settimana", () => {
+    const a = kikkoWindow(KIKKO_SUB20_PLAN, "2026-09-10", "2026-10-14");
+    const b = kikkoWindow(KIKKO_SUB20_PLAN, "2026-09-07", "2026-10-12");
+    expect(a).toEqual(b);
   });
 });

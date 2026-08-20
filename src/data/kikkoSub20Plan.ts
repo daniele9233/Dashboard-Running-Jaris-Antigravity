@@ -678,18 +678,28 @@ export function mk(date: string, type: string, cell: CellFn, vdot: number): Sess
 
 export const KIKKO_SUB20_DEFAULT_START = KIKKO_SUB20_META.startDate;
 
+/** Le settimane di kikkoSub20, per chi deve interrogarne il calendario. */
+export const KIKKO_SUB20_PLAN: KikkoPlanDef = {
+  get weeks() { return WEEKS; },
+  defaultStart: KIKKO_SUB20_DEFAULT_START,
+  // pigro come `weeks`: la data di gara nasce da una costante dichiarata più
+  // sotto, e valutarla qui la troverebbe ancora nella zona morta
+  get defaultRace() { return kikkoSub20RaceDate(KIKKO_SUB20_DEFAULT_START); },
+  weekVdot: KIKKO_WEEK_VDOT,
+};
+
 /** Giorni fra il lunedì della settimana 1 e la gara: 9 settimane + domenica. */
 const KIKKO_RACE_OFFSET_DAYS = (KIKKO_SUB20_META.weeks - 1) * 7 + 6;
 
-/** Ricostruisce il piano a partire dal lunedì scelto (la data viene normalizzata). */
-export function buildKikkoSub20Sessions(startDate?: string | null): Session[] {
+/**
+ * Ricostruisce il piano dentro la finestra scelta.
+ *
+ * Senza data di gara vale la durata piena a partire dal lunedì indicato: è il
+ * comportamento di sempre, e i test lo verificano.
+ */
+export function buildKikkoSub20Sessions(startDate?: string | null, raceDate?: string | null): Session[] {
   const start = kikkoSub20NormalizeStart(startDate);
-  const delta = daysBetween(KIKKO_SUB20_DEFAULT_START, start);
-  return WEEKS.flatMap((w, wi) =>
-    w.cells.map((cell, i) =>
-      mk(addDays(w.mon, SLOTS[i].offset + delta), SLOTS[i].type, cell, KIKKO_WEEK_VDOT[wi]),
-    ),
-  );
+  return buildKikkoPlanSessions(KIKKO_SUB20_PLAN, start, raceDate ?? kikkoSub20RaceDate(start));
 }
 
 /** Piano ancorato alla partenza di default. */
@@ -780,44 +790,126 @@ export function heatTable(kind: HeatKind, baseSec: number): HeatRow[] {
  * è esattamente il tipo di divergenza che l'atleta nota subito.
  */
 export function kikkoHeatInfo(
-  plan: { weeks: WeekDef[]; defaultStart: string; weekVdot: number[] },
+  plan: KikkoPlanDef,
   iso: string,
   startDate?: string | null,
+  raceDate?: string | null,
 ) {
-  const start = kikkoSub20NormalizeStart(startDate ?? plan.defaultStart);
-  const delta = daysBetween(plan.defaultStart, start);
   const tempC = romeTempForDate(iso);
   const dpC = romeDewPointForDate(iso);
   const index = tempC + dpC;
   const band = heatBandForIndex(index);
 
-  for (let wi = 0; wi < plan.weeks.length; wi++) {
-    const w = plan.weeks[wi];
-    for (let i = 0; i < w.cells.length; i++) {
-      if (addDays(w.mon, SLOTS[i].offset + delta) !== iso) continue;
-      const cell = w.cells[i](pacesFor(iso, plan.weekVdot[wi]));
-      const kind = cell.kind ?? null;
-      return {
-        tempC, dpC, index, band, kind,
-        vdot: plan.weekVdot[wi],
-        baseSec: cell.baseSec ?? null,
-        base: cell.baseSec != null ? secToPace(cell.baseSec) : null,
-        pace: kind && cell.baseSec != null ? heatPace(kind, band, cell.baseSec) : null,
-      };
-    }
+  const hit = kikkoLookup(plan, iso, kikkoWindow(plan, startDate, raceDate));
+  if (hit) {
+    const cell = plan.weeks[hit.wi].cells[hit.i](pacesFor(iso, plan.weekVdot[hit.wi]));
+    const kind = cell.kind ?? null;
+    return {
+      tempC, dpC, index, band, kind,
+      vdot: plan.weekVdot[hit.wi],
+      baseSec: cell.baseSec ?? null,
+      base: cell.baseSec != null ? secToPace(cell.baseSec) : null,
+      pace: kind && cell.baseSec != null ? heatPace(kind, band, cell.baseSec) : null,
+    };
   }
   return { tempC, dpC, index, band, kind: null, vdot: null, baseSec: null, base: null, pace: null };
 }
 
-/** Le settimane di kikkoSub20, per chi deve interrogarne il calendario. */
-export const KIKKO_SUB20_PLAN = {
-  get weeks() { return WEEKS; },
-  defaultStart: KIKKO_SUB20_DEFAULT_START,
-  weekVdot: KIKKO_WEEK_VDOT,
-};
+export function kikkoSub20HeatInfo(iso: string, startDate?: string | null, raceDate?: string | null) {
+  return kikkoHeatInfo(KIKKO_SUB20_PLAN, iso, startDate, raceDate);
+}
 
-export function kikkoSub20HeatInfo(iso: string, startDate?: string | null) {
-  return kikkoHeatInfo(KIKKO_SUB20_PLAN, iso, startDate);
+/* ── LA FINESTRA: DALL'INIZIO ALLA GARA ─────────────────────────────────────
+ *
+ * Le due date sono indipendenti. Se fra l'inizio e la gara ci stanno tutte le
+ * settimane del piano, il piano ci sta intero; se ce ne stanno sei, se ne
+ * corrono sei.
+ *
+ * E si tagliano DALL'INIZIO, non dalla fine. Non è una scelta di comodo: le
+ * ultime settimane sono quelle che contengono il picco, il richiamo a ritmo
+ * gara e il taper, cioè il lavoro che decide la prestazione. Le prime sono
+ * costruzione, e la costruzione è la parte che si può accorciare quando il
+ * tempo non c'è. Un piano tagliato in coda arriverebbe alla gara nel mezzo di
+ * una settimana di carico, il che è il modo più sicuro di sprecare due mesi.
+ *
+ * Se la finestra è più larga del piano, il piano non si allunga: comincia più
+ * tardi. Inventare settimane in testa vorrebbe dire scrivere allenamenti che
+ * nessuno ha pensato.
+ */
+
+export interface KikkoPlanDef {
+  readonly weeks: WeekDef[];
+  defaultStart: string;
+  readonly defaultRace: string;
+  weekVdot: number[];
+}
+
+export interface KikkoWindow {
+  /** Lunedì della prima settimana effettivamente corsa. */
+  firstMonday: string;
+  /** Domenica di gara, riportata alla domenica della sua settimana. */
+  raceIso: string;
+  /** Quante settimane del piano entrano nella finestra. */
+  weeksUsed: number;
+  /** Quante ne sono state tolte dalla testa. */
+  weeksSkipped: number;
+  /** Settimane vuote prima dell'inizio del piano, se la finestra è più larga. */
+  weeksIdle: number;
+}
+
+/** Quanto del piano entra fra queste due date. */
+export function kikkoWindow(
+  plan: KikkoPlanDef,
+  startIso?: string | null,
+  raceIso?: string | null,
+): KikkoWindow {
+  const total = plan.weeks.length;
+  const raceMonday = kikkoSub20NormalizeStart(raceIso ?? plan.defaultRace);
+  const startMonday = kikkoSub20NormalizeStart(startIso ?? plan.defaultStart);
+
+  const span = Math.round(daysBetween(startMonday, raceMonday) / 7) + 1;
+  const weeksUsed = Math.max(1, Math.min(total, span));
+  const weeksSkipped = total - weeksUsed;
+  const weeksIdle = Math.max(0, span - total);
+
+  return {
+    firstMonday: addDays(raceMonday, -(weeksUsed - 1) * 7),
+    raceIso: addDays(raceMonday, 6),
+    weeksUsed,
+    weeksSkipped,
+    weeksIdle,
+  };
+}
+
+/**
+ * A che settimana del piano corrisponde una certa data, dentro la finestra.
+ * Restituisce null se quel giorno il piano non prevede niente.
+ */
+function kikkoLookup(plan: KikkoPlanDef, iso: string, w: KikkoWindow) {
+  for (let wi = w.weeksSkipped; wi < plan.weeks.length; wi++) {
+    const mon = addDays(w.firstMonday, (wi - w.weeksSkipped) * 7);
+    for (let i = 0; i < plan.weeks[wi].cells.length; i++) {
+      if (addDays(mon, SLOTS[i].offset) === iso) return { wi, i, mon };
+    }
+  }
+  return null;
+}
+
+/** Il piano dentro la finestra scelta, seduta per seduta. */
+export function buildKikkoPlanSessions(
+  plan: KikkoPlanDef,
+  startIso?: string | null,
+  raceIso?: string | null,
+): Session[] {
+  const w = kikkoWindow(plan, startIso, raceIso);
+  const out: Session[] = [];
+  for (let wi = w.weeksSkipped; wi < plan.weeks.length; wi++) {
+    const mon = addDays(w.firstMonday, (wi - w.weeksSkipped) * 7);
+    plan.weeks[wi].cells.forEach((cell, i) => {
+      out.push(mk(addDays(mon, SLOTS[i].offset), SLOTS[i].type, cell, plan.weekVdot[wi]));
+    });
+  }
+  return out;
 }
 
 /* ── QUANTO SEI VICINO ALL'OBIETTIVO ────────────────────────────────────────

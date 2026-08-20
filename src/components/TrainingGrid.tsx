@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer, XCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer, XCircle, CalendarDays, Target } from "lucide-react";
 import { useApi, invalidateCache } from "../hooks/useApi";
 import { API_CACHE } from "../hooks/apiCacheKeys";
 import { getRuns } from "../api";
@@ -9,7 +9,7 @@ import { evaluatePlan } from "../utils/trainingAdherence";
 import { SessionVerdict, AdherenceStrip } from "./TrainingAdherence";
 import {
   getTrainingPlan, generateTrainingPlan, adaptTrainingPlan, evaluateTest,
-  getSub20Status, putSub20Status, putSub20StartDate,
+  getSub20Status, putSub20Status, putSub20Window, putSub20Goal,
   type Sub20StatusResponse, type Sub20SessionStatus,
 } from "../api";
 import type { Session, TrainingPlanResponse, AdaptAdaptation } from "../types/api";
@@ -17,12 +17,12 @@ import {
   KIKKO_SUB20_LEGEND, KIKKO_SUB20_DEFAULT_START,
   buildKikkoSub20Sessions, kikkoSub20RaceDate, kikkoSub20NormalizeStart,
   kikkoSub20HeatInfo, heatTable, heatReferenceLabel,
-  kikkoGoalOdds, KIKKO_SUB20_TARGETS, KIKKO_SUB20_META, addDays,
+  kikkoGoalOdds, KIKKO_SUB20_TARGETS, KIKKO_SUB20_PLAN, kikkoWindow, addDays,
 } from "../data/kikkoSub20Plan";
 import {
   KIKKO_SUB135_LEGEND, KIKKO_SUB135_DEFAULT_START, KIKKO_SUB135_META,
   buildKikkoSub135Sessions, kikkoSub135RaceDate, kikkoSub135HeatInfo,
-  KIKKO_SUB135_TARGETS,
+  KIKKO_SUB135_TARGETS, KIKKO_SUB135_PLAN,
 } from "../data/kikkoSub135Plan";
 
 /**
@@ -33,6 +33,16 @@ import {
  * scegliere all'atleta il target ogni mattina.
  */
 type KikkoPlanId = "off" | "sub20" | "sub135";
+
+/**
+ * La finestra del piano: quando comincio e quando corro.
+ *
+ * Le due date NON si legano fra loro. Se la gara è fra sei settimane il piano
+ * ne corre sei — le ultime sei, quelle col picco e il taper — invece di
+ * spostarti la gara a dodici settimane da oggi. La durata la decide l'atleta,
+ * non il software.
+ */
+interface Window { start: string; race: string }
 
 /** Verde finché l'aria non conta, ambra quando inizia a costare, rosso oltre. */
 const HEAT_COLOR: Record<string, string> = {
@@ -49,11 +59,11 @@ const HEAT_COLOR: Record<string, string> = {
  * paga. La tabella sta accanto alla seduta, non sepolta nella descrizione.
  */
 function HeatPanel({
-  date, startDate, plan,
-}: { date: string; startDate: string; plan: KikkoPlanId }) {
+  date, startDate, raceDate, plan,
+}: { date: string; startDate: string; raceDate: string; plan: KikkoPlanId }) {
   const info = plan === "sub135"
-    ? kikkoSub135HeatInfo(date, startDate)
-    : kikkoSub20HeatInfo(date, startDate);
+    ? kikkoSub135HeatInfo(date, startDate, raceDate)
+    : kikkoSub20HeatInfo(date, startDate, raceDate);
   const { kind, baseSec } = info;
   const col = HEAT_COLOR[info.band.id] ?? "#A3E635";
   // La tabella usa la base di QUELLA settimana: il VDOT sale lungo il piano,
@@ -192,6 +202,64 @@ function OddsPanel({
       </div>
     </div>
   );
+}
+
+/**
+ * Un campo data che si comporta come un calendario.
+ *
+ * Due correzioni a quello nativo. La prima è l'icona: senza `color-scheme:
+ * dark` il browser la disegna quasi nera su fondo nero, e il campo sembra
+ * testo morto — la riga sta in index.css e vale per tutta l'app. La seconda è
+ * il bersaglio: l'icona nativa è larga sedici pixel, qui il clic apre il
+ * calendario da qualunque punto del campo.
+ */
+function DateField({
+  label, value, onChange, title, accent,
+}: {
+  label: string;
+  value: string;
+  onChange: (iso: string) => void;
+  title: string;
+  accent?: string;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const open = () => {
+    const el = ref.current;
+    if (!el) return;
+    // showPicker non c'è su tutti i browser: dove manca resta il clic nativo
+    try { (el as HTMLInputElement & { showPicker?: () => void }).showPicker?.(); }
+    catch { /* il campo resta comunque digitabile */ }
+  };
+
+  return (
+    <div
+      onClick={open}
+      role="presentation"
+      title={title}
+      className="flex items-center gap-1.5 rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-2 py-1 cursor-pointer hover:border-white/25 transition-colors"
+    >
+      <CalendarDays className="w-3.5 h-3.5 shrink-0" style={{ color: accent ?? "#6B7280" }} />
+      <span className="text-[9px] font-black tracking-[0.18em] uppercase text-gray-600">{label}</span>
+      <input
+        ref={ref}
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="bg-transparent border-0 p-0 text-xs font-bold outline-none cursor-pointer"
+        style={{ color: accent ?? "#FFFFFF" }}
+      />
+    </div>
+  );
+}
+
+/** "19:59" o "1:34:35" → secondi. Null se non è un tempo. */
+function parseGoal(text: string): number | null {
+  const parts = text.trim().split(":").map((x) => Number(x));
+  if (!parts.length || parts.some((n) => !Number.isFinite(n) || n < 0)) return null;
+  const sec = parts.length === 2 ? parts[0] * 60 + parts[1]
+    : parts.length === 3 ? parts[0] * 3600 + parts[1] * 60 + parts[2]
+    : null;
+  return sec != null && sec >= 300 && sec <= 6 * 3600 ? sec : null;
 }
 
 /** "19:47" o "1:34:12". */
@@ -1502,10 +1570,15 @@ export function TrainingGrid() {
    * della mezza vive in pagina: il default è già quello giusto e spostarla è
    * un'eccezione, non la regola.
    */
-  const [sub20StartDate, setSub20StartDate] = useState<string>(KIKKO_SUB20_DEFAULT_START);
-  const [sub20StartDraft, setSub20StartDraft] = useState<string>(KIKKO_SUB20_DEFAULT_START);
-  const [sub135StartDate, setSub135StartDate] = useState<string>(KIKKO_SUB135_DEFAULT_START);
-  const [sub135StartDraft, setSub135StartDraft] = useState<string>(KIKKO_SUB135_DEFAULT_START);
+  const [sub20Win, setSub20Win] = useState<Window>({
+    start: KIKKO_SUB20_DEFAULT_START,
+    race: kikkoSub20RaceDate(KIKKO_SUB20_DEFAULT_START),
+  });
+  const [sub135Win, setSub135Win] = useState<Window>({
+    start: KIKKO_SUB135_DEFAULT_START,
+    race: kikkoSub135RaceDate(KIKKO_SUB135_DEFAULT_START),
+  });
+  const [draft, setDraft] = useState<Window | null>(null);
 
   const openDay = (date: Date) => setDetailDate(date);
   const closeDay = useCallback(() => setDetailDate(null), []);
@@ -1538,12 +1611,38 @@ export function TrainingGrid() {
   }, [planData]);
 
 
+  /**
+   * Il tempo obiettivo, in secondi, per piano.
+   *
+   * Vive sul server accanto alla data di partenza — è configurazione del
+   * piano, non una preferenza di questo browser — e finché non arriva valgono
+   * quelli scritti dentro i piani.
+   */
+  const [goals, setGoals] = useState<Record<string, number>>({});
+  const [goalDraft, setGoalDraft] = useState<string | null>(null);
+
   /** Tutto quello che dipende dal piano acceso, in un posto solo. */
-  const activeStart = kikkoPlan === "sub135" ? sub135StartDate : sub20StartDate;
-  const activeRaceIso = kikkoPlan === "sub135"
-    ? kikkoSub135RaceDate(sub135StartDate)
-    : kikkoSub20RaceDate(sub20StartDate);
-  const activeWeeks = kikkoPlan === "sub135" ? KIKKO_SUB135_META.weeks : KIKKO_SUB20_META.weeks;
+  const activeWin = kikkoPlan === "sub135" ? sub135Win : sub20Win;
+  const activeStart = activeWin.start;
+  const activeRaceIso = activeWin.race;
+  const activePlan = kikkoPlan === "sub135" ? KIKKO_SUB135_PLAN : KIKKO_SUB20_PLAN;
+  const activeAccent = kikkoPlan === "sub135" ? "#00FFAA" : "var(--app-accent)";
+
+  /** Gli obiettivi scritti nel piano, che valgono finché non se ne sceglie uno. */
+  const planTargets = kikkoPlan === "sub135" ? KIKKO_SUB135_TARGETS : KIKKO_SUB20_TARGETS;
+  const goalSec = goals[kikkoPlan] ?? planTargets[0].sec;
+
+  /**
+   * Cosa misura la percentuale: l'obiettivo scelto, più quello di targa del
+   * piano se è più ambizioso. Due righe al massimo — la seconda esiste perché
+   * kikkoSub20 punta al 19:33 anche quando l'atleta si accontenta della sub-20,
+   * e nascondere il tetto verso cui sale il VDOT racconterebbe metà storia.
+   */
+  const activeTargets = useMemo(() => {
+    const chosen = { label: fmtRaceTime(goalSec), sec: goalSec };
+    const stretch = planTargets.find((t) => t.sec < goalSec - 1);
+    return stretch ? [chosen, stretch] : [chosen];
+  }, [goalSec, planTargets]);
 
   /**
    * La probabilità del giorno, se quel giorno ha una qualità.
@@ -1554,8 +1653,8 @@ export function TrainingGrid() {
    */
   const activeOdds = (dayKey: string) => {
     const info = kikkoPlan === "sub135"
-      ? kikkoSub135HeatInfo(dayKey, activeStart)
-      : kikkoSub20HeatInfo(dayKey, activeStart);
+      ? kikkoSub135HeatInfo(dayKey, activeStart, activeRaceIso)
+      : kikkoSub20HeatInfo(dayKey, activeStart, activeRaceIso);
     const session = sub20Map[dayKey];
     const isQuality = session?.type === "intervals" || session?.type === "tempo";
     if (!isQuality || info.vdot == null) return null;
@@ -1565,23 +1664,32 @@ export function TrainingGrid() {
         vdot={info.vdot}
         raceIso={activeRaceIso}
         distanceKm={kikkoPlan === "sub135" ? 21.0975 : 5}
-        targets={kikkoPlan === "sub135" ? KIKKO_SUB135_TARGETS : KIKKO_SUB20_TARGETS}
+        targets={activeTargets}
       />
     );
   };
 
-  /** La bozza dei due calendari segue il piano acceso, non una sola data. */
-  const activeDraft = kikkoPlan === "sub135" ? sub135StartDraft : sub20StartDraft;
-  const setActiveDraft = kikkoPlan === "sub135" ? setSub135StartDraft : setSub20StartDraft;
-  /** La gara mostrata nel secondo calendario: la domenica dell'ultima settimana. */
-  const draftRaceIso = addDays(activeDraft, (activeWeeks - 1) * 7 + 6);
+  /** La bozza dei due calendari: quella applicata quando non si sta modificando. */
+  const shownWin = draft ?? activeWin;
+  /**
+   * Quanto del piano entra nella finestra scelta.
+   *
+   * Se le settimane bastano il piano ci sta intero; se sono meno si corrono le
+   * ULTIME — quelle col picco e il taper — e la pagina lo dice, invece di far
+   * finta che il programma sia lo stesso.
+   */
+  const draftWindow = useMemo(
+    () => kikkoWindow(activePlan, shownWin.start, shownWin.race),
+    [activePlan, shownWin],
+  );
+  const dirty = shownWin.start !== activeWin.start || shownWin.race !== activeWin.race;
 
-  // Il piano acceso, costruito rispetto alla sua partenza.
+  // Il piano acceso, dentro la sua finestra.
   const sub20Sessions = useMemo(
     () => (kikkoPlan === "sub135"
-      ? buildKikkoSub135Sessions(sub135StartDate)
-      : buildKikkoSub20Sessions(sub20StartDate)),
-    [kikkoPlan, sub20StartDate, sub135StartDate],
+      ? buildKikkoSub135Sessions(sub135Win.start, sub135Win.race)
+      : buildKikkoSub20Sessions(sub20Win.start, sub20Win.race)),
+    [kikkoPlan, sub20Win, sub135Win],
   );
   const sub20Map = useMemo(() => {
     const map: Record<string, Session> = {};
@@ -1612,13 +1720,20 @@ export function TrainingGrid() {
   const [sub20Status, setSub20StatusLocal] = useState<Record<string, Sub20SessionStatus>>({});
   useEffect(() => {
     if (sub20StatusData?.statuses) setSub20StatusLocal(sub20StatusData.statuses);
-    if (sub20StatusData?.start_date) {
-      // Sul DB può esserci la partenza del vecchio piano Sub-20, che era
-      // ancorata a un martedì: senza normalizzare, kikkoSub20 slitta di un
-      // giorno e le qualità cadono di mercoledì e venerdì.
-      const monday = kikkoSub20NormalizeStart(sub20StatusData.start_date);
-      setSub20StartDate(monday);
-      setSub20StartDraft(monday);
+    if (sub20StatusData?.goals) setGoals(sub20StatusData.goals);
+    // Sul DB può esserci la partenza del vecchio piano Sub-20, che era ancorata
+    // a un martedì: senza normalizzare, kikkoSub20 slitta di un giorno e le
+    // qualità cadono di mercoledì e venerdì.
+    if (sub20StatusData?.start_date || sub20StatusData?.race_date) {
+      setSub20Win((prev) => ({
+        start: sub20StatusData.start_date
+          ? kikkoSub20NormalizeStart(sub20StatusData.start_date)
+          : prev.start,
+        race: sub20StatusData.race_date
+          ? kikkoSub20NormalizeStart(sub20StatusData.race_date)
+          : prev.race,
+      }));
+      setDraft(null);
     }
   }, [sub20StatusData]);
 
@@ -1643,38 +1758,65 @@ export function TrainingGrid() {
   }, []);
 
 
-  // "Ricalcola": la data scelta viene riportata al lunedì della sua settimana
-  // (il piano è ancorato al lunedì), il calendario ci salta sopra e la scelta
-  // si salva su DB già normalizzata.
-  const recalcSub20FromDraft = useCallback(async () => {
-    if (!activeDraft || activeDraft.length !== 10) return;
-    const monday = kikkoSub20NormalizeStart(activeDraft);
-    const [y, m, d] = monday.split("-").map(Number);
+  /**
+   * "Applica": la finestra in bozza diventa quella del piano.
+   *
+   * Entrambe le date vengono riportate al lunedì della loro settimana — il
+   * piano è ancorato al lunedì, e una partenza di mercoledì farebbe cadere le
+   * qualità di giovedì e sabato. Il calendario salta sulla prima settimana
+   * davvero corsa, che con una finestra stretta non è quella scelta ma la
+   * prima che il piano riesce a farci stare.
+   */
+  const applyWindow = useCallback(async () => {
+    if (!draft) return;
+    const win: Window = {
+      start: kikkoSub20NormalizeStart(draft.start),
+      race: kikkoSub20NormalizeStart(draft.race),
+    };
+    setDraft(null);
+
+    const w = kikkoWindow(activePlan, win.start, win.race);
+    const [y, m, d] = w.firstMonday.split("-").map(Number);
     setCurrentDate(new Date(y, m - 1, d));
     setView("Month");
 
-    // La partenza della mezza resta in pagina: sul DB c'è un solo campo
-    // start_date, ed è di kikkoSub20. Salvarci sopra sposterebbe l'altro piano.
+    // Sul DB c'è una finestra sola, ed è di kikkoSub20: quella della mezza vive
+    // in pagina. Salvarci sopra sposterebbe l'altro piano.
     if (kikkoPlan === "sub135") {
-      setSub135StartDate(monday);
-      setSub135StartDraft(monday);
+      setSub135Win(win);
       return;
     }
 
-    setSub20StartDate(monday);
-    setSub20StartDraft(monday);
+    setSub20Win(win);
     try {
-      const res = await putSub20StartDate(monday);
-      if (res?.start_date) {
-        const normalized = kikkoSub20NormalizeStart(res.start_date);
-        setSub20StartDate(normalized);
-        setSub20StartDraft(normalized);
+      const res = await putSub20Window(win.start, win.race);
+      if (res?.start_date && res?.race_date) {
+        setSub20Win({
+          start: kikkoSub20NormalizeStart(res.start_date),
+          race: kikkoSub20NormalizeStart(res.race_date),
+        });
       }
       invalidateCache("sub20-status");
     } catch {
       /* l'ottimistico resta */
     }
-  }, [activeDraft, kikkoPlan]);
+  }, [draft, kikkoPlan, activePlan]);
+
+  /** Salva il tempo obiettivo del piano acceso. Testo non valido: si ignora. */
+  const saveGoal = useCallback(async () => {
+    if (goalDraft == null) return;
+    const sec = parseGoal(goalDraft);
+    setGoalDraft(null);
+    if (sec == null || sec === goalSec) return;
+    setGoals((prev) => ({ ...prev, [kikkoPlan]: sec }));
+    try {
+      const res = await putSub20Goal(kikkoPlan, sec);
+      if (res?.goals) setGoals(res.goals);
+      invalidateCache("sub20-status");
+    } catch {
+      /* l'ottimistico resta; ritenta al prossimo salvataggio */
+    }
+  }, [goalDraft, goalSec, kikkoPlan]);
 
   const next = () => {
     const d = new Date(currentDate);
@@ -1919,7 +2061,7 @@ export function TrainingGrid() {
 
               <p className="text-gray-300 leading-relaxed mb-6">{display.description}</p>
 
-              {showSub20 && <HeatPanel date={dayKey} startDate={activeStart} plan={kikkoPlan} />}
+              {showSub20 && <HeatPanel date={dayKey} startDate={activeStart} raceDate={activeRaceIso} plan={kikkoPlan} />}
               {showSub20 && activeOdds(dayKey)}
 
               {display.details.length > 0 && (
@@ -2133,52 +2275,78 @@ export function TrainingGrid() {
             );
           })}
 
-          {/* Inizio e gara: due calendari, legati dalla durata del piano.
-              Toccandone uno si sposta l'altro — il piano dura quello che dura,
-              e le settimane non si allungano da sole. */}
+          {/* Inizio, gara e obiettivo.
+              I due calendari sono legati dalla durata del piano: toccandone uno
+              si sposta l'altro, perché le settimane non si allungano da sole.
+              L'obiettivo invece è libero — è la domanda a cui risponde la
+              percentuale sulle sedute di qualità. */}
           {showSub20 && (
-            <div className="flex items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#141414] px-2.5 py-1.5">
-              <label className="flex items-center gap-1.5">
-                <span className="text-[9px] font-black tracking-[0.18em] uppercase text-gray-600">Inizio</span>
-                <input
-                  type="date"
-                  value={activeDraft}
-                  onChange={(e) => setActiveDraft(kikkoSub20NormalizeStart(e.target.value))}
-                  title="Lunedì di partenza del piano"
-                  className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-md px-2 py-1 text-xs font-bold text-white focus:outline-none focus:border-[#C0FF00]/50"
-                />
-              </label>
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#141414] px-2.5 py-1.5">
+              <DateField
+                label="Inizio"
+                value={shownWin.start}
+                onChange={(iso) => setDraft({ ...shownWin, start: kikkoSub20NormalizeStart(iso) })}
+                title="Lunedì da cui parti"
+              />
 
               <span className="text-gray-700">→</span>
 
-              <label className="flex items-center gap-1.5">
-                <span className="text-[9px] font-black tracking-[0.18em] uppercase text-gray-600">Gara</span>
-                <input
-                  type="date"
-                  value={draftRaceIso}
-                  onChange={(e) => {
-                    // la gara è sempre la domenica dell'ultima settimana:
-                    // si risale al lunedì di quella settimana e si tolgono le
-                    // settimane del piano
-                    const lastMonday = kikkoSub20NormalizeStart(e.target.value);
-                    setActiveDraft(addDays(lastMonday, -(activeWeeks - 1) * 7));
-                  }}
-                  title="Domenica di gara — sposta la partenza di conseguenza"
-                  className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-md px-2 py-1 text-xs font-bold focus:outline-none focus:border-[#C0FF00]/50"
-                  style={{ color: kikkoPlan === "sub135" ? "#00FFAA" : "var(--app-accent)" }}
-                />
-              </label>
+              <DateField
+                label="Gara"
+                value={addDays(kikkoSub20NormalizeStart(shownWin.race), 6)}
+                accent={activeAccent}
+                title="Giorno della gara — indipendente dall'inizio"
+                onChange={(iso) => setDraft({ ...shownWin, race: kikkoSub20NormalizeStart(iso) })}
+              />
 
-              <span className="text-[10px] text-gray-600 whitespace-nowrap">{activeWeeks} sett.</span>
+              {/* Quanto del piano ci sta. Se la finestra è stretta si corrono
+                  le ultime settimane, quelle col picco e il taper, e va detto. */}
+              <span
+                className="text-[10px] whitespace-nowrap"
+                style={{ color: draftWindow.weeksSkipped > 0 ? "#F59E0B" : "#6B7280" }}
+                title={
+                  draftWindow.weeksSkipped > 0
+                    ? `Il piano ne ha ${activePlan.weeks.length}: con questa finestra si corrono le ultime ${draftWindow.weeksUsed}, dal picco al taper.`
+                    : draftWindow.weeksIdle > 0
+                      ? `Il piano dura ${activePlan.weeks.length} settimane: le prime ${draftWindow.weeksIdle} restano libere.`
+                      : "Il piano ci sta intero."
+                }
+              >
+                {draftWindow.weeksUsed} sett.
+                {draftWindow.weeksSkipped > 0 && ` · ultime ${draftWindow.weeksUsed} di ${activePlan.weeks.length}`}
+                {draftWindow.weeksIdle > 0 && ` · ${draftWindow.weeksIdle} libere prima`}
+              </span>
 
               <button
                 type="button"
-                onClick={recalcSub20FromDraft}
-                disabled={activeDraft === activeStart}
+                onClick={applyWindow}
+                disabled={!dirty}
                 className="px-3 py-1 rounded-md text-xs font-bold text-gray-300 bg-[#1E1E1E] border border-[#2A2A2A] hover:text-white disabled:opacity-30 disabled:cursor-default transition-colors"
               >
                 Applica
               </button>
+
+              <span className="w-px h-5 bg-[#2A2A2A]" />
+
+              <label
+                className="flex items-center gap-1.5 rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-2 py-1"
+                title="Il tempo che vuoi fare. È l'obiettivo su cui si misura la percentuale delle sedute di qualità."
+              >
+                <Target className="w-3.5 h-3.5 shrink-0" style={{ color: activeAccent }} />
+                <span className="text-[9px] font-black tracking-[0.18em] uppercase text-gray-600">Obiettivo</span>
+                <input
+                  value={goalDraft ?? fmtRaceTime(goalSec)}
+                  onChange={(e) => setGoalDraft(e.target.value)}
+                  onBlur={saveGoal}
+                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                  inputMode="numeric"
+                  placeholder={kikkoPlan === "sub135" ? "1:34:35" : "19:59"}
+                  className="w-[4.5rem] bg-transparent border-0 p-0 text-xs font-bold outline-none"
+                  style={{
+                    color: goalDraft != null && parseGoal(goalDraft) == null ? "#F43F5E" : activeAccent,
+                  }}
+                />
+              </label>
             </div>
           )}
 

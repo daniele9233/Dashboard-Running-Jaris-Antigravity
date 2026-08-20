@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-08-20T15:03:06.205Z",
+  "generated_at": "2026-08-20T18:15:35.941Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -17,7 +17,7 @@
     "files": 209,
     "backend_routes": 68,
     "frontend_routes": 18,
-    "api_clients": 74
+    "api_clients": 76
   },
   "files": [
     {
@@ -745,9 +745,9 @@
         "typing",
         "urllib.parse"
       ],
-      "hash": "0d44b03d51c61322baed89521eb6305cba0a7091ef7aafa31bd80167df5818d8",
-      "last_modified": "2026-08-20T14:09:16.560Z",
-      "size_bytes": 497013
+      "hash": "946135969dbeb7f771f50ddc50f0df83b26346eb17a8089f79972ad6d295e598",
+      "last_modified": "2026-08-20T18:07:31.794Z",
+      "size_bytes": 498490
     },
     {
       "path": "backend/test_intervals.py",
@@ -1788,9 +1788,9 @@
         "../types/jarvis",
         "./client"
       ],
-      "hash": "c0ce36816882315f71823f029c03f3a036f106d7c7861d532a9201e0efc7b40c",
-      "last_modified": "2026-08-20T14:09:16.561Z",
-      "size_bytes": 24512
+      "hash": "28511dc38a0483a11bcb47e05e793413433d38ccd9f189a385370f7d7f66ee71",
+      "last_modified": "2026-08-20T18:07:41.216Z",
+      "size_bytes": 25178
     },
     {
       "path": "src/App.tsx",
@@ -4754,9 +4754,9 @@
         "react",
         "react-i18next"
       ],
-      "hash": "761cd01e24f99e50fbeb707cb1ae55f66bfe12c1f7d6daf7d35bf0b3b178a6ab",
-      "last_modified": "2026-08-20T15:02:45.048Z",
-      "size_bytes": 115493
+      "hash": "1198ed2469c790bccf3304fcf133d6eb563ab383b9123329fcfa461ef90a8970",
+      "last_modified": "2026-08-20T18:10:21.148Z",
+      "size_bytes": 122172
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -5005,8 +5005,8 @@
         "../types/api",
         "./kikkoSub20Plan"
       ],
-      "hash": "377d837d35dfe9c849ad5364e3f4465adf77920fa3261cff9e52523d3383e039",
-      "last_modified": "2026-08-20T15:00:07.989Z",
+      "hash": "bb140fcf46ff9cb93c03441c906c046b4dc6c8a7a937d8bb56dd54a82bc7aab6",
+      "last_modified": "2026-08-20T18:07:04.786Z",
       "size_bytes": 12547
     },
     {
@@ -5024,9 +5024,9 @@
         "./kikkoSub20Plan",
         "vitest"
       ],
-      "hash": "4de3b122e7f3c332280f909d6d81be751aa68ab4ba6005ac78637cec6c6c3a19",
-      "last_modified": "2026-08-20T15:03:06.205Z",
-      "size_bytes": 24145
+      "hash": "ae9c0ada1de2bed7786725814c3c555473412381fe6a0abd073b4bbc0432ce3b",
+      "last_modified": "2026-08-20T18:15:35.941Z",
+      "size_bytes": 27362
     },
     {
       "path": "src/data/kikkoSub20Plan.ts",
@@ -5043,6 +5043,7 @@
         "addDays",
         "Bases",
         "basesFor",
+        "buildKikkoPlanSessions",
         "buildKikkoSub20Sessions",
         "Cell",
         "CellFn",
@@ -5075,10 +5076,13 @@
         "KIKKO_WEEK_VDOT",
         "kikkoGoalOdds",
         "kikkoHeatInfo",
+        "KikkoPlanDef",
         "kikkoSub20ActualWeeklyKm",
         "kikkoSub20HeatInfo",
         "kikkoSub20NormalizeStart",
         "kikkoSub20RaceDate",
+        "kikkoWindow",
+        "KikkoWindow",
         "longReps",
         "longRun",
         "mk",
@@ -5100,9 +5104,9 @@
       "imports": [
         "../types/api"
       ],
-      "hash": "1d56cf2244fdae462244461a305291b0141a145e22894488713a0f025d5ba4e1",
-      "last_modified": "2026-08-20T14:59:37.242Z",
-      "size_bytes": 38865
+      "hash": "1bf68074933dad133a58c1fc1225400fcfeba00cd60be4cb53583f8cf61a711b",
+      "last_modified": "2026-08-20T18:07:04.734Z",
+      "size_bytes": 42415
     },
     {
       "path": "src/data/sub20Plan.ts",
@@ -5319,14 +5323,15 @@
         "ai",
         "layout",
         "map",
-        "statistics"
+        "statistics",
+        "training"
       ],
       "exports": [],
       "routes": [],
       "imports": [],
-      "hash": "2aa1b6d9c3dfc75a3a852fc732daca3013da36846c55bb2c71c398981462a0bf",
-      "last_modified": "2026-07-28T06:33:05.768Z",
-      "size_bytes": 6761
+      "hash": "6099e58297e81916708bae711935d072e3d0cfde19cfc7ac7c6977d02773ca37",
+      "last_modified": "2026-08-20T18:00:14.649Z",
+      "size_bytes": 7224
     },
     {
       "path": "src/lib/utils.ts",
@@ -5901,14 +5906,14 @@
       "path": "/api/conquests",
       "handler": "get_conquests",
       "file": "backend/server.py",
-      "line": 9535
+      "line": 9563
     },
     {
       "method": "PUT",
       "path": "/api/conquests",
       "handler": "set_conquests",
       "file": "backend/server.py",
-      "line": 9543
+      "line": 9571
     },
     {
       "method": "GET",
@@ -5978,84 +5983,84 @@
       "path": "/api/garmin/auth-start",
       "handler": "garmin_auth_start",
       "file": "backend/server.py",
-      "line": 9766
+      "line": 9794
     },
     {
       "method": "GET",
       "path": "/api/garmin/csv-data",
       "handler": "get_garmin_csv_data",
       "file": "backend/server.py",
-      "line": 10964
+      "line": 10992
     },
     {
       "method": "DELETE",
       "path": "/api/garmin/csv-data/{doc_id}",
       "handler": "delete_garmin_csv_data",
       "file": "backend/server.py",
-      "line": 10983
+      "line": 11011
     },
     {
       "method": "POST",
       "path": "/api/garmin/csv-import",
       "handler": "garmin_csv_import",
       "file": "backend/server.py",
-      "line": 10782
+      "line": 10810
     },
     {
       "method": "POST",
       "path": "/api/garmin/csv-link",
       "handler": "garmin_csv_link",
       "file": "backend/server.py",
-      "line": 10955
+      "line": 10983
     },
     {
       "method": "POST",
       "path": "/api/garmin/exchange-ticket",
       "handler": "garmin_exchange_ticket",
       "file": "backend/server.py",
-      "line": 9789
+      "line": 9817
     },
     {
       "method": "GET",
       "path": "/api/garmin/gct-analysis",
       "handler": "get_gct_analysis",
       "file": "backend/server.py",
-      "line": 11006
+      "line": 11034
     },
     {
       "method": "POST",
       "path": "/api/garmin/login",
       "handler": "garmin_login_direct",
       "file": "backend/server.py",
-      "line": 9742
+      "line": 9770
     },
     {
       "method": "POST",
       "path": "/api/garmin/save-token",
       "handler": "garmin_save_token",
       "file": "backend/server.py",
-      "line": 9710
+      "line": 9738
     },
     {
       "method": "GET",
       "path": "/api/garmin/status",
       "handler": "garmin_status",
       "file": "backend/server.py",
-      "line": 9699
+      "line": 9727
     },
     {
       "method": "POST",
       "path": "/api/garmin/sync-all",
       "handler": "garmin_sync_all",
       "file": "backend/server.py",
-      "line": 10026
+      "line": 10054
     },
     {
       "method": "POST",
       "path": "/api/garmin/sync",
       "handler": "garmin_sync",
       "file": "backend/server.py",
-      "line": 9874
+      "line": 9902
     },
     {
       "method": "GET",
@@ -6076,7 +6081,7 @@
       "path": "/api/jarvis/chat",
       "handler": "jarvis_chat",
       "file": "backend/server.py",
-      "line": 10084
+      "line": 10112
     },
     {
       "method": "GET",
@@ -6202,7 +6207,7 @@
       "path": "/api/sub20/status",
       "handler": "set_sub20_status",
       "file": "backend/server.py",
-      "line": 9484
+      "line": 9487
     },
     {
       "method": "GET",
@@ -6265,14 +6270,14 @@
       "path": "/api/user/weekly-goal",
       "handler": "get_weekly_goal",
       "file": "backend/server.py",
-      "line": 9566
+      "line": 9594
     },
     {
       "method": "PUT",
       "path": "/api/user/weekly-goal",
       "handler": "set_weekly_goal",
       "file": "backend/server.py",
-      "line": 9574
+      "line": 9602
     },
     {
       "method": "GET",
@@ -6775,6 +6780,12 @@
       "file": "src/api/index.ts"
     },
     {
+      "name": "putSub20Goal",
+      "method": "PUT",
+      "path": "/api/sub20/status",
+      "file": "src/api/index.ts"
+    },
+    {
       "name": "putSub20Rpe",
       "method": "PUT",
       "path": "/api/sub20/status",
@@ -6788,6 +6799,12 @@
     },
     {
       "name": "putSub20Status",
+      "method": "PUT",
+      "path": "/api/sub20/status",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "putSub20Window",
       "method": "PUT",
       "path": "/api/sub20/status",
       "file": "src/api/index.ts"

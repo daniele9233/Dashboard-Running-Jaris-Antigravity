@@ -26,6 +26,16 @@
 /* ─── Theme tokens — switched via [data-theme] on <html> ───────────────── */
 :root,
 html[data-theme="dark"] {
+  /*
+   * I controlli nativi devono sapere che siamo al buio.
+   *
+   * Senza questa riga il browser disegna il selettore data con la sua tavolozza
+   * chiara: l'icona del calendario dentro <input type="date"> esce quasi nera
+   * su fondo #0A0A0A, e il campo sembra un pezzo di testo morto — c'è, ma non
+   * si vede e nessuno ci clicca sopra. Vale anche per l'orologio, i menu a
+   * tendina e la scrollbar di sistema.
+   */
+  color-scheme: dark;
   --app-bg: #050505;
   --app-bg-alt: #0A0A0A;
   --app-card: #1a1a1a;

@@ -490,6 +490,10 @@ export interface Sub20StatusResponse {
   statuses: Record<string, Sub20SessionStatus>;
   rpe?: Record<string, Sub20RpeLevel>;
   start_date?: string | null;
+  /** Domenica di gara, scelta liberamente: il piano si adatta alla finestra. */
+  race_date?: string | null;
+  /** Tempo obiettivo in secondi, per piano: { sub20: 1199, sub135: 5675 }. */
+  goals?: Record<string, number>;
   ok?: boolean;
 }
 export const getSub20Status = () => api.get<Sub20StatusResponse>('/api/sub20/status');
@@ -497,9 +501,16 @@ export const putSub20Status = (date: string, status: Sub20SessionStatus | null) 
   api.put<Sub20StatusResponse>('/api/sub20/status', { date, status });
 export const putSub20Rpe = (date: string, rpe: Sub20RpeLevel | null) =>
   api.put<Sub20StatusResponse>('/api/sub20/status', { date, rpe });
-// Data di partenza del piano (martedì settimana 1); null → torna al default.
+// Finestra del piano: inizio e gara, indipendenti. null → torna al default.
 export const putSub20StartDate = (startDate: string | null) =>
   api.put<Sub20StatusResponse>('/api/sub20/status', { start_date: startDate });
+
+export const putSub20Window = (startDate: string | null, raceDate: string | null) =>
+  api.put<Sub20StatusResponse>('/api/sub20/status', { start_date: startDate, race_date: raceDate });
+
+/** Tempo obiettivo di un piano, in secondi. null → torna a quello scritto nel piano. */
+export const putSub20Goal = (plan: string, seconds: number | null) =>
+  api.put<Sub20StatusResponse>('/api/sub20/status', { goals: { [plan]: seconds } });
 
 // ─── CONQUISTA D'ITALIA (gamification) ───────────────────────────────────────
 export interface ConquestsResponse {

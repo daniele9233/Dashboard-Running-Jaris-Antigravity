@@ -1,8 +1,8 @@
 import type { Session } from "../types/api";
 import {
-  SLOTS, addDays, basesFor, daysBetween, easy, fmtNum, heatPace, kikkoSub20NormalizeStart,
-  kikkoHeatInfo, longReps, longRun, mk, pacesFor, reps, secToPace, soglia, trimZero,
-  type CellFn, type WeekDef,
+  addDays, basesFor, easy, fmtNum, heatPace, kikkoSub20NormalizeStart,
+  buildKikkoPlanSessions, kikkoHeatInfo, longReps, longRun, pacesFor, reps, secToPace, soglia, trimZero,
+  type CellFn, type KikkoPlanDef, type WeekDef,
 } from "./kikkoSub20Plan";
 
 /**
@@ -224,18 +224,21 @@ export function kikkoSub135ActualWeeklyKm(): number[] {
   return WEEKS.map((w) => w.cells.reduce((sum, c) => sum + c(ref).dist, 0));
 }
 
+/** Le settimane del piano, per chi deve interrogarne il calendario. */
+export const KIKKO_SUB135_PLAN: KikkoPlanDef = {
+  get weeks() { return WEEKS; },
+  defaultStart: KIKKO_SUB135_DEFAULT_START,
+  get defaultRace() { return kikkoSub135RaceDate(KIKKO_SUB135_DEFAULT_START); },
+  weekVdot: KIKKO_SUB135_WEEK_VDOT,
+};
+
 /** Giorni fra il lunedì della settimana 1 e la gara. */
 const KIKKO_SUB135_RACE_OFFSET_DAYS = (KIKKO_SUB135_META.weeks - 1) * 7 + 6;
 
-/** Ricostruisce il piano a partire dal lunedì scelto (la data viene normalizzata). */
-export function buildKikkoSub135Sessions(startDate?: string | null): Session[] {
+/** Ricostruisce il piano dentro la finestra scelta. */
+export function buildKikkoSub135Sessions(startDate?: string | null, raceDate?: string | null): Session[] {
   const start = kikkoSub20NormalizeStart(startDate ?? KIKKO_SUB135_DEFAULT_START);
-  const delta = daysBetween(KIKKO_SUB135_DEFAULT_START, start);
-  return WEEKS.flatMap((w, wi) =>
-    w.cells.map((cell, i) =>
-      mk(addDays(w.mon, SLOTS[i].offset + delta), SLOTS[i].type, cell, KIKKO_SUB135_WEEK_VDOT[wi]),
-    ),
-  );
+  return buildKikkoPlanSessions(KIKKO_SUB135_PLAN, start, raceDate ?? kikkoSub135RaceDate(start));
 }
 
 /** Piano ancorato alla partenza di default. */
@@ -246,16 +249,9 @@ export function kikkoSub135RaceDate(startDate?: string | null): string {
   return addDays(kikkoSub20NormalizeStart(startDate ?? KIKKO_SUB135_DEFAULT_START), KIKKO_SUB135_RACE_OFFSET_DAYS);
 }
 
-/** Le settimane del piano, per chi deve interrogarne il calendario. */
-export const KIKKO_SUB135_PLAN = {
-  get weeks() { return WEEKS; },
-  defaultStart: KIKKO_SUB135_DEFAULT_START,
-  weekVdot: KIKKO_SUB135_WEEK_VDOT,
-};
-
 /** L'aria attesa e il ritmo del giorno — stesso termometro di kikkoSub20. */
-export function kikkoSub135HeatInfo(iso: string, startDate?: string | null) {
-  return kikkoHeatInfo(KIKKO_SUB135_PLAN, iso, startDate);
+export function kikkoSub135HeatInfo(iso: string, startDate?: string | null, raceDate?: string | null) {
+  return kikkoHeatInfo(KIKKO_SUB135_PLAN, iso, startDate, raceDate);
 }
 
 /** La legenda dei colori: sulla mezza il lungo è la seduta chiave, non le ripetute. */

@@ -9470,6 +9470,7 @@ async def get_sub20_status():
     statuses   = { 'YYYY-MM-DD': 'done' | 'failed' }
     rpe        = { 'YYYY-MM-DD': 'facile' | 'giusto' | 'duro' }
     start_date = 'YYYY-MM-DD' (martedì settimana 1) | None → default lato client
+    goals      = { 'sub20': 1199, ... } tempi obiettivo in secondi, per piano
     L'RPE alimenta l'auto-adattamento del piano (motore lato client).
     """
     athlete_id = await _get_athlete_id()
@@ -9478,6 +9479,8 @@ async def get_sub20_status():
         "statuses": (doc or {}).get("statuses", {}),
         "rpe": (doc or {}).get("rpe", {}),
         "start_date": (doc or {}).get("start_date"),
+        "race_date": (doc or {}).get("race_date"),
+        "goals": (doc or {}).get("goals", {}),
     }
 
 
@@ -9489,17 +9492,40 @@ async def set_sub20_status(payload: dict = Body(...)):
       status     ∈ {'done','failed'} — null/altro per togliere (richiede 'date')
       rpe        ∈ {'facile','giusto','duro'} — null/altro per togliere (richiede 'date')
       start_date = 'YYYY-MM-DD' — null/altro per tornare al default
+      goals      = {'sub20': 1199, 'sub135': 5675} — tempi obiettivo in secondi,
+                   per piano; null per tornare a quelli scritti nel piano
     """
     athlete_id = await _get_athlete_id()
     q = {"athlete_id": athlete_id}
 
-    # start_date è config del piano, indipendente dalle sedute.
-    if "start_date" in payload:
-        sd = payload.get("start_date")
-        if isinstance(sd, str) and len(sd) == 10:
-            await db.sub20_status.update_one(q, {"$set": {"start_date": sd}}, upsert=True)
+    # start_date e race_date sono config del piano, indipendenti dalle sedute e
+    # indipendenti FRA LORO: la finestra la decide l'atleta, il piano ci si
+    # adatta tagliando dalla testa.
+    for field in ("start_date", "race_date"):
+        if field not in payload:
+            continue
+        val = payload.get(field)
+        if isinstance(val, str) and len(val) == 10:
+            await db.sub20_status.update_one(q, {"$set": {field: val}}, upsert=True)
         else:
-            await db.sub20_status.update_one(q, {"$unset": {"start_date": ""}}, upsert=True)
+            await db.sub20_status.update_one(q, {"$unset": {field: ""}}, upsert=True)
+
+    # Gli obiettivi sono config del piano: un tempo in secondi per ciascuno.
+    # Si tengono per piano e non in un campo solo, perché la sub-20 e la mezza
+    # sono due traguardi diversi e spegnerne uno non deve toccare l'altro.
+    if "goals" in payload:
+        goals = payload.get("goals")
+        if isinstance(goals, dict):
+            for plan, sec in goals.items():
+                key = str(plan)[:16]
+                if not key.isalnum():
+                    continue
+                if isinstance(sec, (int, float)) and 300 <= sec <= 6 * 3600:
+                    await db.sub20_status.update_one(
+                        q, {"$set": {f"goals.{key}": int(sec)}}, upsert=True)
+                else:
+                    await db.sub20_status.update_one(
+                        q, {"$unset": {f"goals.{key}": ""}}, upsert=True)
 
     # status / rpe sono per-seduta e richiedono una data valida.
     if "status" in payload or "rpe" in payload:
@@ -9525,6 +9551,8 @@ async def set_sub20_status(payload: dict = Body(...)):
         "statuses": (doc or {}).get("statuses", {}),
         "rpe": (doc or {}).get("rpe", {}),
         "start_date": (doc or {}).get("start_date"),
+        "race_date": (doc or {}).get("race_date"),
+        "goals": (doc or {}).get("goals", {}),
     }
 
 
