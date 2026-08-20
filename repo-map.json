@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-08-20T13:07:23.618Z",
+  "generated_at": "2026-08-20T14:26:24.872Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,10 +14,10 @@
     ]
   },
   "counts": {
-    "files": 210,
-    "backend_routes": 66,
+    "files": 209,
+    "backend_routes": 68,
     "frontend_routes": 18,
-    "api_clients": 65
+    "api_clients": 74
   },
   "files": [
     {
@@ -640,18 +640,18 @@
         "_enrich_run_from_garmin_csv",
         "_ensure_fitness_freshness_current",
         "_ensure_indexes",
+        "_ensure_run_laps",
         "_environmental_pace_adjustment_sec_per_km",
         "_extract_fit_dynamics",
+        "_extract_reps_from_laps",
+        "_extract_reps_from_streams",
+        "_fetch_run_weather",
         "_filter_runs_for_range",
         "_find_matching_run_for_garmin_csv",
         "_format_pace",
         "_format_secs",
         "_gap_pace_seconds",
-        "_garmin_biomechanics_from_doc",
-        "_garmin_csv_active_query",
-        "_garmin_csv_doc_to_run_like",
-        "_garmin_csv_fingerprint",
-        "_garmin_csv_quality_score"
+        "_garmin_biomechanics_from_doc"
       ],
       "routes": [
         "DELETE /api/field-test/{test_id}",
@@ -685,11 +685,11 @@
         "GET /api/strava/callback",
         "GET /api/strava/connections",
         "GET /api/strava/status",
+        "GET /api/sub20/status",
         "GET /api/supercompensation",
         "GET /api/test-ai",
         "GET /api/training-plan",
         "GET /api/training-plan/current",
-        "GET /api/training/plan-state",
         "GET /api/user/weekly-goal",
         "GET /api/vdot/paces",
         "GET /api/weekly-history",
@@ -713,12 +713,14 @@
         "POST /api/runs/reapply-overrides",
         "POST /api/strava/exchange-code",
         "POST /api/strava/sync",
+        "POST /api/sub20/evaluate-session",
         "POST /api/training-plan/adapt",
         "POST /api/training-plan/evaluate-test",
         "POST /api/training-plan/generate",
+        "POST /api/weather/backfill",
         "PUT /api/badges/state",
         "PUT /api/conquests",
-        "PUT /api/training/plan-state",
+        "PUT /api/sub20/status",
         "PUT /api/user/weekly-goal"
       ],
       "imports": [
@@ -743,9 +745,9 @@
         "typing",
         "urllib.parse"
       ],
-      "hash": "d50a096d66375033ea64f253c225c49275cb33ded1c0981533233016b9e6f235",
-      "last_modified": "2026-08-20T10:21:52.397Z",
-      "size_bytes": 471044
+      "hash": "0d44b03d51c61322baed89521eb6305cba0a7091ef7aafa31bd80167df5818d8",
+      "last_modified": "2026-08-20T14:09:16.560Z",
+      "size_bytes": 497013
     },
     {
       "path": "backend/test_intervals.py",
@@ -1646,6 +1648,7 @@
         "training"
       ],
       "exports": [
+        "adaptTrainingPlan",
         "analyzeRun",
         "BadgeState",
         "BadgeUnlock",
@@ -1654,17 +1657,21 @@
         "deleteFieldTest",
         "deleteGarminCsvData",
         "disconnectStrava",
+        "evaluateSub20Session",
+        "evaluateTest",
         "exchangeGarminTicket",
         "exchangeStravaCode",
         "GarminCsvData",
         "GarminCsvImportResult",
         "GarminSyncResult",
         "GctAnalysisResponse",
+        "generateTrainingPlan",
         "getAnalytics",
         "getBadges",
         "getBadgeState",
         "getBestEfforts",
         "getConquests",
+        "getCurrentWeek",
         "getDashboard",
         "getDashboardInsight",
         "getFieldTestDivergence",
@@ -1677,7 +1684,6 @@
         "getGctAnalysis",
         "getHeatmap",
         "getInjuryRisk",
-        "getPlanState",
         "getPredictionHistory",
         "getProAnalytics",
         "getProfile",
@@ -1692,20 +1698,16 @@
         "getStravaAuthUrl",
         "getStravaConnections",
         "getStravaStatus",
+        "getSub20Status",
         "getSupercompensation",
+        "getTrainingPlan",
         "getUserLayout",
         "getVdotPaces",
         "getWeeklyGoal",
         "getWeeklyHistory",
         "getWeeklyReport",
         "GridLayoutItem",
-        "GridLayouts",
-        "importGarminCsv",
-        "IntervalSegment",
-        "IntervalSource",
-        "IntervalSummary",
-        "jarvisChat",
-        "linkGarminCsv"
+        "GridLayouts"
       ],
       "routes": [
         "DELETE /api/field-test/${id}",
@@ -1742,8 +1744,10 @@
         "GET /api/strava/auth-url",
         "GET /api/strava/connections",
         "GET /api/strava/status",
+        "GET /api/sub20/status",
         "GET /api/supercompensation",
-        "GET /api/training/plan-state",
+        "GET /api/training-plan",
+        "GET /api/training-plan/current",
         "GET /api/user/layout",
         "GET /api/user/weekly-goal",
         "GET /api/vdot/paces",
@@ -1752,6 +1756,7 @@
         "PATCH /api/profile",
         "PATCH /api/runs/${id}/race-lab",
         "PATCH /api/strava/active-athlete",
+        "PATCH /api/training-plan/session/complete",
         "POST /api/ai/analyze-run",
         "POST /api/field-test",
         "POST /api/fitness-freshness/recalculate",
@@ -1768,9 +1773,13 @@
         "POST /api/runs/weather/bulk",
         "POST /api/strava/exchange-code",
         "POST /api/strava/sync",
+        "POST /api/sub20/evaluate-session",
+        "POST /api/training-plan/adapt",
+        "POST /api/training-plan/evaluate-test",
+        "POST /api/training-plan/generate",
         "PUT /api/badges/state",
         "PUT /api/conquests",
-        "PUT /api/training/plan-state",
+        "PUT /api/sub20/status",
         "PUT /api/user/layout",
         "PUT /api/user/weekly-goal"
       ],
@@ -1779,9 +1788,9 @@
         "../types/jarvis",
         "./client"
       ],
-      "hash": "88609f10b9c967c3f26b4ff26d26b9c1fc7b1f13d266073783e489c8e0dea8c6",
-      "last_modified": "2026-08-20T10:27:25.515Z",
-      "size_bytes": 19173
+      "hash": "c0ce36816882315f71823f029c03f3a036f106d7c7861d532a9201e0efc7b40c",
+      "last_modified": "2026-08-20T14:09:16.561Z",
+      "size_bytes": 24512
     },
     {
       "path": "src/App.tsx",
@@ -4691,249 +4700,6 @@
       "size_bytes": 5336
     },
     {
-      "path": "src/components/training/climate.ts",
-      "kind": "frontend-component",
-      "purpose": "React component climate.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "garmin",
-        "training",
-        "types"
-      ],
-      "exports": [
-        "bandForIndex",
-        "Climate",
-        "CLIMATE_STUDIES",
-        "climateFromRuns",
-        "climateStudyRefs",
-        "Conditions",
-        "conditionsAt",
-        "dewPoint",
-        "HEAT_BANDS",
-        "heatAdjustedPace",
-        "HeatBand",
-        "HeatKind",
-        "heatPenaltyPct",
-        "humidityFromDewPoint",
-        "ROME",
-        "ROME_MONTH_DP",
-        "ROME_MONTH_TEMP"
-      ],
-      "routes": [],
-      "imports": [
-        "../gamification/gamiCore",
-        "./studies"
-      ],
-      "hash": "08f307de778879df4bc3a9749e6751ddd7f6429a0f93cb06e9782a90d988b238",
-      "last_modified": "2026-08-20T10:19:32.496Z",
-      "size_bytes": 10851
-    },
-    {
-      "path": "src/components/training/PlanBoard.tsx",
-      "kind": "frontend-component",
-      "purpose": "React component PlanBoard.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "api",
-        "layout",
-        "training",
-        "types"
-      ],
-      "exports": [
-        "PlanBoard"
-      ],
-      "routes": [],
-      "imports": [
-        "../../types/api",
-        "../../utils/trainingAdherence",
-        "../gamification/gamiCore",
-        "../TrainingAdherence",
-        "./planEngine",
-        "./planFormat",
-        "./studies",
-        "./useTrainingPlan",
-        "lucide-react",
-        "react"
-      ],
-      "hash": "d0951fb481633dc159ec33996e8670c18d8ddfd0d200a8698d37a3f65ee9245f",
-      "last_modified": "2026-08-20T13:07:23.618Z",
-      "size_bytes": 22518
-    },
-    {
-      "path": "src/components/training/planEngine.test.ts",
-      "kind": "frontend-component",
-      "purpose": "React component planEngine.test.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "training",
-        "types"
-      ],
-      "exports": [],
-      "routes": [],
-      "imports": [
-        "../gamification/gamiCore",
-        "./climate",
-        "./planEngine",
-        "vitest"
-      ],
-      "hash": "cedffde3b6146dbdc5b6d786807ac07f05c02f770ae5dcb14888abd3349401b4",
-      "last_modified": "2026-08-20T12:53:05.910Z",
-      "size_bytes": 17603
-    },
-    {
-      "path": "src/components/training/planEngine.ts",
-      "kind": "frontend-component",
-      "purpose": "React component planEngine.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "training",
-        "types"
-      ],
-      "exports": [
-        "bandOf",
-        "BlockId",
-        "buildPlan",
-        "buildSkeleton",
-        "ceilingKm",
-        "conditionsFor",
-        "defaultClimate",
-        "FitnessSnapshot",
-        "GoalOutlook",
-        "Lever",
-        "longRunKm",
-        "Paces",
-        "pacesFor",
-        "Plan",
-        "PlanConfig",
-        "PlanSession",
-        "PlanTest",
-        "PlanWeek",
-        "projectVdot",
-        "qualityBudget",
-        "QualityBudget",
-        "RaceGoal",
-        "riegelExponent",
-        "sigmaPct",
-        "warmupKm"
-      ],
-      "routes": [],
-      "imports": [
-        "../../types/api",
-        "../gamification/gamiCore",
-        "./climate",
-        "./studies"
-      ],
-      "hash": "5fcb20cce1e14066038ca0362acd332c38a9c42356d0d5b19ddbe11dd044d3fe",
-      "last_modified": "2026-08-20T13:07:23.560Z",
-      "size_bytes": 69377
-    },
-    {
-      "path": "src/components/training/planFormat.ts",
-      "kind": "frontend-component",
-      "purpose": "React component planFormat.",
-      "touch_when": [
-        "ai",
-        "training"
-      ],
-      "exports": [
-        "parseTime",
-        "probColor"
-      ],
-      "routes": [],
-      "imports": [],
-      "hash": "3accfd7c9f4dd7c823a033a63cc2afd748d66b0478b31c1be5b26644f7b29b7b",
-      "last_modified": "2026-08-20T13:07:23.582Z",
-      "size_bytes": 1148
-    },
-    {
-      "path": "src/components/training/PlanSetup.tsx",
-      "kind": "frontend-component",
-      "purpose": "React component PlanSetup.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "layout",
-        "training",
-        "types"
-      ],
-      "exports": [
-        "PlanSetup"
-      ],
-      "routes": [],
-      "imports": [
-        "../gamification/gamiCore",
-        "./climate",
-        "./planEngine",
-        "./planFormat",
-        "./useTrainingPlan",
-        "lucide-react",
-        "react"
-      ],
-      "hash": "f7612ef5ffe284cade6e2bcf2fc8f35815bea9f0c6245aa6499b587ccb77ef9d",
-      "last_modified": "2026-08-20T13:07:23.560Z",
-      "size_bytes": 16659
-    },
-    {
-      "path": "src/components/training/studies.ts",
-      "kind": "frontend-component",
-      "purpose": "React component studies.",
-      "touch_when": [
-        "ai",
-        "training",
-        "types"
-      ],
-      "exports": [
-        "allStudies",
-        "STUDIES",
-        "Study",
-        "StudyId",
-        "studyList",
-        "StudyTopic"
-      ],
-      "routes": [],
-      "imports": [],
-      "hash": "c1929fbd0c170df66ae730fa82272f0f3595cd22f2e446d2140924c8d82a903b",
-      "last_modified": "2026-08-20T09:59:57.516Z",
-      "size_bytes": 13693
-    },
-    {
-      "path": "src/components/training/useTrainingPlan.ts",
-      "kind": "frontend-component",
-      "purpose": "React component useTrainingPlan.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "training",
-        "types"
-      ],
-      "exports": [
-        "deriveFitness",
-        "PlanState",
-        "SessionOutcome",
-        "TestResult",
-        "useTrainingPlan",
-        "UseTrainingPlan"
-      ],
-      "routes": [],
-      "imports": [
-        "../../api",
-        "../../hooks/apiCacheKeys",
-        "../../hooks/useApi",
-        "../../types/api",
-        "../gamification/gamiCore",
-        "./climate",
-        "./planEngine",
-        "react"
-      ],
-      "hash": "10e82c51ece2ef09e96f1b6bcd5be22ff837192da7917e90b0d30720826b4aff",
-      "last_modified": "2026-08-20T12:52:27.983Z",
-      "size_bytes": 11941
-    },
-    {
       "path": "src/components/TrainingAdherence.tsx",
       "kind": "frontend-component",
       "purpose": "React component TrainingAdherence.",
@@ -4958,18 +4724,55 @@
       "size_bytes": 6579
     },
     {
-      "path": "src/components/TrainingView.tsx",
-      "kind": "frontend-view",
-      "purpose": "Page/view component for Training.",
+      "path": "src/components/TrainingGrid.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component TrainingGrid.",
       "touch_when": [
         "activities",
         "ai",
-        "api",
+        "garmin",
+        "layout",
+        "profile",
+        "strava",
         "training",
         "types"
       ],
       "exports": [
-        "TrainingView"
+        "TrainingGrid"
+      ],
+      "routes": [],
+      "imports": [
+        "../api",
+        "../data/kikkoSub135Plan",
+        "../data/kikkoSub20Plan",
+        "../hooks/apiCacheKeys",
+        "../hooks/useApi",
+        "../types/api",
+        "../utils/trainingAdherence",
+        "./TrainingAdherence",
+        "lucide-react",
+        "react",
+        "react-i18next"
+      ],
+      "hash": "bff1e129fdf9e66e06ac7cabb58eddd07fd7c9e05fcf916d0eaf38d90d23f6d7",
+      "last_modified": "2026-08-20T14:26:24.873Z",
+      "size_bytes": 108920
+    },
+    {
+      "path": "src/components/TrainingSidebar.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component TrainingSidebar.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "layout",
+        "profile",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "TrainingSidebar"
       ],
       "routes": [],
       "imports": [
@@ -4977,14 +4780,36 @@
         "../hooks/apiCacheKeys",
         "../hooks/useApi",
         "../types/api",
-        "./training/PlanBoard",
-        "./training/PlanSetup",
-        "./training/useTrainingPlan",
+        "lucide-react",
+        "react",
+        "recharts"
+      ],
+      "hash": "340f8482499b4aacc46992d5015629072ab3f8e73d49eba7c39552bad36059a8",
+      "last_modified": "2026-08-20T14:09:16.562Z",
+      "size_bytes": 10818
+    },
+    {
+      "path": "src/components/TrainingView.tsx",
+      "kind": "frontend-view",
+      "purpose": "Page/view component for Training.",
+      "touch_when": [
+        "ai",
+        "layout",
+        "training"
+      ],
+      "exports": [
+        "TrainingView"
+      ],
+      "routes": [],
+      "imports": [
+        "./TrainingGrid",
+        "./TrainingSidebar",
+        "lucide-react",
         "react"
       ],
-      "hash": "afaf88ba015a84c8ec2e7746098b455383f024f1fcef7e0ba04cc1e68b5409ad",
-      "last_modified": "2026-08-20T10:26:57.503Z",
-      "size_bytes": 1954
+      "hash": "ce17d8bf8a62bf8f20b0fc8c0ea72b24bcb1cd7a6221a68dbec7d978fb5b4129",
+      "last_modified": "2026-08-20T14:09:16.562Z",
+      "size_bytes": 2075
     },
     {
       "path": "src/components/VO2MaxChart.tsx",
@@ -5126,6 +4951,183 @@
       "hash": "871474f36e4442d4281f9ae4fbac599ba418d73faabf3fcf44e6b085e2b09c81",
       "last_modified": "2026-04-29T06:17:00.249Z",
       "size_bytes": 1776
+    },
+    {
+      "path": "src/data/kikkoSub135Plan.test.ts",
+      "kind": "frontend-source",
+      "purpose": "frontend-source kikkoSub135Plan.test.ts.",
+      "touch_when": [
+        "ai",
+        "training",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "./kikkoSub135Plan",
+        "./kikkoSub20Plan",
+        "vitest"
+      ],
+      "hash": "52ebd34a6b58b628a47f90c6507316aa48441c270fcf69b29e61e3c9ade6c564",
+      "last_modified": "2026-08-20T14:19:45.065Z",
+      "size_bytes": 8522
+    },
+    {
+      "path": "src/data/kikkoSub135Plan.ts",
+      "kind": "frontend-source",
+      "purpose": "frontend-source kikkoSub135Plan.ts.",
+      "touch_when": [
+        "activities",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "buildKikkoSub135Sessions",
+        "KIKKO_SUB135_DEFAULT_START",
+        "KIKKO_SUB135_DELOAD_WEEKS",
+        "KIKKO_SUB135_GOAL_SEC",
+        "KIKKO_SUB135_LEGEND",
+        "KIKKO_SUB135_META",
+        "KIKKO_SUB135_PLAN",
+        "KIKKO_SUB135_RACE_PACE",
+        "KIKKO_SUB135_RACE_PACE_SEC",
+        "KIKKO_SUB135_SESSIONS",
+        "KIKKO_SUB135_WEEK_VDOT",
+        "KIKKO_SUB135_WEEKLY_KM",
+        "kikkoSub135ActualWeeklyKm",
+        "kikkoSub135HeatInfo",
+        "kikkoSub135RaceDate",
+        "kikkoSub135ThresholdPace"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api",
+        "./kikkoSub20Plan"
+      ],
+      "hash": "663a287a67fd9b5e037b69139dbd8cc0339741ebb2ec04102b97a9e48736fb97",
+      "last_modified": "2026-08-20T14:21:01.322Z",
+      "size_bytes": 12375
+    },
+    {
+      "path": "src/data/kikkoSub20Plan.test.ts",
+      "kind": "frontend-source",
+      "purpose": "frontend-source kikkoSub20Plan.test.ts.",
+      "touch_when": [
+        "ai",
+        "training",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "./kikkoSub20Plan",
+        "vitest"
+      ],
+      "hash": "df72518e2d752a87e0dffa3507fc8a715d1bf72082ae31ae4eaa224251000be4",
+      "last_modified": "2026-08-20T14:15:33.824Z",
+      "size_bytes": 21319
+    },
+    {
+      "path": "src/data/kikkoSub20Plan.ts",
+      "kind": "frontend-source",
+      "purpose": "frontend-source kikkoSub20Plan.ts.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "garmin",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "addDays",
+        "Bases",
+        "basesFor",
+        "buildKikkoSub20Sessions",
+        "Cell",
+        "CellFn",
+        "daysBetween",
+        "dewPoint",
+        "easy",
+        "fmtNum",
+        "HeatBand",
+        "heatBandForDate",
+        "heatBandForIndex",
+        "HeatKind",
+        "heatPace",
+        "HeatPace",
+        "heatReferenceLabel",
+        "HeatRow",
+        "heatTable",
+        "itDayName",
+        "KIKKO_SUB20_DEFAULT_START",
+        "KIKKO_SUB20_DELOAD_WEEKS",
+        "KIKKO_SUB20_HEAT_BANDS",
+        "KIKKO_SUB20_LEGEND",
+        "KIKKO_SUB20_META",
+        "KIKKO_SUB20_PLAN",
+        "KIKKO_SUB20_SESSIONS",
+        "KIKKO_SUB20_WEEKLY_KM",
+        "KIKKO_VDOT_GOAL",
+        "KIKKO_VDOT_START",
+        "KIKKO_WEEK_VDOT",
+        "kikkoHeatInfo",
+        "kikkoSub20ActualWeeklyKm",
+        "kikkoSub20HeatInfo",
+        "kikkoSub20NormalizeStart",
+        "kikkoSub20RaceDate",
+        "longReps",
+        "longRun",
+        "mk",
+        "Paces",
+        "pacesFor",
+        "paceToSec",
+        "repPaceForRecovery",
+        "reps",
+        "romeDewPointForDate",
+        "romeHeatIndexForDate",
+        "romeTempForDate",
+        "secToPace",
+        "SLOTS",
+        "soglia",
+        "trimZero",
+        "WeekDef"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api"
+      ],
+      "hash": "b4cd9f2c09f94b8735e9e6f4d4a28a607b46cce62181cf096dc7b7baf2579ca9",
+      "last_modified": "2026-08-20T14:21:01.283Z",
+      "size_bytes": 34475
+    },
+    {
+      "path": "src/data/sub20Plan.ts",
+      "kind": "frontend-source",
+      "purpose": "frontend-source sub20Plan.ts.",
+      "touch_when": [
+        "ai",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "buildSub20Sessions",
+        "computeSub20Adaptations",
+        "SUB20_DEFAULT_START",
+        "SUB20_LEGEND",
+        "SUB20_META",
+        "SUB20_SESSIONS",
+        "Sub20AdaptInfo",
+        "sub20RaceDate",
+        "Sub20Rpe",
+        "Sub20Status"
+      ],
+      "routes": [],
+      "imports": [
+        "../types/api"
+      ],
+      "hash": "d929ff604dbcc63255fea4ba11f0b228e416c047420f968e30322ff6b9cb8dbd",
+      "last_modified": "2026-08-20T14:09:16.564Z",
+      "size_bytes": 20848
     },
     {
       "path": "src/hooks/apiCacheKeys.ts",
@@ -5895,14 +5897,14 @@
       "path": "/api/conquests",
       "handler": "get_conquests",
       "file": "backend/server.py",
-      "line": 8917
+      "line": 9535
     },
     {
       "method": "PUT",
       "path": "/api/conquests",
       "handler": "set_conquests",
       "file": "backend/server.py",
-      "line": 8925
+      "line": 9543
     },
     {
       "method": "GET",
@@ -5972,84 +5974,84 @@
       "path": "/api/garmin/auth-start",
       "handler": "garmin_auth_start",
       "file": "backend/server.py",
-      "line": 9148
+      "line": 9766
     },
     {
       "method": "GET",
       "path": "/api/garmin/csv-data",
       "handler": "get_garmin_csv_data",
       "file": "backend/server.py",
-      "line": 10346
+      "line": 10964
     },
     {
       "method": "DELETE",
       "path": "/api/garmin/csv-data/{doc_id}",
       "handler": "delete_garmin_csv_data",
       "file": "backend/server.py",
-      "line": 10365
+      "line": 10983
     },
     {
       "method": "POST",
       "path": "/api/garmin/csv-import",
       "handler": "garmin_csv_import",
       "file": "backend/server.py",
-      "line": 10164
+      "line": 10782
     },
     {
       "method": "POST",
       "path": "/api/garmin/csv-link",
       "handler": "garmin_csv_link",
       "file": "backend/server.py",
-      "line": 10337
+      "line": 10955
     },
     {
       "method": "POST",
       "path": "/api/garmin/exchange-ticket",
       "handler": "garmin_exchange_ticket",
       "file": "backend/server.py",
-      "line": 9171
+      "line": 9789
     },
     {
       "method": "GET",
       "path": "/api/garmin/gct-analysis",
       "handler": "get_gct_analysis",
       "file": "backend/server.py",
-      "line": 10388
+      "line": 11006
     },
     {
       "method": "POST",
       "path": "/api/garmin/login",
       "handler": "garmin_login_direct",
       "file": "backend/server.py",
-      "line": 9124
+      "line": 9742
     },
     {
       "method": "POST",
       "path": "/api/garmin/save-token",
       "handler": "garmin_save_token",
       "file": "backend/server.py",
-      "line": 9092
+      "line": 9710
     },
     {
       "method": "GET",
       "path": "/api/garmin/status",
       "handler": "garmin_status",
       "file": "backend/server.py",
-      "line": 9081
+      "line": 9699
     },
     {
       "method": "POST",
       "path": "/api/garmin/sync-all",
       "handler": "garmin_sync_all",
       "file": "backend/server.py",
-      "line": 9408
+      "line": 10026
     },
     {
       "method": "POST",
       "path": "/api/garmin/sync",
       "handler": "garmin_sync",
       "file": "backend/server.py",
-      "line": 9256
+      "line": 9874
     },
     {
       "method": "GET",
@@ -6070,7 +6072,7 @@
       "path": "/api/jarvis/chat",
       "handler": "jarvis_chat",
       "file": "backend/server.py",
-      "line": 9466
+      "line": 10084
     },
     {
       "method": "GET",
@@ -6178,6 +6180,27 @@
       "line": 1259
     },
     {
+      "method": "POST",
+      "path": "/api/sub20/evaluate-session",
+      "handler": "sub20_evaluate_session",
+      "file": "backend/server.py",
+      "line": 9296
+    },
+    {
+      "method": "GET",
+      "path": "/api/sub20/status",
+      "handler": "get_sub20_status",
+      "file": "backend/server.py",
+      "line": 9467
+    },
+    {
+      "method": "PUT",
+      "path": "/api/sub20/status",
+      "handler": "set_sub20_status",
+      "file": "backend/server.py",
+      "line": 9484
+    },
+    {
       "method": "GET",
       "path": "/api/supercompensation",
       "handler": "get_supercompensation",
@@ -6235,31 +6258,17 @@
     },
     {
       "method": "GET",
-      "path": "/api/training/plan-state",
-      "handler": "get_plan_state",
-      "file": "backend/server.py",
-      "line": 8865
-    },
-    {
-      "method": "PUT",
-      "path": "/api/training/plan-state",
-      "handler": "put_plan_state",
-      "file": "backend/server.py",
-      "line": 8879
-    },
-    {
-      "method": "GET",
       "path": "/api/user/weekly-goal",
       "handler": "get_weekly_goal",
       "file": "backend/server.py",
-      "line": 8948
+      "line": 9566
     },
     {
       "method": "PUT",
       "path": "/api/user/weekly-goal",
       "handler": "set_weekly_goal",
       "file": "backend/server.py",
-      "line": 8956
+      "line": 9574
     },
     {
       "method": "GET",
@@ -6267,6 +6276,13 @@
       "handler": "get_vdot_paces",
       "file": "backend/server.py",
       "line": 6474
+    },
+    {
+      "method": "POST",
+      "path": "/api/weather/backfill",
+      "handler": "backfill_run_weather",
+      "file": "backend/server.py",
+      "line": 9106
     },
     {
       "method": "GET",
@@ -6395,6 +6411,12 @@
   ],
   "api_clients": [
     {
+      "name": "adaptTrainingPlan",
+      "method": "POST",
+      "path": "/api/training-plan/adapt",
+      "file": "src/api/index.ts"
+    },
+    {
       "name": "analyzeRun",
       "method": "POST",
       "path": "/api/ai/analyze-run",
@@ -6425,6 +6447,18 @@
       "file": "src/api/index.ts"
     },
     {
+      "name": "evaluateSub20Session",
+      "method": "POST",
+      "path": "/api/sub20/evaluate-session",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "evaluateTest",
+      "method": "POST",
+      "path": "/api/training-plan/evaluate-test",
+      "file": "src/api/index.ts"
+    },
+    {
       "name": "exchangeGarminTicket",
       "method": "POST",
       "path": "/api/garmin/exchange-ticket",
@@ -6434,6 +6468,12 @@
       "name": "exchangeStravaCode",
       "method": "POST",
       "path": "/api/strava/exchange-code",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "generateTrainingPlan",
+      "method": "POST",
+      "path": "/api/training-plan/generate",
       "file": "src/api/index.ts"
     },
     {
@@ -6464,6 +6504,12 @@
       "name": "getConquests",
       "method": "GET",
       "path": "/api/conquests",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getCurrentWeek",
+      "method": "GET",
+      "path": "/api/training-plan/current",
       "file": "src/api/index.ts"
     },
     {
@@ -6536,12 +6582,6 @@
       "name": "getInjuryRisk",
       "method": "GET",
       "path": "/api/injury-risk",
-      "file": "src/api/index.ts"
-    },
-    {
-      "name": "getPlanState",
-      "method": "GET",
-      "path": "/api/training/plan-state",
       "file": "src/api/index.ts"
     },
     {
@@ -6629,9 +6669,21 @@
       "file": "src/api/index.ts"
     },
     {
+      "name": "getSub20Status",
+      "method": "GET",
+      "path": "/api/sub20/status",
+      "file": "src/api/index.ts"
+    },
+    {
       "name": "getSupercompensation",
       "method": "GET",
       "path": "/api/supercompensation",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getTrainingPlan",
+      "method": "GET",
+      "path": "/api/training-plan",
       "file": "src/api/index.ts"
     },
     {
@@ -6719,9 +6771,21 @@
       "file": "src/api/index.ts"
     },
     {
-      "name": "putPlanState",
+      "name": "putSub20Rpe",
       "method": "PUT",
-      "path": "/api/training/plan-state",
+      "path": "/api/sub20/status",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "putSub20StartDate",
+      "method": "PUT",
+      "path": "/api/sub20/status",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "putSub20Status",
+      "method": "PUT",
+      "path": "/api/sub20/status",
       "file": "src/api/index.ts"
     },
     {
@@ -6776,6 +6840,12 @@
       "name": "syncStrava",
       "method": "POST",
       "path": "/api/strava/sync",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "toggleSessionComplete",
+      "method": "PATCH",
+      "path": "/api/training-plan/session/complete",
       "file": "src/api/index.ts"
     },
     {

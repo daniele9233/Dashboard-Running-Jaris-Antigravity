@@ -8846,71 +8846,689 @@ async def reclassify_runs(apply: bool = False, fetch_laps: bool = False, laps_li
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  PIANO DI ALLENAMENTO — stato lato server
+#  SUB-20 PLAN — AUTO SESSION EVALUATION (kikkoderisoSub20)
 # ═══════════════════════════════════════════════════════════════════════════════
-# Il piano non viene generato qui: lo costruisce il motore nel frontend, che ha
-# il modello fisiologico, il clima dell'atleta e i ritmi. Al server serve solo
-# ricordare DUE cose fra un dispositivo e l'altro:
-#
-#   · la configurazione — obiettivi, data di partenza, tetto di volume: da lì il
-#     piano si rigenera identico, quindi non c'è bisogno di salvare le settimane
-#   · il registro — cosa è stato fatto, saltato, e come è andato ogni test
-#
-# Un solo documento per atleta, sovrascritto: nessuno storico, perché la storia
-# vera sono le corse.
+# Confronta una qualità eseguita col prescritto dal piano, NORMALIZZANDO per
+# condizioni reali: pendenza (GAP asimmetrico), temperatura+umidità (heat
+# slowdown). Estrae le rep dai laps/streams, dà verdetto AVANTI/IN LINEA/INDIETRO,
+# propone il % di successo, stima il VDOT implicito e la finestra in cui la seduta
+# produrrà effetto sulla performance (supercompensazione).
 
-_PLAN_STATE_MAX_BYTES = 256 * 1024
+def _pace_to_sec(p) -> Optional[int]:
+    """'3:58' → 238. None su input invalido."""
+    try:
+        if isinstance(p, (int, float)):
+            return int(p)
+        parts = str(p).split(":")
+        if len(parts) != 2:
+            return None
+        return int(parts[0]) * 60 + int(parts[1])
+    except Exception:
+        return None
 
 
-@app.get("/api/training/plan-state")
-async def get_plan_state():
-    athlete_id = await _get_athlete_id()
-    doc = await db.plan_state.find_one({"athlete_id": athlete_id})
-    if not doc:
-        return {"config": None, "log": {}, "tests": {}}
+def _extract_reps_from_streams(streams: list, duration_minutes: float,
+                               min_rep_m: float = 250.0) -> list:
+    """Dettaglio per-rep dai streams: [{dist_m, dur_s, pace_sec, hr_avg, hr_max}].
+
+    Stessa segmentazione del detector (_workout_structure_from_streams): 2-means
+    sui pace, blocchi 'lavoro' = cluster veloce. Qui restituisce i dettagli di
+    OGNI rep (passo, durata, HR) per il confronto col prescritto.
+    """
+    st = streams or []
+    dur_s = (duration_minutes or 0) * 60
+    n = len(st)
+    if n < 12 or dur_s <= 0:
+        return []
+    ds = [s.get("d") for s in st if isinstance(s, dict)]
+    hrs = [s.get("hr") for s in st if isinstance(s, dict)]
+    alts = [s.get("alt") for s in st if isinstance(s, dict)]
+    if len(ds) < 12:
+        return []
+    for i in range(len(ds)):
+        if ds[i] is None:
+            ds[i] = ds[i - 1] if i > 0 else 0.0
+    n = len(ds)
+    dt = dur_s / (n - 1)
+    pace = []
+    for i in range(n - 1):
+        dd = ds[i + 1] - ds[i]
+        pace.append(999.0 if dd <= 0.3 else 1000.0 * dt / dd)
+    pace.append(pace[-1] if pace else 999.0)
+    w = max(2, int(round(15.0 / dt)))
+    sp = _median_filter(pace, w)
+    moving = [p for p in sp if p < 900]
+    if len(moving) < 12:
+        return []
+    cf, cs = _two_means_split(moving)
+    thr = (cf + cs) / 2.0
+    work = [1 if (p < thr and p < 900) else 0 for p in sp]
+    blocks = []
+    i = 0
+    while i < n:
+        v = work[i]
+        j = i
+        while j < n and work[j] == v:
+            j += 1
+        blocks.append([v, i, j])
+        i = j
+    merged = []
+    for b in blocks:
+        seg_t = (b[2] - b[1]) * dt
+        if merged and seg_t < 20:
+            merged[-1][2] = b[2]
+        else:
+            merged.append(b[:])
+    reps = []
+    for b in merged:
+        if b[0] != 1:
+            continue
+        i0, i1 = b[1], b[2]
+        seg_t = (i1 - i0) * dt
+        seg_d = ds[min(i1, n - 1)] - ds[i0]
+        if seg_t < 20 or seg_d < min_rep_m:
+            continue
+        block_hr = [hrs[k] for k in range(i0, min(i1, len(hrs))) if hrs[k]]
+        a_start = alts[i0] if i0 < len(alts) and alts[i0] is not None else None
+        ae = min(i1, len(alts) - 1)
+        a_end = alts[ae] if ae >= 0 and alts[ae] is not None else None
+        elev_m = round(a_end - a_start, 1) if (a_start is not None and a_end is not None) else None
+        grade_pct = (elev_m / seg_d * 100.0) if (elev_m is not None and seg_d > 0) else None
+        reps.append({
+            "dist_m": round(seg_d),
+            "dur_s": round(seg_t),
+            "pace_sec": round(1000.0 * seg_t / seg_d) if seg_d > 0 else None,
+            "elev_m": elev_m,
+            "grade_pct": round(grade_pct, 2) if grade_pct is not None else None,
+            "hr_avg": round(sum(block_hr) / len(block_hr)) if block_hr else None,
+            "hr_max": max(block_hr) if block_hr else None,
+        })
+    return reps
+
+
+def _extract_reps_from_laps(laps: list) -> list:
+    """Rep dai laps Strava (gold standard): cluster veloce = lavoro."""
+    if not laps:
+        return []
+    items = []
+    for lp in laps:
+        spd = lp.get("average_speed") or 0
+        dist = lp.get("distance") or 0
+        mt = lp.get("moving_time") or lp.get("elapsed_time") or 0
+        pace = (1000.0 / spd) if spd > 0 else None
+        if pace is None or dist < 120 or mt < 15:
+            continue
+        items.append((pace, dist, mt, lp.get("average_heartrate")))
+    if len(items) < 2:
+        return []
+    cf, cs = _two_means_split([it[0] for it in items])
+    thr = (cf + cs) / 2.0
+    reps = []
+    for pace, dist, mt, hr in items:
+        if pace <= thr:
+            reps.append({
+                "dist_m": round(dist), "dur_s": round(mt),
+                "pace_sec": round(pace),
+                "elev_m": None, "grade_pct": None,
+                "hr_avg": round(hr) if hr else None, "hr_max": None,
+            })
+    return reps
+
+
+async def _fetch_run_weather(lat, lng, date_str, hour_start=None, hour_end=None):
+    """Open-Meteo per la corsa. Mirror logica frontend: forecast (past_days) per
+    run ≤9 giorni fa, altrimenti archive.
+
+    Se forniti hour_start + hour_end (durata corsa nota), restituisce la MEDIA
+    sulle ore coperte dalla corsa — più rappresentativa di un singolo snapshot,
+    soprattutto all'alba quando la temp varia 4°+ in un'ora.
+    """
+    if lat is None or lng is None or not date_str:
+        return None
+    from datetime import date as _date
+    try:
+        y, m, d = [int(x) for x in date_str[:10].split("-")]
+        days_ago = (dt.datetime.utcnow().date() - _date(y, m, d)).days
+    except Exception:
+        days_ago = 999
+    use_forecast = 0 <= days_ago <= 9
+    base = {
+        "latitude": str(lat), "longitude": str(lng),
+        "hourly": "temperature_2m,relative_humidity_2m,apparent_temperature",
+        "timezone": "auto",
+    }
+    if use_forecast:
+        params = {**base, "past_days": "10", "forecast_days": "1"}
+        url = "https://api.open-meteo.com/v1/forecast"
+    else:
+        params = {**base, "start_date": date_str[:10], "end_date": date_str[:10]}
+        url = "https://archive-api.open-meteo.com/v1/archive"
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as http:
+            r = await http.get(url, params=params)
+            if r.status_code != 200:
+                return None
+            j = r.json()
+    except Exception:
+        return None
+    hourly = j.get("hourly") or {}
+    times = hourly.get("time") or []
+    temps = hourly.get("temperature_2m") or []
+    hums = hourly.get("relative_humidity_2m") or []
+    apps = hourly.get("apparent_temperature") or []
+    if not times:
+        return None
+
+    # Raccoglie tutti gli indici delle ore coperte (start..end inclusi)
+    hours_wanted = set()
+    if hour_start is not None:
+        if hour_end is None:
+            hour_end = hour_start
+        h = hour_start
+        while True:
+            hours_wanted.add(min(23, max(0, h)))
+            if h >= hour_end:
+                break
+            h += 1
+    else:
+        hours_wanted.add(8)
+
+    idxs = []
+    for idx, t in enumerate(times):
+        if t[:10] != date_str[:10]:
+            continue
+        th = int(t[11:13]) if len(t) >= 13 else 0
+        if th in hours_wanted:
+            idxs.append(idx)
+    if not idxs:
+        for idx, t in enumerate(times):
+            if t[:10] == date_str[:10]:
+                idxs.append(idx)
+                break
+
+    def _avg(arr):
+        vals = [arr[i] for i in idxs if i < len(arr) and arr[i] is not None]
+        return (sum(vals) / len(vals)) if vals else None
+
     return {
-        "config": doc.get("config"),
-        "log": doc.get("log", {}),
-        "tests": doc.get("tests", {}),
-        "updated_at": doc.get("updated_at"),
+        "temp_c": _avg(temps),
+        "humidity": _avg(hums),
+        "apparent_c": _avg(apps),
+        "source": "forecast" if use_forecast else "archive",
+        "hours_used": sorted(hours_wanted),
     }
 
 
-@app.put("/api/training/plan-state")
-async def put_plan_state(payload: dict = Body(...)):
-    """Salva configurazione e registro. `config: null` cancella il piano."""
+async def _run_weather_fields(run_doc: dict) -> dict:
+    """Meteo Open-Meteo persistito sul run: temperature / humidity / weather.
+
+    Media oraria sulle ore coperte dalla corsa (start..end da start_date_local
+    + durata), stessa logica del sub-20 eval. Abilita: correzione caldo nel
+    VDOT (_environmental_pace_adjustment), niente penalita confidenza "caldo
+    estivo non correggibile", e vista Clima & Ritmo senza fetch client-side.
+    Non-fatale: ritorna {} se mancano posizione/data o l'API e' giu'.
+    """
+    latlng = run_doc.get("start_latlng") or []
+    lat = latlng[0] if len(latlng) >= 2 else None
+    lng = latlng[1] if len(latlng) >= 2 else None
+    date_str = run_doc.get("date")
+    if lat is None or lng is None or not date_str:
+        return {}
+    sdl = run_doc.get("start_date_local") or ""
+    hh = int(sdl[11:13]) if len(sdl) >= 13 and sdl[11:13].isdigit() else None
+    mm = int(sdl[14:16]) if len(sdl) >= 16 and sdl[14:16].isdigit() else 0
+    dur_min = float(run_doc.get("duration_minutes") or 0)
+    hour_start = hour_end = None
+    if hh is not None:
+        # Due campioni orari piu' vicini al PUNTO MEDIO della corsa: i dati
+        # Open-Meteo sono istantanei a HH:00, e una 07:25->07:47 sta tra il
+        # campione 07:00 (piu' freddo) e 08:00 — lo snapshot dell'ora di start
+        # legge 1-2°C in meno di quel che il runner ha sentito.
+        mid_min = hh * 60 + mm + dur_min / 2
+        hour_start = min(23, int(mid_min // 60))
+        hour_end = min(23, max(hour_start, int(round(mid_min / 60))))
+    w = await _fetch_run_weather(lat, lng, date_str, hour_start, hour_end)
+    if not w or w.get("temp_c") is None:
+        return {}
+    return {
+        "temperature": round(w["temp_c"], 1),
+        "humidity": round(w["humidity"]) if w.get("humidity") is not None else None,
+        "weather": {
+            "temp_c": round(w["temp_c"], 1),
+            "humidity": round(w["humidity"], 1) if w.get("humidity") is not None else None,
+            "apparent": round(w["apparent_c"], 1) if w.get("apparent_c") is not None else None,
+            "source": w.get("source"),
+            "hours_used": w.get("hours_used"),
+        },
+    }
+
+
+@app.post("/api/weather/backfill")
+async def backfill_run_weather(limit: int = 60):
+    """Arricchisce di meteo i run che ne sono privi (recenti prima).
+
+    Idempotente: salta i run con temperature gia' valorizzata. Batch limitato
+    per restare nei rate limit Open-Meteo e nei timeout request Render.
+    Invalida le cache analytics/DNA cosi' VDOT e previsioni si ricalcolano
+    con la correzione caldo attiva.
+    """
+    athlete_id = await _get_athlete_id()
+    q: dict = {
+        "$or": [{"temperature": {"$exists": False}}, {"temperature": None}],
+        "start_latlng.1": {"$exists": True},
+        "is_treadmill": {"$ne": True},
+    }
+    if athlete_id:
+        q["athlete_id"] = athlete_id
+    limit = max(1, min(200, int(limit)))
+    runs = await db.runs.find(q).sort("date", -1).to_list(limit)
+    enriched, failed = 0, 0
+    for r in runs:
+        try:
+            fields = await _run_weather_fields(r)
+        except Exception as e:
+            print(f"[weather-backfill] {r.get('date')}: {e}")
+            fields = {}
+        if fields:
+            await db.runs.update_one({"_id": r["_id"]}, {"$set": fields})
+            enriched += 1
+        else:
+            failed += 1
+    if athlete_id and enriched:
+        await _invalidate_analytics_cache(athlete_id)
+        await _invalidate_runner_dna_cache(athlete_id)
+    return {"ok": True, "scanned": len(runs), "enriched": enriched, "no_data": failed}
+
+
+def _sub20_suggest_pct(avg_raw, target, reps_done, reps_prescribed, rep_paces) -> Optional[int]:
+    """Propone il % successo (— /50/70/90/100) da esecuzione RAW vs prescritto."""
+    if not avg_raw or not target:
+        return None
+    tiers = [0, 50, 70, 90, 100]
+    diff = avg_raw - target  # negativo = più veloce del target
+    if diff <= 3:
+        base = 100
+    elif diff <= 8:
+        base = 90
+    elif diff <= 15:
+        base = 70
+    else:
+        base = 50
+    # penale fade: ultima rep >5% più lenta della prima
+    if len(rep_paces) >= 2 and rep_paces[-1] > rep_paces[0] * 1.05:
+        base = tiers[max(0, tiers.index(base) - 1)]
+    # completamento parziale
+    done_ratio = reps_done / max(1, reps_prescribed)
+    if done_ratio < 0.6:
+        base = min(base, 50)
+    elif done_ratio < 1.0:
+        base = min(base, 70)
+    return base
+
+
+def _sub20_adaptation_window(date_str: str, rep_m: float) -> dict:
+    """Finestra di supercompensazione: quando la seduta produce effetto."""
+    from datetime import date as _date, timedelta
+    try:
+        y, m, d = [int(x) for x in date_str[:10].split("-")]
+        base = _date(y, m, d)
+    except Exception:
+        return {}
+    if rep_m >= 1600:
+        lo, hi, kind = 12, 16, "resistenza specifica / soglia"
+    else:
+        lo, hi, kind = 10, 12, "VO2max"
+    return {
+        "absorb": "24–48h",
+        "peak_from": (base + timedelta(days=lo)).isoformat(),
+        "peak_to": (base + timedelta(days=hi)).isoformat(),
+        "kind": kind,
+        "note": (f"Stimolo {kind}: assorbito in 24–48h. Beneficio su performance "
+                 f"tra +{lo} e +{hi} giorni (supercompensazione)."),
+    }
+
+
+def _pbp_adj_sec(grade_pct: float) -> float:
+    """PBP (passo in base alla pendenza) ALLINEATO a Strava, per matchare la
+    colonna che l'utente vede nei parziali.
+
+    Calibrato sui dati reali Strava: +0.5% → ~3.5s/km più veloce (≈7 s/km/%),
+    −0.9% → ~5s/km più lento (≈5.6 s/km/%). Ritorna i sec/km da sottrarre al
+    passo grezzo per ottenere il PBP. NB: distinto dal _grade_adjustment_sec
+    globale (modello Minetti più aggressivo, usato per VDOT) — qui serve solo
+    la coerenza VISIVA con Strava.
+    """
+    if grade_pct >= 0:
+        return grade_pct * 7.0
+    return grade_pct * 5.6  # negativo → PBP più lento
+
+
+def _reps_from_laps(laps: list, streams: list) -> list:
+    """Rep dai LAP ufficiali Strava (= i parziali che vede l'utente).
+
+    Passo/durata dal lap; dislivello per-lap calcolato slice-ando lo stream di
+    altitudine sul range di distanza cumulata del lap. Cluster veloce = lavoro.
+    """
+    if not laps:
+        return []
+    items = []
+    cum = 0.0
+    for lp in laps:
+        dist = lp.get("distance") or 0
+        mt = lp.get("moving_time") or lp.get("elapsed_time") or 0
+        spd = lp.get("average_speed") or 0
+        pace = (1000.0 / spd) if spd > 0 else ((mt / (dist / 1000.0)) if dist > 0 else None)
+        start_d = cum
+        cum += dist
+        items.append({"pace": pace, "dist": dist, "mt": mt,
+                      "hr": lp.get("average_heartrate"), "start_d": start_d, "end_d": cum})
+    valid = [it for it in items if it["pace"] and it["dist"] >= 120 and it["mt"] >= 15]
+    if len(valid) < 2:
+        return []
+    cf, cs = _two_means_split([it["pace"] for it in valid])
+    thr = (cf + cs) / 2.0
+    ds = [s.get("d") for s in streams] if streams else []
+    alts = [s.get("alt") for s in streams] if streams else []
+
+    def _alt_at(dist_m):
+        if not ds:
+            return None
+        for k in range(len(ds)):
+            if ds[k] is not None and ds[k] >= dist_m:
+                return alts[k] if k < len(alts) else None
+        return alts[-1] if alts else None
+
+    reps = []
+    for it in valid:
+        if it["pace"] > thr:
+            continue  # recupero
+        a0 = _alt_at(it["start_d"])
+        a1 = _alt_at(it["end_d"])
+        elev = round(a1 - a0, 1) if (a0 is not None and a1 is not None) else None
+        grade = (elev / it["dist"] * 100.0) if (elev is not None and it["dist"] > 0) else None
+        reps.append({
+            "dist_m": round(it["dist"]),
+            "dur_s": round(it["mt"]),
+            "pace_sec": round(it["pace"]),
+            "elev_m": elev,
+            "grade_pct": round(grade, 2) if grade is not None else None,
+            "hr_avg": round(it["hr"]) if it["hr"] else None,
+            "hr_max": None,
+        })
+    return reps
+
+
+async def _ensure_run_laps(run: dict) -> list:
+    """Ritorna i lap del run; se mancano in DB li scarica live da Strava e li salva."""
+    laps = run.get("laps") or []
+    if laps:
+        return laps
+    sid = run.get("strava_id")
+    if not sid:
+        return []
+    try:
+        tokens = await _get_active_strava_token()
+        if not tokens:
+            return []
+        tokens = await _refresh_token_if_needed(tokens)
+        async with httpx.AsyncClient(timeout=20.0) as http:
+            r = await http.get(
+                f"https://www.strava.com/api/v3/activities/{sid}/laps",
+                headers={"Authorization": f"Bearer {tokens['access_token']}"},
+            )
+            if r.status_code != 200:
+                return []
+            laps = [{
+                "distance": lp.get("distance"),
+                "moving_time": lp.get("moving_time"),
+                "elapsed_time": lp.get("elapsed_time"),
+                "average_speed": lp.get("average_speed"),
+                "average_heartrate": lp.get("average_heartrate"),
+                "lap_index": lp.get("lap_index"),
+            } for lp in r.json()]
+            if laps:
+                await db.runs.update_one({"_id": run["_id"]}, {"$set": {"laps": laps}})
+    except Exception:
+        return run.get("laps") or []
+    return laps
+
+
+@app.post("/api/sub20/evaluate-session")
+async def sub20_evaluate_session(payload: dict = Body(...)):
+    """Valuta una qualità del piano Sub-20 contro il prescritto, normalizzando
+    per pendenza + temperatura + umidità.
+
+    Body: { date, reps, rep_m, target_pace_sec, window_days? }
+    """
+    from datetime import date as _date, timedelta
+    try:
+        center_str = str(payload.get("date") or "")[:10]
+        y, m, d = [int(x) for x in center_str.split("-")]
+        center = _date(y, m, d)
+    except Exception:
+        return {"matched": False, "error": "bad_date"}
+    reps_prescribed = int(payload.get("reps") or 0)
+    rep_m = float(payload.get("rep_m") or 1000)
+    target_pace_sec = int(payload.get("target_pace_sec") or 0)
+    window_days = int(payload.get("window_days") or 2)
+    manual_temp = payload.get("manual_temp_c")  # override utente: cosa vede su Strava
+    manual_humidity = payload.get("manual_humidity")
+
+    athlete_id = await _get_athlete_id()
+    q = {"athlete_id": athlete_id} if athlete_id else {}
+    lo = (center - timedelta(days=window_days)).isoformat()
+    hi = (center + timedelta(days=window_days)).isoformat()
+
+    # SOLO sessioni di QUALITÀ (intervals). Niente fallback a corse facili:
+    # se non c'è una qualità in questa finestra → non valutare nulla.
+    quality = []
+    async for r in db.runs.find({**q, "date": {"$gte": lo, "$lte": hi}}):
+        if r.get("is_treadmill"):
+            continue
+        if r.get("run_type") != "intervals":
+            continue
+        quality.append(r)
+    if not quality:
+        return {"matched": False, "reason": "no_quality"}
+
+    def _score(r):
+        rd = (r.get("date") or "")[:10]
+        try:
+            yy, mm, dd = [int(x) for x in rd.split("-")]
+            return abs((_date(yy, mm, dd) - center).days)
+        except Exception:
+            return 99
+    quality.sort(key=_score)
+    run = quality[0]
+
+    # Rep dai LAP ufficiali Strava (= i parziali che vede l'utente); scarica
+    # live se mancano. Fallback: segmentazione streams.
+    laps = await _ensure_run_laps(run)
+    reps = _reps_from_laps(laps, run.get("streams") or []) or \
+        _extract_reps_from_streams(run.get("streams") or [], run.get("duration_minutes"))
+    if not reps:
+        return {"matched": True, "run_id": str(run.get("_id")),
+                "run_date": run.get("date"), "reps": [], "error": "no_reps"}
+
+    rep_paces = [rp["pace_sec"] for rp in reps if rp.get("pace_sec")]
+    avg_raw = sum(rep_paces) / len(rep_paces) if rep_paces else None
+    net_elev = sum((sp.get("elevation_difference") or 0) for sp in (run.get("splits") or []))
+
+    # ── meteo: preferisci temperatura DISPOSITIVO (Garmin/Strava average_temp),
+    #    è quella che vede l'utente su Strava. Open-Meteo per umidità + fallback. ──
+    latlng = run.get("start_latlng") or []
+    lat = latlng[0] if len(latlng) >= 2 else None
+    lng = latlng[1] if len(latlng) >= 2 else None
+    # Intervallo orario coperto dalla corsa: start + durata → media oraria,
+    # invece di uno snapshot. All'alba la temp può variare 4° in un'ora.
+    sdl = run.get("start_date_local") or ""
+    hh = int(sdl[11:13]) if len(sdl) >= 13 and sdl[11:13].isdigit() else None
+    mm = int(sdl[14:16]) if len(sdl) >= 16 and sdl[14:16].isdigit() else 0
+    dur_min = float(run.get("duration_minutes") or 0)
+    hour_start = hour_end = None
+    if hh is not None:
+        start_min = hh * 60 + mm
+        end_min = int(start_min + dur_min)
+        hour_start = start_min // 60
+        hour_end = min(23, end_min // 60)
+
+    device_temp = run.get("device_temp_c")
+    weather = await _fetch_run_weather(lat, lng, run.get("date"), hour_start, hour_end)
+    om_temp = weather.get("temp_c") if weather else None
+    humidity = weather.get("humidity") if weather else None
+    # Cascata di priorità:
+    # 1) override MANUALE per seduta (vince su tutto: l'utente vede Strava 18°)
+    # 2) Open-Meteo 2m air temp (fisicamente corretto, calibrato sulla cella)
+    # 3) Garmin average_temp SOLO se ≤22°C (sopra = sensore polso scaldato,
+    #    inaffidabile — gonfia il credito caldo e quindi il VDOT)
+    temp_source = None
+    if manual_temp is not None:
+        temp_c = float(manual_temp)
+        temp_source = "manual"
+    elif om_temp is not None:
+        temp_c = om_temp
+        temp_source = weather.get("source") if weather else "open-meteo"
+    elif device_temp is not None and device_temp <= 22:
+        temp_c = device_temp
+        temp_source = "strava_device"
+    else:
+        temp_c = None
+    if manual_humidity is not None:
+        humidity = float(manual_humidity)
+    apparent_c = _apparent_temp_c(temp_c, humidity) if temp_c is not None else None
+    heat_frac = _heat_slowdown_frac(temp_c, humidity, 5.0) if temp_c is not None else 0.0
+    heat_sec = (avg_raw or 0) * heat_frac
+
+    # ── arricchisci ogni rep: PBP (passo in base alla pendenza) + passo a temp ideale ──
+    for rp in reps:
+        praw = rp.get("pace_sec")
+        if praw is None:
+            rp["pbp_sec"] = None
+            rp["ideal_sec"] = None
+            continue
+        g = rp.get("grade_pct")
+        rp["pbp_sec"] = round(praw - _pbp_adj_sec(g)) if g is not None else praw
+        rp["ideal_sec"] = round(praw - heat_sec)
+
+    # normalizzato = PBP (pendenza) − credito caldo, per-rep
+    norm_paces = [rp["pbp_sec"] - heat_sec for rp in reps if rp.get("pbp_sec") is not None]
+    norm_avg = sum(norm_paces) / len(norm_paces) if norm_paces else None
+    grade_adj_avg = (sum((rp["pbp_sec"] - rp["pace_sec"]) for rp in reps
+                         if rp.get("pbp_sec") is not None and rp.get("pace_sec") is not None)
+                     / len(rep_paces)) if rep_paces else 0
+
+    delta = (norm_avg - target_pace_sec) if (norm_avg and target_pace_sec) else None
+    if delta is None:
+        verdict = "ND"
+    elif delta <= -5:
+        verdict = "AVANTI"
+    elif delta <= 5:
+        verdict = "IN_LINEA"
+    else:
+        verdict = "INDIETRO"
+
+    reps_done = len(rep_paces)
+    pct = _sub20_suggest_pct(avg_raw, target_pace_sec, reps_done, reps_prescribed, rep_paces)
+    vdot_impl = _vdot_from_race(3.0, norm_avg * 3.0) if norm_avg else None
+    adaptation = _sub20_adaptation_window(run.get("date"), rep_m)
+
+    return {
+        "matched": True,
+        "run_id": str(run.get("_id")),
+        "run_date": run.get("date"),
+        "run_name": run.get("name"),
+        "run_type": run.get("run_type"),
+        "reps": reps,
+        "reps_done": reps_done,
+        "reps_prescribed": reps_prescribed,
+        "avg_raw_sec": round(avg_raw) if avg_raw else None,
+        "target_pace_sec": target_pace_sec,
+        "conditions": {
+            "temp_c": round(temp_c, 1) if temp_c is not None else None,
+            "humidity": round(humidity) if humidity is not None else None,
+            "apparent_c": round(apparent_c, 1) if apparent_c is not None else None,
+            "net_elev_m": round(net_elev, 1),
+            "grade_adj_sec": round(grade_adj_avg),
+            "heat_adj_sec": round(heat_sec),
+            "temp_source": temp_source,
+            "weather_source": weather.get("source") if weather else None,
+            "hours_used": weather.get("hours_used") if weather else None,
+        },
+        "normalized_avg_sec": round(norm_avg) if norm_avg else None,
+        "delta_sec": round(delta) if delta is not None else None,
+        "verdict": verdict,
+        "suggested_pct": pct,
+        "vdot_implied": round(vdot_impl, 1) if vdot_impl else None,
+        "adaptation": adaptation,
+    }
+
+
+# ── Stato sedute piano Sub-20 (effettuato / fallito) — persistente su DB ──────
+@app.get("/api/sub20/status")
+async def get_sub20_status():
+    """Esiti + RPE + partenza del piano scelti dall'utente:
+    statuses   = { 'YYYY-MM-DD': 'done' | 'failed' }
+    rpe        = { 'YYYY-MM-DD': 'facile' | 'giusto' | 'duro' }
+    start_date = 'YYYY-MM-DD' (martedì settimana 1) | None → default lato client
+    L'RPE alimenta l'auto-adattamento del piano (motore lato client).
+    """
+    athlete_id = await _get_athlete_id()
+    doc = await db.sub20_status.find_one({"athlete_id": athlete_id})
+    return {
+        "statuses": (doc or {}).get("statuses", {}),
+        "rpe": (doc or {}).get("rpe", {}),
+        "start_date": (doc or {}).get("start_date"),
+    }
+
+
+@app.put("/api/sub20/status")
+async def set_sub20_status(payload: dict = Body(...)):
+    """Aggiorna esito, RPE e/o data di partenza del piano.
+
+    Chiavi indipendenti (si aggiorna solo ciò che è presente nel payload):
+      status     ∈ {'done','failed'} — null/altro per togliere (richiede 'date')
+      rpe        ∈ {'facile','giusto','duro'} — null/altro per togliere (richiede 'date')
+      start_date = 'YYYY-MM-DD' — null/altro per tornare al default
+    """
     athlete_id = await _get_athlete_id()
     q = {"athlete_id": athlete_id}
 
-    if "config" in payload and payload.get("config") is None:
-        await db.plan_state.delete_one(q)
-        return {"ok": True, "config": None, "log": {}, "tests": {}}
+    # start_date è config del piano, indipendente dalle sedute.
+    if "start_date" in payload:
+        sd = payload.get("start_date")
+        if isinstance(sd, str) and len(sd) == 10:
+            await db.sub20_status.update_one(q, {"$set": {"start_date": sd}}, upsert=True)
+        else:
+            await db.sub20_status.update_one(q, {"$unset": {"start_date": ""}}, upsert=True)
 
-    state = {}
-    if "config" in payload:
-        state["config"] = payload.get("config")
-    if "log" in payload:
-        state["log"] = dict(payload.get("log") or {})
-    if "tests" in payload:
-        state["tests"] = dict(payload.get("tests") or {})
-    if not state:
-        return JSONResponse({"error": "empty_payload"}, status_code=400)
+    # status / rpe sono per-seduta e richiedono una data valida.
+    if "status" in payload or "rpe" in payload:
+        date = str(payload.get("date") or "")[:10]
+        if not date or len(date) != 10:
+            return JSONResponse({"error": "bad_date"}, status_code=400)
+        if "status" in payload:
+            status = payload.get("status")
+            if status in ("done", "failed"):
+                await db.sub20_status.update_one(q, {"$set": {f"statuses.{date}": status}}, upsert=True)
+            else:
+                await db.sub20_status.update_one(q, {"$unset": {f"statuses.{date}": ""}}, upsert=True)
+        if "rpe" in payload:
+            rpe = payload.get("rpe")
+            if rpe in ("facile", "giusto", "duro"):
+                await db.sub20_status.update_one(q, {"$set": {f"rpe.{date}": rpe}}, upsert=True)
+            else:
+                await db.sub20_status.update_one(q, {"$unset": {f"rpe.{date}": ""}}, upsert=True)
 
-    if len(json.dumps(state, default=str)) > _PLAN_STATE_MAX_BYTES:
-        return JSONResponse({"error": "payload_too_large"}, status_code=413)
-
-    state["updated_at"] = dt.datetime.now(dt.timezone.utc).isoformat()
-    await db.plan_state.update_one(q, {"$set": state}, upsert=True)
-
-    doc = await db.plan_state.find_one(q)
+    doc = await db.sub20_status.find_one(q)
     return {
         "ok": True,
-        "config": (doc or {}).get("config"),
-        "log": (doc or {}).get("log", {}),
-        "tests": (doc or {}).get("tests", {}),
+        "statuses": (doc or {}).get("statuses", {}),
+        "rpe": (doc or {}).get("rpe", {}),
+        "start_date": (doc or {}).get("start_date"),
     }
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
 #  CONQUISTA D'ITALIA — regioni conquistate (gamification)
 # ═══════════════════════════════════════════════════════════════════════════════
 
