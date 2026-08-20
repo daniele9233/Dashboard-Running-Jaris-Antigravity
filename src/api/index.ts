@@ -132,117 +132,11 @@ export const deleteFieldTest = (id: string) =>
 export const getFieldTestDivergence = () =>
   api.get<FieldTestDivergenceResponse>('/api/field-test/divergence');
 
-// ─── TRAINING PLAN ───────────────────────────────────────────────────────────
-export const getTrainingPlan = () => api.get<TrainingPlanResponse>('/api/training-plan');
+// ─── PIANO DI ALLENAMENTO (legacy backend) ───────────────────────────────────
+// Il generatore vive nel frontend: vedi src/components/training/planEngine.ts.
+// Gli endpoint /api/training-plan/* restano nel backend perché l'auto-adapt su
+// sync ci scrive ancora, ma nessuna pagina li interroga più.
 
-export const getCurrentWeek = () => api.get<TrainingPlanResponse['weeks'][0]>('/api/training-plan/current');
-
-export const toggleSessionComplete = (weekId: string, sessionIndex: number, completed: boolean) =>
-  api.patch('/api/training-plan/session/complete', { week_id: weekId, session_index: sessionIndex, completed });
-
-export const generateTrainingPlan = (data: {
-  goal_race: string;
-  weeks_to_race: number;
-  target_time?: string;
-  plan_mode?: 'conservative' | 'balanced' | 'aggressive';
-  dry_run?: boolean;
-  test_distance_km?: number;
-  test_time?: string;
-  start_date?: string;       // ISO date YYYY-MM-DD — user-chosen plan start
-  start_weekly_km?: number;  // km/sett di partenza (vuoto = auto dal volume recente)
-  city?: string;             // base climatica (default "roma") per adattare i ritmi
-}) =>
-  api.post<{
-    ok: boolean;
-    dry_run?: boolean;
-    weeks_generated: number;
-    current_vdot: number;
-    target_vdot: number;
-    peak_vdot?: number;
-    peak_date?: string;
-    peak_source?: {
-      date?: string;
-      name?: string;
-      distance_km?: number;
-      duration_minutes?: number;
-      avg_pace?: string;
-      avg_hr?: number | null;
-      strava_id?: string | number;
-    } | null;
-    training_months?: number;
-    weekly_volume?: number;
-    history_context?: {
-      days_since_last_run: number;
-      longest_stop_days_6m: number;
-      weekly_volume_4w: number;
-      weekly_volume_8w: number;
-      recent_peak_weekly_km: number;
-      quality_sessions_8w: number;
-      interval_sessions_8w: number;
-      tempo_sessions_8w: number;
-      long_runs_8w: number;
-      easy_ratio_8w: number;
-      aerobic_base_score: number;
-      readiness_score: number;
-      training_status: string;
-      load: { ctl: number; atl: number; tsb: number };
-    };
-    test_vdot?: number | null;
-    plan_mode?: 'conservative' | 'balanced' | 'aggressive' | null;
-    strategy_options?: Array<{
-      mode: 'conservative' | 'balanced' | 'aggressive';
-      label: string;
-      focus: string;
-      success_pct: number;
-      completion_pct: number;
-      weekly_volume_multiplier: number;
-      projected_vdot: number;
-      note: string;
-    }>;
-    feasibility: {
-      feasible: boolean;
-      difficulty: string;
-      message: string;
-      confidence_pct: number;
-      is_recovery?: boolean;
-      conservative_vdot?: number;
-      conservative_time?: string;
-      conservative_rate?: number;
-      optimistic_vdot?: number;
-      optimistic_time?: string;
-      optimistic_rate?: number;
-      original_target_time?: string;
-      suggested_weeks?: number;
-      suggested_months?: number;
-      suggested_timeframe?: string;
-    };
-    race_predictions: Record<string, string>;
-    suggested_weeks?: number;
-    suggested_months?: number;
-    suggested_timeframe?: string;
-  }>('/api/training-plan/generate', data);
-
-export const adaptTrainingPlan = () =>
-  api.post<AdaptResponse>('/api/training-plan/adapt');
-
-export const evaluateTest = (data: {
-  test_distance_km: number;
-  test_time: string;
-  test_date?: string;
-}) =>
-  api.post<{
-    ok: boolean;
-    test_vdot: number;
-    test_pace: string;
-    previous_plan_vdot: number;
-    new_target_vdot: number;
-    vdot_change: number;
-    direction: 'improved' | 'declined' | 'unchanged';
-    confidence: number;
-    weeks_remaining: number;
-    weeks_regenerated: number;
-    message: string;
-  }>('/api/training-plan/evaluate-test', data);
 
 // ─── FITNESS & FRESHNESS ─────────────────────────────────────────────────────
 export const getFitnessFreshness = () => api.get<FitnessFreshnessResponse>('/api/fitness-freshness');
@@ -421,85 +315,27 @@ export const getUserLayout = () =>
 export const putUserLayout = (payload: { layouts: GridLayouts; hidden_keys?: string[] }) =>
   api.put<{ ok: boolean }>('/api/user/layout', payload);
 
-// ─── SUB-20 SESSION EVALUATION (kikkoderisoSub20) ────────────────────────────
-export interface Sub20RepDetail {
-  dist_m: number;
-  dur_s: number;
-  pace_sec: number | null;
-  elev_m: number | null;
-  grade_pct: number | null;
-  pbp_sec: number | null;
-  ideal_sec: number | null;
-  hr_avg: number | null;
-  hr_max: number | null;
-}
-export interface Sub20Conditions {
-  temp_c: number | null;
-  humidity: number | null;
-  apparent_c: number | null;
-  net_elev_m: number;
-  grade_adj_sec: number;
-  heat_adj_sec: number;
-  temp_source: string | null;
-  weather_source: string | null;
-  hours_used: number[] | null;
-}
-export interface Sub20Adaptation {
-  absorb: string;
-  peak_from: string;
-  peak_to: string;
-  kind: string;
-  note: string;
-}
-export interface Sub20EvalResult {
-  matched: boolean;
-  run_id?: string;
-  run_date?: string;
-  run_name?: string;
-  run_type?: string;
-  reps?: Sub20RepDetail[];
-  reps_done?: number;
-  reps_prescribed?: number;
-  avg_raw_sec?: number | null;
-  target_pace_sec?: number;
-  conditions?: Sub20Conditions;
-  normalized_avg_sec?: number | null;
-  delta_sec?: number | null;
-  verdict?: 'AVANTI' | 'IN_LINEA' | 'INDIETRO' | 'ND';
-  suggested_pct?: number | null;
-  vdot_implied?: number | null;
-  adaptation?: Sub20Adaptation;
-  reason?: string;
-  error?: string;
-}
-export const evaluateSub20Session = (body: {
-  date: string;
-  reps: number;
-  rep_m: number;
-  target_pace_sec: number;
-  window_days?: number;
-  manual_temp_c?: number;
-  manual_humidity?: number;
-}) => api.post<Sub20EvalResult>('/api/sub20/evaluate-session', body);
+// ─── PIANO DI ALLENAMENTO — stato lato server ────────────────────────────────
+// Il piano NON viaggia sulla rete: lo ricostruisce il motore dalla config, che è
+// deterministica. Al server vanno solo la configurazione e il registro di cosa
+// è stato fatto — così il piano è lo stesso sul telefono e sul portatile.
 
-// Esiti sedute Sub-20 (effettuato / fallito) + RPE — persistenti su DB.
-// L'RPE (facile/giusto/duro) alimenta l'auto-adattamento del piano.
-export type Sub20SessionStatus = 'done' | 'failed';
-export type Sub20RpeLevel = 'facile' | 'giusto' | 'duro';
-export interface Sub20StatusResponse {
-  statuses: Record<string, Sub20SessionStatus>;
-  rpe?: Record<string, Sub20RpeLevel>;
-  start_date?: string | null;
+export interface PlanStateResponse {
+  config: unknown | null;
+  log: Record<string, string>;
+  tests: Record<string, unknown>;
+  updated_at?: string;
   ok?: boolean;
 }
-export const getSub20Status = () => api.get<Sub20StatusResponse>('/api/sub20/status');
-export const putSub20Status = (date: string, status: Sub20SessionStatus | null) =>
-  api.put<Sub20StatusResponse>('/api/sub20/status', { date, status });
-export const putSub20Rpe = (date: string, rpe: Sub20RpeLevel | null) =>
-  api.put<Sub20StatusResponse>('/api/sub20/status', { date, rpe });
-// Data di partenza del piano (martedì settimana 1); null → torna al default.
-export const putSub20StartDate = (startDate: string | null) =>
-  api.put<Sub20StatusResponse>('/api/sub20/status', { start_date: startDate });
+
+export const getPlanState = () => api.get<PlanStateResponse>('/api/training/plan-state');
+
+export const putPlanState = (body: {
+  config?: unknown | null;
+  log?: Record<string, string>;
+  tests?: Record<string, unknown>;
+}) => api.put<PlanStateResponse>('/api/training/plan-state', body);
+
 
 // ─── CONQUISTA D'ITALIA (gamification) ───────────────────────────────────────
 export interface ConquestsResponse {

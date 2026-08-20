@@ -27,7 +27,15 @@ export const paceToSec = (p?: string | null): number | null => {
   return Number.isFinite(v) && v > 0 ? v : null;
 };
 
-export const fmtPace = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec) % 60).padStart(2, "0")}`;
+/**
+ * Si arrotonda PRIMA di dividere, non dopo: 239,8 s/km sono 4:00, non 3:00.
+ * Arrotondando solo i secondi il minuto resta quello di prima e il passo
+ * risulta un minuto più veloce del vero, una volta ogni sessanta.
+ */
+export const fmtPace = (sec: number) => {
+  const s = Math.max(0, Math.round(sec));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+};
 
 export const fmtClock = (sec: number): string => {
   sec = Math.max(0, Math.round(sec));
