@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-09-05T12:38:02.915Z",
+  "generated_at": "2026-09-05T13:12:24.651Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -4747,6 +4747,7 @@
         "ai",
         "garmin",
         "layout",
+        "strava",
         "training",
         "types"
       ],
@@ -4767,9 +4768,9 @@
         "react",
         "react-i18next"
       ],
-      "hash": "0a9e3002ba93df2676416e68bab96243ee429c849324a27c8f843959d881ebd2",
-      "last_modified": "2026-09-05T12:33:39.605Z",
-      "size_bytes": 58400
+      "hash": "be7f1247803928f02b594bc3f6bd6468302d7773f14711e132551a22bcc3c93c",
+      "last_modified": "2026-09-05T13:11:43.192Z",
+      "size_bytes": 58646
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -5061,9 +5062,9 @@
         "./kikkoSub20Plan",
         "vitest"
       ],
-      "hash": "6dc92195e464f73b58252c5f25c70392e152dfead8a3c3a8593553b4eafa18e2",
-      "last_modified": "2026-09-05T12:34:07.228Z",
-      "size_bytes": 31778
+      "hash": "f1d121c85e3b645203e1cfe9b1eab7f3d59a66dee50903d7a9df89bf6f57e513",
+      "last_modified": "2026-09-05T13:12:24.651Z",
+      "size_bytes": 31922
     },
     {
       "path": "src/data/kikkoSub20Plan.ts",
@@ -5143,9 +5144,9 @@
         "../types/api",
         "./kikkoEvidence"
       ],
-      "hash": "ea6cfc2d9263b26eb19a26ae6eeae9b24e9b63989071ee4bbba73bd7d0c7374b",
-      "last_modified": "2026-09-05T12:33:39.591Z",
-      "size_bytes": 48713
+      "hash": "9569d78d594fe5870b13d37fa5f179be5b0af2eded7738dffbba9fbae931ac85",
+      "last_modified": "2026-09-05T13:11:43.182Z",
+      "size_bytes": 49805
     },
     {
       "path": "src/data/sub20Plan.ts",

@@ -464,10 +464,12 @@ describe("kikkoSub20 — probabilità dell'obiettivo", () => {
   });
 
   it("un obiettivo più ambizioso è sempre meno probabile", () => {
-    const sub20 = odds(50.5, "2026-09-15", KIKKO_SUB20_TARGETS[0].sec);
-    const stretch = odds(50.5, "2026-09-15", KIKKO_SUB20_TARGETS[1].sec);
-    expect(KIKKO_SUB20_TARGETS[1].sec).toBeLessThan(KIKKO_SUB20_TARGETS[0].sec);
-    expect(stretch.p).toBeLessThan(sub20.p);
+    // I target sono ordinati dal più ambizioso al più sicuro: [0] è il
+    // bersaglio dichiarato, [1] il pavimento su cui si ripiega.
+    const punta = odds(50.5, "2026-09-15", KIKKO_SUB20_TARGETS[0].sec);
+    const pavimento = odds(50.5, "2026-09-15", KIKKO_SUB20_TARGETS[1].sec);
+    expect(KIKKO_SUB20_TARGETS[0].sec).toBeLessThan(KIKKO_SUB20_TARGETS[1].sec);
+    expect(punta.p).toBeLessThan(pavimento.p);
   });
 
   it("il tempo previsto tiene conto dell'aria del giorno di gara", () => {

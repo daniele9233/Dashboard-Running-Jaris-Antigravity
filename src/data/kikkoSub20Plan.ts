@@ -45,7 +45,7 @@ export const KIKKO_SUB20_META = {
   weeks: 12,
   phase: "kikkoSub20",
   goalRace: "5K",
-  goalTime: "19:35",
+  goalTime: "19:40",
   runsPerWeek: 4,
   startDate: "2026-07-27", // lunedì di riferimento della settimana 1
 };
@@ -53,42 +53,56 @@ export const KIKKO_SUB20_META = {
 /* ── VDOT ───────────────────────────────────────────────────────────────────*/
 
 /**
- * Ancorato a DUE prestazioni massimali, non a una stima.
+ * Rimisurato il 05/09/2026 su TUTTE le sedute di qualità da giugno.
  *
- * 1) 17/06/2026 · 5,02 km in 21:04 · 23°C · UR 60%
- *    DP 14,8° → indice T+DP 37,8 (fascia 37-42, penalità 2,5-4% sul continuo).
- *    21:04 tal quale vale VDOT 47,1; al fresco diventa ~20:20, cioè 48,9.
+ * Ventitré sedute di soglia e ripetute, tapis escluso, ricostruite lap per lap
+ * separando il lavoro dal recupero SUL PASSO — i recuperi sono lunghi 170-275 m
+ * e un filtro sulla distanza li conterebbe come lavoro. Ogni passo riportato
+ * al fresco con l'indice T+DP di quel giorno, poi convertito con le formule di
+ * Daniels (VO₂ dalla velocità, %VO₂max dalla durata; controprova: 5K in 19:57
+ * → 49,95 ✓).
  *
- * 2) Luglio 2026 · 4×1000 a 3:55 di media · rec 3′ camminando · 26,1°C · UR 70%
- *    DP 20,2° → indice T+DP 46,3 (fascia 42-48, penalità 3-4,5% sulle ripetute).
- *    3:55 al fresco vale ~3:46/km. Ma tre minuti di CAMMINATA sono un recupero
- *    generoso: un lavoro dosato per la gara si chiude con più riserva, quindi
- *    si sconta un altro 2,5% e resta un I-pace reale di ~3:51/km → VDOT ~50.
+ * I dati si dividono in due famiglie, e la divisione È la diagnosi.
  *
- * Le due prove dicono 48,9 (giugno, continuo) e ~50 (luglio, frazionato). Il
- * frazionato promette sempre più di quanto la gara mantenga, ma è più recente
- * e il lavoro in mezzo c'è stato: 49,0 è il punto onesto fra i due.
+ *   CONTINUE ≥ 4 km — 25/08 6 km a 4:09 al fresco → 48,3 · 11/08 4,52 km a
+ *   4:06 → 48,2 · 04/08 → 47,7 · 17/06 5,02 km → 47,6. Quattro prove su dieci
+ *   settimane, tutte dentro sette decimi.
  *
- * Il backend ne calcola 47,7 sulle stesse corse: legge male le sedute di
- * ripetute, perché gli split al km mescolano prova e recupero. Dove i due
- * numeri divergono comanda la prestazione misurata, non la media pesata.
+ *   RIPETUTE 1000 m con 3′ di recupero — 49,4 · 50,4 · 50,6 · 51,7. Due punti
+ *   e mezzo sopra. Non è misura sbagliata: è il recupero che promette quello
+ *   che la gara non mantiene.
  *
- * ⚠ Dopo ogni test (3 km a tutta ogni 3-4 settimane) riscrivi KIKKO_WEEK_VDOT
- * da lì in avanti: è l'unico posto da toccare perché tutto il piano si
- * ricalcoli.
+ *   E il 04/09, 3×1600 con 2′ — prova lunga, pausa corta, la seduta più simile
+ *   a una gara — cade a 48,8, cioè ADDOSSO alle continue. È la conferma.
+ *
+ * Convergenza: 48,5 come stato di allenamento. Ma le prove sono state corse
+ * tutte senza scarico, su 30-40 km a settimana, e il VDOT di Daniels è definito
+ * su prestazioni DI GARA, che si corrono scaricati. Taper: +1,5% — non il 2% di
+ * Bosquet (MSSE 2007), perché quel 2% è misurato su chi scarica da 60-120 km a
+ * settimana e qui se ne scaricano 30-40. Più tre decimi di percento per la
+ * differenza fra il riferimento a 15°C e una gara a 5-10°C.
+ *
+ *   48,5 (misurato, carico) + 1,5% taper + 0,3% freddo = 49,5 → 5K in 20:03.
+ *
+ * ⚠ Dopo ogni test (3 km a tutta ogni 3-4 settimane) riscrivi questo numero:
+ * è l'unico posto da toccare perché tutto il piano si ricalcoli.
  */
-export const KIKKO_VDOT_START = 49.0;
+export const KIKKO_VDOT_START = 49.5;
 /**
- * 19:35 sui 5K: esattamente +2,0 punti in dodici settimane, e la sub-20 cade
- * già a metà piano.
+ * 19:40 sui 5K, che a questo livello vale VDOT 50,8: dalla partenza sono +1,3.
  *
- * Il due non è arrotondato per bellezza: è il tetto che il selettore del VDOT
- * consente, e quel tetto viene dalla letteratura (Milanović 2015, Bacon 2013).
- * Prima qui c'era 51,1 — un decimo oltre — e un piano che di default chiede
- * più di quanto lui stesso dichiara possibile è un piano che si contraddice
- * alla prima riga.
+ * Il conto della finestra: kikkoPlausibleGain su dodici settimane a partire da
+ * 49,5 dà +1,2. Il piano ne chiede 1,3, cioè sta UN DECIMO sopra il tetto che
+ * la letteratura misura (Milanović 2015, Bacon 2013). Non è un errore ed è
+ * scritto qui apposta: è un obiettivo di punta, non il valore atteso. Regge a
+ * due condizioni — dodici settimane piene, nessuna saltata — e se una salta il
+ * bersaglio realistico torna a essere la sub-20, che con questa partenza cade
+ * già a +0,3.
+ *
+ * Chi vuole il margine invece della punta metta 50,3 (19:50, +0,8): sta
+ * comodamente dentro il tetto e lascia due decimi di riserva.
  */
-export const KIKKO_VDOT_GOAL = 51.0;
+export const KIKKO_VDOT_GOAL = 50.8;
 
 /**
  * QUANTO SI PUÒ CHIEDERE A UN BLOCCO, IN PUNTI DI VDOT.
@@ -1169,15 +1183,20 @@ export function kikkoVdotGainTable(
 }
 
 /**
- * Gli obiettivi di kikkoSub20, in ordine di ambizione.
+ * Gli obiettivi di kikkoSub20, dal più ambizioso al più sicuro.
  *
- * Due, perché il piano ne ha davvero due: la sub-20 cade a metà strada — è
- * quella che dà il nome al piano — e il 19:35 è il tetto verso cui punta la
- * progressione del VDOT. Mostrarne uno solo nasconderebbe metà della storia.
+ * Due, perché il piano ne ha davvero due, e l'ordine è cambiato: il 19:40 è
+ * ora il bersaglio dichiarato — è il primo, quindi è quello che la pagina
+ * propone — e la sub-20 non è più il traguardo ma il PAVIMENTO, quello che
+ * resta in piedi se il blocco perde una settimana.
+ *
+ * Mostrarli entrambi non è indecisione: una probabilità del 35% sul 19:40
+ * accanto a una dell'80% sulla sub-20 dice all'atleta due cose diverse e
+ * ugualmente vere, e la seconda è quella che decide come partire in gara.
  */
 export const KIKKO_SUB20_TARGETS = [
+  { label: KIKKO_SUB20_META.goalTime, sec: 19 * 60 + 40 },
   { label: "sub-20", sec: 19 * 60 + 59 },
-  { label: KIKKO_SUB20_META.goalTime, sec: 19 * 60 + 35 },
 ];
 
 export const KIKKO_SUB20_LEGEND: { color: string; label: string; opacity?: number }[] = [

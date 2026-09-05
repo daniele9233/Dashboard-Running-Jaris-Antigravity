@@ -536,15 +536,20 @@ export function TrainingGrid() {
   const goalPace = secToPace(goalSec / GOAL_DISTANCE_KM);
 
   /**
-   * Cosa misura la percentuale: l'obiettivo scelto, più quello di targa del
-   * piano se è più ambizioso. Due righe al massimo — la seconda esiste perché
-   * kikkoSub20 punta al 19:35 anche quando l'atleta si accontenta della sub-20,
-   * e nascondere il tetto verso cui sale il VDOT racconterebbe metà storia.
+   * Cosa misura la percentuale: l'obiettivo scelto, più l'altro obiettivo di
+   * targa del piano — che sia più ambizioso o più prudente.
+   *
+   * Prima si mostrava solo quello PIÙ veloce, e aveva senso finché il piano
+   * puntava oltre la sub-20. Ora che il bersaglio è il 19:40 la riga che serve
+   * è quella sotto: la probabilità sulla sub-20 è il pavimento, ed è il numero
+   * che decide come partire il giorno della gara.
    */
   const activeTargets = useMemo(() => {
     const chosen = { label: fmtRaceTime(goalSec), sec: goalSec };
-    const stretch = KIKKO_SUB20_TARGETS.find((t) => t.sec < goalSec - 1);
-    return stretch ? [chosen, stretch] : [chosen];
+    const other = KIKKO_SUB20_TARGETS
+      .filter((t) => Math.abs(t.sec - goalSec) > 1)
+      .sort((a, b) => Math.abs(a.sec - goalSec) - Math.abs(b.sec - goalSec))[0];
+    return other ? [chosen, other].sort((a, b) => a.sec - b.sec) : [chosen];
   }, [goalSec]);
 
   /**
