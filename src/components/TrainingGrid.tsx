@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, Sparkles, Zap, AlertTriangle, CheckCircle2, Info, Timer, XCircle, CalendarDays, Target, BookOpen, ChevronDown, Gauge } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, CalendarDays, Target, BookOpen, ChevronDown, TrendingUp } from "lucide-react";
 import { useApi, invalidateCache } from "../hooks/useApi";
 import { API_CACHE } from "../hooks/apiCacheKeys";
 import { getRuns } from "../api";
@@ -8,33 +8,22 @@ import type { RunsResponse } from "../types/api";
 import { evaluatePlan } from "../utils/trainingAdherence";
 import { SessionVerdict, AdherenceStrip } from "./TrainingAdherence";
 import {
-  getTrainingPlan, generateTrainingPlan, adaptTrainingPlan, evaluateTest,
-  getSub20Status, putSub20Status, putSub20Window, putSub20Goal, putSub20Vdot,
+  getSub20Status, putSub20Status, putSub20Window, putSub20Goal,
   type Sub20StatusResponse, type Sub20SessionStatus,
 } from "../api";
-import type { Session, TrainingPlanResponse, AdaptAdaptation } from "../types/api";
+import type { Session } from "../types/api";
 import { EVIDENCE, type EvidenceKey } from "../data/kikkoEvidence";
 import {
   KIKKO_SUB20_LEGEND, KIKKO_SUB20_DEFAULT_START,
   buildKikkoSub20Sessions, kikkoSub20RaceDate, kikkoSub20NormalizeStart,
   kikkoSub20HeatInfo, heatTable, heatReferenceLabel,
   kikkoGoalOdds, KIKKO_SUB20_TARGETS, KIKKO_SUB20_PLAN, kikkoWindow, addDays,
-  kikkoVdotOptions, kikkoPlausibleGain, KIKKO_VDOT_MAX_GAIN, type KikkoVdotChoice,
+  kikkoVdotGainTable, kikkoVdotForFiveK, kikkoPlausibleGain, secToPace,
 } from "../data/kikkoSub20Plan";
-import {
-  KIKKO_SUB135_LEGEND, KIKKO_SUB135_DEFAULT_START, KIKKO_SUB135_META,
-  buildKikkoSub135Sessions, kikkoSub135RaceDate, kikkoSub135HeatInfo,
-  KIKKO_SUB135_TARGETS, KIKKO_SUB135_PLAN,
-} from "../data/kikkoSub135Plan";
 
-/**
- * Quale dei due piani kikko è acceso.
- *
- * "off" torna al piano generato dal backend. I due piani non convivono: sono
- * due risposte alla stessa domenica, e mostrarle insieme vorrebbe dire far
- * scegliere all'atleta il target ogni mattina.
- */
-type KikkoPlanId = "off" | "sub20" | "sub135";
+/** Il piano e' uno solo, e la sua distanza non si sceglie: 5 km. */
+const PLAN_ID = "sub20";
+const GOAL_DISTANCE_KM = 5;
 
 /**
  * La finestra del piano: quando comincio e quando corro.
@@ -61,14 +50,11 @@ const HEAT_COLOR: Record<string, string> = {
  * paga. La tabella sta accanto alla seduta, non sepolta nella descrizione.
  */
 function HeatPanel({
-  date, startDate, raceDate, plan, vdot,
+  date, startDate, raceDate,
 }: {
   date: string; startDate: string; raceDate: string;
-  plan: KikkoPlanId; vdot: KikkoVdotChoice | null;
 }) {
-  const info = plan === "sub135"
-    ? kikkoSub135HeatInfo(date, startDate, raceDate, vdot)
-    : kikkoSub20HeatInfo(date, startDate, raceDate, vdot);
+  const info = kikkoSub20HeatInfo(date, startDate, raceDate);
   const { kind, baseSec } = info;
   const col = HEAT_COLOR[info.band.id] ?? "#A3E635";
   // La tabella usa la base di QUELLA settimana: il VDOT sale lungo il piano,
@@ -367,1224 +353,119 @@ function toDisplay(session: Session | undefined): SessionDisplay | null {
   return { color, title: session.title, details, completed: session.completed, description: session.description };
 }
 
-/** Data ISO → "mar 14 lug" (locale IT), senza sfasamenti di fuso. */
-function fmtItShort(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" });
-}
-
-// ─── Generate Plan Modal ─────────────────────────────────────────────────────
-
-// ─── Adapt Plan Modal ─────────────────────────────────────────────────────────
-
-const SEVERITY_CONFIG = {
-  critical: { icon: AlertTriangle, color: "text-red-400",    bg: "bg-red-500/10",    border: "border-red-500/20"    },
-  warning:  { icon: AlertTriangle, color: "text-amber-400",  bg: "bg-amber-500/10",  border: "border-amber-500/20"  },
-  info:     { icon: Info,          color: "text-blue-400",   bg: "bg-blue-500/10",   border: "border-blue-500/20"   },
-};
-
-function AdaptPlanModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
-  const [loading, setLoading]   = useState(false);
-  const [result, setResult]     = useState<AdaptAdaptation[] | null>(null);
-  const [summary, setSummary]   = useState<{ weeks: number; sessions: number; triggered: number } | null>(null);
-  const [error, setError]       = useState<string | null>(null);
-
-  const handleAdapt = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await adaptTrainingPlan();
-      if (res.message) {
-        setError(res.message);
-      } else {
-        // Plan changed → invalidate plan + current week
-        invalidateCache(API_CACHE.TRAINING_PLAN);
-        invalidateCache(API_CACHE.TRAINING_CURRENT_WEEK);
-        setResult(res.adaptations);
-        setSummary({ weeks: res.weeks_modified, sessions: res.sessions_modified, triggered: res.triggered_count });
-      }
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Errore nell'adattamento del piano.");
-    } finally {
-      setLoading(false);
-    }
-  };
+/**
+ * ALLA FINE DEL PIANO: QUANTI PUNTI CI PUOI METTERE, E QUANTO VALGONO.
+ *
+ * "VDOT" da solo non dice niente a nessuno. Un punto è un numero astratto
+ * finché non lo si traduce in secondi al chilometro — e quanti secondi sia un
+ * punto DIPENDE DA DOVE PARTI: intorno a 49 vale circa cinque secondi al km,
+ * a 60 meno di quattro. Non è la regola del pollice da sei secondi che gira
+ * nei forum: qui il conto esce dalla tabella dei ritmi, la stessa che scrive
+ * i target di ogni seduta.
+ *
+ * La colonna che conta è l'ultima: quanto scende il tempo sui 5 km. E la
+ * riga in fondo dice quanto di quella scala la finestra scelta può davvero
+ * produrre — circa un punto ogni otto settimane a questo livello (Milanović
+ * 2015, Bacon 2013). Chiedere di più non è ambizione, è scrivere ritmi che
+ * non arrivano.
+ */
+function VdotGainPanel({
+  startVdot, weeks, goalSec,
+}: {
+  startVdot: number;
+  weeks: number;
+  goalSec: number;
+}) {
+  const mono = { fontFamily: "'JetBrains Mono', monospace" };
+  const rows = kikkoVdotGainTable(startVdot, weeks);
+  const cap = kikkoPlausibleGain(weeks, startVdot);
+  const needVdot = kikkoVdotForFiveK(goalSec);
+  const needGain = Math.round((needVdot - startVdot) * 10) / 10;
+  const dec = (n: number) => n.toFixed(1).replace(".", ",");
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh]">
-
-        {/* Header */}
-        <div className="p-6 border-b border-[#2A2A2A] shrink-0">
-          <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
-            <Zap className="w-5 h-5 text-amber-400" />
-            Adatta Piano
-          </h2>
-          <p className="text-gray-400 text-sm leading-relaxed">
-            Gestisce gli <strong>"Allarmi"</strong>: serve per le decisioni più pesanti (ridurre i chilometri, cambiare la struttura della settimana, gestire gli infortuni).
-          </p>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {!result && !loading && (
-            <div className="space-y-3">
-              {[
-                { icon: "⚡", label: "ACWR (Prevenzione Infortuni)", desc: "Calcola il rapporto tra il carico di questa settimana e quello delle ultime 4. Se hai esagerato troppo in fretta, riduce il volume per proteggerti." },
-                { icon: "📊", label: "TSB (Forma vs Fatica)",        desc: "Controlla se sei troppo stanco. Se la 'Freshness' è troppo bassa, trasforma una sessione dura in una di recupero." },
-                { icon: "🎯", label: "VDOT Drift (Correzione Ritmo)", desc: "Se sei più veloce o lento del previsto, ricalcola tutti i tuoi passi (Easy, Threshold, Interval) per il futuro." },
-                { icon: "✅", label: "Compliance (Costanza)",       desc: "Se hai saltato troppi allenamenti negli ultimi 14 giorni, il piano si ammorbidisce per farti riprendere senza stress." },
-                { icon: "🏁", label: "Taper (Scarico Pre-Gara)",     desc: "A meno di 14 giorni dalla gara, riduce i chilometri per farti arrivare al via con gambe fresche e cariche." },
-              ].map(m => (
-                <div key={m.label} className="flex items-start gap-3 p-3 rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_16px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)] bg-gradient-to-br from-white/[0.05] to-black/40">
-                  <span className="text-lg">{m.icon}</span>
-                  <div>
-                    <span className="text-sm font-bold text-gray-200">{m.label}</span>
-                    <p className="text-xs text-gray-500 mt-0.5">{m.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {loading && (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <div className="w-10 h-10 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-              <p className="text-gray-400 text-sm">Analisi in corso…</p>
-            </div>
-          )}
-
-          {result && summary && (
-            <div className="space-y-4">
-              {/* Summary bar */}
-              <div className="flex gap-3 mb-2">
-                <div className="flex-1 rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_16px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)] bg-gradient-to-br from-white/[0.05] to-black/40 p-3 text-center">
-                  <div className="text-xl font-bold text-amber-400">{summary.triggered}</div>
-                  <div className="text-xs text-gray-500">modelli attivati</div>
-                </div>
-                <div className="flex-1 rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_16px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)] bg-gradient-to-br from-white/[0.05] to-black/40 p-3 text-center">
-                  <div className="text-xl font-bold text-white">{summary.weeks}</div>
-                  <div className="text-xs text-gray-500">settimane modificate</div>
-                </div>
-                <div className="flex-1 rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_16px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)] bg-gradient-to-br from-white/[0.05] to-black/40 p-3 text-center">
-                  <div className="text-xl font-bold text-white">{summary.sessions}</div>
-                  <div className="text-xs text-gray-500">sessioni aggiornate</div>
-                </div>
-              </div>
-
-              {/* Adaptation cards */}
-              {result.map((a, i) => {
-                const cfg = SEVERITY_CONFIG[a.severity] ?? SEVERITY_CONFIG.info;
-                const Icon = a.triggered ? cfg.icon : CheckCircle2;
-                return (
-                  <div key={i} className={`rounded-xl border p-4 ${cfg.bg} ${cfg.border}`}>
-                    <div className="flex items-start gap-3">
-                      <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${a.triggered ? cfg.color : "text-[#10B981]"}`} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">{a.model_name}</span>
-                          {a.triggered && (
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${
-                              a.severity === 'critical' ? 'bg-red-500/20 text-red-400' :
-                              a.severity === 'warning'  ? 'bg-amber-500/20 text-amber-400' :
-                              'bg-blue-500/20 text-blue-400'
-                            }`}>attivato</span>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-300 leading-relaxed">{a.message}</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {error && (
-            <div className="flex items-center gap-2 text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
-              <Info className="w-4 h-4 shrink-0" />
-              <p className="text-sm">{error}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-6 border-t border-[#2A2A2A] shrink-0 flex gap-3">
-          <button
-            type="button"
-            onClick={() => { onClose(); if (result) onDone(); }}
-            className="flex-1 py-3 rounded-lg bg-[#121212] border border-[#2A2A2A] text-gray-400 hover:text-white transition-colors text-sm font-medium"
-          >
-            {result ? "Chiudi" : "Annulla"}
-          </button>
-          {!result && !loading && (
-            <button
-              type="button"
-              onClick={handleAdapt}
-              className="flex-1 py-3 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-sm font-bold transition-colors flex items-center justify-center gap-2"
-            >
-              <Zap className="w-4 h-4" />
-              Analizza e Adatta
-            </button>
-          )}
-        </div>
+    <div className="mt-8 rounded-xl border border-[#2A2A2A] bg-[#0F0F0F] overflow-hidden">
+      <div className="px-4 py-3 border-b border-[#2A2A2A] flex flex-wrap items-center gap-x-3 gap-y-1">
+        <TrendingUp className="w-4 h-4 shrink-0" style={{ color: "var(--app-accent)" }} />
+        <span className="text-[10px] font-black tracking-[0.2em] uppercase text-gray-300">
+          Quanto VDOT puoi guadagnare
+        </span>
+        <span className="text-[11px] text-gray-500" style={mono}>
+          parti da {dec(startVdot)} · {weeks} settimane
+        </span>
       </div>
-    </div>
-  );
-}
 
-// ─── Evaluate Test Modal ─────────────────────────────────────────────────────
-
-function EvaluateTestModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{
-    test_vdot: number;
-    test_pace: string;
-    previous_plan_vdot: number;
-    new_target_vdot: number;
-    vdot_change: number;
-    direction: string;
-    confidence: number;
-    message: string;
-  } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [testDistance, setTestDistance] = useState("3");
-  const [testTime, setTestTime] = useState("");
-  const [testDate, setTestDate] = useState(new Date().toISOString().split("T")[0]);
-
-  const handleEvaluate = async () => {
-    if (!testDistance || !testTime) {
-      setError("Inserisci distanza e tempo del test.");
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await evaluateTest({
-        test_distance_km: parseFloat(testDistance),
-        test_time: testTime.trim(),
-        test_date: testDate,
-      });
-      setResult(res as unknown as typeof result);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Errore nella valutazione del test.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh]">
-        {/* Header */}
-        <div className="p-6 border-b border-[#2A2A2A] shrink-0">
-          <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
-            <Timer className="w-5 h-5 text-purple-400" />
-            Test di Valutazione
-          </h2>
-          <p className="text-gray-400 text-sm leading-relaxed">
-            Esegui un test (minimo 3km) per ricalibrare il piano. Il nuovo VDOT verrà usato per adattare le sessioni future.
-          </p>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {!result && !loading && (
-            <div className="space-y-5">
-              {/* Test Distance */}
-              <div>
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">Distanza Test (km)</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {["3", "5", "10"].map(d => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => setTestDistance(d)}
-                      className={`py-2.5 px-2 rounded-lg text-xs font-medium border transition-colors ${
-                        testDistance === d
-                          ? "bg-purple-500 border-purple-500 text-white"
-                          : "bg-[#121212] border-[#2A2A2A] text-gray-400 hover:border-gray-500"
-                      }`}
-                    >
-                      {d} km
-                    </button>
-                  ))}
-                  <input
-                    type="number"
-                    value={testDistance}
-                    onChange={e => setTestDistance(e.target.value)}
-                    placeholder="Custom"
-                    className="bg-[#121212] border border-[#2A2A2A] rounded-lg px-2 py-2 text-white text-xs font-mono placeholder:text-gray-600 focus:border-purple-500 focus:outline-none text-center"
-                  />
-                </div>
-              </div>
-
-              {/* Test Time */}
-              <div>
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">
-                  Tempo del Test
-                </label>
-                <input
-                  type="text"
-                  value={testTime}
-                  onChange={e => setTestTime(e.target.value)}
-                  placeholder="es. 14:30"
-                  className="w-full bg-[#121212] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white text-lg font-mono placeholder:text-gray-600 focus:border-purple-500 focus:outline-none transition-colors"
-                />
-              </div>
-
-              {/* Test Date */}
-              <div>
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">
-                  Data del Test
-                </label>
-                <input
-                  type="date"
-                  value={testDate}
-                  onChange={e => setTestDate(e.target.value)}
-                  className="w-full bg-[#121212] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white focus:border-purple-500 focus:outline-none transition-colors"
-                />
-              </div>
-
-              {/* Info box */}
-              <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
-                <p className="text-[11px] text-purple-300 leading-relaxed">
-                  <span className="font-bold">Base scientifica:</span> Daniels (2013) — il VDOT da time trial è il metodo più accurato per stimare la forma attuale. Test ≥ 3km per affidabilità.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {loading && (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <div className="w-10 h-10 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
-              <p className="text-gray-400 text-sm">Valutazione in corso…</p>
-            </div>
-          )}
-
-          {result && (
-            <div className="space-y-4">
-              {/* VDOT comparison */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center">
-                  <div className="text-[10px] text-gray-500 uppercase mb-1">VDOT Precedente</div>
-                  <div className="text-2xl font-bold text-gray-400">{result.previous_plan_vdot}</div>
-                </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-purple-500/30 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center">
-                  <div className="text-[10px] text-purple-400 uppercase mb-1">VDOT Test</div>
-                  <div className="text-2xl font-bold text-purple-400">{result.test_vdot}</div>
-                  <div className="text-[10px] text-gray-500 mt-1">Passo: {result.test_pace}/km</div>
-                </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center">
-                  <div className="text-[10px] text-gray-500 uppercase mb-1">Nuovo Target</div>
-                  <div className="text-2xl font-bold text-white">{result.new_target_vdot}</div>
-                </div>
-              </div>
-
-              {/* Direction indicator */}
-              <div className={`rounded-xl border p-4 ${
-                result.direction === "improved"
-                  ? "bg-emerald-500/10 border-emerald-500/20"
-                  : result.direction === "declined"
-                  ? "bg-red-500/10 border-red-500/20"
-                  : "bg-blue-500/10 border-blue-500/20"
-              }`}>
-                <div className="flex items-center gap-2 mb-2">
-                  {result.direction === "improved" ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  ) : result.direction === "declined" ? (
-                    <AlertTriangle className="w-4 h-4 text-red-400" />
-                  ) : (
-                    <Info className="w-4 h-4 text-blue-400" />
-                  )}
-                  <span className={`text-sm font-bold ${
-                    result.direction === "improved" ? "text-emerald-400" :
-                    result.direction === "declined" ? "text-red-400" : "text-blue-400"
-                  }`}>
-                    {result.direction === "improved" ? "Miglioramento!" :
-                     result.direction === "declined" ? "Leggero calo" : "Stabile"}
-                  </span>
-                  <span className="text-sm text-gray-400">
-                    {result.vdot_change > 0 ? "+" : ""}{result.vdot_change} VDOT
-                  </span>
-                </div>
-                <p className="text-xs text-gray-400">{result.message}</p>
-              </div>
-
-              {/* Confidence */}
-              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-gray-400 uppercase">Confidenza nel piano</span>
-                  <span className="text-sm font-bold text-purple-400">{result.confidence}%</span>
-                </div>
-                <div className="w-full h-2 bg-[#2A2A2A] rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-purple-500 to-emerald-500 transition-all"
-                    style={{ width: `${result.confidence}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="flex items-center gap-2 text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
-              <Info className="w-4 h-4 shrink-0" />
-              <p className="text-sm">{error}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-6 border-t border-[#2A2A2A] shrink-0 flex gap-3">
-          <button
-            type="button"
-            onClick={() => { onClose(); if (result) onDone(); }}
-            className="flex-1 py-3 rounded-lg bg-[#121212] border border-[#2A2A2A] text-gray-400 hover:text-white transition-colors text-sm font-medium"
-          >
-            {result ? "Chiudi" : "Annulla"}
-          </button>
-          {!result && !loading && (
-            <button
-              type="button"
-              onClick={handleEvaluate}
-              disabled={loading}
-              className="flex-1 py-3 rounded-lg bg-purple-500 hover:bg-purple-400 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              <Timer className="w-4 h-4" />
-              Valuta e Ricalibra
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Generate Plan Modal ─────────────────────────────────────────────────────
-
-interface GenerateResult {
-  current_vdot: number;
-  target_vdot: number;
-  weeks_generated: number;
-  dry_run?: boolean;
-  peak_vdot?: number;
-  peak_date?: string;
-  peak_source?: {
-    date?: string;
-    name?: string;
-    distance_km?: number;
-    duration_minutes?: number;
-    avg_pace?: string;
-    avg_hr?: number | null;
-    strava_id?: string | number;
-  } | null;
-  training_months?: number;
-  weekly_volume?: number;
-  history_context?: {
-    days_since_last_run: number;
-    longest_stop_days_6m: number;
-    weekly_volume_4w: number;
-    weekly_volume_8w: number;
-    recent_peak_weekly_km: number;
-    quality_sessions_8w: number;
-    interval_sessions_8w: number;
-    tempo_sessions_8w: number;
-    long_runs_8w: number;
-    easy_ratio_8w: number;
-    aerobic_base_score: number;
-    readiness_score: number;
-    training_status: string;
-    load: { ctl: number; atl: number; tsb: number };
-  };
-  test_vdot?: number | null;
-  plan_mode?: PlanMode | null;
-  strategy_options?: StrategyOption[];
-  start_weekly_km?: number;
-  peak_weekly_km?: number;
-  recent_weekly_km?: number;
-  climate?: {
-    city: string;
-    months: { month: number; label: string; temp_c: number; heat_adj_sec: number }[];
-    race_month_label: string;
-    race_temp_c: number;
-    race_heat_adj_sec: number;
-  };
-  race_predictions_expected?: Record<string, string>;
-  feasibility: {
-    feasible: boolean;
-    difficulty: string;
-    message: string;
-    confidence_pct: number;
-    is_recovery?: boolean;
-    conservative_vdot?: number;
-    conservative_time?: string;
-    conservative_rate?: number;
-    optimistic_vdot?: number;
-    optimistic_time?: string;
-    optimistic_rate?: number;
-    original_target_time?: string;
-    suggested_weeks?: number;
-    suggested_timeframe?: string;
-  };
-  race_predictions: Record<string, string>;
-}
-
-type PlanMode = 'conservative' | 'balanced' | 'aggressive';
-type CalibrationMode = 'strava' | '3k' | 'cooper';
-interface StrategyOption {
-  mode: PlanMode;
-  label: string;
-  focus: string;
-  success_pct: number;
-  completion_pct: number;
-  weekly_volume_multiplier: number;
-  projected_vdot: number;
-  note: string;
-}
-
-const TIME_PLACEHOLDERS: Record<string, string> = {
-  "5K": "es. 25:00",
-  "10K": "es. 52:00",
-  "Half Marathon": "es. 1:55:00",
-  "Marathon": "es. 4:10:00",
-};
-
-// Basi climatiche selezionabili (devono combaciare con CITY_MONTH_TEMP_C nel backend)
-const CLIMATE_CITIES: { id: string; label: string }[] = [
-  { id: "roma", label: "Roma (default · usa anche il tuo storico)" },
-  { id: "milano", label: "Milano" },
-  { id: "torino", label: "Torino" },
-  { id: "napoli", label: "Napoli" },
-  { id: "bologna", label: "Bologna" },
-  { id: "firenze", label: "Firenze" },
-  { id: "palermo", label: "Palermo" },
-  { id: "cagliari", label: "Cagliari" },
-];
-
-type ModalPhase = 'input' | 'calibration' | 'strategy' | 'done';
-
-function GeneratePlanModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
-  const [phase, setPhase] = useState<ModalPhase>('input');
-  const [goalRace, setGoalRace] = useState("5K");
-  const [weeksToRace, setWeeksToRace] = useState(12);
-  const [targetTime, setTargetTime] = useState("");
-  const [startDate, setStartDate] = useState(() => {
-    // Default: next Monday
-    const today = new Date();
-    const daysUntilMonday = (8 - today.getDay()) % 7 || 7;
-    const nextMonday = new Date(today);
-    nextMonday.setDate(today.getDate() + daysUntilMonday);
-    return nextMonday.toISOString().slice(0, 10);
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<GenerateResult | null>(null);
-  const [calibrationMode, setCalibrationMode] = useState<CalibrationMode>('strava');
-  const [testTime, setTestTime] = useState("");
-  const [cooperMeters, setCooperMeters] = useState("");
-  // Km/settimana di partenza (vuoto = auto dal volume recente) + base climatica
-  const [startKm, setStartKm] = useState("");
-  const [climateCity, setClimateCity] = useState("roma");
-
-  const validateGoal = () => {
-    if (!targetTime.trim()) {
-      setError("Inserisci il tempo obiettivo (mm:ss o h:mm:ss).");
-      return false;
-    }
-    setError(null);
-    return true;
-  };
-
-  const testPayload = () => {
-    if (calibrationMode === '3k' && testTime.trim()) {
-      return { test_distance_km: 3, test_time: testTime.trim() };
-    }
-    if (calibrationMode === 'cooper' && cooperMeters.trim()) {
-      const meters = Number(cooperMeters.replace(",", "."));
-      if (Number.isFinite(meters) && meters > 0) {
-        return { test_distance_km: meters / 1000, test_time: "12:00" };
-      }
-    }
-    return {};
-  };
-
-  const baseParams = () => {
-    const km = Number(startKm.replace(",", "."));
-    return {
-      goal_race: goalRace,
-      weeks_to_race: weeksToRace,
-      target_time: targetTime.trim(),
-      start_date: startDate,
-      city: climateCity,
-      ...(startKm.trim() && Number.isFinite(km) && km > 0 ? { start_weekly_km: km } : {}),
-      ...testPayload(),
-    };
-  };
-
-  const handleAnalyze = async () => {
-    if (!validateGoal()) return;
-    if (calibrationMode === '3k' && !testTime.trim()) {
-      setError("Inserisci il tempo del test 3 km oppure scegli Solo Strava.");
-      return;
-    }
-    if (calibrationMode === 'cooper' && !cooperMeters.trim()) {
-      setError("Inserisci i metri del Cooper oppure scegli Solo Strava.");
-      return;
-    }
-    if (calibrationMode === 'cooper') {
-      const meters = Number(cooperMeters.replace(",", "."));
-      if (!Number.isFinite(meters) || meters <= 0) {
-        setError("Inserisci una distanza Cooper valida in metri.");
-        return;
-      }
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await generateTrainingPlan({ ...baseParams(), dry_run: true });
-      const analysis = res as unknown as GenerateResult;
-      setResult(analysis);
-      if (analysis.weeks_generated > 0 && analysis.dry_run === false) {
-        setPhase('done');
-        return;
-      }
-      if (!analysis.strategy_options?.length) {
-        const generated = await generateTrainingPlan({ ...baseParams(), plan_mode: 'balanced' });
-        setResult(generated as unknown as GenerateResult);
-        setPhase('done');
-        return;
-      }
-      setPhase('strategy');
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Errore nell'analisi del piano.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGenerate = async (mode: PlanMode) => {
-    if (!validateGoal()) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await generateTrainingPlan({ ...baseParams(), plan_mode: mode });
-      // New plan → invalidate plan + current week
-      invalidateCache(API_CACHE.TRAINING_PLAN);
-      invalidateCache(API_CACHE.TRAINING_CURRENT_WEEK);
-      setResult(res as unknown as GenerateResult);
-      setPhase('done');
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Errore nella generazione del piano.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const feasColor = result?.feasibility.difficulty === "already_there" ? "text-[#10B981]"
-    : result?.feasibility.difficulty === "realistic" ? "text-[#3B82F6]"
-    : result?.feasibility.difficulty === "challenging" ? "text-amber-400"
-    : "text-red-400";
-  const strategyOptions = result?.strategy_options ?? [];
-  const defaultStrategy = strategyOptions.find(option => option.mode === 'balanced') ?? strategyOptions[0];
-  const selectedStrategy = result?.plan_mode
-    ? strategyOptions.find(option => option.mode === result.plan_mode)
-    : undefined;
-  const selectedSuccessPct = selectedStrategy?.success_pct ?? result?.feasibility.confidence_pct ?? 0;
-  const selectedCompletionPct = selectedStrategy?.completion_pct;
-  const selectedColor = selectedSuccessPct >= 80 ? "text-[#10B981]"
-    : selectedSuccessPct >= 60 ? "text-[#C0FF00]"
-    : selectedSuccessPct >= 45 ? "text-amber-400"
-    : "text-red-400";
-  const peakSource = result?.peak_source;
-  const peakDetails = peakSource
-    ? [
-        peakSource.name,
-        peakSource.distance_km ? `${Number(peakSource.distance_km).toFixed(2)} km` : null,
-        peakSource.avg_pace ? `${peakSource.avg_pace}/km` : null,
-      ].filter(Boolean).join(" - ")
-    : "";
-
-  return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh]">
-
-        {/* Header */}
-        <div className="p-6 pb-4 border-b border-[#2A2A2A] shrink-0">
-          <h2 className="text-xl font-bold text-white mb-1">
-            Genera Piano di Allenamento
-          </h2>
-          <p className="text-gray-500 text-sm mb-3">
-            Obiettivo, calibrazione e strategia prima di creare il piano.
-          </p>
-          {phase === 'input' && (
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-              <p className="text-[11px] text-blue-300 leading-relaxed">
-                <span className="font-bold uppercase mr-1">Flusso:</span>
-                configura l'obiettivo, calibra il VDOT con test opzionale, scegli il profilo di allenamento.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-
-          {/* ── PHASE: INPUT ── */}
-          {phase === 'input' && (
-            <>
-              {/* Goal Race */}
-              <div className="mb-5">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">Obiettivo Gara</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {(["5K", "10K", "Half Marathon", "Marathon"] as const).map(g => (
-                    <button
-                      key={g}
-                      type="button"
-                      onClick={() => { setGoalRace(g); setTargetTime(""); }}
-                      className={`py-2.5 px-2 rounded-lg text-xs font-medium border transition-colors ${
-                        goalRace === g
-                          ? "bg-[#3B82F6] border-[#3B82F6] text-white"
-                          : "bg-[#121212] border-[#2A2A2A] text-gray-400 hover:border-gray-500"
-                      }`}
-                    >
-                      {g}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Target Time */}
-              <div className="mb-5">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">
-                  Tempo Obiettivo
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={targetTime}
-                    onChange={e => setTargetTime(e.target.value)}
-                    placeholder={TIME_PLACEHOLDERS[goalRace] || "mm:ss"}
-                    className="w-full bg-[#121212] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white text-lg font-mono placeholder:text-gray-600 focus:border-[#3B82F6] focus:outline-none transition-colors"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                    {goalRace === "Marathon" || goalRace === "Half Marathon" ? "h:mm:ss" : "mm:ss"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Weeks slider */}
-              <div className="mb-5">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">
-                  Settimane alla gara: <span className="text-white font-bold">{weeksToRace}</span>
-                </label>
-                <input
-                  type="range" min={8} max={24} step={1}
-                  value={weeksToRace}
-                  onChange={e => setWeeksToRace(Number(e.target.value))}
-                  className="w-full accent-[#3B82F6]"
-                />
-                <div className="flex justify-between text-xs text-gray-600 mt-1">
-                  <span>8 sett.</span>
-                  <span>24 sett.</span>
-                </div>
-              </div>
-
-              {/* Start Date */}
-              <div className="mb-5">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">
-                  Data di inizio piano
-                </label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={e => setStartDate(e.target.value)}
-                  min={new Date().toISOString().slice(0, 10)}
-                  className="w-full bg-[#121212] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white focus:border-[#3B82F6] focus:outline-none transition-colors [color-scheme:dark]"
-                />
-                <p className="text-[11px] text-gray-600 mt-1.5">
-                  Di default: prossimo lunedì. Puoi scegliere qualsiasi giorno.
-                </p>
-              </div>
-
-              {/* Starting weekly km (regola del 10%) */}
-              <div className="mb-5">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">
-                  Km/settimana di partenza
-                </label>
-                <input
-                  type="number"
-                  min={8}
-                  step={1}
-                  value={startKm}
-                  onChange={e => setStartKm(e.target.value)}
-                  placeholder="auto — dal tuo volume recente"
-                  className="w-full bg-[#121212] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white text-lg font-mono placeholder:text-gray-600 focus:border-[#3B82F6] focus:outline-none transition-colors"
-                />
-                <p className="text-[11px] text-gray-600 mt-1.5">
-                  Lascia vuoto per partire dal volume delle tue ultime settimane. Il piano
-                  cresce al massimo del <span className="text-gray-400 font-bold">10% a settimana</span> (regola del 10%).
-                </p>
-              </div>
-
-              {/* Climate base city */}
-              <div className="mb-5">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">
-                  Località · base climatica
-                </label>
-                <select
-                  value={climateCity}
-                  onChange={e => setClimateCity(e.target.value)}
-                  className="w-full bg-[#121212] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white focus:border-[#3B82F6] focus:outline-none transition-colors [color-scheme:dark]"
+      <div className="overflow-x-auto">
+        <table className="w-full text-[11.5px]" style={mono}>
+          <thead>
+            <tr className="text-gray-500 border-b border-[#1E1E1E]">
+              <th className="text-left font-bold px-4 py-2">Guadagno</th>
+              <th className="text-left font-bold px-2 py-2">VDOT</th>
+              <th className="text-left font-bold px-2 py-2">Ritmo gara</th>
+              <th className="text-left font-bold px-2 py-2">al km</th>
+              <th className="text-left font-bold px-2 py-2">Soglia</th>
+              <th className="text-left font-bold px-2 py-2">5 km</th>
+              <th className="text-left font-bold px-4 py-2">Sui 5 km</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const col = r.plausible ? "var(--app-accent)" : "#F59E0B";
+              return (
+                <tr
+                  key={r.gain}
+                  className="border-b border-[#141414] last:border-0"
+                  style={r.plausible ? undefined : { opacity: 0.55 }}
                 >
-                  {CLIMATE_CITIES.map(c => (
-                    <option key={c.id} value={c.id}>{c.label}</option>
-                  ))}
-                </select>
-                <p className="text-[11px] text-gray-600 mt-1.5">
-                  I ritmi delle sedute si adattano alla temperatura attesa mese per mese
-                  (es. a luglio le ripetute sono più lente che a dicembre, a parità di forma).
-                </p>
-              </div>
+                  <td className="px-4 py-2 font-bold whitespace-nowrap" style={{ color: col }}>
+                    +{dec(r.gain)}
+                  </td>
+                  <td className="px-2 py-2 text-gray-400 whitespace-nowrap">{dec(r.vdot)}</td>
+                  <td className="px-2 py-2 text-gray-300 whitespace-nowrap">{secToPace(r.raceSec / GOAL_DISTANCE_KM)}</td>
+                  <td className="px-2 py-2 font-bold whitespace-nowrap" style={{ color: col }}>
+                    −{dec(r.racePerKm)}″
+                  </td>
+                  <td className="px-2 py-2 text-gray-500 whitespace-nowrap">{secToPace(r.thrSec)}</td>
+                  <td className="px-2 py-2 text-gray-300 whitespace-nowrap">{fmtRaceTime(r.raceSec)}</td>
+                  <td className="px-4 py-2 font-bold whitespace-nowrap" style={{ color: col }}>
+                    −{Math.round(r.raceGainSec)}″
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="px-4 py-3 border-t border-[#2A2A2A] space-y-1.5 text-[11px] leading-snug">
+        <p className="text-gray-400">
+          In <span className="text-gray-200 font-bold">{weeks} settimane</span> fatte per intero la
+          letteratura misura circa{" "}
+          <span className="font-bold" style={{ color: "var(--app-accent)" }}>+{dec(cap)} punti</span>{" "}
+          per un atleta a questo livello: le righe sotto quella soglia sono realistiche, quelle
+          sopra sono ambizione. Circa un punto ogni otto settimane (Milanović 2015, Bacon 2013).
+        </p>
+        <p className="text-gray-400">
+          Per <span className="text-gray-200 font-bold">{fmtRaceTime(goalSec)}</span> sui{" "}
+          {GOAL_DISTANCE_KM} km serve VDOT{" "}
+          <span className="text-gray-200 font-bold">{dec(needVdot)}</span>
+          {needGain > 0.05 ? (
+            <>
+              , cioè{" "}
+              <span className="font-bold" style={{ color: needGain <= cap + 0.05 ? "var(--app-accent)" : "#F59E0B" }}>
+                +{dec(needGain)}
+              </span>{" "}
+              da qui{needGain <= cap + 0.05 ? " — dentro quello che la finestra può dare." : " — più di quanto la finestra può dare: o si allunga, o si sposta l'obiettivo."}
             </>
+          ) : (
+            <> — il motore per farlo c'è già: quello che manca è portarlo alla gara.</>
           )}
-
-          {/* ── PHASE: CALIBRATION ── */}
-          {phase === 'calibration' && (
-            <div className="space-y-5">
-              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Calibrazione VDOT</div>
-                <p className="text-sm text-gray-400 leading-relaxed">
-                  Per un piano piu preciso puoi inserire un test massimale. Se lo salti, il sistema usa lo storico Strava ed e meno certo.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                {([
-                  { mode: 'strava' as const, title: 'Solo Strava', body: 'Usa le corse recenti. Piu rapido, meno preciso.' },
-                  { mode: '3k' as const, title: 'Test 3 km', body: 'Tempo sui 3.000 metri come anchor test.' },
-                  { mode: 'cooper' as const, title: 'Cooper 12 min', body: 'Metri percorsi in 12 minuti.' },
-                ]).map((card) => (
-                  <button
-                    key={card.mode}
-                    type="button"
-                    onClick={() => setCalibrationMode(card.mode)}
-                    className={`text-left rounded-xl border p-4 transition-colors ${
-                      calibrationMode === card.mode
-                        ? 'bg-[#3B82F6]/10 border-[#3B82F6] text-white'
-                        : 'bg-[#121212] border-[#2A2A2A] text-gray-400 hover:border-gray-500'
-                    }`}
-                  >
-                    <div className="text-sm font-bold mb-1">{card.title}</div>
-                    <div className="text-xs leading-relaxed">{card.body}</div>
-                  </button>
-                ))}
-              </div>
-
-              {calibrationMode === '3k' && (
-                <div>
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Tempo test 3 km</label>
-                  <input
-                    type="text"
-                    value={testTime}
-                    onChange={e => setTestTime(e.target.value)}
-                    placeholder="es. 12:45"
-                    className="w-full bg-[#121212] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white text-lg font-mono placeholder:text-gray-600 focus:border-[#3B82F6] focus:outline-none"
-                  />
-                </div>
-              )}
-
-              {calibrationMode === 'cooper' && (
-                <div>
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Metri percorsi in 12 minuti</label>
-                  <input
-                    type="number"
-                    value={cooperMeters}
-                    onChange={e => setCooperMeters(e.target.value)}
-                    placeholder="es. 2850"
-                    className="w-full bg-[#121212] border border-[#2A2A2A] rounded-lg px-4 py-3 text-white text-lg font-mono placeholder:text-gray-600 focus:border-[#3B82F6] focus:outline-none"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── PHASE: STRATEGY ── */}
-          {phase === 'strategy' && result && (
-            <div className="space-y-5">
-              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Scegli una strategia
-                </div>
-                <p className="text-sm text-gray-400 leading-relaxed">
-                  L'analisi e pronta: ora scegli un profilo oppure usa il piano bilanciato consigliato.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">VDOT attuale</div>
-                  <div className="text-2xl font-bold text-white">{result.current_vdot}</div>
-                  <div className="text-[9px] text-gray-600 mt-1">temp. ideale · solo corse ≥5 km</div>
-                  {result.test_vdot && <div className="text-[10px] text-[#C0FF00] mt-1">da anchor test</div>}
-                </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">VDOT obiettivo</div>
-                  <div className="text-2xl font-bold text-[#3B82F6]">{result.target_vdot}</div>
-                </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Gap</div>
-                  <div className={`text-2xl font-bold ${feasColor}`}>+{Math.max(0, result.target_vdot - result.current_vdot).toFixed(1)}</div>
-                </div>
-              </div>
-
-              {/* Volume + clima del piano */}
-              <div className="grid grid-cols-2 gap-3">
-                {result.start_weekly_km != null && (
-                  <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
-                    <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Volume settimanale</div>
-                    <div className="text-lg font-bold text-white">
-                      {result.start_weekly_km} <span className="text-xs text-gray-500 font-normal">km/sett →</span> {result.peak_weekly_km} <span className="text-xs text-gray-500 font-normal">km picco</span>
-                    </div>
-                    <div className="text-[10px] text-gray-600 mt-1">
-                      recente: {result.recent_weekly_km ?? "—"} km/sett · crescita ≤10%/settimana
-                    </div>
-                  </div>
-                )}
-                {result.climate && (
-                  <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
-                    <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">
-                      Clima · {result.climate.city.charAt(0).toUpperCase() + result.climate.city.slice(1)}
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      {result.climate.months.slice(0, 4).map(m => (
-                        <span key={m.month} className={`text-[10px] px-2 py-0.5 rounded-full border ${m.heat_adj_sec >= 4 ? "text-amber-300 border-amber-500/30 bg-amber-500/10" : "text-gray-400 border-[#2A2A2A]"}`}>
-                          {m.label.slice(0, 3)} {Math.round(m.temp_c)}°{m.heat_adj_sec >= 4 ? ` +${m.heat_adj_sec}s/km` : ""}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="text-[10px] text-gray-600 mt-1.5">ritmi già adattati al caldo atteso</div>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                {strategyOptions.map((option) => (
-                  <button
-                    key={option.mode}
-                    type="button"
-                    onClick={() => handleGenerate(option.mode)}
-                    disabled={loading}
-                    className="text-left bg-[#121212] hover:bg-[#171717] border border-[#2A2A2A] hover:border-[#3B82F6]/60 rounded-xl p-4 transition-colors disabled:opacity-50"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-bold text-white">{option.label}</span>
-                      <span className="text-lg font-black text-[#C0FF00]">{option.success_pct}%</span>
-                    </div>
-                    <p className="text-xs text-gray-400 leading-relaxed mb-3">{option.focus}</p>
-                    <div className="space-y-2 text-[11px]">
-                      <div className="flex justify-between"><span className="text-gray-500">Successo obiettivo</span><span className="text-white font-bold">{option.success_pct}%</span></div>
-                      <div className="flex justify-between"><span className="text-gray-500">Tenuta fisica</span><span className="text-white font-bold">{option.completion_pct}%</span></div>
-                      <div className="flex justify-between"><span className="text-gray-500">VDOT stimato</span><span className="text-white font-bold">{option.projected_vdot}</span></div>
-                    </div>
-                    <p className="text-[11px] text-gray-500 mt-3 leading-relaxed">{option.note}</p>
-                    <div className="mt-4 rounded-lg bg-[#3B82F6] px-3 py-2 text-center text-xs font-bold text-white">
-                      Genera {option.label}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-
-          {/* ── PHASE: DONE ── */}
-          {phase === 'done' && result && (
-            <div className="space-y-4">
-              {/* VDOT Summary */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center">
-                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">VDOT Attuale</div>
-                  <div className="text-3xl font-bold text-white">{result.current_vdot}</div>
-                  <div className="text-[9px] text-gray-600 mt-0.5">temp. ideale · solo corse ≥5 km</div>
-                  {result.test_vdot && <div className="text-[9px] text-[#C0FF00] mt-0.5">calibrato da test</div>}
-                </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center">
-                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">VDOT Target</div>
-                  <div className="text-3xl font-bold text-[#3B82F6]">{result.target_vdot}</div>
-                </div>
-              </div>
-
-              {result.history_context && (
-                <div className="grid grid-cols-4 gap-2">
-                  <div className="bg-[#121212] border border-[#2A2A2A] rounded-lg p-3">
-                    <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Stato</div>
-                    <div className="text-xs font-bold text-white">{result.history_context.training_status.replaceAll('_', ' ')}</div>
-                  </div>
-                  <div className="bg-[#121212] border border-[#2A2A2A] rounded-lg p-3">
-                    <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Stop</div>
-                    <div className="text-xs font-bold text-white">{result.history_context.days_since_last_run} gg</div>
-                  </div>
-                  <div className="bg-[#121212] border border-[#2A2A2A] rounded-lg p-3">
-                    <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Volume 8 sett.</div>
-                    <div className="text-xs font-bold text-white">{result.history_context.weekly_volume_8w} km/w</div>
-                  </div>
-                  <div className="bg-[#121212] border border-[#2A2A2A] rounded-lg p-3">
-                    <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Qualita 8 sett.</div>
-                    <div className="text-xs font-bold text-white">{result.history_context.quality_sessions_8w}</div>
-                  </div>
-                </div>
-              )}
-
-              {/* Peak context */}
-              {result.peak_vdot && result.peak_vdot !== result.current_vdot && (
-                <div className="flex flex-wrap items-center gap-2 text-[10px] text-gray-500 bg-[#121212] border border-[#2A2A2A] rounded-lg px-3 py-2">
-                  <span>Picco storico: <strong className="text-[#8B5CF6]">{result.peak_vdot}</strong></span>
-                  {result.peak_date && (
-                    <span>({new Date(result.peak_date).toLocaleDateString('it', { month: 'short', year: 'numeric' })})</span>
-                  )}
-                  {peakDetails && <span>- {peakDetails}</span>}
-                  {result.feasibility.is_recovery && <span className="text-[#8B5CF6] font-bold">- Recovery Mode</span>}
-                </div>
-              )}
-
-              {selectedStrategy && (
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="flex items-start justify-between gap-4 mb-3">
-                    <div>
-                      <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Strategia scelta</div>
-                      <div className="text-lg font-bold text-white">{selectedStrategy.label}</div>
-                      <p className="text-xs text-gray-400 mt-1">{selectedStrategy.focus}</p>
-                    </div>
-                    <div className={`text-3xl font-black ${selectedColor}`}>{selectedStrategy.success_pct}%</div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-[11px]">
-                    <div className="bg-[#1E1E1E] rounded-lg px-3 py-2">
-                      <div className="text-gray-500 uppercase mb-1">Successo obiettivo</div>
-                      <div className="text-white font-bold">{selectedStrategy.success_pct}%</div>
-                    </div>
-                    <div className="bg-[#1E1E1E] rounded-lg px-3 py-2">
-                      <div className="text-gray-500 uppercase mb-1">Tenuta fisica</div>
-                      <div className="text-white font-bold">{selectedStrategy.completion_pct}%</div>
-                    </div>
-                    <div className="bg-[#1E1E1E] rounded-lg px-3 py-2">
-                      <div className="text-gray-500 uppercase mb-1">VDOT stimato</div>
-                      <div className="text-white font-bold">{selectedStrategy.projected_vdot}</div>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-gray-500 mt-3 leading-relaxed">{selectedStrategy.note}</p>
-                </div>
-              )}
-
-              {/* Gap indicator */}
-              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-gray-400 uppercase">Progressione richiesta</span>
-                  <span className={`text-sm font-bold ${feasColor}`}>
-                    +{Math.max(0, result.target_vdot - result.current_vdot).toFixed(1)} VDOT
-                  </span>
-                </div>
-                <div className="w-full h-2 bg-[#2A2A2A] rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-[#3B82F6] to-[#10B981] transition-all"
-                    style={{ width: `${Math.min(100, selectedSuccessPct)}%` }}
-                  />
-                </div>
-                <p className={`text-xs mt-2 ${feasColor}`}>{result.feasibility.message}</p>
-              </div>
-
-              {/* Volume + clima del piano generato */}
-              {(result.start_weekly_km != null || result.climate) && (
-                <div className="grid grid-cols-2 gap-3">
-                  {result.start_weekly_km != null && (
-                    <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
-                      <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Volume settimanale</div>
-                      <div className="text-lg font-bold text-white">
-                        {result.start_weekly_km} <span className="text-xs text-gray-500 font-normal">km/sett →</span> {result.peak_weekly_km} <span className="text-xs text-gray-500 font-normal">km picco</span>
-                      </div>
-                      <div className="text-[10px] text-gray-600 mt-1">
-                        recente: {result.recent_weekly_km ?? "—"} km/sett · regola del 10%
-                      </div>
-                    </div>
-                  )}
-                  {result.climate && (
-                    <div className="bg-[#121212] border border-[#2A2A2A] rounded-xl p-4">
-                      <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">
-                        Clima · {result.climate.city.charAt(0).toUpperCase() + result.climate.city.slice(1)}
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 mt-1">
-                        {result.climate.months.slice(0, 5).map(m => (
-                          <span key={m.month} className={`text-[10px] px-2 py-0.5 rounded-full border ${m.heat_adj_sec >= 4 ? "text-amber-300 border-amber-500/30 bg-amber-500/10" : "text-gray-400 border-[#2A2A2A]"}`}>
-                            {m.label.slice(0, 3)} {Math.round(m.temp_c)}°{m.heat_adj_sec >= 4 ? ` +${m.heat_adj_sec}s/km` : ""}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="text-[10px] text-gray-600 mt-1.5">ritmi delle sedute già adattati al caldo</div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Race predictions: ideale vs caldo atteso */}
-              {Object.keys(result.race_predictions).length > 0 && (
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                      Previsioni a VDOT {result.target_vdot}
-                    </div>
-                    {result.climate && result.climate.race_heat_adj_sec >= 4 && (
-                      <span className="text-[10px] text-amber-300">
-                        gara a {result.climate.race_month_label}: ~{Math.round(result.climate.race_temp_c)}°C
-                      </span>
-                    )}
-                  </div>
-                  <div className="space-y-1.5">
-                    {Object.entries(result.race_predictions).map(([dist, time]) => {
-                      const hot = result.race_predictions_expected?.[dist];
-                      const showHot = hot && hot !== time;
-                      return (
-                        <div key={dist} className={`flex justify-between items-center px-3 py-2 rounded-lg ${
-                          dist === goalRace ? 'bg-[#3B82F6]/10 border border-[#3B82F6]/30' : 'bg-[#1E1E1E]'
-                        }`}>
-                          <span className="text-xs text-gray-400">{dist}</span>
-                          <span className="flex items-baseline gap-2.5">
-                            <span className={`text-sm font-mono font-bold ${dist === goalRace ? 'text-[#3B82F6]' : 'text-white'}`}>
-                              {time}
-                            </span>
-                            {showHot && (
-                              <span className="text-[11px] font-mono text-amber-300" title="previsione al caldo atteso">
-                                ☀️ {hot}
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {result.climate && result.climate.race_heat_adj_sec >= 4 && (
-                    <p className="text-[10px] text-gray-600 mt-2">
-                      Bianco: temperatura ideale (≤15°C). ☀️ Ambra: al caldo atteso (+{result.climate.race_heat_adj_sec} s/km).
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Success probability when infeasible */}
-              {!result.feasibility.feasible && !selectedStrategy && (
-                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="w-4 h-4 text-red-400" />
-                    <span className="text-sm font-bold text-red-400">Obiettivo ambizioso</span>
-                  </div>
-                  <p className="text-xs text-gray-400 mb-3">{result.feasibility.message}</p>
-                  <div className="flex items-center gap-4">
-                    <div className="flex-1">
-                      <div className="text-[10px] text-gray-500 uppercase mb-1">Probabilità di successo</div>
-                      <div className="text-2xl font-bold text-red-400">{result.feasibility.confidence_pct}%</div>
-                    </div>
-                    {result.feasibility.suggested_weeks && (
-                      <div className="flex-1">
-                        <div className="text-[10px] text-gray-500 uppercase mb-1">Tempo consigliato</div>
-                        <div className="text-sm font-bold text-white">{result.feasibility.suggested_timeframe ?? `${result.feasibility.suggested_weeks} settimane`}</div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {!result.feasibility.feasible && selectedStrategy && (
-                <div className="bg-[#3B82F6]/10 border border-[#3B82F6]/20 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Info className="w-4 h-4 text-[#3B82F6]" />
-                    <span className="text-sm font-bold text-[#3B82F6]">
-                      Obiettivo ambizioso, strategia {selectedStrategy.label}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-400 mb-3">{result.feasibility.message}</p>
-                  <div className="flex items-center gap-4">
-                    <div className="flex-1">
-                      <div className="text-[10px] text-gray-500 uppercase mb-1">Probabilita piano scelto</div>
-                      <div className={`text-2xl font-bold ${selectedColor}`}>{selectedStrategy.success_pct}%</div>
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-[10px] text-gray-500 uppercase mb-1">Tenuta fisica</div>
-                      <div className="text-2xl font-bold text-white">{selectedCompletionPct}%</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Plan summary */}
-              <div className="flex items-center gap-2 text-[#10B981] bg-[#10B981]/10 border border-[#10B981]/20 rounded-lg p-3">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span className="text-sm">Piano di {result.weeks_generated} settimane generato con successo!</span>
-              </div>
-            </div>
-          )}
-
-          {error && <p className="text-red-400 text-sm mt-4">{error}</p>}
-        </div>
-
-        {/* Footer */}
-        <div className="p-6 border-t border-[#2A2A2A] shrink-0 flex gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              if (phase === 'done') {
-                onClose();
-                onDone();
-              } else if (phase === 'strategy') {
-                setPhase('calibration');
-              } else if (phase === 'calibration') {
-                setPhase('input');
-              } else {
-                onClose();
-              }
-            }}
-            className="flex-1 py-3 rounded-lg bg-[#121212] border border-[#2A2A2A] text-gray-400 hover:text-white transition-colors text-sm font-medium"
-          >
-            {phase === 'done' ? 'Chiudi' : phase === 'input' ? 'Annulla' : 'Indietro'}
-          </button>
-          {phase === 'input' && (
-            <button
-              type="button"
-              onClick={() => { if (validateGoal()) setPhase('calibration'); }}
-              disabled={loading}
-              className="flex-1 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              Continua
-            </button>
-          )}
-          {phase === 'calibration' && (
-            <button
-              type="button"
-              onClick={handleAnalyze}
-              disabled={loading}
-              className="flex-1 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {loading ? <span>Analizzando...</span> : <><Sparkles className="w-4 h-4" /> Mostra Strategie</>}
-            </button>
-          )}
-          {phase === 'strategy' && (
-            <button
-              type="button"
-              onClick={() => defaultStrategy && handleGenerate(defaultStrategy.mode)}
-              disabled={loading || !defaultStrategy}
-              className="flex-1 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {loading ? <span>Generando...</span> : <><Sparkles className="w-4 h-4" /> Genera Piano Bilanciato</>}
-            </button>
-          )}
-          {phase === 'done' && (
-            <button
-              type="button"
-              onClick={() => { onClose(); onDone(); }}
-              className="flex-1 py-3 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
-            >
-              Vedi Piano
-            </button>
-          )}
-        </div>
+        </p>
+        <p className="text-gray-600">
+          Un punto non vale sempre uguale: più il motore è grande, meno secondi compra. A{" "}
+          {dec(startVdot)} un punto pieno sono {dec(rows.find((r) => r.gain === 1)?.racePerKm ?? 0)}″
+          al km, non i sei che si sentono ripetere.
+        </p>
       </div>
     </div>
   );
@@ -1603,38 +484,13 @@ export function TrainingGrid() {
    * apre invece sopra tutto, su fondo pieno, senza niente che filtri.
    */
   const [detailDate, setDetailDate] = useState<Date | null>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [showAdaptModal, setShowAdaptModal] = useState(false);
   /**
-   * Piano kikkoSub20 acceso/spento. Prima era `useState(false)` senza setter,
-   * quindi tutta la macchina interna (adattamento RPE, esiti sedute, legenda)
-   * era irraggiungibile.
-   *
-   * `showSub20` resta come alias perché quella macchina è nata per il piano
-   * Sub-20 e viene riusata identica: rinominare venti riferimenti non
-   * cambierebbe nulla di sostanziale.
-   */
-  // Acceso all'apertura su kikkoSub20: entrando in Training si vede subito il
-  // calendario sull'anno. I bottoni in header cambiano piano o spengono.
-  const [kikkoPlan, setKikkoPlan] = useState<KikkoPlanId>("sub20");
-  const showSub20 = kikkoPlan !== "off";
-
-  /**
-   * Ogni piano ha la sua partenza, e non è un dettaglio: kikkoSub20 è ancorato
-   * al 27 luglio, kikkoSub1:34:35 al 17 agosto. Una sola data condivisa
-   * sposterebbe il piano sbagliato ogni volta che si cambia.
-   *
-   * Sul DB viaggia solo quella di kikkoSub20 — è il campo che esiste. Quella
-   * della mezza vive in pagina: il default è già quello giusto e spostarla è
-   * un'eccezione, non la regola.
+   * La finestra: il lunedì da cui si parte e la settimana della gara.
+   * Vive sul server, così vale da qualunque browser si apra la pagina.
    */
   const [sub20Win, setSub20Win] = useState<Window>({
     start: KIKKO_SUB20_DEFAULT_START,
     race: kikkoSub20RaceDate(KIKKO_SUB20_DEFAULT_START),
-  });
-  const [sub135Win, setSub135Win] = useState<Window>({
-    start: KIKKO_SUB135_DEFAULT_START,
-    race: kikkoSub135RaceDate(KIKKO_SUB135_DEFAULT_START),
   });
   const [draft, setDraft] = useState<Window | null>(null);
 
@@ -1655,20 +511,6 @@ export function TrainingGrid() {
     };
   }, [detailDate, closeDay]);
 
-  const { data: planData, refetch: refetchPlan } = useApi<TrainingPlanResponse>(getTrainingPlan, { cacheKey: API_CACHE.TRAINING_PLAN });
-
-  // Build date → Session lookup map from all plan weeks
-  const sessionMap = useMemo(() => {
-    const map: Record<string, Session> = {};
-    for (const week of planData?.weeks ?? []) {
-      for (const session of week.sessions) {
-        if (session.date) map[session.date] = session;
-      }
-    }
-    return map;
-  }, [planData]);
-
-
   /**
    * Il tempo obiettivo, in secondi, per piano.
    *
@@ -1676,36 +518,22 @@ export function TrainingGrid() {
    * piano, non una preferenza di questo browser — e finché non arriva valgono
    * quelli scritti dentro i piani.
    */
-  /**
-   * Il VDOT scelto: da dove parti e dove vuoi arrivare, per piano.
-   *
-   * È l'ingresso che cambia tutti i ritmi del calendario. La partenza dovrebbe
-   * uscire da una prova reale — il 3 km a tutta — non da una speranza: se la
-   * si mette troppo alta il piano prescrive ritmi che non si reggono, e ogni
-   * seduta si chiude "fallita" per un errore di taratura.
-   */
-  const [vdots, setVdots] = useState<Record<string, KikkoVdotChoice>>({});
   const [goals, setGoals] = useState<Record<string, number>>({});
   const [goalDraft, setGoalDraft] = useState<string | null>(null);
 
-  /** Tutto quello che dipende dal piano acceso, in un posto solo. */
-  const activeWin = kikkoPlan === "sub135" ? sub135Win : sub20Win;
-  const activeStart = activeWin.start;
-  const activeRaceIso = activeWin.race;
-  const activePlan = kikkoPlan === "sub135" ? KIKKO_SUB135_PLAN : KIKKO_SUB20_PLAN;
-  const activeAccent = kikkoPlan === "sub135" ? "#00FFAA" : "var(--app-accent)";
+  const activeStart = sub20Win.start;
+  const activeRaceIso = sub20Win.race;
+  const activeAccent = "var(--app-accent)";
 
-  /** Il VDOT del piano acceso: quello scelto, o quello scritto nel piano. */
-  const activeVdot = vdots[kikkoPlan] ?? null;
-  const planVdot = activePlan.weekVdot;
-  const shownVdot: KikkoVdotChoice = activeVdot ?? {
-    start: planVdot[0],
-    target: planVdot[planVdot.length - 1],
-  };
-
-  /** Gli obiettivi scritti nel piano, che valgono finché non se ne sceglie uno. */
-  const planTargets = kikkoPlan === "sub135" ? KIKKO_SUB135_TARGETS : KIKKO_SUB20_TARGETS;
-  const goalSec = goals[kikkoPlan] ?? planTargets[0].sec;
+  /**
+   * L'obiettivo: il tempo, e il passo che ne discende.
+   *
+   * La distanza non è una scelta — il piano è sui 5 km — quindi il passo è
+   * solo il tempo diviso cinque. Scriverlo accanto evita di rifare il conto a
+   * mente ogni volta che l'obiettivo si sposta di dieci secondi.
+   */
+  const goalSec = goals[PLAN_ID] ?? KIKKO_SUB20_TARGETS[0].sec;
+  const goalPace = secToPace(goalSec / GOAL_DISTANCE_KM);
 
   /**
    * Cosa misura la percentuale: l'obiettivo scelto, più quello di targa del
@@ -1715,9 +543,9 @@ export function TrainingGrid() {
    */
   const activeTargets = useMemo(() => {
     const chosen = { label: fmtRaceTime(goalSec), sec: goalSec };
-    const stretch = planTargets.find((t) => t.sec < goalSec - 1);
+    const stretch = KIKKO_SUB20_TARGETS.find((t) => t.sec < goalSec - 1);
     return stretch ? [chosen, stretch] : [chosen];
-  }, [goalSec, planTargets]);
+  }, [goalSec]);
 
   /**
    * La probabilità del giorno, se quel giorno ha una qualità.
@@ -1727,9 +555,7 @@ export function TrainingGrid() {
    * letto.
    */
   const activeOdds = (dayKey: string) => {
-    const info = kikkoPlan === "sub135"
-      ? kikkoSub135HeatInfo(dayKey, activeStart, activeRaceIso, activeVdot)
-      : kikkoSub20HeatInfo(dayKey, activeStart, activeRaceIso, activeVdot);
+    const info = kikkoSub20HeatInfo(dayKey, activeStart, activeRaceIso);
     const session = sub20Map[dayKey];
     const isQuality = session?.type === "intervals" || session?.type === "tempo";
     if (!isQuality || info.vdot == null) return null;
@@ -1738,7 +564,7 @@ export function TrainingGrid() {
         date={dayKey}
         vdot={info.vdot}
         raceIso={activeRaceIso}
-        distanceKm={kikkoPlan === "sub135" ? 21.0975 : 5}
+        distanceKm={GOAL_DISTANCE_KM}
         targets={activeTargets}
       />
     );
@@ -1746,14 +572,12 @@ export function TrainingGrid() {
 
   /** Le prove dietro la seduta del giorno, se quel giorno c'è una seduta. */
   const activeEvidence = (dayKey: string) => {
-    const info = kikkoPlan === "sub135"
-      ? kikkoSub135HeatInfo(dayKey, activeStart, activeRaceIso, activeVdot)
-      : kikkoSub20HeatInfo(dayKey, activeStart, activeRaceIso, activeVdot);
+    const info = kikkoSub20HeatInfo(dayKey, activeStart, activeRaceIso);
     return info.evidence ? <EvidencePanel evidence={info.evidence} /> : null;
   };
 
   /** La bozza dei due calendari: quella applicata quando non si sta modificando. */
-  const shownWin = draft ?? activeWin;
+  const shownWin = draft ?? sub20Win;
   /**
    * Quanto del piano entra nella finestra scelta.
    *
@@ -1762,28 +586,15 @@ export function TrainingGrid() {
    * finta che il programma sia lo stesso.
    */
   const draftWindow = useMemo(
-    () => kikkoWindow(activePlan, shownWin.start, shownWin.race),
-    [activePlan, shownWin],
+    () => kikkoWindow(KIKKO_SUB20_PLAN, shownWin.start, shownWin.race),
+    [shownWin],
   );
-  const dirty = shownWin.start !== activeWin.start || shownWin.race !== activeWin.race;
-
-  /**
-   * Quanto salto regge la finestra scelta.
-   *
-   * Il tetto non è prudenza mia: è il tasso che la letteratura misura su
-   * atleti già allenati, e serve a dire subito quando si sta chiedendo al
-   * piano più di quanto un piano possa dare.
-   */
-  const plausibleGain = kikkoPlausibleGain(draftWindow.weeksUsed, shownVdot.start);
-  const askedGain = Math.round((shownVdot.target - shownVdot.start) * 10) / 10;
-
+  const dirty = shownWin.start !== sub20Win.start || shownWin.race !== sub20Win.race;
 
   // Il piano acceso, dentro la sua finestra.
   const sub20Sessions = useMemo(
-    () => (kikkoPlan === "sub135"
-      ? buildKikkoSub135Sessions(sub135Win.start, sub135Win.race, vdots.sub135 ?? null)
-      : buildKikkoSub20Sessions(sub20Win.start, sub20Win.race, vdots.sub20 ?? null)),
-    [kikkoPlan, sub20Win, sub135Win, vdots],
+    () => buildKikkoSub20Sessions(sub20Win.start, sub20Win.race),
+    [sub20Win],
   );
   const sub20Map = useMemo(() => {
     const map: Record<string, Session> = {};
@@ -1793,16 +604,15 @@ export function TrainingGrid() {
 
   const getSession = (year: number, month: number, day: number): Session | undefined => {
     const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    if (showSub20) return sub20Map[key];
-    return sessionMap[key];
+    return sub20Map[key];
   };
 
   // ── Aderenza: confronto automatico fra prescrizione e giri realmente corsi.
   // Il verdetto lo dà il sistema; la diagnosi guarda il pattern, non il giorno.
   const { data: runsData } = useApi<RunsResponse>(getRuns, { cacheKey: API_CACHE.RUNS });
   const adherence = useMemo(
-    () => evaluatePlan(showSub20 ? sub20Sessions : Object.values(sessionMap), runsData?.runs ?? []),
-    [sessionMap, sub20Sessions, runsData, showSub20],
+    () => evaluatePlan(sub20Sessions, runsData?.runs ?? []),
+    [sub20Sessions, runsData],
   );
   const adherenceByDate = useMemo(
     () => Object.fromEntries(adherence.map((e) => [e.date.slice(0, 10), e])),
@@ -1815,7 +625,6 @@ export function TrainingGrid() {
   useEffect(() => {
     if (sub20StatusData?.statuses) setSub20StatusLocal(sub20StatusData.statuses);
     if (sub20StatusData?.goals) setGoals(sub20StatusData.goals);
-    if (sub20StatusData?.vdots) setVdots(sub20StatusData.vdots as Record<string, KikkoVdotChoice>);
     // Sul DB può esserci la partenza del vecchio piano Sub-20, che era ancorata
     // a un martedì: senza normalizzare, kikkoSub20 slitta di un giorno e le
     // qualità cadono di mercoledì e venerdì.
@@ -1835,7 +644,7 @@ export function TrainingGrid() {
   const keyOf = (year: number, month: number, day: number) =>
     `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   const sub20StatusOf = (year: number, month: number, day: number): Sub20SessionStatus | undefined =>
-    showSub20 ? sub20Status[keyOf(year, month, day)] : undefined;
+    sub20Status[keyOf(year, month, day)];
 
   const markSub20 = useCallback(async (date: string, status: Sub20SessionStatus | null) => {
     setSub20StatusLocal((prev) => {
@@ -1870,17 +679,10 @@ export function TrainingGrid() {
     };
     setDraft(null);
 
-    const w = kikkoWindow(activePlan, win.start, win.race);
+    const w = kikkoWindow(KIKKO_SUB20_PLAN, win.start, win.race);
     const [y, m, d] = w.firstMonday.split("-").map(Number);
     setCurrentDate(new Date(y, m - 1, d));
     setView("Month");
-
-    // Sul DB c'è una finestra sola, ed è di kikkoSub20: quella della mezza vive
-    // in pagina. Salvarci sopra sposterebbe l'altro piano.
-    if (kikkoPlan === "sub135") {
-      setSub135Win(win);
-      return;
-    }
 
     setSub20Win(win);
     try {
@@ -1895,23 +697,7 @@ export function TrainingGrid() {
     } catch {
       /* l'ottimistico resta */
     }
-  }, [draft, kikkoPlan, activePlan]);
-
-  /** Salva il VDOT del piano acceso. La partenza trascina l'obiettivo se lo supera. */
-  const saveVdot = useCallback(async (next: KikkoVdotChoice) => {
-    const clean: KikkoVdotChoice = {
-      start: Math.round(next.start * 10) / 10,
-      target: Math.round(Math.min(Math.max(next.target, next.start), next.start + KIKKO_VDOT_MAX_GAIN) * 10) / 10,
-    };
-    setVdots((prev) => ({ ...prev, [kikkoPlan]: clean }));
-    try {
-      const res = await putSub20Vdot(kikkoPlan, clean.start, clean.target);
-      if (res?.vdots) setVdots(res.vdots as Record<string, KikkoVdotChoice>);
-      invalidateCache("sub20-status");
-    } catch {
-      /* l'ottimistico resta */
-    }
-  }, [kikkoPlan]);
+  }, [draft]);
 
   /** Salva il tempo obiettivo del piano acceso. Testo non valido: si ignora. */
   const saveGoal = useCallback(async () => {
@@ -1919,15 +705,15 @@ export function TrainingGrid() {
     const sec = parseGoal(goalDraft);
     setGoalDraft(null);
     if (sec == null || sec === goalSec) return;
-    setGoals((prev) => ({ ...prev, [kikkoPlan]: sec }));
+    setGoals((prev) => ({ ...prev, [PLAN_ID]: sec }));
     try {
-      const res = await putSub20Goal(kikkoPlan, sec);
+      const res = await putSub20Goal(PLAN_ID, sec);
       if (res?.goals) setGoals(res.goals);
       invalidateCache("sub20-status");
     } catch {
       /* l'ottimistico resta; ritenta al prossimo salvataggio */
     }
-  }, [goalDraft, goalSec, kikkoPlan]);
+  }, [goalDraft, goalSec]);
 
   const next = () => {
     const d = new Date(currentDate);
@@ -1991,7 +777,7 @@ export function TrainingGrid() {
             const session = getSession(year, month, day);
             const display = toDisplay(session);
             const st = sub20StatusOf(year, month, day);
-            const done = st === 'done' || (!showSub20 && display?.completed);
+            const done = st === 'done';
             const failed = st === 'failed';
             const isToday = day === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear();
 
@@ -2045,7 +831,7 @@ export function TrainingGrid() {
             const session = getSession(date.getFullYear(), date.getMonth(), date.getDate());
             const display = toDisplay(session);
             const st = sub20StatusOf(date.getFullYear(), date.getMonth(), date.getDate());
-            const done = st === 'done' || (!showSub20 && display?.completed);
+            const done = st === 'done';
             const failed = st === 'failed';
             const isToday = date.toDateString() === new Date().toDateString();
 
@@ -2094,7 +880,7 @@ export function TrainingGrid() {
     const display = toDisplay(session);
     const dayKey = keyOf(date.getFullYear(), date.getMonth(), date.getDate());
     const st = sub20StatusOf(date.getFullYear(), date.getMonth(), date.getDate());
-    const done = st === 'done' || (!showSub20 && display?.completed);
+    const done = st === 'done';
     const failed = st === 'failed';
 
     return (
@@ -2136,50 +922,45 @@ export function TrainingGrid() {
               )}
 
               {/* Esito manuale — solo Sub-20, persistente su DB */}
-              {showSub20 && (
-                <div className="mb-6 pb-6 border-b border-[#2A2A2A]">
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Correzione manuale</div>
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => markSub20(dayKey, done ? null : 'done')}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold border transition-colors ${
-                        done
-                          ? 'bg-[#10B981] border-[#10B981] text-black'
-                          : 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981] hover:bg-[#10B981]/20'
-                      }`}
-                    >
-                      <CheckCircle2 className="w-4 h-4" /> Effettuato
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => markSub20(dayKey, failed ? null : 'failed')}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold border transition-colors ${
-                        failed
-                          ? 'bg-[#EF4444] border-[#EF4444] text-white'
-                          : 'bg-[#EF4444]/10 border-[#EF4444]/30 text-[#EF4444] hover:bg-[#EF4444]/20'
-                      }`}
-                    >
-                      <XCircle className="w-4 h-4" /> Fallito
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-gray-600 mt-2.5">
-                    Salvato sul database, permanente. Ritocca lo stesso pulsante per annullare.
-                  </p>
+              <div className="mb-6 pb-6 border-b border-[#2A2A2A]">
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Correzione manuale</div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => markSub20(dayKey, done ? null : 'done')}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold border transition-colors ${
+                      done
+                        ? 'bg-[#10B981] border-[#10B981] text-black'
+                        : 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981] hover:bg-[#10B981]/20'
+                    }`}
+                  >
+                    <CheckCircle2 className="w-4 h-4" /> Effettuato
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => markSub20(dayKey, failed ? null : 'failed')}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold border transition-colors ${
+                      failed
+                        ? 'bg-[#EF4444] border-[#EF4444] text-white'
+                        : 'bg-[#EF4444]/10 border-[#EF4444]/30 text-[#EF4444] hover:bg-[#EF4444]/20'
+                    }`}
+                  >
+                    <XCircle className="w-4 h-4" /> Fallito
+                  </button>
                 </div>
-              )}
+                <p className="text-[11px] text-gray-600 mt-2.5">
+                  Salvato sul database, permanente. Ritocca lo stesso pulsante per annullare.
+                </p>
+              </div>
 
 
               <p className="text-gray-300 leading-relaxed mb-6">{display.description}</p>
 
-              {showSub20 && (
-                <HeatPanel
-                  date={dayKey} startDate={activeStart} raceDate={activeRaceIso}
-                  plan={kikkoPlan} vdot={activeVdot}
-                />
-              )}
-              {showSub20 && activeOdds(dayKey)}
-              {showSub20 && activeEvidence(dayKey)}
+              <HeatPanel
+                date={dayKey} startDate={activeStart} raceDate={activeRaceIso}
+              />
+              {activeOdds(dayKey)}
+              {activeEvidence(dayKey)}
 
               {display.details.length > 0 && (
                 <div className="flex flex-wrap gap-3">
@@ -2298,7 +1079,7 @@ export function TrainingGrid() {
                   const session = getSession(year, month, day);
                   const display = toDisplay(session);
                   const st = sub20StatusOf(year, month, day);
-                  const done = st === 'done' || (!showSub20 && display?.completed);
+                  const done = st === 'done';
                   const failed = st === 'failed';
                   return (
                     <div
@@ -2323,15 +1104,12 @@ export function TrainingGrid() {
     );
   };
 
-  const hasPlan = (planData?.weeks.length ?? 0) > 0;
-
   return (
     <div className="flex flex-col h-full bg-[#121212]">
       {/* Header
-          Va a capo, e non è pignoleria: con due piani accanto a "Genera Piano",
-          al date-picker e ai quattro tasti di vista, a 1280 px la riga
-          traboccava e il primo bottone finiva fuori dallo schermo — invisibile
-          e non cliccabile. */}
+          Va a capo, e non è pignoleria: fra i due calendari, l'obiettivo e i
+          quattro tasti di vista, a 1280 px la riga traboccava e il primo
+          elemento finiva fuori dallo schermo — invisibile e non cliccabile. */}
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 p-6 border-b border-[#2A2A2A]">
         <div className="flex items-center gap-4 min-w-0">
           <h1 className="text-2xl font-bold text-white shrink-0">{t("sections.trainingMenu")}</h1>
@@ -2339,189 +1117,100 @@ export function TrainingGrid() {
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
-          <button
-            type="button"
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-medium rounded-lg transition-colors"
+          {/* Il piano. Uno solo, e non si spegne: la pagina è quella. */}
+          <span
+            className="flex items-center gap-2 px-4 py-2 text-sm font-black rounded-lg border"
+            style={{
+              background: activeAccent,
+              color: "#0A0A0A",
+              borderColor: activeAccent,
+              boxShadow: "0 0 22px rgba(192,255,0,0.55)",
+            }}
           >
-            <Sparkles className="w-4 h-4" />
-            Genera Piano
-          </button>
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: "#0A0A0A" }} />
+            kikkoSub20
+          </span>
 
-          {/* I due piani kikko.
-              Acceso = pieno, con il pallino. Spento = grigio, senza accento:
-              prima erano due bottoni colorati, uno pieno e uno bordato, e a
-              colpo d'occhio non si capiva quale fosse attivo. Un solo elemento
-              acceso alla volta, e si vede da lontano. */}
-          {([
-            { id: "sub20", label: "kikkoSub20", accent: "var(--app-accent)", glow: "192,255,0" },
-            { id: "sub135", label: KIKKO_SUB135_META.phase, accent: "#00FFAA", glow: "0,255,170" },
-          ] as const).map((btn) => {
-            const on = kikkoPlan === btn.id;
-            return (
-              <button
-                key={btn.id}
-                type="button"
-                onClick={() => setKikkoPlan(on ? "off" : btn.id)}
-                title={on ? "Piano attivo — tocca per tornare al piano generato" : `Attiva ${btn.label}`}
-                aria-pressed={on}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-black rounded-lg border transition-all ${
-                  on ? "scale-[1.03]" : "hover:border-white/25 hover:text-gray-200"
-                }`}
-                style={
-                  on
-                    ? {
-                        background: btn.accent,
-                        color: "#0A0A0A",
-                        borderColor: btn.accent,
-                        boxShadow: `0 0 22px rgba(${btn.glow},0.55)`,
-                      }
-                    : {
-                        background: "#1A1A1A",
-                        color: "#6B7280",
-                        borderColor: "#2A2A2A",
-                      }
-                }
-              >
-                <span
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ background: on ? "#0A0A0A" : "#3F3F46" }}
-                />
-                {btn.label}
-              </button>
-            );
-          })}
+          {/* I due calendari: quando si comincia e quando si finisce.
+              Sono indipendenti — se fra le due date ci stanno sei settimane si
+              corrono le ULTIME sei del piano, quelle col picco e il taper, e
+              la riga accanto lo dice invece di far finta di niente. */}
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#141414] px-2.5 py-1.5">
+            <DateField
+              label="Inizio"
+              value={shownWin.start}
+              onChange={(iso) => setDraft({ ...shownWin, start: kikkoSub20NormalizeStart(iso) })}
+              title="Lunedì da cui parti"
+            />
 
-          {/* Inizio, gara e obiettivo.
-              I due calendari sono legati dalla durata del piano: toccandone uno
-              si sposta l'altro, perché le settimane non si allungano da sole.
-              L'obiettivo invece è libero — è la domanda a cui risponde la
-              percentuale sulle sedute di qualità. */}
-          {showSub20 && (
-            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#141414] px-2.5 py-1.5">
-              <DateField
-                label="Inizio"
-                value={shownWin.start}
-                onChange={(iso) => setDraft({ ...shownWin, start: kikkoSub20NormalizeStart(iso) })}
-                title="Lunedì da cui parti"
-              />
+            <span className="text-gray-700">→</span>
 
-              <span className="text-gray-700">→</span>
+            <DateField
+              label="Fine"
+              value={addDays(kikkoSub20NormalizeStart(shownWin.race), 6)}
+              accent={activeAccent}
+              title="Ultimo giorno: la gara. Indipendente dall'inizio."
+              onChange={(iso) => setDraft({ ...shownWin, race: kikkoSub20NormalizeStart(iso) })}
+            />
 
-              <DateField
-                label="Gara"
-                value={addDays(kikkoSub20NormalizeStart(shownWin.race), 6)}
-                accent={activeAccent}
-                title="Giorno della gara — indipendente dall'inizio"
-                onChange={(iso) => setDraft({ ...shownWin, race: kikkoSub20NormalizeStart(iso) })}
-              />
+            <span
+              className="text-[10px] whitespace-nowrap"
+              style={{ color: draftWindow.weeksSkipped > 0 ? "#F59E0B" : "#6B7280" }}
+              title={
+                draftWindow.weeksSkipped > 0
+                  ? `Il piano ne ha ${KIKKO_SUB20_PLAN.weeks.length}: con questa finestra si corrono le ultime ${draftWindow.weeksUsed}, dal picco al taper.`
+                  : draftWindow.weeksIdle > 0
+                    ? `Il piano dura ${KIKKO_SUB20_PLAN.weeks.length} settimane: le prime ${draftWindow.weeksIdle} restano libere.`
+                    : "Il piano ci sta intero."
+              }
+            >
+              {draftWindow.weeksUsed} sett.
+              {draftWindow.weeksSkipped > 0 && ` · ultime ${draftWindow.weeksUsed} di ${KIKKO_SUB20_PLAN.weeks.length}`}
+              {draftWindow.weeksIdle > 0 && ` · ${draftWindow.weeksIdle} libere prima`}
+            </span>
 
-              {/* Quanto del piano ci sta. Se la finestra è stretta si corrono
-                  le ultime settimane, quelle col picco e il taper, e va detto. */}
-              <span
-                className="text-[10px] whitespace-nowrap"
-                style={{ color: draftWindow.weeksSkipped > 0 ? "#F59E0B" : "#6B7280" }}
-                title={
-                  draftWindow.weeksSkipped > 0
-                    ? `Il piano ne ha ${activePlan.weeks.length}: con questa finestra si corrono le ultime ${draftWindow.weeksUsed}, dal picco al taper.`
-                    : draftWindow.weeksIdle > 0
-                      ? `Il piano dura ${activePlan.weeks.length} settimane: le prime ${draftWindow.weeksIdle} restano libere.`
-                      : "Il piano ci sta intero."
-                }
-              >
-                {draftWindow.weeksUsed} sett.
-                {draftWindow.weeksSkipped > 0 && ` · ultime ${draftWindow.weeksUsed} di ${activePlan.weeks.length}`}
-                {draftWindow.weeksIdle > 0 && ` · ${draftWindow.weeksIdle} libere prima`}
-              </span>
+            <button
+              type="button"
+              onClick={applyWindow}
+              disabled={!dirty}
+              className="px-3 py-1 rounded-md text-xs font-bold text-gray-300 bg-[#1E1E1E] border border-[#2A2A2A] hover:text-white disabled:opacity-30 disabled:cursor-default transition-colors"
+            >
+              Applica
+            </button>
+          </div>
 
-              <button
-                type="button"
-                onClick={applyWindow}
-                disabled={!dirty}
-                className="px-3 py-1 rounded-md text-xs font-bold text-gray-300 bg-[#1E1E1E] border border-[#2A2A2A] hover:text-white disabled:opacity-30 disabled:cursor-default transition-colors"
-              >
-                Applica
-              </button>
+          {/* L'obiettivo. La distanza non si sceglie: il piano è sui 5 km.
+              Si scrive il tempo, e accanto compare da solo il passo che serve
+              per farlo — che è il numero che poi si legge sull'orologio. */}
+          <div
+            className="flex items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#141414] px-2.5 py-1.5"
+            title="Il tempo che vuoi fare sui 5 km. È l'obiettivo su cui si misura la percentuale delle sedute di qualità."
+          >
+            <Target className="w-3.5 h-3.5 shrink-0" style={{ color: activeAccent }} />
+            <span className="text-[9px] font-black tracking-[0.18em] uppercase text-gray-600">Obiettivo</span>
+            <span className="text-xs font-bold text-gray-400">{GOAL_DISTANCE_KM} km</span>
+            <span className="text-gray-700">in</span>
+            <input
+              value={goalDraft ?? fmtRaceTime(goalSec)}
+              onChange={(e) => setGoalDraft(e.target.value)}
+              onBlur={saveGoal}
+              onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+              inputMode="numeric"
+              placeholder="19:59"
+              className="w-[3.6rem] bg-transparent border-0 p-0 text-xs font-bold outline-none"
+              style={{
+                color: goalDraft != null && parseGoal(goalDraft) == null ? "#F43F5E" : activeAccent,
+              }}
+            />
+            <span className="text-gray-700">=</span>
+            <span
+              className="text-xs font-bold tabular-nums"
+              style={{ fontFamily: "'JetBrains Mono', monospace", color: activeAccent }}
+            >
+              {goalPace}/km
+            </span>
+          </div>
 
-              <span className="w-px h-5 bg-[#2A2A2A]" />
-
-              {/* Il VDOT: da dove parti e dove punti.
-                  La partenza dovrebbe uscire da una prova reale, non da una
-                  speranza — messa troppo alta il piano scrive ritmi che non si
-                  reggono e ogni seduta si chiude "fallita" per un errore di
-                  taratura. L'obiettivo si ferma a +2 punti perché è quello che
-                  un blocco può davvero produrre. */}
-              <label
-                className="flex items-center gap-1.5 rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-2 py-1"
-                title="Il VDOT da cui parti. Va ancorato a una prova vera: il 3 km a tutta della prima settimana serve a questo."
-              >
-                <Gauge className="w-3.5 h-3.5 shrink-0 text-gray-500" />
-                <span className="text-[9px] font-black tracking-[0.18em] uppercase text-gray-600">VDOT</span>
-                <input
-                  type="number" step={0.1} min={25} max={85}
-                  value={shownVdot.start}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (Number.isFinite(v)) saveVdot({ start: v, target: shownVdot.target });
-                  }}
-                  className="w-[3.2rem] bg-transparent border-0 p-0 text-xs font-bold text-white outline-none"
-                />
-              </label>
-
-              <span className="text-gray-700">→</span>
-
-              <label
-                className="flex items-center gap-1.5 rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-2 py-1"
-                title="Il VDOT a cui punti alla gara. Massimo +2 punti: oltre, nessun blocco lo produce."
-              >
-                <span className="text-[9px] font-black tracking-[0.18em] uppercase text-gray-600">Arrivo</span>
-                <select
-                  value={shownVdot.target}
-                  onChange={(e) => saveVdot({ start: shownVdot.start, target: Number(e.target.value) })}
-                  className="bg-transparent border-0 p-0 text-xs font-bold outline-none cursor-pointer"
-                  style={{ color: activeAccent }}
-                >
-                  {kikkoVdotOptions(shownVdot.start).map((v) => (
-                    <option key={v} value={v} style={{ background: "#0A0A0A" }}>
-                      {v.toFixed(1)}{v > shownVdot.start ? ` (+${(v - shownVdot.start).toFixed(1)})` : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              {/* Il salto chiesto contro quello che la finestra può dare. */}
-              {askedGain > plausibleGain + 0.05 && (
-                <span
-                  className="text-[10px] font-bold whitespace-nowrap"
-                  style={{ color: askedGain > plausibleGain * 1.6 ? "#F43F5E" : "#F59E0B" }}
-                  title={`Su ${draftWindow.weeksUsed} settimane la letteratura misura circa +${plausibleGain.toFixed(1)} punti per un atleta a questo livello (Milanović 2015, Bacon 2013). Chiederne +${askedGain.toFixed(1)} significa scrivere ritmi che potrebbero non arrivare.`}
-                >
-                  +{askedGain.toFixed(1)} in {draftWindow.weeksUsed} sett. · realistico +{plausibleGain.toFixed(1)}
-                </span>
-              )}
-
-
-              <label
-                className="flex items-center gap-1.5 rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-2 py-1"
-                title="Il tempo che vuoi fare. È l'obiettivo su cui si misura la percentuale delle sedute di qualità."
-              >
-                <Target className="w-3.5 h-3.5 shrink-0" style={{ color: activeAccent }} />
-                <span className="text-[9px] font-black tracking-[0.18em] uppercase text-gray-600">Obiettivo</span>
-                <input
-                  value={goalDraft ?? fmtRaceTime(goalSec)}
-                  onChange={(e) => setGoalDraft(e.target.value)}
-                  onBlur={saveGoal}
-                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-                  inputMode="numeric"
-                  placeholder={kikkoPlan === "sub135" ? "1:34:35" : "19:59"}
-                  className="w-[4.5rem] bg-transparent border-0 p-0 text-xs font-bold outline-none"
-                  style={{
-                    color: goalDraft != null && parseGoal(goalDraft) == null ? "#F43F5E" : activeAccent,
-                  }}
-                />
-              </label>
-            </div>
-          )}
 
           <div className="flex bg-[#1E1E1E] rounded-md border border-[#2A2A2A] p-1">
             {(['Day', 'Week', 'Month', 'Year'] as const).map(v => (
@@ -2549,51 +1238,28 @@ export function TrainingGrid() {
         </div>
       </div>
 
-      {/* Empty state */}
-      {!showSub20 && !hasPlan && planData !== null && (
-        <div className="flex flex-col items-center justify-center flex-1 text-center">
-          <div className="w-16 h-16 rounded-full bg-[#1E1E1E] flex items-center justify-center mb-4 border border-[#2A2A2A]">
-            <Sparkles className="w-8 h-8 text-gray-500" />
-          </div>
-          <h3 className="text-xl font-bold text-gray-300 mb-2">Nessun piano generato</h3>
-          <p className="text-gray-500 mb-6">Genera un piano personalizzato basato sul tuo VDOT.</p>
-          <button
-            type="button"
-            onClick={() => setShowModal(true)}
-            className="px-6 py-3 bg-[#3B82F6] text-white rounded-lg text-sm font-medium hover:bg-[#2563EB] transition-colors"
-          >
-            Genera il tuo Piano
-          </button>
-        </div>
-      )}
-
-      {/* Calendar (piano generico o Sub-20: stesso rendering, dataset diverso) */}
-      {(showSub20 || hasPlan || planData === null) && (
-        <div className="flex-1 overflow-auto p-6">
-          {view === 'Month' && renderMonthView()}
-          {view === 'Week' && renderWeekView()}
-          {view === 'Day' && renderDayView()}
-          {view === 'Year' && renderYearView()}
-          {/* Legend */}
-          {(showSub20 || hasPlan) && (
-            <div className="flex flex-wrap items-center gap-4 mt-6 pt-4 border-t border-[#2A2A2A]">
-              {(kikkoPlan === "sub135" ? KIKKO_SUB135_LEGEND : kikkoPlan === "sub20" ? KIKKO_SUB20_LEGEND : ([
-                { color: SESSION_COLORS.easy,      label: 'Easy / Recovery' },
-                { color: SESSION_COLORS.tempo,     label: 'Tempo' },
-                { color: SESSION_COLORS.intervals, label: 'Intervals' },
-                { color: SESSION_COLORS.long,      label: 'Long Run' },
-                { color: SESSION_COLORS.strength,  label: 'Riposo + Forza' },
-                { color: '#2A2A2A',                label: 'Riposo', opacity: 0.3 },
-              ] as Array<{ color: string; label: string; opacity?: number }>)).map(({ color, label, opacity }) => (
-                <div key={label} className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: color, opacity: (opacity as number | undefined) ?? 0.9 }} />
-                  <span className="text-xs text-gray-500">{label}</span>
-                </div>
-              ))}
+      {/* Calendario */}
+      <div className="flex-1 overflow-auto p-6">
+        {view === 'Month' && renderMonthView()}
+        {view === 'Week' && renderWeekView()}
+        {view === 'Day' && renderDayView()}
+        {view === 'Year' && renderYearView()}
+        {/* Legend */}
+        <div className="flex flex-wrap items-center gap-4 mt-6 pt-4 border-t border-[#2A2A2A]">
+          {KIKKO_SUB20_LEGEND.map(({ color, label, opacity }) => (
+            <div key={label} className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: color, opacity: (opacity as number | undefined) ?? 0.9 }} />
+              <span className="text-xs text-gray-500">{label}</span>
             </div>
-          )}
+          ))}
         </div>
-      )}
+
+        <VdotGainPanel
+          startVdot={KIKKO_SUB20_PLAN.weekVdot[0]}
+          weeks={draftWindow.weeksUsed}
+          goalSec={goalSec}
+        />
+      </div>
 
       {/* Dettaglio seduta — copre tutto: niente scritte che filtrano da dietro */}
       {detailDate && (
@@ -2610,21 +1276,6 @@ export function TrainingGrid() {
         </div>
       )}
 
-      {/* Generate Modal */}
-      {showModal && (
-        <GeneratePlanModal
-          onClose={() => setShowModal(false)}
-          onDone={() => { setShowModal(false); refetchPlan(); }}
-        />
-      )}
-
-      {/* Adapt Modal */}
-      {showAdaptModal && (
-        <AdaptPlanModal
-          onClose={() => setShowAdaptModal(false)}
-          onDone={() => { setShowAdaptModal(false); refetchPlan(); }}
-        />
-      )}
     </div>
   );
 }

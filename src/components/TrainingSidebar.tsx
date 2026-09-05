@@ -222,12 +222,6 @@ export function TrainingSidebar() {
               <span>Fase</span>
               <span className="text-gray-300">{currentWeek.phase}</span>
             </div>
-            {currentWeek.target_vdot && (
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>VDOT target</span>
-                <span className="text-[#3B82F6] font-bold font-mono">{currentWeek.target_vdot}</span>
-              </div>
-            )}
             {currentWeek.goal_race && currentWeek.target_time && (
               <div className="flex justify-between text-xs text-gray-500">
                 <span>Obiettivo</span>

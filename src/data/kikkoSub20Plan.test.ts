@@ -9,6 +9,8 @@ import {
   kikkoVdotProgression,
   kikkoVdotOptions,
   kikkoPlausibleGain,
+  kikkoVdotForFiveK,
+  kikkoVdotGainTable,
   KIKKO_VDOT_MAX_GAIN,
   KIKKO_SUB20_PLAN,
   KIKKO_SUB20_META,
@@ -628,5 +630,42 @@ describe("kikkoSub20 — il VDOT come ingresso", () => {
       const info = kikkoSub20HeatInfo(d, "2026-07-27", "2026-10-18");
       expect(info.evidence, d).not.toBeNull();
     }
+  });
+  // ── Quanto vale un punto di VDOT ──────────────────────────────────────────
+
+  it("il VDOT che serve per un tempo sui 5 km torna indietro dal tempo", () => {
+    // VDOT 50 vale 239 s/km, cioè 19:55 sui 5000
+    expect(kikkoVdotForFiveK(239 * 5)).toBe(50);
+    // sub-20 netta: sta fra 49 e 50, più vicina a 50
+    const v = kikkoVdotForFiveK(19 * 60 + 59);
+    expect(v).toBeGreaterThan(49.5);
+    expect(v).toBeLessThan(50);
+  });
+
+  it("un punto di VDOT vale gli stessi secondi che dice la tabella dei ritmi", () => {
+    const rows = kikkoVdotGainTable(49, 12);
+    const uno = rows.find((r) => r.gain === 1)!;
+    expect(uno.racePerKm).toBeCloseTo(basesFor(49).race - basesFor(50).race, 6);
+    // intorno a 49 sono cinque secondi al km, non sei
+    expect(uno.racePerKm).toBeCloseTo(5, 6);
+    expect(Math.round(uno.raceGainSec)).toBe(25);
+  });
+
+  it("il guadagno cresce con i punti e resta coerente sui 5 km", () => {
+    const rows = kikkoVdotGainTable(49, 12);
+    for (let i = 1; i < rows.length; i++) {
+      expect(rows[i].racePerKm).toBeGreaterThan(rows[i - 1].racePerKm);
+      expect(rows[i].raceSec).toBeLessThan(rows[i - 1].raceSec);
+      expect(rows[i].raceGainSec).toBeCloseTo(rows[i].racePerKm * 5, 6);
+    }
+  });
+
+  it("una finestra corta rende plausibili solo i guadagni piccoli", () => {
+    const sette = kikkoVdotGainTable(49, 7);
+    const cap = kikkoPlausibleGain(7, 49);
+    expect(cap).toBeLessThan(1);
+    expect(sette.filter((r) => r.plausible).map((r) => r.gain)).toEqual([0.3, 0.5]);
+    // dodici settimane ne reggono di più
+    expect(kikkoVdotGainTable(49, 12).filter((r) => r.plausible).length).toBeGreaterThan(2);
   });
 });

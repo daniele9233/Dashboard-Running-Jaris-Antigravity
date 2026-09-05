@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-08-20T18:55:00.288Z",
+  "generated_at": "2026-09-05T12:38:02.915Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 210,
+    "files": 211,
     "backend_routes": 68,
     "frontend_routes": 18,
     "api_clients": 77
@@ -1180,6 +1180,21 @@
       "hash": "d153c800fcd79b9ff05ebfe4ead9cdf56755127e415a3707df4b9dba9b2c2bbe",
       "last_modified": "2026-05-04T10:26:06.498Z",
       "size_bytes": 1455
+    },
+    {
+      "path": "docs/validazione-piano-sub20-24ottobre.md",
+      "kind": "documentation",
+      "purpose": "Validazione del piano 7 settimane → sub-20 del 24 ottobre 2026",
+      "touch_when": [
+        "ai",
+        "training"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "0b553d7d1a5d81767407f08be1ed2dfcacdc1f20f51d02aeef48e8995037ae87",
+      "last_modified": "2026-09-05T12:38:02.915Z",
+      "size_bytes": 12858
     },
     {
       "path": "index.html",
@@ -4732,8 +4747,6 @@
         "ai",
         "garmin",
         "layout",
-        "profile",
-        "strava",
         "training",
         "types"
       ],
@@ -4744,7 +4757,6 @@
       "imports": [
         "../api",
         "../data/kikkoEvidence",
-        "../data/kikkoSub135Plan",
         "../data/kikkoSub20Plan",
         "../hooks/apiCacheKeys",
         "../hooks/useApi",
@@ -4755,9 +4767,9 @@
         "react",
         "react-i18next"
       ],
-      "hash": "4d10f517e42dfef120c98f0c7fbff3c2cf56ea71c94787e6226bec9fe293c6b4",
-      "last_modified": "2026-08-20T18:55:00.288Z",
-      "size_bytes": 130626
+      "hash": "0a9e3002ba93df2676416e68bab96243ee429c849324a27c8f843959d881ebd2",
+      "last_modified": "2026-09-05T12:33:39.605Z",
+      "size_bytes": 58400
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -4785,9 +4797,9 @@
         "react",
         "recharts"
       ],
-      "hash": "340f8482499b4aacc46992d5015629072ab3f8e73d49eba7c39552bad36059a8",
-      "last_modified": "2026-08-20T14:09:16.562Z",
-      "size_bytes": 10818
+      "hash": "b6ebc91fabd894c2292255e6426a027cadb510059bad8d1aee6cfaed98ee111c",
+      "last_modified": "2026-09-05T12:31:55.994Z",
+      "size_bytes": 10276
     },
     {
       "path": "src/components/TrainingView.tsx",
@@ -5049,9 +5061,9 @@
         "./kikkoSub20Plan",
         "vitest"
       ],
-      "hash": "5d6ad6c928a711abbe07000e75b7aa6f112d3be58e4fe5219c6ecfa0580817ed",
-      "last_modified": "2026-08-20T18:52:47.911Z",
-      "size_bytes": 30611
+      "hash": "6dc92195e464f73b58252c5f25c70392e152dfead8a3c3a8593553b4eafa18e2",
+      "last_modified": "2026-09-05T12:34:07.228Z",
+      "size_bytes": 31778
     },
     {
       "path": "src/data/kikkoSub20Plan.ts",
@@ -5096,6 +5108,7 @@
         "KIKKO_SUB20_SESSIONS",
         "KIKKO_SUB20_TARGETS",
         "KIKKO_SUB20_WEEKLY_KM",
+        "KIKKO_VDOT_GAIN_STEPS",
         "KIKKO_VDOT_GOAL",
         "KIKKO_VDOT_MAX_GAIN",
         "KIKKO_VDOT_START",
@@ -5110,6 +5123,8 @@
         "kikkoSub20NormalizeStart",
         "kikkoSub20RaceDate",
         "KikkoVdotChoice",
+        "kikkoVdotForFiveK",
+        "kikkoVdotGainTable",
         "kikkoVdotOptions",
         "kikkoVdotProgression",
         "kikkoWeekVdot",
@@ -5121,19 +5136,16 @@
         "Paces",
         "pacesFor",
         "paceToSec",
-        "repPaceForRecovery",
-        "reps",
-        "romeDewPointForDate",
-        "romeHeatIndexForDate"
+        "repPaceForRecovery"
       ],
       "routes": [],
       "imports": [
         "../types/api",
         "./kikkoEvidence"
       ],
-      "hash": "8a19a6e96ef6804fd420be49246ed8bbef6dcd8f456e4f28c8272055f2a4c70d",
-      "last_modified": "2026-08-20T18:55:00.246Z",
-      "size_bytes": 46790
+      "hash": "ea6cfc2d9263b26eb19a26ae6eeae9b24e9b63989071ee4bbba73bd7d0c7374b",
+      "last_modified": "2026-09-05T12:33:39.591Z",
+      "size_bytes": 48713
     },
     {
       "path": "src/data/sub20Plan.ts",

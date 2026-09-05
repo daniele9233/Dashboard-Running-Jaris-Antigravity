@@ -1091,6 +1091,83 @@ export function kikkoGoalOdds(opts: {
   };
 }
 
+/* ── QUANTO VALE UN PUNTO DI VDOT ───────────────────────────────────────────
+ *
+ * La domanda vera non è "quanti punti prendo": è "quei punti, al chilometro,
+ * quanto sono". Un punto di VDOT non vale lo stesso a 40 e a 55 — più il
+ * motore è grande, meno secondi compra ogni punto. Qui il conto si fa sulla
+ * tabella vera, non su una regola del pollice: si legge il ritmo a VDOT X e a
+ * VDOT X + guadagno, e si sottrae.
+ *
+ * Intorno a 49 il cambio è circa 5 secondi al chilometro per punto: mezzo
+ * punto vale 2,5 s/km, cioè 12 secondi sui 5000. È meno dei "6 secondi" che si
+ * sentono ripetere, e la differenza conta quando l'obiettivo dista venti
+ * secondi.
+ */
+
+/** Il VDOT che produce quel tempo sui 5 km, al fresco. */
+export function kikkoVdotForFiveK(sec: number): number {
+  const target = sec / 5;                       // secondi/km richiesti
+  const keys = Object.keys(VDOT_TABLE).map(Number).sort((a, b) => a - b);
+  // la tabella scende: VDOT più alto = secondi/km più bassi
+  for (let i = 0; i < keys.length - 1; i++) {
+    const lo = keys[i], hi = keys[i + 1];
+    const pLo = VDOT_TABLE[lo].race, pHi = VDOT_TABLE[hi].race;
+    if (target <= pLo && target >= pHi) {
+      return Math.round((lo + (pLo - target) / (pLo - pHi)) * 10) / 10;
+    }
+  }
+  return target > VDOT_TABLE[keys[0]].race ? keys[0] : keys[keys.length - 1];
+}
+
+/** I salti di VDOT che ha senso mettere in fila: da quasi niente a molto. */
+export const KIKKO_VDOT_GAIN_STEPS = [0.3, 0.5, 1, 1.5];
+
+export interface VdotGainRow {
+  /** Punti di VDOT guadagnati. */
+  gain: number;
+  vdot: number;
+  /** Secondi al km guadagnati a ritmo gara 5K. */
+  racePerKm: number;
+  /** Secondi al km guadagnati a soglia (e, con lo stesso scarto, sulle lente). */
+  thrPerKm: number;
+  /** Il ritmo di soglia che ne esce, secondi/km. */
+  thrSec: number;
+  /** Tempo sui 5 km con quel VDOT, al fresco. */
+  raceSec: number;
+  /** Secondi guadagnati sui 5 km. */
+  raceGainSec: number;
+  /** Il guadagno sta dentro quello che la finestra può ragionevolmente dare. */
+  plausible: boolean;
+}
+
+/**
+ * La scala dei guadagni possibili, tradotta in secondi.
+ *
+ * `weeks` serve solo a dire quali righe sono alla portata della finestra
+ * scelta: il tetto è quello di kikkoPlausibleGain, cioè circa un punto ogni
+ * otto settimane per un atleta a questo livello (Milanović 2015, Bacon 2013).
+ */
+export function kikkoVdotGainTable(
+  start: number, weeks: number, gains: number[] = KIKKO_VDOT_GAIN_STEPS,
+): VdotGainRow[] {
+  const b0 = basesFor(start);
+  const cap = kikkoPlausibleGain(weeks, start);
+  return gains.map((gain) => {
+    const b = basesFor(start + gain);
+    return {
+      gain,
+      vdot: Math.round((start + gain) * 10) / 10,
+      racePerKm: b0.race - b.race,
+      thrPerKm: b0.thr - b.thr,
+      thrSec: b.thr,
+      raceSec: b.race * 5,
+      raceGainSec: (b0.race - b.race) * 5,
+      plausible: gain <= cap + 1e-9,
+    };
+  });
+}
+
 /**
  * Gli obiettivi di kikkoSub20, in ordine di ambizione.
  *
