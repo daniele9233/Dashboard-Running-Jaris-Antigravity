@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-09-05T13:12:24.651Z",
+  "generated_at": "2026-09-14T19:08:14.762Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 211,
+    "files": 225,
     "backend_routes": 68,
     "frontend_routes": 18,
     "api_clients": 77
@@ -1026,6 +1026,94 @@
       "size_bytes": 2821
     },
     {
+      "path": "docs/hero-page/HERO-PAGE.md",
+      "kind": "documentation",
+      "purpose": "METIC LAB — Hero page running",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "cadence",
+        "dashboard",
+        "garmin",
+        "layout",
+        "map",
+        "runner-dna",
+        "strava",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "AnimatedWordmark",
+        "ArrowGlyph",
+        "BibObject",
+        "CursorLens",
+        "CustomGlyph",
+        "EASE_IN",
+        "EASE_IN_OUT",
+        "EASE_OUT",
+        "EASE_POP",
+        "EnterDisc",
+        "GlyphKind",
+        "hasFinePointer",
+        "HERO_BIB",
+        "HERO_BRAND",
+        "HERO_ENTER_RING",
+        "HERO_GOAL",
+        "HERO_MARQUEE",
+        "HERO_NAV",
+        "HERO_PHRASES",
+        "HERO_PORTAL",
+        "HERO_QUOTE",
+        "HERO_ROUTE",
+        "HERO_WORDS",
+        "HeroArtwork",
+        "HeroNav",
+        "HeroWord",
+        "IntroGate",
+        "IntroHero",
+        "Magnetic",
+        "Marquee",
+        "MarqueeStyle",
+        "Monogram",
+        "prefersReducedMotion",
+        "RegMark",
+        "seeded",
+        "SparkGlyph",
+        "waitForHeroFonts",
+        "WordmarkVariant"
+      ],
+      "routes": [],
+      "imports": [
+        "../../data/kikkoSub20Plan",
+        "./AnimatedWordmark",
+        "./components/hero/IntroGate",
+        "./context/ThemeContext",
+        "./CursorLens",
+        "./EnterDisc",
+        "./HeroArtwork",
+        "./heroContent",
+        "./HeroGlyphs",
+        "./heroMotion",
+        "./HeroNav",
+        "./IntroHero",
+        "./Magnetic",
+        "./Marquee",
+        "./utils/telemetry",
+        "gsap",
+        "gsap/CustomEase",
+        "gsap/MotionPathPlugin",
+        "lenis",
+        "motion/react",
+        "react",
+        "react-dom/client",
+        "react-router-dom"
+      ],
+      "hash": "5f134f02980f1b56ce4491581208d02d56bb0b3450da680b0e72a60242ff557c",
+      "last_modified": "2026-09-14T19:08:14.763Z",
+      "size_bytes": 101119
+    },
+    {
       "path": "docs/module-summaries/activities.md",
       "kind": "documentation",
       "purpose": "Module Summary: Activities",
@@ -1207,9 +1295,9 @@
       "exports": [],
       "routes": [],
       "imports": [],
-      "hash": "b5a1b4bb457eded1c68ffa133748651b475b26f62f55a4e4b8b9495e18e045d7",
-      "last_modified": "2026-03-27T18:28:13.136Z",
-      "size_bytes": 324
+      "hash": "b3c4e7b72a9c7a94abac5d42b83f4f4a95be794c6cb18a35fb39930f30b135d4",
+      "last_modified": "2026-09-14T18:32:17.403Z",
+      "size_bytes": 835
     },
     {
       "path": "llms.txt",
@@ -1301,9 +1389,9 @@
       "exports": [],
       "routes": [],
       "imports": [],
-      "hash": "610868d984092fbbd24743437da88a7016c43f79b2148a1cfe82d8e9d48c7dff",
-      "last_modified": "2026-06-14T19:51:50.272Z",
-      "size_bytes": 2587
+      "hash": "83e2bab8cd365e206da765c468900075975b5e3dc425675f0af70491a7433004",
+      "last_modified": "2026-09-14T14:21:21.017Z",
+      "size_bytes": 2612
     },
     {
       "path": "PRD.md",
@@ -3530,6 +3618,308 @@
       "size_bytes": 2634
     },
     {
+      "path": "src/components/hero/AnimatedWordmark.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component AnimatedWordmark.",
+      "touch_when": [
+        "ai",
+        "types"
+      ],
+      "exports": [
+        "AnimatedWordmark",
+        "WordmarkVariant"
+      ],
+      "routes": [],
+      "imports": [
+        "./heroContent",
+        "./HeroGlyphs",
+        "react"
+      ],
+      "hash": "845b8c26d7bacc35ec6181dc4e63c0511223189d3cf65041fe93078585a432dc",
+      "last_modified": "2026-09-14T18:47:12.405Z",
+      "size_bytes": 4208
+    },
+    {
+      "path": "src/components/hero/CursorLens.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component CursorLens.",
+      "touch_when": [
+        "ai",
+        "layout",
+        "types"
+      ],
+      "exports": [
+        "CursorLens"
+      ],
+      "routes": [],
+      "imports": [
+        "react"
+      ],
+      "hash": "480cb0ad09b597039087f7c689f6ee808502f5293acc5ea87eea2a852cf58867",
+      "last_modified": "2026-09-14T18:50:28.241Z",
+      "size_bytes": 1560
+    },
+    {
+      "path": "src/components/hero/EnterDisc.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component EnterDisc.",
+      "touch_when": [
+        "types"
+      ],
+      "exports": [
+        "EnterDisc"
+      ],
+      "routes": [],
+      "imports": [
+        "./heroContent",
+        "./HeroGlyphs",
+        "./Magnetic",
+        "react"
+      ],
+      "hash": "0041c6d59c3227e20227cf601ca0e76f35ab174edddaf1296b973634fcc77f08",
+      "last_modified": "2026-09-14T18:50:28.235Z",
+      "size_bytes": 1200
+    },
+    {
+      "path": "src/components/hero/hero.css",
+      "kind": "frontend-component",
+      "purpose": "React component hero.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "garmin",
+        "layout"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [],
+      "hash": "83d1108aa481b13b2dd3e6e1ef2e89d510e3a4627b78ea7e6b2693e574901c98",
+      "last_modified": "2026-09-14T18:56:25.366Z",
+      "size_bytes": 28847
+    },
+    {
+      "path": "src/components/hero/HeroArtwork.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component HeroArtwork.",
+      "touch_when": [
+        "ai",
+        "types"
+      ],
+      "exports": [
+        "HeroArtwork"
+      ],
+      "routes": [],
+      "imports": [
+        "./AnimatedWordmark",
+        "./CursorLens",
+        "./HeroGlyphs",
+        "react"
+      ],
+      "hash": "362cf725d9b64e7de98537c623bea3b39664e2e27b0833ee52d2e34b291554fb",
+      "last_modified": "2026-09-14T14:30:21.383Z",
+      "size_bytes": 1127
+    },
+    {
+      "path": "src/components/hero/heroContent.ts",
+      "kind": "frontend-component",
+      "purpose": "React component heroContent.",
+      "touch_when": [
+        "ai",
+        "cadence",
+        "dashboard",
+        "runner-dna",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "GlyphKind",
+        "HERO_BIB",
+        "HERO_BRAND",
+        "HERO_ENTER_RING",
+        "HERO_GOAL",
+        "HERO_MARQUEE",
+        "HERO_NAV",
+        "HERO_PHRASES",
+        "HERO_PORTAL",
+        "HERO_QUOTE",
+        "HERO_ROUTE",
+        "HERO_WORDS",
+        "HeroWord",
+        "MarqueeStyle"
+      ],
+      "routes": [],
+      "imports": [
+        "../../data/kikkoSub20Plan"
+      ],
+      "hash": "45912830e06e3f17b8ebc922db26916fd10062622be9b6c9f0697029268a002f",
+      "last_modified": "2026-09-14T18:46:16.921Z",
+      "size_bytes": 3024
+    },
+    {
+      "path": "src/components/hero/HeroGlyphs.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component HeroGlyphs.",
+      "touch_when": [
+        "ai",
+        "garmin",
+        "types"
+      ],
+      "exports": [
+        "ArrowGlyph",
+        "BibObject",
+        "CustomGlyph",
+        "Monogram",
+        "RegMark",
+        "SparkGlyph"
+      ],
+      "routes": [],
+      "imports": [
+        "./heroContent"
+      ],
+      "hash": "e88a024de0019ed5fa6ca519ce7eb3aa29e24bd65a2dda7d04987704ce83e92d",
+      "last_modified": "2026-09-14T18:53:54.854Z",
+      "size_bytes": 5389
+    },
+    {
+      "path": "src/components/hero/heroMotion.ts",
+      "kind": "frontend-component",
+      "purpose": "React component heroMotion.",
+      "touch_when": [
+        "ai"
+      ],
+      "exports": [
+        "EASE_IN",
+        "EASE_IN_OUT",
+        "EASE_OUT",
+        "EASE_POP",
+        "hasFinePointer",
+        "prefersReducedMotion",
+        "seeded",
+        "waitForHeroFonts"
+      ],
+      "routes": [],
+      "imports": [
+        "gsap",
+        "gsap/CustomEase",
+        "gsap/MotionPathPlugin"
+      ],
+      "hash": "41cdb2802a4aef82fbff435e8a17ff3bb412e4f092852a74845c5bddea7d1e71",
+      "last_modified": "2026-09-14T18:50:28.234Z",
+      "size_bytes": 1909
+    },
+    {
+      "path": "src/components/hero/HeroNav.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component HeroNav.",
+      "touch_when": [
+        "ai",
+        "types"
+      ],
+      "exports": [
+        "HeroNav"
+      ],
+      "routes": [],
+      "imports": [
+        "./heroContent",
+        "./HeroGlyphs",
+        "./Magnetic",
+        "react"
+      ],
+      "hash": "5f707ffc1e3f5f70d0fa42b78b8ceda6178c103d39cded8de5d8c45ed1a06304",
+      "last_modified": "2026-09-14T18:47:25.846Z",
+      "size_bytes": 2225
+    },
+    {
+      "path": "src/components/hero/IntroGate.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component IntroGate.",
+      "touch_when": [
+        "dashboard",
+        "strava",
+        "types"
+      ],
+      "exports": [
+        "IntroGate"
+      ],
+      "routes": [],
+      "imports": [
+        "./IntroHero",
+        "react",
+        "react-router-dom"
+      ],
+      "hash": "c08fe41bd8f3f8af92820436996335f68ceea4caa7b0223a59dbd5291fdfdf1a",
+      "last_modified": "2026-09-14T18:32:54.609Z",
+      "size_bytes": 1548
+    },
+    {
+      "path": "src/components/hero/IntroHero.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component IntroHero.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "api",
+        "layout",
+        "types"
+      ],
+      "exports": [
+        "IntroHero"
+      ],
+      "routes": [],
+      "imports": [
+        "./EnterDisc",
+        "./HeroArtwork",
+        "./heroContent",
+        "./heroMotion",
+        "./HeroNav",
+        "./Marquee",
+        "gsap",
+        "lenis",
+        "react"
+      ],
+      "hash": "b9e790dce1e69030a012c517cd9ffa57f17b2d9ac1c64071cafbfcbf7edd7925",
+      "last_modified": "2026-09-14T18:58:21.392Z",
+      "size_bytes": 24463
+    },
+    {
+      "path": "src/components/hero/Magnetic.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component Magnetic.",
+      "touch_when": [
+        "types"
+      ],
+      "exports": [
+        "Magnetic"
+      ],
+      "routes": [],
+      "imports": [
+        "motion/react",
+        "react"
+      ],
+      "hash": "c111034395e6db338bdc144fdab1c88b6d3c38805bd939c8fd1a8daf2b5eccbe",
+      "last_modified": "2026-09-14T14:29:39.034Z",
+      "size_bytes": 1753
+    },
+    {
+      "path": "src/components/hero/Marquee.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component Marquee.",
+      "touch_when": [],
+      "exports": [
+        "Marquee"
+      ],
+      "routes": [],
+      "imports": [
+        "./heroContent",
+        "./HeroGlyphs",
+        "gsap",
+        "react"
+      ],
+      "hash": "aab6e39ee1d98f3161d8a4f23ba4ea88ab78416b59ffbbdea6ff4478ea00b180",
+      "last_modified": "2026-09-14T14:29:31.532Z",
+      "size_bytes": 2317
+    },
+    {
       "path": "src/components/JarvisOrb.tsx",
       "kind": "frontend-component",
       "purpose": "React component JarvisOrb.",
@@ -5399,21 +5789,22 @@
       "purpose": "frontend-source main.tsx.",
       "touch_when": [
         "activities",
-        "ai"
+        "ai",
+        "dashboard"
       ],
       "exports": [],
       "routes": [],
       "imports": [
-        "./App.tsx",
+        "./components/hero/IntroGate",
         "./context/ThemeContext",
         "./utils/telemetry",
         "react",
         "react-dom/client",
         "react-router-dom"
       ],
-      "hash": "23371e0781cda2f3238b0b49662a8b2a63a5c5f8f58e5d65edd135bc60107ba7",
-      "last_modified": "2026-04-29T06:15:12.363Z",
-      "size_bytes": 606
+      "hash": "d924d3fcecce159a239be2da28c63f0cc64acde9bb449baca3132b17002c9020",
+      "last_modified": "2026-09-14T18:32:54.609Z",
+      "size_bytes": 885
     },
     {
       "path": "src/types/api.ts",
