@@ -8,13 +8,17 @@ import { gsap } from "../celebrations/gsapSetup";
 import type { Run, Profile } from "../../types/api";
 import { CHART_SERIES, CHART_TEXT } from "../statistics/chartTheme";
 import {
-  computeLevelSystem, XP_BONUS,
+  computeLevelSystem, XP_BONUS, XP_ZONES, QUALITY_BONUS_MIN,
   type LevelSystem, type TierState, type LevelNode, type Projection, type XpExample,
   type LevelGain,
 } from "./evolutionEngine";
 import { useAthleteVdot } from "./useAthleteVdot";
 import { GoalTimeline, PhysioVerdict } from "./PhysioVerdict";
 import { usePhysio } from "./usePhysio";
+import { GoalCone } from "./GoalCone";
+import { useApi } from "../../hooks/useApi";
+import { getSub20Status, type Sub20StatusResponse } from "../../api";
+import { KIKKO_SUB20_PLAN, KIKKO_SUB20_TARGETS, kikkoWindow } from "../../data/kikkoSub20Plan";
 
 const MONO = "'JetBrains Mono', monospace";
 const ICONS: Record<string, LucideIcon> = { Footprints, Sparkles, Flame, Zap, Medal, Award, Target, Trophy, Gem, Crown };
@@ -47,6 +51,19 @@ export function AthleteEvolutionFramework({ runs, profile }: { runs: Run[]; prof
 
   const sys = useMemo(() => computeLevelSystem(runs, profile, today, vdotAnchor), [runs, profile, today, vdotAnchor]);
   const physio = usePhysio(runs);
+
+  // l'obiettivo del piano di allenamento, con la stessa domenica di gara che
+  // mostra il calendario: lo stato è condiviso con la pagina Training
+  const { data: planStatus } = useApi<Sub20StatusResponse>(getSub20Status, { cacheKey: "sub20-status" });
+  const mine = useMemo(() => {
+    if (!planStatus) return null;
+    const w = kikkoWindow(KIKKO_SUB20_PLAN, planStatus.start_date, planStatus.race_date);
+    return { targetSec: planStatus.goals?.sub20 ?? KIKKO_SUB20_TARGETS[0].sec, raceIso: w.raceIso };
+  }, [planStatus]);
+  const xpPace = useMemo(
+    () => (sys.projection.ok ? { perDay: sys.projection.xpPerDay, perSession: sys.projection.xpPerSession, total: sys.totalXp } : null),
+    [sys],
+  );
   const rootRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -107,6 +124,9 @@ export function AthleteEvolutionFramework({ runs, profile }: { runs: Run[]; prof
         <ProjectionPanel p={sys.projection} />
         <div className="aef-rise"><GoalTimeline p={physio} /></div>
       </div>
+
+      {/* la data con il suo margine: quando diventa possibile, alla pari, probabile */}
+      <div className="mt-5"><GoalCone physio={physio} mine={mine} xp={xpPace} /></div>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[1.15fr_0.85fr] items-start">
         <PathPanel sys={sys} trackRef={trackRef} />
@@ -546,7 +566,10 @@ function XpLegendPanel({ sys }: { sys: LevelSystem }) {
       <Panel className="p-4 md:p-5">
         <p className="text-[11px] text-gray-500 mb-3.5">
           Ogni minuto vale in base alla <b className="text-gray-300">zona</b> in cui l'hai corso, più 3 XP al km.
-          Le sedute di qualità prendono un bonus fisso: dieci minuti forti pesano quanto mezz'ora di lento.
+          La corsa si legge <b className="text-gray-300">giro per giro</b> (o chilometro per chilometro): sulle ripetute
+          i tratti veloci contano come ripetute e il trotto fra l'uno e l'altro come recupero, invece di finire tutti
+          insieme in una media. Oltre {QUALITY_BONUS_MIN} minuti di soglia o ripetute scatta il bonus fisso: dieci minuti
+          forti pesano quanto mezz'ora di lento.
         </p>
         <div className="space-y-2">
           {sys.legend.map((l) => <LegendRow key={l.zone.id} l={l} max={max} />)}
@@ -682,26 +705,60 @@ function TierNode({ t, last, isNext }: { t: TierState; last: boolean; isNext: bo
   );
 }
 
-// ── ULTIME CORSE → XP GUADAGNATI ──────────────────────────────────────────────
+// ── ULTIME GIORNATE → XP GUADAGNATI ───────────────────────────────────────────
+/**
+ * Una riga per giornata, con dentro il perché del numero. La barra dice dove
+ * sono finiti i minuti; aprendo la riga si legge la somma voce per voce — è la
+ * risposta a "come mai il lungo vale più delle ripetute?" senza dover chiedere.
+ */
 function RecentRuns({ sys }: { sys: LevelSystem }) {
+  const [open, setOpen] = useState<string | null>(sys.recent[0]?.date ?? null);
   return (
     <section className="aef-rise min-w-0">
-      <SectionTitle icon={Activity} hint="XP guadagnati">Ultime corse</SectionTitle>
+      <SectionTitle icon={Activity} hint="tocca una giornata per il conto">Ultime giornate</SectionTitle>
       <Panel className="p-2">
-        {sys.recent.map((r, i) => {
+        {sys.recent.map((r) => {
           const col = RUN_COLOR[r.type] ?? "#22D3EE";
+          const totalMin = r.zoneMinutes.reduce((s, m) => s + m, 0) || 1;
+          const isOpen = open === r.date;
           return (
-            <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/[0.03] transition-colors">
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: col }} />
-              <div className="min-w-0 flex-1">
-                <div className="text-[12px] font-bold text-white/90 truncate">{r.name}</div>
-                <div className="text-[9px] text-gray-500" style={{ fontFamily: MONO }}>{r.date} · {r.km} km
-                  {r.isRace && <span className="ml-1.5 text-[#E879F9] font-black">GARA</span>}
-                  {r.isPB && !r.isRace && <span className="ml-1.5 text-[#FBBF24] font-black">PB</span>}
+            <div key={r.date} className={`rounded-xl transition-colors ${isOpen ? "bg-white/[0.04]" : "hover:bg-white/[0.03]"}`}>
+              <button type="button" onClick={() => setOpen(isOpen ? null : r.date)} aria-expanded={isOpen}
+                className="w-full flex items-center gap-3 px-3 py-2 text-left">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: col }} />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[12px] font-bold text-white/90 truncate">{r.name}</div>
+                  <div className="text-[9px] text-gray-500 truncate" style={{ fontFamily: MONO }}>
+                    {r.date} · {r.km.toLocaleString("it-IT")} km{r.parts > 1 && ` · ${r.parts} parti`}
+                    {r.structured && <span className="ml-1.5 font-black" style={{ color: XP_ZONES[4].color }}>RIPETUTE</span>}
+                    {r.isRace && <span className="ml-1.5 text-[#E879F9] font-black">GARA</span>}
+                    {r.isPB && !r.isRace && <span className="ml-1.5 text-[#FBBF24] font-black">PB</span>}
+                  </div>
+                  <div className="mt-1 flex h-1 rounded-full overflow-hidden bg-white/[0.05]" aria-hidden>
+                    {r.zoneMinutes.map((m, i) => m > 0 && (
+                      <span key={i} style={{ width: `${(m / totalMin) * 100}%`, background: XP_ZONES[i].color }} />
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <span className="text-[13px] font-black tabular-nums shrink-0" style={{ fontFamily: MONO, color: "#C0FF00" }}>+{r.xp}</span>
-              <ChevronRight className="w-3.5 h-3.5 text-gray-700 shrink-0" />
+                <span className="text-[13px] font-black tabular-nums shrink-0" style={{ fontFamily: MONO, color: "#C0FF00" }}>+{r.xp}</span>
+                <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-transform ${isOpen ? "rotate-90 text-gray-400" : "text-gray-700"}`} />
+              </button>
+              {isOpen && (
+                <div className="px-3 pb-2.5 pl-8">
+                  {r.lines.map((l) => (
+                    <div key={l.label} className="flex items-baseline gap-2 py-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0 self-center" style={{ background: l.color }} />
+                      <span className="text-[10px] font-bold text-gray-300 shrink-0">{l.label}</span>
+                      <span className="text-[9px] text-gray-600 truncate" style={{ fontFamily: MONO }}>{l.detail}</span>
+                      <span className="ml-auto text-[10px] font-black tabular-nums shrink-0" style={{ fontFamily: MONO, color: l.color }}>+{l.xp}</span>
+                    </div>
+                  ))}
+                  <div className="mt-1 pt-1 border-t border-white/[0.06] flex justify-between text-[10px] font-black" style={{ fontFamily: MONO }}>
+                    <span className="text-gray-500 uppercase tracking-wider text-[9px]">Totale</span>
+                    <span style={{ color: "#C0FF00" }}>+{r.xp} XP</span>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}

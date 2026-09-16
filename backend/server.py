@@ -77,7 +77,7 @@ FISH_AUDIO_API_KEY = os.environ.get("FISH_AUDIO_API_KEY", "")
 GARMIN_EMAIL       = os.environ.get("GARMIN_EMAIL", "")
 GARMIN_PASSWORD    = os.environ.get("GARMIN_PASSWORD", "")
 APP_VERSION        = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT") or os.environ.get("COMMIT_SHA") or "local"
-ANALYTICS_SCHEMA_VERSION = "pro-v11-2026-05-02"
+ANALYTICS_SCHEMA_VERSION = "pro-v13-2026-09-16"
 RUNNER_DNA_SCHEMA_VERSION = "runner-dna-v6-2026-06-10"
 GARMIN_CSV_REPAIR_VERSION = "garmin-csv-repair-v2-2026-04-22"
 
@@ -338,6 +338,9 @@ def analytics_run_projection(include_splits: bool = False) -> dict:
         "avg_stride_length": 1,
         "biomechanics": 1,
         "garmin_csv_id": 1,
+        # i giri pesano poco e sono l'unico dato che separa lavoro e recupero:
+        # la biomeccanica "a ritmo" li usa per leggere le ripetute
+        "laps": 1,
     }
     if include_splits:
         projection["splits"] = 1
@@ -5649,12 +5652,177 @@ def _build_best_efforts_progression_chart(runs: list, resolution: str) -> dict:
     )
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+#  BIOMECCANICA A RITMO — i dati delle corse veloci e dei giri delle ripetute
+# ═══════════════════════════════════════════════════════════════════════════════
+# La media di tutte le uscite racconta la biomeccanica del lento: su un atleta che
+# corre due terzi dei chilometri a 6:00 il GCT medio esce 250 ms e la cadenza 174,
+# numeri veri ma di un altro gesto. Quello che conta in gara è l'appoggio quando
+# si va forte, quindi i grafici della sezione leggono solo:
+#   - le corse con passo medio sotto i 4:45/km (telemetria dell'intera corsa);
+#   - i giri di lavoro delle ripetute sotto i 4:45, con la cadenza presa dagli
+#     streams per-punto dentro il giro (gli split al km mescolano ripetuta e trotto);
+#   - i chilometri sotto i 4:45 delle corse continue (split con cadenza).
+FAST_PACE_SEC = 285.0   # 4:45/km
+EASY_PACE_SEC = 330.0   # 5:30/km: il "lento" con cui confrontare il gesto veloce
+FAST_BIOMECH_CHARTS = {
+    "fast_biomechanics", "ground_contact_stability", "athletic_profile",
+    "cadence_monthly", "gct_cadence", "cadence_speed_matrix",
+}
+
+
+def _run_pace_sec(run: dict) -> Optional[float]:
+    pace = _parse_pace_sec(run.get("avg_pace"))
+    if pace:
+        return float(pace)
+    km = float(run.get("distance_km") or 0)
+    minutes = float(run.get("duration_minutes") or 0)
+    return minutes * 60 / km if km > 0 and minutes > 0 else None
+
+
+def _stride_m(speed_mps: float, cadence_spm: Optional[float]) -> Optional[float]:
+    """Lunghezza del passo: metri al minuto diviso passi al minuto."""
+    if not cadence_spm or cadence_spm < 120 or speed_mps <= 0:
+        return None
+    return round(speed_mps * 60.0 / cadence_spm, 2)
+
+
+def _median(values: list) -> Optional[float]:
+    nums = sorted(float(v) for v in values if v is not None)
+    if not nums:
+        return None
+    m = len(nums) // 2
+    return nums[m] if len(nums) % 2 else (nums[m - 1] + nums[m]) / 2
+
+
+def _fast_rep_laps(run: dict, streams: Optional[list]) -> list:
+    """I giri di lavoro sotto i 4:45 di una seduta strutturata, con la loro cadenza.
+
+    Lavoro e recupero si separano sul passo (2-means sui giri, contrasto >= 15%),
+    come nel resto dell'app. La cadenza del giro è la mediana dei punti degli
+    streams che cadono dentro la sua distanza: la mediana, perché i primi metri
+    di ogni ripetuta sono un'accelerazione e la media ne resterebbe sporcata.
+    """
+    items = []
+    cursor = 0.0
+    for lp in run.get("laps") or []:
+        dist = float(lp.get("distance") or 0)
+        secs = float(lp.get("moving_time") or lp.get("elapsed_time") or 0)
+        start = cursor
+        cursor += max(0.0, dist)
+        if dist < 150 or secs < 25:
+            continue
+        items.append({"start": start, "end": start + dist, "distance_m": dist, "time_s": secs,
+                      "pace_sec": secs / (dist / 1000.0), "hr": lp.get("average_heartrate")})
+    if len(items) < 3:
+        return []
+    cf, cs = _two_means_split([it["pace_sec"] for it in items])
+    if cf <= 0 or cs / cf < 1.15:
+        return []
+    cut = (cf + cs) / 2.0
+    # Giri di lavoro consecutivi, senza un recupero in mezzo, sono la stessa
+    # ripetuta: chi preme il tasto a metà di un 1600 non ha fatto 1000 + 600.
+    work: list = []
+    prev_work = False
+    for it in items:
+        is_work = it["pace_sec"] <= cut
+        if is_work and prev_work and work:
+            w = work[-1]
+            hr_parts = [(w["hr"], w["time_s"]), (it["hr"], it["time_s"])]
+            hr_time = sum(t for h, t in hr_parts if h)
+            w["hr"] = sum(h * t for h, t in hr_parts if h) / hr_time if hr_time else None
+            w["end"], w["distance_m"], w["time_s"] = it["end"], w["distance_m"] + it["distance_m"], w["time_s"] + it["time_s"]
+            w["pace_sec"] = w["time_s"] / (w["distance_m"] / 1000.0)
+        elif is_work:
+            work.append(dict(it))
+        prev_work = is_work
+    work = [w for w in work if w["pace_sec"] <= FAST_PACE_SEC]
+    if len(work) < 2:
+        return []
+    pts = [p for p in (streams or []) if isinstance(p, dict) and p.get("d") is not None and (p.get("cad") or 0) >= 120]
+    out = []
+    for it in work:
+        cads = [p["cad"] for p in pts if it["start"] <= p["d"] < it["end"]]
+        cad = _median(cads) if len(cads) >= 3 else None
+        out.append({
+            "distance_m": round(it["distance_m"]),
+            "pace_sec": round(it["pace_sec"], 1),
+            "cadence": round(cad) if cad else None,
+            "stride_m": _stride_m(it["distance_m"] / it["time_s"], cad),
+            "hr": round(it["hr"]) if it["hr"] else None,
+            "minutes": round(it["time_s"] / 60.0, 2),
+        })
+    return out
+
+
+def _fast_split_samples(run: dict) -> list:
+    """I chilometri sotto i 4:45 di una corsa continua, con la cadenza dello split."""
+    if (run.get("run_type") or "").lower() == "intervals":
+        # sulle ripetute uno split al km è mezza ripetuta e mezzo trotto
+        return []
+    out = []
+    for sp in run.get("splits") or []:
+        dist = float(sp.get("distance") or 0)
+        secs = float(sp.get("elapsed_time") or 0)
+        cad = sp.get("cadence")
+        if dist < 900 or secs <= 0 or not cad or float(cad) < 120:
+            continue
+        pace = secs / (dist / 1000.0)
+        if pace > FAST_PACE_SEC:
+            continue
+        out.append({
+            "distance_m": round(dist), "pace_sec": round(pace, 1), "cadence": round(float(cad)),
+            "stride_m": _stride_m(dist / secs, float(cad)), "hr": round(sp["hr"]) if sp.get("hr") else None,
+            "minutes": round(secs / 60.0, 2),
+        })
+    return out
+
+
+def _fast_telemetry(runs: list, telemetry_runs: list, streams_by_id: Optional[dict]) -> dict:
+    """Tutto quello che la sezione biomeccanica sa del gesto veloce, in un posto solo."""
+    fast_runs, easy_runs = [], []
+    for r in telemetry_runs:
+        pace = _run_pace_sec(r)
+        if not pace or float(r.get("distance_km") or 0) < 1.0:
+            continue
+        if pace <= FAST_PACE_SEC:
+            fast_runs.append(r)
+        elif pace >= EASY_PACE_SEC:
+            easy_runs.append(r)
+
+    segments, sessions = [], []
+    for r in runs:
+        rid = str(r.get("_id") or r.get("id") or "")
+        reps = _fast_rep_laps(r, (streams_by_id or {}).get(rid))
+        if reps:
+            cads = [x["cadence"] for x in reps if x["cadence"]]
+            strides = [x["stride_m"] for x in reps if x["stride_m"]]
+            total_m = sum(x["distance_m"] for x in reps)
+            total_min = sum(x["minutes"] for x in reps)
+            hrs = [x["hr"] for x in reps if x["hr"]]
+            sessions.append({
+                "date": r.get("date"), "name": r.get("name"), "n_work": len(reps),
+                "work_pace_sec": round(total_min * 60 / (total_m / 1000.0), 1) if total_m else None,
+                "avg_rep_m": round(total_m / len(reps)),
+                "cadence": round(_median(cads)) if cads else None,
+                "stride_m": round(_median(strides), 2) if strides else None,
+                "hr": round(_avg(hrs)) if hrs else None,
+                "reps": reps,
+            })
+            segments.extend({**x, "date": r.get("date"), "kind": "rep"} for x in reps)
+        else:
+            segments.extend({**x, "date": r.get("date"), "kind": "km"} for x in _fast_split_samples(r))
+    sessions.sort(key=lambda x: str(x.get("date") or ""), reverse=True)
+    return {"fast_runs": fast_runs, "easy_runs": easy_runs, "segments": segments, "sessions": sessions}
+
+
 def _build_biomechanics_charts(
     runs: list,
     resolution: str,
     vdot: Optional[float],
     garmin_csv_docs: Optional[list] = None,
     only_chart: Optional[str] = None,
+    streams_by_id: Optional[dict] = None,
 ) -> dict:
     def wants(chart_id: str) -> bool:
         return only_chart is None or only_chart == chart_id
@@ -5670,6 +5838,7 @@ def _build_biomechanics_charts(
         "gct_monthly",
         "gct_cadence",
         "cadence_speed_matrix",
+        "fast_biomechanics",
     }
     if only_chart and only_chart not in valid_chart_ids:
         return {}
@@ -5706,48 +5875,88 @@ def _build_biomechanics_charts(
         "gct_monthly",
         "gct_cadence",
         "cadence_speed_matrix",
+        "fast_biomechanics",
     }
     bio_runs = []
     gct_runs = []
-    cad_runs = []
     if needs_bio_runs:
         bio_runs = [r for r in telemetry_runs if any(_bio_value(r, k) is not None for k in ("gct", "cadence", "vr", "stride", "vo"))]
         gct_runs = [r for r in bio_runs if _bio_value(r, "gct") is not None]
-        cad_runs = [r for r in bio_runs if _bio_value(r, "cadence") is not None]
+
+    # il gesto veloce: corse sotto i 4:45, giri delle ripetute, km veloci
+    fast = {"fast_runs": [], "easy_runs": [], "segments": [], "sessions": []}
+    if only_chart is None or only_chart in FAST_BIOMECH_CHARTS:
+        fast = _fast_telemetry(runs, telemetry_runs, streams_by_id)
+    seg_cadence_by_bucket: dict[str, list] = {}
+    seg_stride_by_bucket: dict[str, list] = {}
+    for sgm in fast["segments"]:
+        key = _bucket_key(str(sgm.get("date") or ""), resolution)
+        if not key:
+            continue
+        if sgm.get("cadence"):
+            seg_cadence_by_bucket.setdefault(key, []).append(sgm["cadence"])
+        if sgm.get("stride_m"):
+            seg_stride_by_bucket.setdefault(key, []).append(sgm["stride_m"])
 
     if wants("ground_contact_stability"):
-        stability_rows = []
-        for key, group in sorted(_group_runs_by_bucket(gct_runs, resolution).items()):
-            gcts = [_bio_value(r, "gct") for r in group]
-            cads = [_bio_value(r, "cadence") for r in group]
-            vrs = [_bio_value(r, "vr") for r in group]
-            avg_gct = _avg(gcts)
-            avg_cad = _avg(cads)
-            avg_vr = _avg(vrs)
-            consistency = _stdev(gcts)
-            score = 100
+        # A ritmo il riferimento cambia: appoggio più corto (sotto 235 ms non si
+        # penalizza), cadenza intorno a 184 e rapporto verticale sotto l'8%.
+        # Con i riferimenti del lento (250 ms, 174 passi) un gesto veloce ottimo
+        # veniva punito per essere veloce.
+        def stability(gcts: list, cad: Optional[float], vrs: list) -> dict:
+            avg_gct, avg_vr = _avg(gcts), _avg(vrs)
+            score = 100.0
             if avg_gct:
-                score -= max(0, avg_gct - 250) * 0.18
-            if avg_cad:
-                score -= abs(avg_cad - 174) * 0.7
+                score -= max(0, avg_gct - 235) * 0.18
+            if cad:
+                score -= max(0, abs(cad - 184) - 4) * 0.7
             if avg_vr:
-                score -= max(0, avg_vr - 8.5) * 3
-            score -= consistency * 0.12
-            stability_rows.append({"date": key, "score": round(max(0, min(100, score)), 1), "gct": round(avg_gct or 0, 1), "cadence": round(avg_cad or 0, 1), "vertical_ratio": round(avg_vr or 0, 2), "runs": len(group)})
-        latest_stability = stability_rows[-1] if stability_rows else {}
-        charts["ground_contact_stability"] = _chart("ground_contact_stability", "Ground Contact Stability", "score", {"latest_score": latest_stability.get("score")}, stability_rows[-12:], stability_rows, latest_stability, len(stability_rows))
+                score -= max(0, avg_vr - 8.0) * 3
+            score -= _stdev(gcts) * 0.12
+            return {"score": round(max(0, min(100, score)), 1), "gct": round(avg_gct or 0, 1),
+                    "cadence": round(cad or 0, 1), "vertical_ratio": round(avg_vr or 0, 2)}
+
+        fast_gct = [r for r in fast["fast_runs"] if _bio_value(r, "gct") is not None]
+        stability_rows = []
+        grouped = sorted(_group_runs_by_bucket(fast_gct, resolution).items())
+        for key, group in grouped:
+            seg_cads = seg_cadence_by_bucket.get(key) or []
+            cad = _median(seg_cads) if seg_cads else _avg([_bio_value(r, "cadence") for r in group])
+            row = stability([_bio_value(r, "gct") for r in group], cad, [_bio_value(r, "vr") for r in group])
+            stability_rows.append({"date": key, **row, "runs": len(group), "segments": len(seg_cads)})
+        # il riquadro legge gli ultimi tre periodi insieme: un mese con una sola
+        # corsa veloce non può decidere da solo il voto
+        recent = grouped[-3:]
+        latest_stability = {}
+        if recent:
+            group = [r for _, g in recent for r in g]
+            seg_cads = [c for key, _ in recent for c in (seg_cadence_by_bucket.get(key) or [])]
+            cad = _median(seg_cads) if seg_cads else _avg([_bio_value(r, "cadence") for r in group])
+            latest_stability = {
+                "date": recent[-1][0],
+                **stability([_bio_value(r, "gct") for r in group], cad, [_bio_value(r, "vr") for r in group]),
+                "runs": len(group), "segments": len(seg_cads),
+            }
+        charts["ground_contact_stability"] = _chart(
+            "ground_contact_stability", "Ground Contact Stability", "score",
+            {"latest_score": latest_stability.get("score"), "fast_pace_sec": FAST_PACE_SEC, "fast_runs": len(fast_gct)},
+            stability_rows[-12:], stability_rows, latest_stability, len(stability_rows),
+            message="Nessuna corsa sotto i 4:45/km con telemetria GCT",
+        )
 
     if wants("athletic_profile"):
         avg_pace = _weighted_pace_sec(runs)
         avg_hr = _avg([r.get("avg_hr") for r in runs])
-        avg_cad = _avg([_bio_value(r, "cadence") for r in cad_runs])
-        avg_gct = _avg([_bio_value(r, "gct") for r in gct_runs])
+        fast_cads = [x["cadence"] for x in fast["segments"] if x.get("cadence")] \
+            or [_bio_value(r, "cadence") for r in fast["fast_runs"] if _bio_value(r, "cadence")]
+        avg_cad = _median(fast_cads)
+        avg_gct = _median([_bio_value(r, "gct") for r in fast["fast_runs"] if _bio_value(r, "gct") is not None])
         radar = [
             {"axis": "Endurance", "value": round(min(100, sum(r.get("distance_km", 0) for r in runs) / max(1, len(runs)) * 7), 1)},
             {"axis": "Speed", "value": round(min(100, ((vdot or 30) - 30) * 4), 1)},
             {"axis": "Efficiency", "value": round(min(100, ((3600 / avg_pace) / avg_hr * 1000) if avg_pace and avg_hr else 0), 1)},
-            {"axis": "Cadence", "value": round(max(0, min(100, 100 - abs((avg_cad or 0) - 174) * 2)), 1) if avg_cad else 0},
-            {"axis": "Impact", "value": round(max(0, min(100, 100 - max(0, (avg_gct or 300) - 240) * 0.8)), 1) if avg_gct else 0},
+            {"axis": "Cadence", "value": round(max(0, min(100, 100 - max(0, abs((avg_cad or 0) - 184) - 4) * 2)), 1) if avg_cad else 0},
+            {"axis": "Impact", "value": round(max(0, min(100, 100 - max(0, (avg_gct or 300) - 215) * 0.8)), 1) if avg_gct else 0},
         ]
         charts["athletic_profile"] = _chart("athletic_profile", "Athletic Profile", "score", {}, radar, radar, sample_size=len(bio_runs))
 
@@ -5780,9 +5989,14 @@ def _build_biomechanics_charts(
 
     if wants("cadence_monthly"):
         cadence_rows = []
-        for key, group in sorted(_group_runs_by_bucket(cad_runs, resolution).items()):
-            cadence_rows.append({"date": key, "cadence": round(_avg([_bio_value(r, "cadence") for r in group]) or 0, 1), "runs": len(group)})
-        charts["cadence_monthly"] = _chart("cadence_monthly", "Cadenza Mensile", "spm", {}, cadence_rows[-12:], cadence_rows, sample_size=len(cadence_rows))
+        run_cads = {key: [c for c in (_bio_value(r, "cadence") for r in group) if c]
+                    for key, group in _group_runs_by_bucket(fast["fast_runs"], resolution).items()}
+        for key in sorted(set(seg_cadence_by_bucket) | set(run_cads)):
+            segs = seg_cadence_by_bucket.get(key) or []
+            cad = _median(segs) if segs else _avg(run_cads.get(key) or [])
+            if cad:
+                cadence_rows.append({"date": key, "cadence": round(cad, 1), "runs": len(segs) or len(run_cads.get(key) or [])})
+        charts["cadence_monthly"] = _chart("cadence_monthly", "Cadenza Mensile", "spm", {"fast_pace_sec": FAST_PACE_SEC}, cadence_rows[-12:], cadence_rows, sample_size=len(cadence_rows))
 
     if wants("cardiac_drift"):
         cardiac_drift = []
@@ -5822,18 +6036,90 @@ def _build_biomechanics_charts(
     if wants("gct_cadence") or wants("cadence_speed_matrix"):
         gct_cad = []
         cad_speed = []
+        fast_ids = {id(r) for r in fast["fast_runs"]}
         for r in bio_runs:
             pace = _parse_pace_sec(r.get("avg_pace"))
             cad = _bio_value(r, "cadence")
             gct = _bio_value(r, "gct")
-            if cad and gct:
+            # GCT e cadenza si confrontano solo sul gesto veloce: al lento la
+            # "zona ottimale" (cadenza >175, GCT <240) è fuori portata per chiunque
+            if cad and gct and id(r) in fast_ids:
                 gct_cad.append({"date": r.get("date"), "cadence": round(cad, 1), "gct": round(gct, 1), "distance_km": r.get("distance_km")})
             if pace and cad:
-                cad_speed.append({"date": r.get("date"), "speed": round(3600 / pace, 2), "cadence": round(cad, 1), "r": max(4, min(30, r.get("distance_km", 5))), "pace_sec": round(pace, 1)})
+                cad_speed.append({"date": r.get("date"), "speed": round(3600 / pace, 2), "cadence": round(cad, 1), "r": max(4, min(30, r.get("distance_km", 5))), "pace_sec": round(pace, 1), "kind": "run"})
+        # la matrice si allunga verso destra con le ripetute e i km veloci
+        for sgm in fast["segments"]:
+            if sgm.get("cadence") and sgm.get("pace_sec"):
+                cad_speed.append({"date": sgm.get("date"), "speed": round(3600 / sgm["pace_sec"], 2), "cadence": sgm["cadence"], "r": 4, "pace_sec": sgm["pace_sec"], "kind": sgm["kind"]})
+        cad_speed.sort(key=lambda x: str(x.get("date") or ""))
         if wants("gct_cadence"):
             charts["gct_cadence"] = _chart("gct_cadence", "GCT vs Cadence", "ms", {}, gct_cad[-80:], gct_cad, sample_size=len(gct_cad))
         if wants("cadence_speed_matrix"):
             charts["cadence_speed_matrix"] = _chart("cadence_speed_matrix", "Cadence vs Speed Matrix", "km/h", {}, cad_speed[-80:], cad_speed, sample_size=len(cad_speed))
+
+    if wants("fast_biomechanics"):
+        fr, er, segs = fast["fast_runs"], fast["easy_runs"], fast["segments"]
+
+        def med(rs: list, key: str) -> Optional[float]:
+            return _median([_bio_value(r, key) for r in rs])
+
+        def best(rs: list, key: str, lower: bool = True) -> Optional[float]:
+            vals = [v for v in (_bio_value(r, key) for r in rs) if v is not None]
+            return (min(vals) if lower else max(vals)) if vals else None
+
+        def rnd(v: Optional[float], digits: int = 0):
+            return None if v is None else round(v, digits) if digits else round(v)
+
+        seg_cads = [x["cadence"] for x in segs if x.get("cadence")]
+        seg_strides = [x["stride_m"] for x in segs if x.get("stride_m")]
+        kpis = {
+            "fast_runs": len(fr), "sessions": len(fast["sessions"]), "segments": len(segs),
+            "reps": sum(1 for x in segs if x.get("kind") == "rep"),
+            "pace_fast_sec": rnd(_median([x["pace_sec"] for x in segs]) or _median([_run_pace_sec(r) for r in fr])),
+            "pace_easy_sec": rnd(_median([_run_pace_sec(r) for r in er])),
+            "gct": rnd(med(fr, "gct")), "gct_best": rnd(best(fr, "gct")), "gct_easy": rnd(med(er, "gct")),
+            "cadence": rnd(_median(seg_cads) or med(fr, "cadence")),
+            "cadence_best": rnd(max(seg_cads) if seg_cads else best(fr, "cadence", lower=False)),
+            "cadence_easy": rnd(med(er, "cadence")),
+            "stride": rnd(_median(seg_strides) or med(fr, "stride"), 2),
+            "stride_best": rnd(max(seg_strides) if seg_strides else best(fr, "stride", lower=False), 2),
+            "stride_easy": rnd(med(er, "stride"), 2),
+            "vertical_ratio": rnd(med(fr, "vr"), 1), "vertical_ratio_best": rnd(best(fr, "vr"), 1),
+            "vertical_ratio_easy": rnd(med(er, "vr"), 1),
+            "vertical_osc": rnd(med(fr, "vo"), 1), "vertical_osc_easy": rnd(med(er, "vo"), 1),
+        }
+        rows = []
+        fast_by_bucket = _group_runs_by_bucket(fr, resolution)
+        for key in sorted(set(fast_by_bucket) | set(seg_cadence_by_bucket)):
+            group = fast_by_bucket.get(key) or []
+            cads = seg_cadence_by_bucket.get(key) or []
+            strides = seg_stride_by_bucket.get(key) or []
+            rows.append({
+                "date": key,
+                "gct": rnd(_avg([_bio_value(r, "gct") for r in group]), 1),
+                "cadence": rnd(_median(cads) if cads else _avg([_bio_value(r, "cadence") for r in group]), 1),
+                "stride": rnd(_median(strides) if strides else _avg([_bio_value(r, "stride") for r in group]), 2),
+                "vertical_ratio": rnd(_avg([_bio_value(r, "vr") for r in group]), 2),
+                "runs": len(group), "segments": len(cads),
+            })
+        best_runs = sorted(
+            [r for r in fr if _bio_value(r, "gct") is not None],
+            key=lambda r: _run_pace_sec(r) or 999,
+        )[:6]
+        summary = {
+            "fast_pace_sec": FAST_PACE_SEC, "easy_pace_sec": EASY_PACE_SEC,
+            "sessions": fast["sessions"][:6],
+            "best_runs": [{
+                "date": r.get("date"), "name": r.get("name"), "distance_km": r.get("distance_km"),
+                "pace_sec": rnd(_run_pace_sec(r)), "gct": rnd(_bio_value(r, "gct")),
+                "cadence": rnd(_bio_value(r, "cadence")), "vertical_ratio": rnd(_bio_value(r, "vr"), 1),
+                "stride": rnd(_bio_value(r, "stride"), 2),
+            } for r in best_runs],
+        }
+        charts["fast_biomechanics"] = _chart(
+            "fast_biomechanics", "Biomeccanica a ritmo", "mixed", summary, rows[-12:], rows, kpis,
+            sample_size=len(fr) + len(segs), message="Nessuna corsa o ripetuta sotto i 4:45/km",
+        )
 
     return charts
 
@@ -5859,18 +6145,16 @@ async def get_pro_analytics(
     if cached and cached.get("payload"):
         return cached["payload"]
 
+    # i grafici "a ritmo" hanno bisogno delle corse (giri, split, streams):
+    # dai soli CSV Garmin non si separa una ripetuta dal suo recupero
     csv_only_biomech_charts = {
-        "ground_contact_stability",
-        "cadence_monthly",
         "gct_monthly",
-        "gct_cadence",
-        "cadence_speed_matrix",
     }
     skip_runs_for_csv_chart = tab == "biomechanics" and chart in csv_only_biomech_charts
     needs_splits = (
         tab == "all"
         or (tab == "potential_progress" and (not chart or chart in {"vo2_vdot_trend", "threshold_progression", "race_evolution", "best_efforts_progression"}))
-        or (tab == "biomechanics" and (chart == "cardiac_drift" or (detail and not chart)))
+        or (tab == "biomechanics" and (not chart or chart in FAST_BIOMECH_CHARTS or chart == "cardiac_drift"))
     )
     all_runs = []
     runs = []
@@ -5949,6 +6233,7 @@ async def get_pro_analytics(
             "gct_monthly",
             "gct_cadence",
             "cadence_speed_matrix",
+            "fast_biomechanics",
         }
         garmin_csv_docs = []
         if not chart or chart in csv_chart_ids:
@@ -5973,7 +6258,18 @@ async def get_pro_analytics(
                 all_runs = await db.runs.find(q, analytics_run_projection()).sort("date", 1).to_list(3000)
                 all_runs = [_normalise_run_quality_fields(dict(r)) for r in all_runs]
                 runs = _filter_runs_for_range(all_runs, range_key)
-        biomech_charts = _build_biomechanics_charts(runs, resolved_resolution, current_vdot, garmin_csv_docs, chart)
+        # la cadenza dei giri delle ripetute sta negli streams: si leggono solo
+        # distanza e cadenza, e solo delle corse con abbastanza giri da avere
+        # una struttura — gli streams completi di tutte le corse pesano troppo
+        streams_by_id: dict = {}
+        if not chart or chart in FAST_BIOMECH_CHARTS:
+            candidates = [r["_id"] for r in runs if r.get("_id") is not None and len(r.get("laps") or []) >= 3]
+            if candidates:
+                stream_docs = await db.runs.find(
+                    {"_id": {"$in": candidates}}, {"streams.d": 1, "streams.cad": 1},
+                ).to_list(len(candidates))
+                streams_by_id = {str(d["_id"]): d.get("streams") or [] for d in stream_docs}
+        biomech_charts = _build_biomechanics_charts(runs, resolved_resolution, current_vdot, garmin_csv_docs, chart, streams_by_id)
         sections["biomechanics"] = {"charts": biomech_charts}
 
     if not detail:

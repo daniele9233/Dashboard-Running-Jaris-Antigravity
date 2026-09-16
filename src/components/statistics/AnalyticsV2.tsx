@@ -1146,8 +1146,14 @@ export function AnalyticsV2({
     if (backend?.length) {
       return backend.map((p) => ({ cadence: Math.round(Number(p.cadence)), gct: Math.round(Number(p.gct)) }));
     }
+    // stesso criterio del backend: solo corse sotto i 4:45/km
+    const fastPace = (p?: string | null) => {
+      if (!p || !p.includes(':')) return false;
+      const [m, s] = p.split(':').map(Number);
+      return m * 60 + s <= 285;
+    };
     const real = runs
-      .filter(r => cadenceSpmFromRun(r) != null && r.avg_ground_contact_time != null && !r.is_treadmill)
+      .filter(r => cadenceSpmFromRun(r) != null && r.avg_ground_contact_time != null && !r.is_treadmill && fastPace(r.avg_pace))
       .map(r => ({ cadence: cadenceSpmFromRun(r)!, gct: Math.round(r.avg_ground_contact_time!) }));
     return real;
   }, [runs, proCharts]);
@@ -2427,12 +2433,12 @@ export function AnalyticsV2({
         <V2Header
           icon={Footprints}
           title={t('statsCards.gctVsCadence')}
-          subtitle={`Tempo Contatto Suolo (ms) vs Cadenza (spm) · ${scatterData.length} corse`}
+          subtitle={`Tempo Contatto Suolo (ms) vs Cadenza (spm) · ${scatterData.length} corse sotto 4:45/km`}
           onExpand={() => openExpandedChart('gct_cadence', setGctExpanded)}
           tooltip={{
             title: 'GCT × CADENZA',
             lines: [
-              'Ogni punto = una corsa. X = cadenza (spm), Y = GCT (ms).',
+              'Ogni punto = una corsa sotto i 4:45/km. X = cadenza (spm), Y = GCT (ms).',
               'Neon: zona ottimale — cadenza > 175 spm e GCT < 240 ms.',
               'Grigio: fuori zona ottimale, margine di miglioramento.',
               'Elite: > 180 spm e < 200 ms GCT.',

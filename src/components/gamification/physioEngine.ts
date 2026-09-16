@@ -5,8 +5,8 @@ import {
   type DaySession, type ZoneId, type ZoneMinutes,
 } from "./gamiCore";
 
-// La lettura di una corsa sta nel nucleo, non qui: le quattro gamification e
-// questo motore devono vedere la stessa identica seduta.
+// La lettura di una corsa sta nel nucleo, non qui: la gamification, il banco di
+// prova e questo motore devono vedere la stessa identica seduta.
 export {
   emptyZoneMinutes, gradeFactor, runZoneMinutes, zoneOfRatio, type ZoneMinutes,
 } from "./gamiCore";
@@ -236,7 +236,22 @@ export function monthlyClimate(runs: Run[]): number[] {
   return byMonth.map((xs, i) => (xs.length >= 3 ? median(xs)! : ROME_NORMALS[i]));
 }
 
-const monthOfDay = (dayIdx: number) => new Date(dayIdx * 86400000).getUTCMonth();
+/**
+ * La temperatura attesa in un giorno preciso.
+ *
+ * Le medie sono mensili, il clima no: letta a gradini, la previsione faceva uno
+ * scalino di venti secondi sui 5K fra il 30 settembre e il 1° ottobre, e ogni
+ * traguardo vicino al limite "cadeva" il primo del mese. Ogni media vale a metà
+ * del suo mese, e fra due metà si passa in linea retta.
+ */
+export function climateAt(climate: number[], dayIdx: number): number {
+  const d = new Date(dayIdx * 86400000);
+  const m = d.getUTCMonth();
+  const days = new Date(Date.UTC(d.getUTCFullYear(), m + 1, 0)).getUTCDate();
+  const t = (d.getUTCDate() - 0.5) / days - 0.5;          // -0,5 a inizio mese, +0,5 alla fine
+  const other = climate[(m + (t >= 0 ? 1 : 11)) % 12];
+  return climate[m] + Math.abs(t) * (other - climate[m]);
+}
 
 // ══ 5 · STATO E PREVISIONE ════════════════════════════════════════════════════
 
@@ -323,6 +338,12 @@ export interface PhysioModel {
 export interface PhysioState {
   ok: boolean;
   model: PhysioModel;
+  /**
+   * La dose giornaliera di adesso, media delle ultime sei settimane: è il "se
+   * continui così" di ogni data. Esposta perché chi disegna una previsione possa
+   * far girare lo stesso scenario che ha prodotto le date, e non uno suo.
+   */
+  dose: SystemLevels;
   /** VDOT di oggi, al fresco: il potenziale, non la prestazione di ferragosto. */
   vdot: number;
   /** Quello che faresti oggi, con la temperatura di oggi. */
@@ -382,6 +403,7 @@ const EMPTY_FORECAST: PhysioForecast = {
 const EMPTY: PhysioState = {
   ok: false,
   model: { levels: emptyLevels(), base: 0, today: 0, climate: ROME_NORMALS },
+  dose: emptyLevels(),
   vdot: 0, vdotToday: 0, anchored: false, systems: [],
   byId: {} as Record<SystemId, SystemState>, limiter: null, strongest: null,
   forecast: EMPTY_FORECAST, goals: [], prescriptions: [], history: [], impacts: [],
@@ -489,7 +511,7 @@ export function buildPhysio(
 
   // ── previsione ──
   const forecast = buildForecast(levels, dailyDose, today, base, climate);
-  const nowMonthTemp = climate[monthOfDay(today)];
+  const nowMonthTemp = climateAt(climate, today);
   const vdotCool = round1(vdotOf(pct, 5, 12));
   // il VDOT di oggi è quello che il cronometro direbbe uscendo adesso: credito
   // del caldo ridotto (se fa caldo non lo spendi) E penalità della giornata
@@ -543,6 +565,7 @@ export function buildPhysio(
   return {
     ok: true,
     model: { levels, base, today, climate },
+    dose: dailyDose,
     vdot: vdotCool, vdotToday: vdotNow, anchored,
     systems, byId,
     limiter: ranked[0] ?? null,
@@ -593,7 +616,7 @@ function buildForecast(
     out[i] = capped;
     if (i % 15 === 0 && i <= 540) {
       const d = today + i;
-      const t = climate[monthOfDay(d)];
+      const t = climateAt(climate, d);
       // il tempo di quel giorno lo dà il clima del mese: stessa forma, cronometro
       // diverso fra luglio e novembre. È la ragione per cui la curva ondeggia.
       const shift = capped - raw;
@@ -643,7 +666,7 @@ function buildGoals(
   const pending = new Map<string, GoalEta>();
   const chase: GoalDef[] = [];
   for (const g of targets) {
-    const done = seasonalTime(levels0, base, g.m, climate[monthOfDay(today)]) <= g.sec;
+    const done = seasonalTime(levels0, base, g.m, climateAt(climate, today)) <= g.sec;
     pending.set(g.id, {
       id: g.id, group: g.group, label: g.label, targetSec: g.sec,
       iso: null, days: null, human: done ? "già alla tua portata" : "fuori portata",
@@ -686,7 +709,7 @@ function walkForward(
     capped = Math.min(rawCool, capped + MAX_VDOT_PER_MONTH / 30);
     const shift = capped - rawCool;                 // il tetto di salita vale anche qui
     const d = today + i;
-    const temp = climate[monthOfDay(d)];
+    const temp = climateAt(climate, d);
     for (const g of goals) {
       if (!open.has(g.id)) continue;
       if (seasonalTime(lv, base + shift, g.m, temp) <= g.sec) {
@@ -769,7 +792,7 @@ export function runScenario(
     capped = Math.min(rawCool, capped + MAX_VDOT_PER_MONTH / 30);
     const shift = capped - rawCool;
     const d = model.today + i;
-    const temp = model.climate[monthOfDay(d)];
+    const temp = climateAt(model.climate, d);
     const sec = seasonalTime(lv, model.base + shift, distM, temp);
     if (sec < bestSec) { bestSec = sec; bestDay = i; }
     if (i % 7 === 0) {
@@ -802,7 +825,7 @@ export function walkPlan(
     lv = integrate(lv, dose);
     const rawCool = model.base + vdotContribution(pctOf(lv), 5);
     capped = Math.min(rawCool, capped + MAX_VDOT_PER_MONTH / 30);
-    const temp = model.climate[monthOfDay(model.today + i)];
+    const temp = climateAt(model.climate, model.today + i);
     if (visit(i, seasonalTime(lv, model.base + capped - rawCool, distM, temp), temp)) return;
   }
 }
@@ -833,7 +856,7 @@ export function timeAtDay(
     rawCool = model.base + vdotContribution(pctOf(lv), 5);
     capped = Math.min(rawCool, capped + MAX_VDOT_PER_MONTH / 30);
   }
-  const temp = model.climate[monthOfDay(model.today + Math.max(0, dayOffset))];
+  const temp = climateAt(model.climate, model.today + Math.max(0, dayOffset));
   return {
     sec: seasonalTime(lv, model.base + capped - rawCool, distM, temp),
     tempC: Math.round(temp),
@@ -858,12 +881,26 @@ export interface Prescription {
 }
 
 /** Minuti settimanali che ogni ricetta aggiunge, per zona. */
-const RECIPES: { id: string; system: SystemId; zone: ZoneId; weeklyMin: number; longRunMin?: number }[] = [
+const RECIPES: { id: RecipeId; system: SystemId; zone: ZoneId; weeklyMin: number; longRunMin?: number }[] = [
   { id: "soglia", system: "soglia", zone: "threshold", weeklyMin: 26 },
   { id: "ripetute", system: "vo2", zone: "vo2", weeklyMin: 20 },
   { id: "lungo", system: "tenuta", zone: "easy", weeklyMin: 100, longRunMin: 100 },
   { id: "volume", system: "mito", zone: "easy", weeklyMin: 90 },
 ];
+export type RecipeId = "soglia" | "ripetute" | "lungo" | "volume";
+
+/** La dose di oggi con in più una seduta a settimana di quella ricetta. */
+export function doseWithRecipe(dose: SystemLevels, id: RecipeId): SystemLevels {
+  const rec = RECIPES.find((r) => r.id === id)!;
+  const zm = emptyZoneMinutes();
+  zm[rec.zone] = rec.weeklyMin / 7;
+  const add = dosesOf(zm, rec.weeklyMin / 7, 0);
+  // la tenuta la dà la lunghezza della singola seduta, non i minuti spalmati
+  add.tenuta = rec.longRunMin ? Math.max(0, rec.longRunMin - 60) / 7 : (rec.weeklyMin / 7) * 0.12;
+  const out = { ...dose };
+  for (const sid of SYSTEM_ORDER) out[sid] += add[sid];
+  return out;
+}
 
 /**
  * "Se aggiungo questa seduta, quanto ci guadagno?"
@@ -914,13 +951,7 @@ function buildPrescriptions(
   };
 
   return RECIPES.map((rec) => {
-    const extra = { ...dailyDose };
-    const zm = emptyZoneMinutes();
-    zm[rec.zone] = rec.weeklyMin / 7;
-    const add = dosesOf(zm, rec.weeklyMin / 7, 0);
-    // la tenuta la dà la lunghezza della singola seduta, non i minuti spalmati
-    add.tenuta = rec.longRunMin ? Math.max(0, rec.longRunMin - 60) / 7 : (rec.weeklyMin / 7) * 0.12;
-    for (const id of SYSTEM_ORDER) extra[id] += add[id];
+    const extra = doseWithRecipe(dailyDose, rec.id);
 
     let lv = { ...levels0 }, lvBase = { ...levels0 };
     for (let i = 0; i < 56; i++) { lv = integrate(lv, extra); lvBase = integrate(lvBase, dailyDose); }

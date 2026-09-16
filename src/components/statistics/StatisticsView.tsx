@@ -1941,14 +1941,14 @@ export function StatisticsView() {
                   title="Cadenza Mensile"
                   variant="pro"
                   onExpand={() => openBiomechModal('cadence')}
-                  subtitle="Passi/minuto — media mensile"
+                  subtitle="Passi/minuto a ritmo — giri delle ripetute e km sotto 4:45"
                   tooltip={{
-                    title: 'CADENZA (SPM)',
+                    title: 'CADENZA A RITMO (SPM)',
                     lines: [
-                      'Cadenza = passi al minuto.',
-                      'Ottimale: 170-185 spm per la maggior parte dei runner.',
-                      '< 160 spm: over-striding.',
-                      '> 185 spm: molto efficiente.',
+                      'Cadenza = passi al minuto, letta solo quando vai forte.',
+                      'Ripetute: la cadenza dentro ogni giro di lavoro, dagli streams.',
+                      'Corse continue: i chilometri sotto 4:45/km.',
+                      'A ritmo gara: 180-190 spm è la finestra buona.',
                       'Linea tratteggiata = 180 spm.',
                     ],
                   }}

@@ -13,6 +13,7 @@ import { Activity, Zap, RefreshCcw, Info, Check, AlertTriangle } from 'lucide-re
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 import type { GarminCsvLinkResult, ProAnalyticsChart } from '../../types/api';
 import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from './chartTheme';
+import { FastBiomechanics } from './FastBiomechanics';
 
 // ─── Constants — alias sul tema condiviso (chartTheme.ts) ───────────────────
 const NEON   = CHART_SERIES.primary;
@@ -373,8 +374,9 @@ function metricVerdict(kind: 'gct' | 'cadence' | 'ratio' | 'score', value: numbe
     return { label: 'Da migliorare', color: NEON_ORANGE };
   }
   if (kind === 'cadence') {
-    if (value >= 170 && value <= 182) return { label: 'Ottimale', color: NEON_GREEN };
-    if (value >= 164 && value <= 188) return { label: 'Buona', color: '#22c55e' };
+    // valori a ritmo (sotto 4:45/km): la finestra buona sale rispetto al lento
+    if (value >= 178 && value <= 192) return { label: 'Ottimale', color: NEON_GREEN };
+    if (value >= 172 && value <= 196) return { label: 'Buona', color: '#22c55e' };
     return { label: 'Da regolare', color: '#facc15' };
   }
   if (kind === 'ratio') {
@@ -443,6 +445,7 @@ function GroundContactStability({
   const sampleSize = chart?.quality?.sample_size ?? chart?.series_detail?.length ?? chart?.series_card?.length ?? 0;
   const verdict = stabilityVerdict(score, hasData);
   const latestRuns = Number(latest.runs ?? sampleSize ?? 0);
+  const latestSegments = Number(latest.segments ?? 0);
   const gctVerdict = metricVerdict('gct', gct, hasData);
   const cadenceVerdict = metricVerdict('cadence', cadence, hasData);
   const ratioVerdict = metricVerdict('ratio', verticalRatio, hasData);
@@ -482,7 +485,7 @@ function GroundContactStability({
               GROUND CONTACT STABILITY
             </h2>
             <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">
-              Calcolo reale da GCT, cadenza, rapporto verticale e variabilita su {sampleSize} campioni.
+              Solo gesto veloce: {latestRuns} corse sotto i 4:45/km{latestSegments ? ` e ${latestSegments} giri o km veloci` : ''} negli ultimi tre mesi.
             </p>
           </div>
         </div>
@@ -550,7 +553,7 @@ function GroundContactStability({
             <div className="relative mt-5 rounded-2xl backdrop-blur-2xl border border-[#ccff00]/20 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
               <div className="mb-2 flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
                 <span>Stability confidence</span>
-                <span className="text-[#ccff00]">{latestRuns || sampleSize} campioni</span>
+                <span className="text-[#ccff00]">{latestRuns + latestSegments || sampleSize} campioni</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-white/10">
                 <motion.div
@@ -565,7 +568,7 @@ function GroundContactStability({
 
           <div className="mt-5 rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-xs leading-5 text-gray-500">
             <span className="font-black uppercase tracking-wider text-gray-300">Come leggerlo: </span>
-            GCT piu basso e stabile e positivo. Cadenza e rapporto verticale aiutano a capire se l'appoggio e reattivo o dispersivo.
+            Si leggono solo le corse sotto i 4:45/km e i giri delle ripetute: al lento l'appoggio è per forza più lungo e la cadenza più bassa, e la media di tutte le uscite descriveva quello. GCT più basso e stabile è positivo.
             I dati L/R Load e Peak Force non arrivano dai CSV Garmin/API attuali, quindi non vengono mostrati come numeri principali.
           </div>
 
@@ -749,6 +752,11 @@ export function AnalyticsV3({
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+
+      {/* ══════════════════════════════════════════════════
+          IL GESTO A RITMO GARA — corse veloci e ripetute
+      ══════════════════════════════════════════════════ */}
+      <FastBiomechanics chart={data.fast_biomechanics} />
 
       {/* ══════════════════════════════════════════════════
           GROUND CONTACT STABILITY

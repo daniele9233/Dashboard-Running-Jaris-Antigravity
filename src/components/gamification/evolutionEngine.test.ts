@@ -43,7 +43,7 @@ describe("XP: le zone pesano il minuto", () => {
     expect(xpHard / xpEasy).toBeGreaterThan(0.7);
   });
 
-  it("il bonus di qualità scatta solo sopra i 12 minuti", () => {
+  it("il bonus di qualità scatta solo dai 10 minuti di lavoro", () => {
     const long = computeLevelSystem([ref(), run(4, 245)], null).recent.find((r) => r.km === 4)!.xp;
     const short = computeLevelSystem([ref(), run(1, 245)], null).recent.find((r) => r.km === 1)!.xp;
     expect(long - short).toBeGreaterThan(XP_ZONES[4].bonus);
@@ -59,6 +59,74 @@ describe("XP: le zone pesano il minuto", () => {
   it("scarta i glitch GPS come i badge", () => {
     const junk = Array.from({ length: 20 }, () => mkRun({ distance_km: 0.01, duration_minutes: 0.07 }));
     expect(computeLevelSystem([...junk, run(10, 300)], null).stats.totalRuns).toBe(1);
+  });
+});
+
+describe("XP: la seduta letta tratto per tratto", () => {
+  // riferimento: 5 km a 4:01, il ritmo 5K dell'atleta; e un lungo, così nessuna
+  // delle corse sotto esame prende il bonus "corsa più lunga" e sporca il confronto
+  const ref = () => run(5, 241, "2026-08-01");
+  const long = () => run(16, 330, "2026-08-02");
+  const lap = (m: number, s: number, hr: number) =>
+    ({ lap_index: 0, distance: m, moving_time: s, elapsed_time: s, average_speed: m / s, average_heartrate: hr });
+
+  /** Il 5×1000 del 16/09: giri veri, FC media 84% perché i recuperi la tengono giù. */
+  const fiveBy1000 = (hrRecovery = 142) => {
+    const laps = [];
+    for (let i = 0; i < 5; i++) {
+      laps.push(lap(1000, 238, 150 + i * 2));
+      if (i < 4) laps.push(lap(330, 120, hrRecovery));
+    }
+    return mkRun({
+      id: "rip", date: "2026-09-16", name: "5x1000", run_type: "intervals",
+      distance_km: 6.32, duration_minutes: 27.9, avg_pace: "4:24", avg_hr: 151, avg_hr_pct: 84, laps,
+    });
+  };
+  const xpOf = (runs: Run[], date: string) => computeLevelSystem(runs, null, "2026-09-20").recent.find((r) => r.date === date)!;
+
+  it("un 5×1000 letto sui giri è una seduta di ripetute, non un medio", () => {
+    const s = xpOf([ref(), long(), fiveBy1000()], "2026-09-16");
+    expect(s.structured).toBe(true);
+    expect(s.zoneMinutes[4]).toBeGreaterThan(19);               // i cinque giri a 3:58
+    expect(s.lines.some((l) => l.label === "Bonus ripetute")).toBe(true);
+    // prima valeva +50, meno di otto chilometri lenti
+    const easy = xpOf([ref(), long(), mkRun({ date: "2026-09-15", distance_km: 8, duration_minutes: 48, avg_pace: "6:00", avg_hr: 130, avg_hr_pct: 72 })], "2026-09-15");
+    expect(s.xp).toBeGreaterThan(easy.xp * 2);
+  });
+
+  it("il trotto fra due ripetute resta recupero anche con la FC ancora alta", () => {
+    // 82% della massima: letto con la sola FC sarebbe Medio
+    const s = xpOf([ref(), long(), fiveBy1000(148)], "2026-09-16");
+    expect(s.zoneMinutes[2]).toBe(0);
+    expect(s.zoneMinutes[0] + s.zoneMinutes[1]).toBeGreaterThan(7);
+  });
+
+  it("un lento con il finale veloce resta un lento: i chilometri lunghi si leggono sulla FC", () => {
+    const laps = [...Array.from({ length: 8 }, () => lap(1000, 360, 130)), lap(1000, 280, 150), lap(1000, 280, 152)];
+    const s = xpOf([ref(), long(), mkRun({
+      date: "2026-09-10", distance_km: 10, duration_minutes: 57.3, avg_pace: "5:44", avg_hr: 134, avg_hr_pct: 74, laps,
+    })], "2026-09-10");
+    expect(s.zoneMinutes[1]).toBeGreaterThan(45);                // gli otto km a 6:00 sono Lento
+    expect(s.zoneMinutes[0]).toBe(0);
+  });
+
+  it("senza giri né FC l'etichetta 'ripetute' vale una zona sotto, non il VO2max pieno", () => {
+    const s = xpOf([ref(), long(), mkRun({ date: "2026-07-21", run_type: "intervals", distance_km: 7, duration_minutes: 31, avg_pace: "4:25" })], "2026-07-21");
+    expect(s.zoneMinutes[3]).toBeCloseTo(31, 0);
+    expect(s.zoneMinutes[4]).toBe(0);
+  });
+
+  it("riscaldamento, lavoro e defaticamento dello stesso giorno sono una seduta sola", () => {
+    const wu = mkRun({ date: "2026-09-16", name: "Morning Run", distance_km: 2.08, duration_minutes: 13, avg_pace: "6:17", avg_hr: 133, avg_hr_pct: 74 });
+    const cd = mkRun({ date: "2026-09-16", name: "Morning Run", distance_km: 2.01, duration_minutes: 12.4, avg_pace: "6:08", avg_hr: 120, avg_hr_pct: 67 });
+    const sys = computeLevelSystem([ref(), long(), wu, fiveBy1000(), cd], null, "2026-09-20");
+    const day = sys.recent.find((r) => r.date === "2026-09-16")!;
+    expect(day.parts).toBe(3);
+    expect(day.name).toBe("5x1000");
+    expect(day.km).toBeCloseTo(10.4, 1);
+    // la scomposizione torna esattamente col totale a video
+    expect(day.lines.reduce((s, l) => s + l.xp, 0)).toBe(day.xp);
+    expect(sys.recent.filter((r) => r.date === "2026-09-16")).toHaveLength(1);
   });
 });
 
@@ -222,8 +290,10 @@ describe("il tempo passa anche se non corri", () => {
   });
 
   it("i livelli costano di più in giorni quando il ritmo cala", () => {
-    const fresh = at("2026-06-30").levels[0];
-    const rusty = at("2026-08-15").levels[0];
+    // il livello più lontano in lista: sul primo mancano pochi XP e i giorni,
+    // arrotondati, possono uscire uguali anche con ritmi diversi
+    const fresh = at("2026-06-30").levels.at(-1)!;
+    const rusty = at("2026-08-15").levels.at(-1)!;
     expect(rusty.days).toBeGreaterThan(fresh.days as number);
     expect(rusty.xpNeeded).toBe(fresh.xpNeeded);   // il prezzo in XP non cambia
   });

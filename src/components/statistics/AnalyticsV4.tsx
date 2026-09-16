@@ -300,8 +300,15 @@ export function AnalyticsV4CadenceSpeedMatrix({ chart, onRequestDetail }: { char
   const [expanded, setExpanded] = useState(false);
   const cardPoints = chart?.series_card ?? [];
   const detailPoints = chart?.series_detail?.length ? chart.series_detail : cardPoints;
-  const avgCadence = Math.round(cardPoints.reduce((s, p) => s + Number(p.cadence ?? 0), 0) / Math.max(1, cardPoints.length));
-  const overStride = Math.round(cardPoints.filter((p) => Number(p.cadence ?? 0) < 165).length / Math.max(1, cardPoints.length) * 100);
+  // i punti "rep" e "km" sono giri di ripetute e km sotto i 4:45: la cadenza
+  // che conta si legge lì, le corse intere restano per disegnare la relazione
+  const isFast = (p: Record<string, unknown>) => p.kind === 'rep' || p.kind === 'km';
+  const fastCard = detailPoints.filter(isFast);
+  const avgCadence = Math.round(
+    (fastCard.length ? fastCard : cardPoints).reduce((s, p) => s + Number(p.cadence ?? 0), 0) / Math.max(1, (fastCard.length ? fastCard : cardPoints).length),
+  );
+  const runPoints = cardPoints.filter((p) => !isFast(p));
+  const overStride = Math.round(runPoints.filter((p) => Number(p.cadence ?? 0) < 165).length / Math.max(1, runPoints.length) * 100);
   const renderChart = (isExpanded = false) => {
     const points = isExpanded ? detailPoints : cardPoints;
     if (!points.length) {
@@ -325,7 +332,8 @@ export function AnalyticsV4CadenceSpeedMatrix({ chart, onRequestDetail }: { char
         }} />
         <ReferenceLine x={13} stroke={N} strokeDasharray="4 3" strokeWidth={1} />
         <ReferenceLine y={170} stroke={N} strokeDasharray="4 3" strokeWidth={1} />
-        <Scatter data={points} fill={CY} fillOpacity={0.6} />
+        <Scatter name="Corse" data={points.filter((p) => !isFast(p))} fill={CY} fillOpacity={0.45} />
+        <Scatter name="Ripetute e km veloci" data={points.filter(isFast)} fill={N} fillOpacity={0.85} />
       </ScatterChart>
     </ResponsiveContainer>
   );
@@ -341,17 +349,21 @@ export function AnalyticsV4CadenceSpeedMatrix({ chart, onRequestDetail }: { char
           background: 'radial-gradient(circle at top left, rgba(192,255,0,0.07), transparent 24%), #0E0E0E',
         }}
       >
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-2">
           <Lbl color={DM}>CADENCE vs SPEED MATRIX</Lbl>
           <div className="flex items-center gap-3">
             <Lbl color={CY}>N = {cardPoints.length}</Lbl>
             <ChartExpandButton onClick={() => { onRequestDetail?.(); setExpanded(true); }} />
           </div>
         </div>
+        <div className="flex items-center gap-4 mb-3 text-[9px] font-black uppercase tracking-widest" style={{ color: DM }}>
+          <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: CY }} />corse</span>
+          <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: N }} />ripetute e km sotto 4:45</span>
+        </div>
         <div className="h-[200px] w-full">{renderChart(false)}</div>
         <div className="flex items-center justify-between mt-4 pt-4" style={{ borderTop: `1px solid ${MT}` }}>
-          <div><Lbl color={DM}>AVG CADENCE</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>{avgCadence || '—'} <span style={{ fontSize: 11, color: DM }}>spm</span></p></div>
-          <div><Lbl color={DM}>OPT. WINDOW</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: N, fontFamily: 'monospace' }}>170-180</p></div>
+          <div><Lbl color={DM}>{fastCard.length ? 'CADENZA A RITMO' : 'AVG CADENCE'}</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>{avgCadence || '—'} <span style={{ fontSize: 11, color: DM }}>spm</span></p></div>
+          <div><Lbl color={DM}>OPT. WINDOW</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: N, fontFamily: 'monospace' }}>{fastCard.length ? '180-190' : '170-180'}</p></div>
           <div><Lbl color={DM}>OVER-STRIDE</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: OR, fontFamily: 'monospace' }}>{overStride}%</p></div>
         </div>
       </Panel>

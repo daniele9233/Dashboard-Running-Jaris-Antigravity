@@ -1,4 +1,5 @@
 import type { Run, Profile } from "../../types/api";
+import { gradeFactor } from "./gamiCore";
 
 /**
  * ATHLETE EVOLUTION — SISTEMA A LIVELLI
@@ -372,7 +373,18 @@ export interface TierState {
   state: "done" | "current" | "locked"; unlockedLevels: number;
 }
 export interface LevelNode { n: number; title: string; tierIdx: number; color: string; cumXp: number; reqXp: number; unlocked: boolean; current: boolean }
-export interface RecentRun { date: string; name: string; type: string; km: number; xp: number; isPB: boolean; isRace: boolean }
+/** Una voce della scomposizione degli XP di una giornata. */
+export interface XpLine { label: string; detail: string; xp: number; color: string }
+export interface RecentRun {
+  date: string; name: string; type: string; km: number; xp: number; isPB: boolean; isRace: boolean;
+  /** Attività dello stesso giorno sommate in una seduta. */
+  parts: number;
+  /** Minuti per zona, nell'ordine di XP_ZONES. */
+  zoneMinutes: number[];
+  lines: XpLine[];
+  /** Dentro c'era una seduta a ripetute letta sui giri. */
+  structured: boolean;
+}
 
 export interface LevelSystem {
   ok: boolean;
@@ -384,11 +396,7 @@ export interface LevelSystem {
   stats: { totalKm: number; totalRuns: number; totalHours: number };
 }
 
-// ── XP per corsa: durata · intensità · qualità ────────────────────────────────
-const TYPE_INT: Record<string, number> = {
-  intervals: 0.92, repetition: 0.95, vo2max: 0.93, tempo: 0.88, threshold: 0.88,
-  fartlek: 0.82, progression: 0.80, long: 0.72, easy: 0.66, recovery: 0.55, race: 0.96, trail: 0.75, workout: 0.82,
-};
+// ── XP per corsa: la seduta letta tratto per tratto ───────────────────────────
 const paceToSec = (p?: string | null): number | null => {
   if (!p || !p.includes(":")) return null;
   const [m, s] = p.split(":"); const v = +m * 60 + +s; return v > 0 ? v : null;
@@ -424,18 +432,6 @@ function bestSustainedPaceSec(runs: Run[]): number | null {
   return best;
 }
 
-/** Intensità ∈ [0.5, 1]: FC% se disponibile (gold standard); altrimenti stima
- *  dal passo relativo al proprio migliore; altrimenti fallback sul tipo seduta. */
-function intensityOf(r: Run, bestPaceSec: number | null): number {
-  if (r.avg_hr_pct) return clamp(r.avg_hr_pct / 100, 0.5, 1);
-  const ps = paceToSec(r.avg_pace);
-  if (ps && bestPaceSec && ps > 0) {
-    const ratio = bestPaceSec / ps; // 1 = al proprio meglio, <1 = più lento
-    return clamp(0.65 + (ratio - 0.75) * 1.2, 0.5, 1);
-  }
-  return TYPE_INT[(r.run_type ?? "easy").toLowerCase()] ?? 0.7;
-}
-
 /**
  * Le cinque zone di lavoro. Il moltiplicatore è per MINUTO: un'ora di lento e
  * dieci minuti di ripetute non possono valere uguale, ma il bonus di seduta fa
@@ -450,32 +446,203 @@ export const XP_ZONES: XpZone[] = [
   { id: "vo2", name: "Ripetute", color: "#F43F5E", perMin: 2.4, bonus: 70, hint: "VO2max, ripetute, prove a tutta" },
 ];
 export const XP_BONUS = { pb: 70, race: 100, week35: 110, week50: 160 };
+/** Minuti sopra soglia che fanno di un'uscita una seduta di qualità. */
+export const QUALITY_BONUS_MIN = 10;
 
-/** Confini di zona: FC% quando c'è, altrimenti passo relativo al proprio meglio. */
-function zoneOf(r: Run, bestPaceSec: number | null): XpZone {
-  if (r.avg_hr_pct) {
-    const h = r.avg_hr_pct;
-    return XP_ZONES[h < 70 ? 0 : h < 79 ? 1 : h < 85 ? 2 : h < 91 ? 3 : 4];
-  }
-  const ps = paceToSec(r.avg_pace);
-  if (ps && bestPaceSec) {
-    const q = bestPaceSec / ps; // 1 = al proprio massimo sostenuto
-    return XP_ZONES[q < 0.68 ? 0 : q < 0.78 ? 1 : q < 0.86 ? 2 : q < 0.93 ? 3 : 4];
-  }
-  const i = intensityOf(r, bestPaceSec);
-  return XP_ZONES[i < 0.62 ? 0 : i < 0.72 ? 1 : i < 0.8 ? 2 : i < 0.88 ? 3 : 4];
+/**
+ * Confini di zona sul passo, come rapporto fra il proprio miglior passo
+ * sostenuto (≈ ritmo 5K) e il passo del tratto. Sono i rapporti di Daniels:
+ * a VDOT 50 il ritmo 5K è 3:59, la soglia 4:15 (0,94), la maratona 4:31
+ * (0,88), il lento fra 5:03 e 5:40 (0,79-0,70).
+ *
+ * I confini di prima (0,86 · 0,93) mettevano la soglia fra le ripetute: letti
+ * tratto per tratto, ogni seduta a 4:15 sarebbe diventata un VO2max.
+ */
+const PACE_EDGES = [0.68, 0.79, 0.91, 0.975];
+/** Confini di zona sulla FC, in percentuale della massima. */
+const HR_EDGES = [70, 79, 85, 91];
+/** Zona che l'etichetta del backend promette, quando mancano i tratti per verificarla. */
+const TYPE_ZONE: Record<string, number> = {
+  recovery: 0, easy: 1, long: 1, trail: 1, progression: 2, fartlek: 2, workout: 2,
+  tempo: 3, threshold: 3, intervals: 4, repetition: 4, vo2max: 4, race: 4,
+};
+
+const zoneByEdges = (v: number, edges: number[]) => edges.reduce((z, e) => (v >= e ? z + 1 : z), 0);
+
+/** Un pezzo di corsa letto per conto suo: un giro dell'orologio o un chilometro. */
+interface Tratto {
+  minutes: number;
+  km: number;
+  /** Passo, già riportato in piano per gli split. Null se il tratto è troppo corto per fidarsi. */
+  paceSec: number | null;
+  hrPct: number | null;
+  /** Il tratto lento fra due tratti di lavoro. */
+  recovery: boolean;
 }
 
-/** XP di una corsa: minuti nella sua zona + km, più i bonus di seduta. */
-function runXp(r: Run, isPB: boolean, bestPaceSec: number | null): number {
-  const dur = r.duration_minutes || 0, dist = r.distance_km || 0;
-  const z = zoneOf(r, bestPaceSec);
+/** Sotto questa durata un recupero ha la FC ancora agganciata alla ripetuta prima. */
+const HR_LAG_MIN = 5;
+
+/**
+ * I tratti di una corsa, dalla fonte migliore disponibile: i giri dell'orologio
+ * (sulle ripetute sono l'unico dato che separa lavoro e recupero), altrimenti
+ * gli split al chilometro, altrimenti niente — e si legge la corsa intera.
+ */
+function readTratti(r: Run): { tratti: Tratto[]; source: "laps" | "splits" } | null {
+  // la FC dei tratti è in battiti, la zona in % della massima: la massima si
+  // ricava dalla corsa stessa, che il backend ha già riportato in percentuale
+  const hrMax = r.avg_hr && r.avg_hr_pct ? (r.avg_hr * 100) / r.avg_hr_pct : null;
+  const pct = (bpm?: number | null) => (hrMax && bpm ? (bpm * 100) / hrMax : null);
+  const sanePace = (sec: number, km: number) => (km >= 0.12 && sec >= 15 && sec / km > 120 && sec / km < 1200 ? sec / km : null);
+
+  const laps: Tratto[] = [];
+  for (const l of r.laps ?? []) {
+    const sec = l.moving_time || l.elapsed_time || 0, km = (l.distance || 0) / 1000;
+    if (sec <= 0 || km <= 0) continue;
+    laps.push({ minutes: sec / 60, km, paceSec: sanePace(sec, km), hrPct: pct(l.average_heartrate), recovery: false });
+  }
+  const splits: Tratto[] = [];
+  for (const s of r.splits ?? []) {
+    const sec = s.elapsed_time || 0, km = (s.distance || 0) / 1000;
+    if (sec <= 0 || km <= 0) continue;
+    const raw = sanePace(sec, km);
+    const grade = (s.elevation_difference ?? 0) / (km * 1000);
+    splits.push({ minutes: sec / 60, km, paceSec: raw == null ? null : raw / gradeFactor(grade), hrPct: pct(s.hr), recovery: false });
+  }
+
+  const pick = laps.length >= 2 ? { tratti: laps, source: "laps" as const }
+    : splits.length >= 2 ? { tratti: splits, source: "splits" as const } : null;
+  if (!pick) return null;
+  // tratti che non raccontano la corsa intera (giri parziali, split troncati)
+  // darebbero una scomposizione sbagliata: meglio leggere la media
+  const total = pick.tratti.reduce((s, t) => s + t.minutes, 0);
+  const dur = r.duration_minutes || 0;
+  if (total <= 0 || Math.abs(total - dur) > Math.max(1, dur) * 0.25) return null;
+  const scale = dur / total;
+  for (const t of pick.tratti) t.minutes *= scale;
+  return pick;
+}
+
+/** 2-means sul passo: il centro dei tratti veloci e quello dei lenti. */
+function twoMeans(vals: number[]): [number, number] {
+  let fast = Math.min(...vals), slow = Math.max(...vals);
+  for (let i = 0; i < 25 && fast !== slow; i++) {
+    const a = vals.filter((v) => Math.abs(v - fast) <= Math.abs(v - slow));
+    const b = vals.filter((v) => Math.abs(v - fast) > Math.abs(v - slow));
+    if (!a.length || !b.length) break;
+    const nf = a.reduce((s, v) => s + v, 0) / a.length, ns = b.reduce((s, v) => s + v, 0) / b.length;
+    const settled = Math.abs(nf - fast) < 0.1 && Math.abs(ns - slow) < 0.1;
+    fast = nf; slow = ns;
+    if (settled) break;
+  }
+  return [fast, slow];
+}
+
+/**
+ * Riconosce una seduta con struttura — lavoro e recupero — e marca i recuperi.
+ * Stesso criterio del classificatore del backend: due famiglie di passo
+ * separate di almeno il 20%, e abbastanza lavoro da essere lavoro.
+ */
+function markRecoveries(tratti: Tratto[]): boolean {
+  const paced = tratti.filter((t) => t.paceSec != null);
+  if (paced.length < 3) return false;
+  const [fast, slow] = twoMeans(paced.map((t) => t.paceSec!));
+  if (fast <= 0 || slow / fast < 1.2) return false;
+  const cut = (fast + slow) / 2;
+  const fastMin = paced.reduce((s, t) => s + (t.paceSec! < cut ? t.minutes : 0), 0);
+  if (fastMin < 4 || fastMin >= paced.reduce((s, t) => s + t.minutes, 0)) return false;
+  for (const t of paced) t.recovery = t.paceSec! >= cut;
+  return true;
+}
+
+/**
+ * Zona di una corsa letta per intero, quando i tratti non ci sono.
+ * Vince il segnale più duro fra passo, FC e l'etichetta del backend — ma
+ * l'etichetta conta una zona sotto: "ripetute" dice che dentro c'era lavoro,
+ * non quanto, e senza i giri non si può dare VO2max a tutti i minuti.
+ */
+function wholeRunZone(r: Run, bestPaceSec: number | null): number {
+  const ps = paceToSec(r.avg_pace);
+  const byPace = ps && bestPaceSec ? zoneByEdges(bestPaceSec / ps, PACE_EDGES) : null;
+  const byHr = r.avg_hr_pct ? zoneByEdges(r.avg_hr_pct, HR_EDGES) : null;
+  const typed = TYPE_ZONE[(r.run_type ?? "").toLowerCase()];
+  const byType = typed == null ? null : Math.max(0, typed - 1);
+  if (byPace == null && byHr == null && byType == null) return 1;
+  return Math.max(byPace ?? 0, byHr ?? 0, byType ?? 0);
+}
+
+/** Come si arriva agli XP di una corsa: la stessa scomposizione che vede l'atleta. */
+export interface RunXp {
+  xp: number;
+  /** Minuti per zona, nell'ordine di {@link XP_ZONES}. */
+  zoneMinutes: number[];
+  km: number;
+  /** Bonus di qualità preso: 0, o il bonus della zona che ha comandato la seduta. */
+  qualityBonus: number;
+  qualityZone: number | null;
+  pbBonus: number;
+  raceBonus: number;
+  /** Letta sui giri, sugli split o sulla media. */
+  source: "laps" | "splits" | "run";
+  /** Riconosciuta come seduta a ripetute: lavoro e recupero letti separati. */
+  structured: boolean;
+}
+
+/**
+ * Gli XP di una corsa.
+ *
+ * Il passo medio e la FC media di un'attività sono una bugia comoda sulle
+ * ripetute: un 5×1000 a 3:58 con 2′ di trotto ha una FC media dell'84% e un
+ * passo medio di 4:24, e letto così finiva nel Medio, senza bonus, a +50 XP.
+ * Meno di otto chilometri lenti. Tutte le sedute di ripetute con i giri
+ * dell'orologio pagavano la stessa cosa: fra 28 e 50 XP.
+ *
+ * Qui ogni tratto prende la sua zona, e vince il più duro fra due segnali: il
+ * passo e la FC di quel tratto. Sulle ripetute la FC arriva in ritardo e
+ * sottostima; su un lungo in deriva cardiaca sovrastima di poco. Il più duro dei
+ * due sbaglia meno di ciascuno preso da solo.
+ *
+ * L'eccezione sono i recuperi brevi: dopo una ripetuta la FC resta alta per un
+ * minuto buono anche al passo, e con il "più duro vince" il trotto fra due
+ * ripetute diventava Medio. Lì decide solo il passo.
+ */
+export function scoreRun(r: Run, isPB: boolean, bestPaceSec: number | null): RunXp {
+  const dur = r.duration_minutes || 0, km = r.distance_km || 0;
+  const zoneMinutes = [0, 0, 0, 0, 0];
+  const read = readTratti(r);
+  let structured = false;
+
+  if (read) {
+    structured = markRecoveries(read.tratti);
+    let prev = wholeRunZone(r, bestPaceSec);
+    for (const t of read.tratti) {
+      const byPace = t.paceSec != null && bestPaceSec ? zoneByEdges(bestPaceSec / t.paceSec, PACE_EDGES) : null;
+      const byHr = t.hrPct != null ? zoneByEdges(t.hrPct, HR_EDGES) : null;
+      let z: number;
+      if (byPace == null && byHr == null) z = prev;            // coda di pochi metri: resta com'era
+      else if (t.recovery && t.minutes < HR_LAG_MIN && byPace != null) z = byPace;
+      else z = Math.max(byPace ?? 0, byHr ?? 0);
+      zoneMinutes[z] += t.minutes;
+      prev = z;
+    }
+  } else {
+    zoneMinutes[wholeRunZone(r, bestPaceSec)] += dur;
+  }
+
+  // il bonus di qualità lo decide la zona che ha comandato il lavoro, non la
+  // più dura toccata per un minuto
+  const quality = zoneMinutes[3] + zoneMinutes[4];
+  const qualityZone = quality >= QUALITY_BONUS_MIN ? (zoneMinutes[4] >= zoneMinutes[3] ? 4 : 3) : null;
+  const qualityBonus = qualityZone == null ? 0 : XP_ZONES[qualityZone].bonus;
   const isRace = (r.run_type ?? "").toLowerCase() === "race" || !!r.event;
-  let xp = dur * z.perMin + dist * 3;
-  if (dur >= 12) xp += z.bonus;
-  if (isRace) xp += XP_BONUS.race;
-  else if (isPB) xp += XP_BONUS.pb;
-  return Math.max(1, Math.round(xp));
+  const raceBonus = isRace ? XP_BONUS.race : 0;
+  const pbBonus = !isRace && isPB ? XP_BONUS.pb : 0;
+
+  const raw = zoneMinutes.reduce((s, m, i) => s + m * XP_ZONES[i].perMin, 0) + km * 3 + qualityBonus + raceBonus + pbBonus;
+  return {
+    xp: Math.max(1, Math.round(raw)), zoneMinutes, km, qualityBonus, qualityZone,
+    pbBonus, raceBonus, source: read?.source ?? "run", structured,
+  };
 }
 
 /**
@@ -509,19 +676,20 @@ export interface XpExample { zone: XpZone; label: string; detail: string; xp: nu
 export function buildXpLegend(runs: Run[]): XpExample[] {
   const best = bestSustainedPaceSec(runs) ?? 240;
   const fmtPace = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec) % 60).padStart(2, "0")}`;
-  // un esempio per zona, al passo che quella zona vale PER LUI
+  // un esempio per zona, al passo che quella zona vale PER LUI: a metà fra i
+  // confini di PACE_EDGES, così l'esempio cade dentro la sua zona e non sul bordo
   const specs: { zi: number; q: number; km: number; label: (p: string) => string }[] = [
-    { zi: 4, q: 0.99, km: 3, label: (p) => `3 km di ripetute a ${p}/km` },
-    { zi: 3, q: 0.90, km: 8, label: (p) => `8 km in soglia a ${p}/km` },
-    { zi: 2, q: 0.82, km: 10, label: (p) => `10 km in medio a ${p}/km` },
-    { zi: 1, q: 0.73, km: 15, label: (p) => `15 km lenti a ${p}/km` },
-    { zi: 0, q: 0.63, km: 8, label: (p) => `8 km di recupero a ${p}/km` },
+    { zi: 4, q: 1.0, km: 3, label: (p) => `3 km di ripetute a ${p}/km` },
+    { zi: 3, q: 0.94, km: 8, label: (p) => `8 km in soglia a ${p}/km` },
+    { zi: 2, q: 0.85, km: 10, label: (p) => `10 km in medio a ${p}/km` },
+    { zi: 1, q: 0.74, km: 15, label: (p) => `15 km lenti a ${p}/km` },
+    { zi: 0, q: 0.64, km: 8, label: (p) => `8 km di recupero a ${p}/km` },
   ];
   return specs.map(({ zi, q, km, label }) => {
     const zone = XP_ZONES[zi];
     const paceSec = best / q;
     const min = (paceSec * km) / 60;
-    const xp = Math.round(min * zone.perMin + km * 3 + (min >= 12 ? zone.bonus : 0));
+    const xp = Math.round(min * zone.perMin + km * 3 + (zi >= 3 && min >= QUALITY_BONUS_MIN ? zone.bonus : 0));
     return { zone, label: label(fmtPace(paceSec)), detail: `${Math.round(min)} min · ${zone.perMin} XP/min`, xp };
   });
 }
@@ -549,32 +717,122 @@ const EMPTY: LevelSystem = {
  *   zone di Daniels, previsioni gara). Senza, questa pagina mostrava un secondo
  *   numero, più basso, calcolato solo sul passo medio.
  */
-export function computeLevelSystem(
-  runsIn: Run[], _profile: Profile | null, todayIso?: string,
-  vdotAnchor?: number | null,
-): LevelSystem {
+interface XpLedger {
+  runs: Run[];
+  scores: Map<string, RunXp>;
+  totalXp: number;
+  xpByDay: Map<number, number>;
+  weekBonusXp: number;
+  totalKm: number;
+  totalMin: number;
+}
+
+/** Il libro mastro degli XP: ogni corsa col suo punteggio, e i bonus di settimana. */
+function xpLedger(runsIn: Run[]): XpLedger {
   // stessa igiene dei badge: avvii per sbaglio e glitch GPS non sono allenamenti
   const runs = (runsIn ?? []).filter((r) => (r.distance_km || 0) >= 0.5 && (r.duration_minutes || 0) >= 3);
-  if (runs.length === 0) return EMPTY;
-
   const pb = pbIds(runs);
   const bestPaceSec = bestSustainedPaceSec(runs);
+  const scores = new Map<string, RunXp>();
   let totalXp = 0, totalKm = 0, totalMin = 0;
   // linea del tempo degli XP: serve alla proiezione per sapere a che ritmo
   // l'atleta accumula e quanto gli è costato arrivare alla forma di oggi
   const xpByDay = new Map<number, number>();
   for (const r of runs) {
-    const xp = runXp(r, pb.has(r.id), bestPaceSec);
-    totalXp += xp;
+    const s = scoreRun(r, pb.has(r.id), bestPaceSec);
+    scores.set(r.id, s);
+    totalXp += s.xp;
     const d = dayIndex(r.date);
-    xpByDay.set(d, (xpByDay.get(d) ?? 0) + xp);
+    xpByDay.set(d, (xpByDay.get(d) ?? 0) + s.xp);
     totalKm += r.distance_km || 0;
     totalMin += r.duration_minutes || 0;
   }
   const week = weeklyBonuses(runs);
   for (const [d, xp] of week.byDay) xpByDay.set(d, (xpByDay.get(d) ?? 0) + xp);
-  const weekBonusXp = week.total;
-  totalXp = Math.round(totalXp + weekBonusXp);
+  return { runs, scores, totalXp: Math.round(totalXp + week.total), xpByDay, weekBonusXp: week.total, totalKm, totalMin };
+}
+
+/** Solo il totale, senza proiezione: per chi spende gli XP invece di leggerli. */
+export const computeTotalXp = (runs: Run[]): number => xpLedger(runs).totalXp;
+
+/**
+ * Totale e ritmo degli XP negli ultimi 90 giorni, senza la proiezione: quanto
+ * serve a chi deve dire "ti mancano 600 XP, circa sette sedute".
+ */
+export function computeXpPace(runs: Run[], todayIso: string = new Date().toISOString()): { totalXp: number; perDay: number; perSession: number } {
+  const ledger = xpLedger(runs);
+  const today = dayIndex(todayIso);
+  let xp = 0, days = 0;
+  for (const [d, v] of ledger.xpByDay) {
+    if (d > today - 90 && d <= today) { xp += v; days++; }
+  }
+  return { totalXp: ledger.totalXp, perDay: xp / 90, perSession: days ? xp / days : 0 };
+}
+
+/**
+ * Le ultime giornate di corsa, una riga per giorno.
+ *
+ * Strava spezza una seduta in più attività — riscaldamento, lavoro,
+ * defaticamento — e la lista mostrava "Morning Run +14 · 5×1000 +50 · Morning
+ * Run +10": tre righe per un allenamento, e il pezzo che conta confuso fra due
+ * trotterellate. La giornata prende il nome del pezzo che ha reso di più, e la
+ * scomposizione dice da dove arriva ogni punto.
+ */
+function recentSessions(ledger: XpLedger, limit = 8): RecentRun[] {
+  const byDate = new Map<string, Run[]>();
+  for (const r of [...ledger.runs].sort((a, b) => b.date.localeCompare(a.date))) {
+    const k = r.date.slice(0, 10);
+    const l = byDate.get(k);
+    if (l) l.push(r); else if (byDate.size < limit) byDate.set(k, [r]);
+  }
+  return [...byDate.entries()].map(([date, parts]) => {
+    const scored = parts.map((r) => ({ r, s: ledger.scores.get(r.id)! }));
+    const main = scored.reduce((a, b) => (b.s.xp > a.s.xp ? b : a));
+    const zoneMinutes = [0, 0, 0, 0, 0];
+    let km = 0, xp = 0, pb = 0, race = 0;
+    const quality = [0, 0, 0, 0, 0];
+    for (const { s } of scored) {
+      s.zoneMinutes.forEach((m, i) => { zoneMinutes[i] += m; });
+      km += s.km; xp += s.xp; pb += s.pbBonus; race += s.raceBonus;
+      if (s.qualityZone != null) quality[s.qualityZone] += s.qualityBonus;
+    }
+
+    const lines: XpLine[] = [];
+    for (let i = XP_ZONES.length - 1; i >= 0; i--) {
+      if (zoneMinutes[i] < 0.5) continue;
+      const z = XP_ZONES[i];
+      lines.push({ label: z.name, detail: `${Math.round(zoneMinutes[i])}′ × ${String(z.perMin).replace(".", ",")}`, xp: zoneMinutes[i] * z.perMin, color: z.color });
+    }
+    lines.push({ label: "Distanza", detail: `${(Math.round(km * 10) / 10).toLocaleString("it-IT")} km × 3`, xp: km * 3, color: "#94A3B8" });
+    for (let i = XP_ZONES.length - 1; i >= 0; i--) {
+      if (quality[i] > 0) lines.push({ label: `Bonus ${XP_ZONES[i].name.toLowerCase()}`, detail: `oltre ${QUALITY_BONUS_MIN}′ di qualità`, xp: quality[i], color: XP_ZONES[i].color });
+    }
+    if (pb) lines.push({ label: "Record personale", detail: "", xp: pb, color: "#FBBF24" });
+    if (race) lines.push({ label: "Gara", detail: "", xp: race, color: "#E879F9" });
+
+    // ogni corsa è arrotondata per conto suo: le righe si ritoccano sulla più
+    // grossa, altrimenti la somma a video non tornerebbe con il totale
+    const rounded = lines.map((l) => ({ ...l, xp: Math.round(l.xp) }));
+    const diff = xp - rounded.reduce((s, l) => s + l.xp, 0);
+    if (diff && rounded.length) rounded.reduce((a, b) => (b.xp > a.xp ? b : a)).xp += diff;
+
+    return {
+      date, name: main.r.name ?? "Corsa", type: (main.r.run_type ?? "easy").toLowerCase(),
+      km: Math.round(km * 10) / 10, xp, isPB: pb > 0, isRace: race > 0,
+      // il marchio "ripetute" solo se la struttura conteneva lavoro vero: anche
+      // una corsa-camminata ha due famiglie di passo, ma non è una seduta
+      parts: parts.length, zoneMinutes, lines: rounded, structured: scored.some(({ s }) => s.structured && s.qualityZone != null),
+    };
+  });
+}
+
+export function computeLevelSystem(
+  runsIn: Run[], _profile: Profile | null, todayIso?: string,
+  vdotAnchor?: number | null,
+): LevelSystem {
+  const ledger = xpLedger(runsIn);
+  const { runs, totalXp, xpByDay, weekBonusXp, totalKm, totalMin } = ledger;
+  if (runs.length === 0) return EMPTY;
 
   const level = levelFromXp(totalXp);
   const maxed = level >= MAX_LEVEL;
@@ -614,11 +872,8 @@ export function computeLevelSystem(
     levels.push({ n, title: levelTitle(n), tierIdx: tierIdxOf(n), color: TIER_DEFS[tierIdxOf(n)].color, cumXp: cum, reqXp: req, unlocked: n <= level, current: n === level });
   }
 
-  // ultime corse → XP guadagnati (gratificazione post-sync)
-  const recent: RecentRun[] = [...runs].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8).map((r) => {
-    const isRace = (r.run_type ?? "").toLowerCase() === "race" || !!r.event;
-    return { date: r.date.slice(0, 10), name: r.name ?? "Corsa", type: (r.run_type ?? "easy").toLowerCase(), km: Math.round((r.distance_km || 0) * 10) / 10, xp: runXp(r, pb.has(r.id), bestPaceSec), isPB: pb.has(r.id), isRace };
-  });
+  // ultime giornate → XP guadagnati (gratificazione post-sync)
+  const recent = recentSessions(ledger);
 
   return {
     ok: true, totalXp, level, maxLevel: MAX_LEVEL, title: levelTitle(level), tierIdx, tier: tiers[tierIdx],

@@ -11,13 +11,14 @@ import type { RunsResponse, Profile } from "../../types/api";
 import { computeGamiStats, equatorJourney } from "./gamiData";
 import { ITALY_REGIONS, regionCostKm, HOME_REGION_ID } from "./italyRegions";
 import { AthleteEvolutionFramework } from "./AthleteEvolutionFramework";
+import { WorldConquest } from "./WorldConquest";
 
 const MONO = "'JetBrains Mono', monospace";
 const LIT = "#C0FF00";
 const GOLD = "#FBBF24";
 const TOKEN = "pk.eyJ1Ijoia2lra29kZXJpc28iLCJhIjoiY21uYWszMTIxMGp3NzJzc2JraDhwbTU5ayJ9.-60pgYn_BXERAHA7AqVgqA";
 
-type Mode = "equatore" | "italia" | "evolution";
+type Mode = "equatore" | "italia" | "mondo" | "evolution";
 type LoadedMap = { setProjection: (p: unknown) => void; setFog: (f: unknown) => void; flyTo: (o: unknown) => void; setConfigProperty?: (a: string, b: string, c: unknown) => void };
 const line = (coords: [number, number][]) => ({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: coords } }) as const;
 
@@ -165,6 +166,7 @@ const MODES: { id: Mode; labelKey: string; icon: typeof Globe2 }[] = [
   { id: "evolution", labelKey: "gami.modeEvolution", icon: Dna },
   { id: "equatore", labelKey: "gami.modeEquator", icon: Globe2 },
   { id: "italia", labelKey: "gami.modeConquest", icon: MapIcon },
+  { id: "mondo", labelKey: "gami.modeWorld", icon: Swords },
 ];
 
 export function GamificationV1() {
@@ -201,6 +203,8 @@ export function GamificationV1() {
         <div ref={hudRef}>
           <ItaliaMode totalKm={s.totalKm} conquered={conquered} onToggle={toggleConquest} />
         </div>
+      ) : mode === "mondo" ? (
+        <WorldConquest runs={runs} conquered={conquered} onToggle={toggleConquest} token={TOKEN} />
       ) : (
         <>
           <EquatorMode totalKm={s.totalKm} />
@@ -231,13 +235,14 @@ export function GamificationV1() {
       )}
 
       {/* Selettore modalità */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 p-1.5 rounded-2xl border border-white/10 bg-black/70 backdrop-blur-xl">
+      {/* sotto i 640 px le quattro etichette non ci stanno: resta solo quella attiva */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 p-1.5 rounded-2xl border border-white/10 bg-black/70 backdrop-blur-xl max-w-[calc(100%-1rem)]">
         {MODES.map((m) => {
           const sel = mode === m.id; const Icon = m.icon;
           return (
-            <button key={m.id} type="button" onClick={() => setMode(m.id)}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-black tracking-[0.12em] uppercase transition-colors ${sel ? "bg-[#C0FF00]/15 text-[#C0FF00]" : "text-gray-400 hover:text-white"}`}>
-              <Icon className="w-3.5 h-3.5" />{t(m.labelKey)}
+            <button key={m.id} type="button" onClick={() => setMode(m.id)} aria-label={t(m.labelKey)} title={t(m.labelKey)}
+              className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-[10px] font-black tracking-[0.12em] uppercase whitespace-nowrap transition-colors ${sel ? "bg-[#C0FF00]/15 text-[#C0FF00]" : "text-gray-400 hover:text-white"}`}>
+              <Icon className="w-3.5 h-3.5 shrink-0" /><span className={sel ? "" : "hidden sm:inline"}>{t(m.labelKey)}</span>
             </button>
           );
         })}

@@ -1,16 +1,13 @@
 import type { Run, Split } from "../../types/api";
 
 /**
- * NUCLEO CONDIVISO delle gamification v2 · v3 · v4.
+ * NUCLEO CONDIVISO della lettura di una corsa.
  *
- * Le tre versioni hanno logiche diverse di proposito — classifica a divisioni,
- * albero delle abilità, momento — ma la lettura di una corsa deve essere una
- * sola: stesso filtro anti-spazzatura, stessa zona, stessa correzione del caldo.
- * Se ognuna se la calcolasse per conto suo, la stessa seduta varrebbe tre cose
- * diverse e il confronto fra le versioni non direbbe niente.
- *
- * La v1 (`evolutionEngine.ts`) resta intoccata: ha le sue copie di queste
- * funzioni ed è la versione già approvata.
+ * Lo usano il motore fisiologico (verdetto e date degli obiettivi), il banco di
+ * prova e gli XP della gamification: la lettura di una corsa deve essere una
+ * sola — stesso filtro anti-spazzatura, stessa zona, stessa correzione del
+ * caldo. Se ognuno se la calcolasse per conto suo, la stessa seduta varrebbe
+ * cose diverse a seconda della pagina.
  */
 
 export const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));

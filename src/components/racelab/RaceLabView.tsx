@@ -7,7 +7,7 @@ import { API_CACHE } from "../../hooks/apiCacheKeys";
 import type { Run, RunsResponse } from "../../types/api";
 import { fmtClock } from "../gamification/gamiCore";
 import { usePhysio, fmtDate } from "../gamification/usePhysio";
-import { humanDays } from "../gamification/physioEngine";
+import { climateAt, humanDays } from "../gamification/physioEngine";
 import {
   CLASS_LABEL, REFERENCE, currentPlan, defaultSetup, fastEfforts, fmtPaceSec, planGoal, whatIf,
   type Conditions, type Effort, type Factor, type RaceSetup,
@@ -207,7 +207,7 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
       physio.weeklyKm,
       physio.weeklyZone.threshold + physio.weeklyZone.vo2,
       Math.max(60, physio.weeklyMinutes / 4),
-      physio.climate[new Date(physio.model.today * 86400000).getUTCMonth()],
+      climateAt(physio.climate, physio.model.today),
     );
     return planGoal(physio.model, dist.m, targetSec, {
       deadlineDays, easyPaceSec: easyPace, setup, vdot: physio.vdot, current: now,

@@ -378,8 +378,11 @@ function normalCdf(z: number): number {
   return 0.5 * (1 + s * y);
 }
 
+/** Deviazione standard di una previsione a `days` giorni, in % del tempo: giornata + modello. */
+export const predictionSdPct = (days: number) => Math.sqrt(RACE_DAY_SD_PCT ** 2 + modelSdPct(days) ** 2);
+
 export function successProbability(predictedSec: number, targetSec: number, horizonDays: number): number {
-  const sd = (predictedSec * Math.sqrt(RACE_DAY_SD_PCT ** 2 + modelSdPct(horizonDays) ** 2)) / 100;
+  const sd = (predictedSec * predictionSdPct(horizonDays)) / 100;
   if (sd <= 0) return predictedSec <= targetSec ? 1 : 0;
   return clamp(normalCdf((targetSec - predictedSec) / sd), 0, 1);
 }
