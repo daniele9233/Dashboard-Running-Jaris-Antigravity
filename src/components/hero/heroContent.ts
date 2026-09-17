@@ -3,7 +3,7 @@
  * are matched by letter, so a word without an "O" simply loses its object.
  */
 
-import { KIKKO_SUB20_META } from "../../data/kikkoSub20Plan";
+import { PLAN_BIBS } from "../../data/mezzaOttobrePlan";
 
 export type GlyphKind = "orb" | "watch" | "track";
 
@@ -17,8 +17,8 @@ export interface HeroWord {
 
 /** Straight from the training plan, so the hero never promises a stale time. */
 export const HERO_GOAL = {
-  race: KIKKO_SUB20_META.goalRace,
-  time: KIKKO_SUB20_META.goalTime,
+  race: "5K",
+  time: PLAN_BIBS[0].value,
 };
 
 /** The line as it should be read (screen readers get exactly this). */

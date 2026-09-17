@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarClock, Table2, Target, type LucideIcon } from "lucide-react";
 import { fmtClock } from "./gamiCore";
 import { humanDays, type PhysioState } from "./physioEngine";
-import { buildGoalCone, coneGoals, type ConeEta, type ConePoint, type GoalCone as Cone } from "./goalConeEngine";
+import { buildGoalCone, coneGoals, type ConeEta, type ConePoint, type GoalCone as Cone, type PlanGoalInput } from "./goalConeEngine";
 import { levelFromXp } from "./evolutionEngine";
 import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from "../statistics/chartTheme";
 
@@ -22,8 +22,8 @@ const secs = (s: number) => `${Math.abs(Math.round(s))}″`;
 
 interface Props {
   physio: PhysioState;
-  /** L'obiettivo del piano di allenamento, con la sua domenica di gara. */
-  mine: { targetSec: number; raceIso: string | null } | null;
+  /** Gli obiettivi del piano di allenamento, ognuno con la sua data. */
+  mine: PlanGoalInput[] | null;
   /** Il ritmo degli XP: serve a dire quante sedute separano dalla data. */
   xp: { perDay: number; perSession: number; total: number } | null;
 }
@@ -64,8 +64,8 @@ export function GoalCone({ physio, mine, xp }: Props) {
                 className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black tracking-wide border transition-colors ${sel ? "bg-[#C0FF00]/12 border-[#C0FF00]/50 text-white" : "border-white/10 text-gray-400 hover:text-white hover:border-white/25"}`}
                 style={{ fontFamily: MONO }}>
                 {g.mine && <span className="mr-1" style={{ color: LIME }}>★</span>}
-                {g.mine ? `Il tuo · ${g.label}` : g.label}
-                {g.mine && g.raceIso && <span className="ml-1 text-gray-500 font-bold">· gara {shortDate(g.raceIso)}</span>}
+                {g.label}
+                {g.mine && g.raceIso && <span className="ml-1 text-gray-500 font-bold">· {shortDate(g.raceIso)}</span>}
               </button>
             );
           })}

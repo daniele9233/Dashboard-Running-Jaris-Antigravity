@@ -10,7 +10,7 @@ import type { Diagnosis, SessionEval, Verdict } from "../utils/trainingAdherence
 const fmtPace = (sec: number | null) =>
   sec == null ? '—' : `${Math.floor(Math.round(sec) / 60)}:${String(Math.round(sec) % 60).padStart(2, '0')}`;
 
-const VERDICT_STYLE: Record<Verdict, { label: string; color: string; bg: string; icon: typeof CheckCircle2 }> = {
+export const VERDICT_STYLE: Record<Verdict, { label: string; color: string; bg: string; icon: typeof CheckCircle2 }> = {
   on_target:     { label: 'Centrata',        color: '#10B981', bg: 'rgba(16,185,129,0.10)',  icon: CheckCircle2 },
   close:         { label: 'Quasi',           color: '#C0FF00', bg: 'rgba(192,255,0,0.10)',   icon: CheckCircle2 },
   under:         { label: 'Sotto target',    color: '#F59E0B', bg: 'rgba(245,158,11,0.10)',  icon: TrendingDown },

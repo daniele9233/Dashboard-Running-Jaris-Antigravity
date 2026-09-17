@@ -130,9 +130,13 @@ describe("il cono del traguardo", () => {
     if (c.boost) expect(c.boost.points).toHaveLength(c.points.length);
   });
 
-  it("l'obiettivo del piano viene per primo e non si ripete fra quelli della lista", () => {
-    const list = coneGoals(physio, { targetSec: 1200, raceIso: "2026-12-20" });
-    expect(list[0].mine).toBe(true);
+  it("gli obiettivi del piano vengono per primi e non si ripetono fra quelli della lista", () => {
+    const list = coneGoals(physio, [
+      { label: "Test 5 km in 20:00", distM: 5000, targetSec: 1200, raceIso: "2026-10-10" },
+      { label: "Mezza a 4:47/km", distM: 21097.5, targetSec: 6055, raceIso: "2026-10-18" },
+    ]);
+    expect(list[0].mine && list[1].mine).toBe(true);
+    expect(list[1].distM).toBe(21097.5);
     expect(list.filter((g) => g.distM === 5000 && g.targetSec === 1200)).toHaveLength(1);
   });
 });

@@ -16,9 +16,7 @@ import { useAthleteVdot } from "./useAthleteVdot";
 import { GoalTimeline, PhysioVerdict } from "./PhysioVerdict";
 import { usePhysio } from "./usePhysio";
 import { GoalCone } from "./GoalCone";
-import { useApi } from "../../hooks/useApi";
-import { getSub20Status, type Sub20StatusResponse } from "../../api";
-import { KIKKO_SUB20_PLAN, KIKKO_SUB20_TARGETS, kikkoWindow } from "../../data/kikkoSub20Plan";
+import { PLAN_GOALS } from "../../data/mezzaOttobrePlan";
 
 const MONO = "'JetBrains Mono', monospace";
 const ICONS: Record<string, LucideIcon> = { Footprints, Sparkles, Flame, Zap, Medal, Award, Target, Trophy, Gem, Crown };
@@ -52,14 +50,12 @@ export function AthleteEvolutionFramework({ runs, profile }: { runs: Run[]; prof
   const sys = useMemo(() => computeLevelSystem(runs, profile, today, vdotAnchor), [runs, profile, today, vdotAnchor]);
   const physio = usePhysio(runs);
 
-  // l'obiettivo del piano di allenamento, con la stessa domenica di gara che
-  // mostra il calendario: lo stato è condiviso con la pagina Training
-  const { data: planStatus } = useApi<Sub20StatusResponse>(getSub20Status, { cacheKey: "sub20-status" });
-  const mine = useMemo(() => {
-    if (!planStatus) return null;
-    const w = kikkoWindow(KIKKO_SUB20_PLAN, planStatus.start_date, planStatus.race_date);
-    return { targetSec: planStatus.goals?.sub20 ?? KIKKO_SUB20_TARGETS[0].sec, raceIso: w.raceIso };
-  }, [planStatus]);
+  // gli obiettivi del piano di allenamento, con le loro date: gli stessi della
+  // pagina Training
+  const mine = useMemo(
+    () => PLAN_GOALS.map((g) => ({ label: g.label, distM: g.distM, targetSec: g.targetSec, raceIso: g.dateIso })),
+    [],
+  );
   const xpPace = useMemo(
     () => (sys.projection.ok ? { perDay: sys.projection.xpPerDay, perSession: sys.projection.xpPerSession, total: sys.totalXp } : null),
     [sys],

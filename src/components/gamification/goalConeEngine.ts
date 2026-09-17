@@ -1,4 +1,4 @@
-import { dayIndex, dayToIso, fmtClock } from "./gamiCore";
+import { dayIndex, dayToIso } from "./gamiCore";
 import {
   doseWithRecipe, GOALS, timeAtDay, walkPlan,
   type PhysioState, type RecipeId, type SystemLevels,
@@ -99,23 +99,20 @@ const RECIPE_LABEL: Record<RecipeId, string> = {
 /** Le distanze fino ai 10K le spostano le qualità; la mezza il lungo. */
 const recipesFor = (distM: number): RecipeId[] => (distM > 12000 ? ["soglia", "lungo"] : ["soglia", "ripetute"]);
 
+/** Un obiettivo del piano di allenamento: distanza, tempo e giorno. */
+export interface PlanGoalInput { label: string; distM: number; targetSec: number; raceIso: string | null }
+
 /**
- * Gli obiettivi fra cui scegliere: prima quello del piano, poi quelli ancora
+ * Gli obiettivi fra cui scegliere: prima quelli del piano, poi quelli ancora
  * aperti della lista, senza doppioni.
  */
-export function coneGoals(
-  p: PhysioState,
-  mine?: { targetSec: number; raceIso: string | null } | null,
-): ConeGoal[] {
+export function coneGoals(p: PhysioState, mine?: PlanGoalInput[] | null): ConeGoal[] {
   const out: ConeGoal[] = [];
-  if (mine && mine.targetSec > 0) {
-    out.push({
-      id: "mine", label: `5K in ${fmtClock(mine.targetSec)}`, distM: 5000,
-      targetSec: mine.targetSec, raceIso: mine.raceIso, mine: true,
-    });
-  }
+  (mine ?? []).forEach((g, i) => {
+    if (g.targetSec > 0) out.push({ id: `mine-${i}`, label: g.label, distM: g.distM, targetSec: g.targetSec, raceIso: g.raceIso, mine: true });
+  });
   for (const g of p.goals) {
-    if (g.done || out.length >= 5) continue;
+    if (g.done || out.length >= 6) continue;
     const def = GOALS.find((d) => d.id === g.id);
     if (!def) continue;
     if (out.some((o) => o.distM === def.m && Math.abs(o.targetSec - def.sec) <= 2)) continue;

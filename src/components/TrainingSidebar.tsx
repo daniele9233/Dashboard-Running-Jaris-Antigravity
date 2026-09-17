@@ -1,23 +1,29 @@
-import { useMemo } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, CheckCircle2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useApi } from '../hooks/useApi';
 import { API_CACHE } from '../hooks/apiCacheKeys';
-import { getCurrentWeek, getRuns } from '../api';
-import type { TrainingWeek, RunsResponse } from '../types/api';
+import { getRuns, getSub20Status, type Sub20StatusResponse } from '../api';
+import type { RunsResponse } from '../types/api';
+import { PLAN_BIBS, PLAN_KINDS, PLAN_META, PLAN_WEEKS } from '../data/mezzaOttobrePlan';
 
-const SESSION_COLORS: Record<string, string> = {
-  easy:      "#8B5CF6",
-  recovery:  "#6B7280",
-  intervals: "#EF4444",
-  tempo:     "#F97316",
-  long:      "#10B981",
-  rest:      "transparent",
-};
+/** La settimana del piano da mostrare all'apertura: quella in corso, o la più vicina. */
+function initialWeekIndex(todayIso: string): number {
+  const i = PLAN_WEEKS.findIndex((w) => w.days[0].date <= todayIso && todayIso <= w.days[w.days.length - 1].date);
+  if (i >= 0) return i;
+  return todayIso < PLAN_WEEKS[0].days[0].date ? 0 : PLAN_WEEKS.length - 1;
+}
 
 export function TrainingSidebar() {
-  const { data: currentWeek } = useApi<TrainingWeek>(getCurrentWeek, { cacheKey: API_CACHE.TRAINING_CURRENT_WEEK });
   const { data: runsData } = useApi<RunsResponse>(getRuns, { cacheKey: API_CACHE.RUNS });
+  // Il menu della settimana viene dal piano scritto, non dal vecchio piano
+  // generato dal backend: quello era fermo a una settimana di dicembre.
+  const { data: statusData } = useApi<Sub20StatusResponse>(getSub20Status, { cacheKey: "sub20-status" });
+  const now = new Date();
+  const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const [weekIdx, setWeekIdx] = useState(() => initialWeekIndex(todayIso));
+  const week = PLAN_WEEKS[weekIdx];
+  const currentIdx = PLAN_WEEKS.findIndex((w) => w.days[0].date <= todayIso && todayIso <= w.days[w.days.length - 1].date);
 
   // ── Weekly mileage from last 9 weeks ────────────────────────────────────────
   const mileageData = useMemo(() => {
@@ -49,25 +55,26 @@ export function TrainingSidebar() {
   const maxMileage = Math.max(...mileageData.map(d => d.value), 10);
   const yMax = Math.ceil(maxMileage / 10) * 10;
 
-  // ── Weekly menu from current week sessions ──────────────────────────────────
+  // ── Menu della settimana, dal piano ─────────────────────────────────────────
   const weeklyMenu = useMemo(() => {
-    if (!currentWeek?.sessions) return [];
-    return currentWeek.sessions.map(session => {
-      const d = new Date(session.date + 'T00:00:00');
-      const dayLabel = d.toLocaleDateString('it-IT', {
+    const manual = statusData?.statuses ?? {};
+    return week.days.map((d) => {
+      const dt = new Date(d.date + 'T00:00:00');
+      const dayLabel = dt.toLocaleDateString('it-IT', {
         weekday: 'short', day: '2-digit', month: 'short',
       }).toUpperCase();
       return {
         date: dayLabel,
-        type: session.type === 'rest' ? 'Riposo' : session.title,
-        color: SESSION_COLORS[session.type] ?? '#6B7280',
-        status: session.completed ? 'completed' as const
-              : session.type === 'rest' ? 'rest' as const
+        type: d.title,
+        color: PLAN_KINDS[d.kind].color,
+        status: d.done || manual[d.date] === 'done' ? 'completed' as const
+              : d.kind === 'rest' ? 'rest' as const
               : 'pending' as const,
-        km: session.target_distance_km > 0 ? session.target_distance_km : null,
+        km: d.km ?? null,
+        today: d.date === todayIso,
       };
     });
-  }, [currentWeek]);
+  }, [week, statusData, todayIso]);
 
   return (
     <div className="flex flex-col h-full bg-[#181818] border-l border-[#2A2A2A]">
@@ -91,11 +98,9 @@ export function TrainingSidebar() {
 
           <div className="absolute bottom-4 left-4">
             <h2 className="text-2xl font-bold text-white mb-1">Runner</h2>
-            {currentWeek && (
-              <p className="text-sm text-gray-300">
-                Settimana {currentWeek.week_number} · {currentWeek.phase}
-              </p>
-            )}
+            <p className="text-sm text-gray-300">
+              {currentIdx >= 0 ? `Settimana ${currentIdx + 1} di ${PLAN_WEEKS.length} · ` : ''}{PLAN_META.name}
+            </p>
           </div>
         </div>
       </div>
@@ -104,10 +109,6 @@ export function TrainingSidebar() {
       <div className="p-6 border-b border-[#2A2A2A]">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xs font-bold text-gray-400 tracking-wider uppercase">Km Settimanali</h3>
-          <div className="flex gap-2">
-            <button className="text-gray-500 hover:text-white"><ChevronLeft className="w-4 h-4" /></button>
-            <button className="text-gray-500 hover:text-white"><ChevronRight className="w-4 h-4" /></button>
-          </div>
         </div>
 
         <div className="h-48 w-full">
@@ -153,86 +154,72 @@ export function TrainingSidebar() {
         </div>
       </div>
 
-      {/* Weekly Menu List */}
+      {/* Menu della settimana */}
       <div className="p-6 flex-1 overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-xs font-bold text-gray-400 tracking-wider uppercase">Weekly Menu</h3>
-            {currentWeek && (
-              <p className="text-xs text-gray-600 mt-0.5">
-                {currentWeek.week_start} – {currentWeek.week_end}
-              </p>
-            )}
+            <h3 className="text-xs font-bold text-gray-400 tracking-wider uppercase">Settimana {week.n}</h3>
+            <p className="text-xs text-gray-600 mt-0.5">{week.dates}</p>
           </div>
           <div className="flex gap-2">
-            <button className="text-gray-500 hover:text-white"><ChevronLeft className="w-4 h-4" /></button>
-            <button className="text-gray-500 hover:text-white"><ChevronRight className="w-4 h-4" /></button>
+            <button type="button" aria-label="Settimana precedente" disabled={weekIdx === 0}
+              onClick={() => setWeekIdx((i) => Math.max(0, i - 1))}
+              className="text-gray-500 hover:text-white disabled:opacity-30">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button type="button" aria-label="Settimana successiva" disabled={weekIdx === PLAN_WEEKS.length - 1}
+              onClick={() => setWeekIdx((i) => Math.min(PLAN_WEEKS.length - 1, i + 1))}
+              className="text-gray-500 hover:text-white disabled:opacity-30">
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
-        {weeklyMenu.length === 0 ? (
-          <div className="text-center py-8 text-gray-600 text-sm">
-            Nessun piano per questa settimana
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {weeklyMenu.map((item, idx) => (
-              <div
-                key={idx}
-                className={`flex items-center justify-between p-3 rounded-lg border-l-4 ${
-                  item.status === 'rest' ? 'opacity-40' : 'bg-[#121212]'
-                }`}
-                style={{ borderLeftColor: item.color || '#2A2A2A' }}
-              >
-                <div className="flex items-center gap-4 min-w-0">
-                  <span className="text-xs font-semibold text-gray-500 w-24 shrink-0">{item.date}</span>
-                  <div className="min-w-0">
-                    <span className={`text-sm font-medium block truncate ${item.status === 'rest' ? 'text-gray-500' : 'text-gray-200'}`}>
-                      {item.type}
-                    </span>
-                    {item.km && (
-                      <span className="text-xs text-gray-500">{item.km} km</span>
-                    )}
-                  </div>
+        <div className="space-y-3">
+          {weeklyMenu.map((item, idx) => (
+            <div
+              key={idx}
+              className={`flex items-center justify-between p-3 rounded-lg border-l-4 ${
+                item.status === 'rest' ? 'opacity-40' : 'bg-[#121212]'
+              } ${item.today ? 'ring-1 ring-[#C0FF00]/40' : ''}`}
+              style={{ borderLeftColor: item.color || '#2A2A2A' }}
+            >
+              <div className="flex items-center gap-4 min-w-0">
+                <span className="text-xs font-semibold text-gray-500 w-24 shrink-0">{item.date}</span>
+                <div className="min-w-0">
+                  <span className={`text-sm font-medium block truncate ${item.status === 'rest' ? 'text-gray-500' : 'text-gray-200'}`}>
+                    {item.type}
+                  </span>
+                  {item.km && (
+                    <span className="text-xs text-gray-500">{item.km} km</span>
+                  )}
                 </div>
-
-                {item.status !== 'rest' && (
-                  <div className="flex items-center gap-2 shrink-0">
-                    {item.status === 'completed' ? (
-                      <CheckCircle2 className="w-5 h-5 text-[#10B981]" />
-                    ) : (
-                      <CheckCircle2 className="w-5 h-5 text-gray-600" />
-                    )}
-                    <ChevronDown className="w-4 h-4 text-gray-500" />
-                  </div>
-                )}
               </div>
-            ))}
-          </div>
-        )}
 
-        {/* Week progress summary */}
-        {currentWeek && (
-          <div className="mt-6 p-4 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 space-y-2">
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>Target settimana</span>
-              <span className="text-white font-bold">{currentWeek.target_km} km</span>
+              {item.status !== 'rest' && (
+                <CheckCircle2 className={`w-5 h-5 shrink-0 ${item.status === 'completed' ? 'text-[#10B981]' : 'text-gray-600'}`} />
+              )}
             </div>
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>Fase</span>
-              <span className="text-gray-300">{currentWeek.phase}</span>
-            </div>
-            {currentWeek.goal_race && currentWeek.target_time && (
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>Obiettivo</span>
-                <span className="text-[#10B981] font-bold">{currentWeek.goal_race} in {currentWeek.target_time}</span>
-              </div>
-            )}
-            {currentWeek.is_recovery_week && (
-              <div className="text-xs text-amber-400">↓ Settimana di recupero</div>
-            )}
+          ))}
+        </div>
+
+        {/* Riepilogo della settimana */}
+        <div className="mt-6 p-4 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 space-y-2">
+          <div className="flex justify-between text-xs text-gray-500">
+            <span>Km della settimana</span>
+            <span className="text-white font-bold">{week.km}</span>
           </div>
-        )}
+          <div className="flex justify-between text-xs text-gray-500">
+            <span>Piano</span>
+            <span className="text-gray-300">{PLAN_META.name}</span>
+          </div>
+          {PLAN_BIBS.map((b) => (
+            <div key={b.id} className="flex justify-between gap-3 text-xs text-gray-500">
+              <span className="truncate">{b.title} · {b.when}</span>
+              <span className="font-bold shrink-0" style={{ color: b.band }}>{b.value}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
     </div>
