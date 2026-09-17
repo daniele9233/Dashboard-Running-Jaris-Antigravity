@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Target, FlaskConical, TrendingDown, Users, Beaker, Gauge } from "lucide-react";
+import { Target, FlaskConical, Users, Beaker } from "lucide-react";
 import { gsap } from "../celebrations/gsapSetup";
-import { useApi, invalidateCache } from "../../hooks/useApi";
-import { getRuns, patchRaceLab } from "../../api";
+import { useApi } from "../../hooks/useApi";
+import { getRuns } from "../../api";
 import { API_CACHE } from "../../hooks/apiCacheKeys";
-import type { Run, RunsResponse } from "../../types/api";
+import type { RunsResponse } from "../../types/api";
 import { fmtClock } from "../gamification/gamiCore";
 import { usePhysio, fmtDate } from "../gamification/usePhysio";
 import { climateAt, humanDays } from "../gamification/physioEngine";
 import {
-  CLASS_LABEL, REFERENCE, currentPlan, defaultSetup, fastEfforts, fmtPaceSec, planGoal, whatIf,
-  type Conditions, type Effort, type Factor, type RaceSetup,
+  currentPlan, defaultSetup, planGoal,
+  type Factor, type RaceSetup,
 } from "./raceLabEngine";
-import { DEFAULT_SHOE_ID, SHOES, SURFACE, TAPERS, shoeById, type SurfaceId, type TaperKind } from "./shoeLab";
+import { DEFAULT_SHOE_ID, SHOES, TAPERS, shoeById, type TaperKind } from "./shoeLab";
+import { GoalTrajectory } from "./GoalTrajectory";
 
 const MONO = "'JetBrains Mono', monospace";
 const LIT = "#C0FF00";
@@ -20,14 +21,13 @@ const LIT = "#C0FF00";
 /**
  * IL BANCO DI PROVA
  * ════════════════════════════════════════════════════════════════════════════
- * Due domande che ogni atleta si fa e a cui nessuna pagina rispondeva.
+ * La domanda che ogni atleta si fa e a cui nessuna pagina rispondeva:
  *
  *   "Quando arrivo al mio obiettivo, e cosa devo fare per arrivarci?"
- *   "Quella prova, con altre scarpe e dieci gradi in meno, quanto valeva?"
  *
- * E soprattutto la terza, che nasce dalle prime due messe insieme: il tempo che
- * mi manca è forma che devo costruire, o è una giornata che non ho avuto?
- * Perché fra le due c'è una differenza di sei mesi.
+ * E dentro quella, la sua gemella: il tempo che mi manca è forma che devo
+ * costruire, o è una giornata che non ho avuto? Perché fra le due c'è una
+ * differenza di sei mesi.
  */
 
 // ── pezzi di interfaccia ──────────────────────────────────────────────────────
@@ -131,6 +131,10 @@ const DISTANCES = [
   { id: "fm", label: "Maratona", m: 42195 },
 ] as const;
 
+/** La super scarpa più efficiente in rastrelliera: è la leva "scarpe da gara". */
+const FASTEST_SHOE_ID = [...SHOES]
+  .sort((a, b) => b.economyPct - a.economyPct)[0]?.id ?? DEFAULT_SHOE_ID;
+
 /** I controlli delle condizioni di gara: gli stessi due volte in pagina. */
 function SetupControls({ setup, onChange }: { setup: RaceSetup; onChange: (s: RaceSetup) => void }) {
   const useClimate = setup.tempC == null;
@@ -176,7 +180,7 @@ function SetupControls({ setup, onChange }: { setup: RaceSetup; onChange: (s: Ra
   );
 }
 
-// ══ SEZIONE 1 · L'OBIETTIVO ═══════════════════════════════════════════════════
+// ══ L'OBIETTIVO ═══════════════════════════════════════════════════
 function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
   const [distId, setDistId] = useState<string>("5k");
   const [timeStr, setTimeStr] = useState("19:50");
@@ -212,10 +216,13 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
     return planGoal(physio.model, dist.m, targetSec, {
       deadlineDays, easyPaceSec: easyPace, setup, vdot: physio.vdot, current: now,
       plan: { ...now, km, qualitySessions: quality, qualityMinutes: 26, longRunMinutes: longRun },
+      fastestShoeId: FASTEST_SHOE_ID,
     });
   }, [physio, targetSec, dist.m, deadlineDays, easyPace, km, quality, longRun, setup]);
 
   const pct = result ? Math.round(result.probability * 100) : 0;
+  const pctNow = result ? Math.round(result.probabilityNow * 100) : 0;
+  const deltaPct = pct - pctNow;
   const probCol = pct >= 80 ? "#22C55E" : pct >= 50 ? "#FBBF24" : "#F43F5E";
   const alreadyThere = result != null && targetSec != null && result.todaySec <= targetSec;
 
@@ -294,21 +301,37 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
 
               <div className="rounded-xl border border-white/8 bg-black/30 p-4 flex flex-col justify-center">
                 <div className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-500 mb-2">
-                  {deadlineDays ? "Probabilità il giorno della gara" : "Probabilità alla data affidabile"}
+                  Probabilità {deadlineDays ? "il giorno della gara" : `al ${fmtDate(result.horizon.iso)}`}
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-5xl font-black tabular-nums leading-none" style={{ fontFamily: MONO, color: probCol }}>{pct}</span>
                   <span className="text-lg font-black text-gray-600">%</span>
+                  {/* il confronto che rende visibile il lavoro dei cursori */}
+                  {deltaPct !== 0 && (
+                    <span className="ml-1 text-[12px] font-black tabular-nums" style={{
+                      fontFamily: MONO, color: deltaPct > 0 ? "#22C55E" : "#F43F5E",
+                    }}>
+                      {deltaPct > 0 ? "+" : "−"}{Math.abs(deltaPct)}
+                    </span>
+                  )}
                 </div>
-                <div className="mt-3 h-2 rounded-full bg-white/8 overflow-hidden">
+                <div className="mt-3 h-2 rounded-full bg-white/8 overflow-hidden relative">
                   <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${pct}%`, background: probCol }} />
+                  {/* tacca del carico attuale: da qui parte il guadagno del piano */}
+                  <div className="absolute top-0 bottom-0 w-[2px] bg-white/70"
+                    style={{ left: `calc(${pctNow}% - 1px)` }} title="col carico di adesso" />
                 </div>
                 <p className="mt-2 text-[10.5px] text-gray-500 leading-relaxed">
+                  Col carico che tieni adesso sarebbe{" "}
+                  <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>{pctNow}%</b>.{" "}
                   {result.gapSec == null || Math.abs(result.gapSec) < 3
                     ? <>Arriveresti giusto sul tempo. </>
                     : result.gapSec > 0
-                      ? <>Ti mancherebbero <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>{fmtClock(result.gapSec)}</b>. </>
-                      : <>Avresti <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>{fmtClock(-result.gapSec)}</b> di margine. </>}
+                      ? <>Al piano simulato ti mancherebbero <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>{fmtClock(result.gapSec)}</b>. </>
+                      : <>Col piano simulato avresti <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>{fmtClock(-result.gapSec)}</b> di margine. </>}
+                  {result.horizon.source === "carico-attuale" && !deadlineDays && (
+                    <>La data di riferimento è quella in cui ci arriverebbe il carico di adesso: è ferma mentre muovi i cursori, così il numero si muove. </>
+                  )}
                   Include la variabilità del giorno di gara: a forma identica due gare non danno lo stesso tempo.
                 </p>
               </div>
@@ -350,6 +373,23 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
                   <Slider label="Sedute di qualità a settimana" value={quality} min={0} max={4} step={1} onChange={setQuality} unit="" />
                   <Slider label="Lungo settimanale" value={longRun} min={60} max={180} step={10} onChange={setLongRun} unit="min" />
                 </div>
+                {/* il numero che traduce i tre cursori in una sola grandezza */}
+                <div className="mt-3 pt-3 border-t border-white/10">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-500">
+                      Tetto di adattamento
+                    </span>
+                    <span className="text-[15px] font-black tabular-nums shrink-0" style={{ fontFamily: MONO, color: LIT }}>
+                      {result.ceilingPerMonth.toFixed(2).replace(".", ",")}
+                      <span className="text-[9.5px] text-gray-500 font-normal ml-1">punti VDOT / mese</span>
+                    </span>
+                  </div>
+                </div>
+                <p className="mt-1.5 text-[10px] text-gray-600 leading-relaxed">
+                  È il tetto di adattamento: il corpo non migliora più in fretta di così, per quanto tu lo
+                  carichi. Alzare i chilometri alza il tetto — con rendimenti decrescenti — e sposta anche il
+                  punto in cui la curva si appiattisce.
+                </p>
               </div>
 
               <div className="rounded-xl border border-white/8 bg-black/20 p-4">
@@ -383,172 +423,108 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
                 )}
               </div>
             </div>
-          </>
-        )}
-      </div>
-    </Card>
-  );
-}
 
-// ══ SEZIONE 2 · IL CALCOLATORE ════════════════════════════════════════════════
-function CalculatorSection({ efforts, base, onSelect, onAnnotate }: {
-  efforts: Effort[];
-  base: Effort | null;
-  onSelect: (id: string) => void;
-  onAnnotate: (id: string, patch: { shoe_id?: string; taper?: TaperKind; rpe?: number | null }) => void;
-}) {
-  const [shoeId, setShoeId] = useState("alphafly3");
-  const [tempC, setTempC] = useState(10);
-  const [taper, setTaper] = useState<TaperKind>("full");
-  const [nitrate, setNitrate] = useState(true);
-  const [surface, setSurface] = useState<SurfaceId>("road");
-  const [pack, setPack] = useState(true);
-  const [elev, setElev] = useState(0);
-  const [distId, setDistId] = useState("5k");
-
-  const dist = DISTANCES.find((d) => d.id === distId)!;
-
-  const result = useMemo(() => {
-    if (!base) return null;
-    const target: Conditions = {
-      ...REFERENCE, shoeId, taper, tempC, humidity: 55, nitrate, surface, pack, elevationGain: elev,
-    };
-    return whatIf(base, target, dist.m);
-  }, [base, shoeId, taper, tempC, nitrate, surface, pack, elev, dist.m]);
-
-  const asIs = useMemo(
-    () => (base ? whatIf(base, {
-      ...REFERENCE, shoeId: base.shoeId, taper: base.taper,
-      tempC: base.tempC ?? 12, humidity: base.humidity, elevationGain: base.elevationGain,
-    }, dist.m) : null),
-    [base, dist.m],
-  );
-
-  if (!base) {
-    return (
-      <Card className="rl-rise">
-        <Head icon={FlaskConical} title="E se invece…" />
-        <p className="px-5 pb-5 text-[12px] text-gray-500">
-          Nessuna prova veloce abbastanza recente da usare come base. Sincronizza le corse, o corri qualcosa di forte.
-        </p>
-      </Card>
-    );
-  }
-
-  const shoe = shoeById(shoeId)!;
-  const delta = asIs && result ? asIs.sec - result.sec : 0;
-
-  return (
-    <Card className="rl-rise overflow-hidden">
-      <Head icon={FlaskConical} title="E se invece…" hint="una tua prova reale, in condizioni che non hai avuto" />
-      <div className="px-5 pb-5">
-        {/* la prova di partenza, con le sue annotazioni */}
-        <div className="rounded-xl border border-white/8 bg-black/25 p-3.5">
-          <Field label="Prova di riferimento">
-            <Select value={base.id} onChange={onSelect}>
-              {efforts.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.date} · {e.km} km a {fmtPaceSec(e.paceSec)}/km{e.tempC != null ? ` · ${Math.round(e.tempC)}°` : ""}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <div className="mt-2.5 grid gap-2 sm:grid-cols-3">
-            <Select value={base.shoeId} onChange={(v) => onAnnotate(base.id, { shoe_id: v })}>
-              {SHOES.map((s) => (
-                <option key={s.id} value={s.id}>{s.brand === "—" ? s.name : `${s.brand} ${s.name}`}</option>
-              ))}
-            </Select>
-            <Select value={base.taper} onChange={(v) => onAnnotate(base.id, { taper: v as TaperKind })}>
-              {TAPERS.map((t) => <option key={t.id} value={t.id}>Taper: {t.label.toLowerCase()}</option>)}
-            </Select>
-            <Select value={base.rpe == null ? "" : String(base.rpe)}
-              onChange={(v) => onAnnotate(base.id, { rpe: v === "" ? null : +v })}>
-              <option value="">RPE: non indicato</option>
-              {[10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6].map((r) => (
-                <option key={r} value={r}>RPE {r}{r >= 9.5 ? " · a tutta" : r >= 8 ? " · quasi gara" : " · controllata"}</option>
-              ))}
-            </Select>
-          </div>
-          <p className="mt-2 text-[10.5px] text-gray-500">
-            Al netto di scarpa, caldo, pendenza e margine: <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>
-              {fmtPaceSec(base.refPaceSec)}/km</b>. È il numero con cui questa prova si confronta con qualunque altra.
-          </p>
-        </div>
-
-        {/* le condizioni ipotetiche */}
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Field label="Distanza"><Select value={distId} onChange={setDistId}>
-            {DISTANCES.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
-          </Select></Field>
-          <Field label="Scarpa"><Select value={shoeId} onChange={setShoeId}>
-            {SHOES.map((s) => (
-              <option key={s.id} value={s.id}>{s.brand === "—" ? s.name : `${s.brand} ${s.name}`}</option>
-            ))}
-          </Select></Field>
-          <Field label="Taper"><Select value={taper} onChange={(v) => setTaper(v as TaperKind)}>
-            {TAPERS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
-          </Select></Field>
-          <Field label="Superficie"><Select value={surface} onChange={(v) => setSurface(v as SurfaceId)}>
-            {SURFACE.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-          </Select></Field>
-        </div>
-
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <Slider label="Temperatura" value={tempC} min={-2} max={38} step={1} onChange={setTempC} unit="°C" />
-          <Slider label="Dislivello del percorso" value={elev} min={0} max={600} step={20} onChange={setElev} unit="m" />
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Toggle on={nitrate} onClick={() => setNitrate(!nitrate)} icon={Beaker} label="Succo di barbabietola" />
-          <Toggle on={pack} onClick={() => setPack(!pack)} icon={Users} label="In gara / in gruppo" />
-        </div>
-
-        {result && asIs && (
-          <div className="mt-5 grid gap-4 lg:grid-cols-[0.9fr_1.1fr] items-start">
-            <div className="rounded-xl border p-4" style={{ borderColor: `${LIT}33`, background: `${LIT}0d` }}>
-              <div className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-500 mb-1">Avresti corso</div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black tabular-nums leading-none" style={{ fontFamily: MONO, color: LIT }}>
-                  {fmtClock(result.sec)}
-                </span>
-                <span className="text-[11px] text-gray-500">sui {dist.label}</span>
-              </div>
-              <div className="text-[11px] text-gray-400 mt-1.5" style={{ fontFamily: MONO }}>
-                {fmtPaceSec(result.paceSec)}/km · ± {Math.round(result.bandSec)}s
-              </div>
-              <div className="mt-3 pt-3 border-t border-white/10 text-[11.5px] text-gray-400 leading-relaxed">
-                Nelle condizioni della prova originale ({shoeById(base.shoeId)?.name}
-                {base.tempC != null && `, ${Math.round(base.tempC)}°`}) sulla stessa distanza faresti{" "}
-                <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>{fmtClock(asIs.sec)}</b>.
-              </div>
-              {delta !== 0 && (
-                <div className="mt-2 flex items-center gap-1.5 text-[13px] font-black"
-                  style={{ color: delta > 0 ? "#22C55E" : "#F43F5E" }}>
-                  <TrendingDown className="w-4 h-4" style={{ transform: delta > 0 ? "none" : "scaleY(-1)" }} />
-                  <span className="tabular-nums" style={{ fontFamily: MONO }}>
-                    {delta > 0 ? "−" : "+"}{fmtClock(Math.abs(delta))}
-                  </span>
-                  <span className="text-[10px] font-normal text-gray-500">
-                    ({(Math.abs(delta) / dist.m * 1000).toFixed(1)} s/km)
-                  </span>
+            {/* ── LA TRAIETTORIA: la stessa risposta, ma vista ── */}
+            <div className="mt-4 rounded-xl border border-white/8 bg-black/25 p-4">
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
+                <div className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-500">
+                  Come ci arrivi
                 </div>
-              )}
+                <div className="text-[10.5px] text-gray-500">
+                  {dist.label} · {km} km a settimana · {quality} di qualità · lungo {longRun}′
+                  {setup.tempC != null ? ` · ${Math.round(setup.tempC)}°` : " · clima del mese"}
+                </div>
+              </div>
+              <GoalTrajectory
+                curve={result.curve}
+                targetSec={targetSec}
+                deadlineDays={deadlineDays}
+                etaPlanDays={result.etaPlan?.days ?? null}
+                etaPlanIso={result.etaPlan?.iso ?? null}
+                etaSafeDays={result.etaSafe?.days ?? null}
+                etaSafeIso={result.etaSafe?.iso ?? null}
+                horizonDays={result.horizon.days}
+                distLabel={dist.label}
+              />
             </div>
 
-            <div className="rounded-xl border border-white/8 bg-black/25 p-4">
-              <div className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-500 mb-1">Da dove arrivano i secondi</div>
-              <p className="text-[10px] text-gray-600 mb-2">Rispetto alla flat da gara a 12 °C, senza taper e da solo.</p>
-              <div className="divide-y divide-white/5">
-                {result.factors.map((f) => <FactorRow key={f.id} f={f} />)}
+            {/* ── LE LEVE: forma contro giornata ── */}
+            {result.levers.length > 0 && (
+              <div className="mt-4 rounded-xl border border-white/8 bg-black/20 p-4">
+                <div className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-500 mb-1">
+                  Cosa sposta la data
+                </div>
+                <p className="text-[10px] text-gray-600 mb-3">
+                  Una leva alla volta, tutto il resto fermo. A sinistra quello che si costruisce in mesi,
+                  a destra quello che si sceglie la mattina della gara.
+                </p>
+                <div className="grid gap-x-6 gap-y-1 lg:grid-cols-2">
+                  {(["forma", "giornata"] as const).map((kind) => {
+                    const rows = result.levers.filter((l) => l.kind === kind);
+                    if (rows.length === 0) return null;
+                    const maxGain = Math.max(...result.levers.map((l) => Math.abs(l.gainSec)), 1);
+                    return (
+                      <div key={kind}>
+                        <div className="text-[9px] font-black tracking-[0.2em] uppercase mb-2"
+                          style={{ color: kind === "forma" ? LIT : "#22D3EE" }}>
+                          {kind === "forma" ? "Forma · mesi" : "Giornata · una scelta"}
+                        </div>
+                        <div className="divide-y divide-white/5">
+                          {rows.map((l) => (
+                            <div key={l.id} className="py-2">
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-[12px] font-bold text-white/90 flex-1 min-w-0 truncate">{l.label}</span>
+                                <span className="text-[12.5px] font-black tabular-nums shrink-0"
+                                  style={{
+                                    fontFamily: MONO,
+                                    color: Math.abs(l.gainSec) < 1 ? "#6B7280" : l.gainSec > 0 ? "#22C55E" : "#F43F5E",
+                                  }}>
+                                  {Math.abs(l.gainSec) < 1
+                                    ? "—"
+                                    : `${l.gainSec > 0 ? "−" : "+"}${fmtClock(Math.abs(l.gainSec))}`}
+                                </span>
+                                {l.probPoints !== 0 && Math.abs(l.gainSec) >= 1 && (
+                                  <span className="text-[10px] font-black tabular-nums shrink-0 w-10 text-right"
+                                    style={{ fontFamily: MONO, color: l.probPoints > 0 ? "#22C55E" : "#F43F5E" }}>
+                                    {l.probPoints > 0 ? "+" : "−"}{Math.abs(l.probPoints)}%
+                                  </span>
+                                )}
+                              </div>
+                              <div className="mt-1 h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
+                                <div className="h-full rounded-full transition-[width] duration-500"
+                                  style={{
+                                    width: `${Math.min(100, (Math.abs(l.gainSec) / maxGain) * 100)}%`,
+                                    background: kind === "forma" ? LIT : "#22D3EE",
+                                  }} />
+                              </div>
+                              <div className="mt-1 flex items-baseline justify-between gap-2">
+                                <span className="text-[10px] text-gray-600 leading-snug">
+                                  {l.detail}
+                                  {/* la leva lenta che a questa data non paga ancora: dirlo, non tacerlo */}
+                                  {Math.abs(l.gainSec) < 2 && l.gainSecLate >= 2 && (
+                                    <> A questa data non paga ancora: sei mesi dopo vale{" "}
+                                      <b className="text-gray-400 tabular-nums" style={{ fontFamily: MONO }}>
+                                        {fmtClock(l.gainSecLate)}
+                                      </b>.
+                                    </>
+                                  )}
+                                </span>
+                                {l.daysEarlier != null && l.daysEarlier !== 0 && (
+                                  <span className="text-[10px] shrink-0 tabular-nums" style={{ fontFamily: MONO, color: "#9CA3AF" }}>
+                                    {l.daysEarlier > 0 ? `${l.daysEarlier} gg prima` : `${-l.daysEarlier} gg dopo`}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <p className="mt-3 pt-3 border-t border-white/10 text-[10.5px] text-gray-500 leading-relaxed">
-                <b className="text-gray-400">{shoe.brand} {shoe.name}</b> — {CLASS_LABEL[shoe.cls]}, {shoe.grams} g,
-                risparmio metabolico stimato {shoe.economyPct.toFixed(1)}% ± {shoe.uncertaintyPct.toFixed(1)}.
-                Il risparmio di ossigeno non è guadagno di cronometro: se ne traduce circa tre quarti.
-              </p>
-            </div>
-          </div>
+            )}
+          </>
         )}
       </div>
     </Card>
@@ -562,40 +538,12 @@ export function RaceLabView() {
   const physio = usePhysio(runs);
   const root = useRef<HTMLDivElement>(null);
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  /** Annotazioni appena salvate: la lista corse è in cache, l'ottimistico evita l'attesa. */
-  const [local, setLocal] = useState<Record<string, Run["race_lab"]>>({});
-
-  const annotated = useMemo(
-    () => runs.map((r) => (local[r.id] ? { ...r, race_lab: local[r.id] } : r)),
-    [runs, local],
-  );
-  const efforts = useMemo(
-    () => fastEfforts(annotated, { maxPaceSec: 285, days: 180, defaultShoe: DEFAULT_SHOE_ID }),
-    [annotated],
-  );
-
-  useEffect(() => {
-    if (!selectedId && efforts.length) setSelectedId(efforts[0].id);
-  }, [efforts, selectedId]);
-
   useEffect(() => {
     const c = gsap.context(() => {
       gsap.from(".rl-rise", { opacity: 0, y: 14, duration: 0.45, stagger: 0.06, ease: "power3.out" });
     }, root);
     return () => c.revert();
   }, [physio.ok]);
-
-  const onAnnotate = (id: string, patch: { shoe_id?: string; taper?: TaperKind; rpe?: number | null }) => {
-    const run = annotated.find((r) => r.id === id);
-    const next = { ...(run?.race_lab ?? {}), ...patch };
-    setLocal((prev) => ({ ...prev, [id]: next }));
-    patchRaceLab(id, patch)
-      .then(() => invalidateCache(API_CACHE.RUNS))
-      .catch(() => { /* l'ottimistico resta: si risincronizza al prossimo caricamento */ });
-  };
-
-  const base = efforts.find((e) => e.id === selectedId) ?? efforts[0] ?? null;
 
   return (
     <main ref={root} className="flex-1 overflow-y-auto bg-black">
@@ -614,45 +562,6 @@ export function RaceLabView() {
 
         <GoalSection physio={physio} />
 
-        <div className="mt-5">
-          <CalculatorSection efforts={efforts} base={base} onSelect={setSelectedId} onAnnotate={onAnnotate} />
-        </div>
-
-        <Card className="rl-rise mt-5">
-          <Head icon={Gauge} title="Su cosa poggiano questi numeri" />
-          <div className="px-5 pb-5 grid gap-2.5 text-[11.5px] text-gray-400 leading-relaxed">
-            <p>
-              <b className="text-white">Scarpe.</b> Gli studi misurano il costo metabolico a velocità fissa, non
-              il tempo di gara: il "4%" del nome commerciale vale circa il 3% di cronometro. Un confronto diretto
-              in laboratorio fra tutti i modelli di punta non esiste — le stime vengono da studi diversi, e ogni
-              voce porta scritta la sua incertezza. Le differenze fra le super scarpe di vertice sono dentro il
-              rumore: sceglierne una per mezzo decimo di percentuale non ha senso, sceglierla contro un super
-              trainer sì.
-            </p>
-            <p>
-              <b className="text-white">Doppio conteggio, evitato.</b> Nell'obiettivo il guadagno di una scarpa è
-              calcolato rispetto a quella con cui hai corso le prove da cui viene la stima, non rispetto a una
-              flat: quel vantaggio è già dentro il tuo VDOT, e contarlo di nuovo gonfierebbe tutto.
-            </p>
-            <p>
-              <b className="text-white">Temperatura.</b> Stesso modello del resto dell'app, con l'umidità che pesa
-              solo sopra i 20 °C e il costo che cresce con la distanza. Se non scegli una temperatura, la
-              previsione usa il clima tipico del mese in cui cade la data — letto dalle tue corse, non da una tabella.
-            </p>
-            <p>
-              <b className="text-white">Taper e nitrati.</b> Meta-analisi, non singoli studi. Il nitrato rende molto
-              meno a chi è già molto allenato, e il modello lo scala sul tuo VDOT.
-            </p>
-            <p>
-              <b className="text-white">RPE.</b> Serve solo a stimare quanto margine era rimasto in una prova non
-              massimale. Non entra nel VDOT né nella soglia: un numero soggettivo non può correggere una misura.
-            </p>
-            <p>
-              <b className="text-white">I vantaggi si compongono, non si sommano.</b> Tre miglioramenti del 2% non
-              fanno il 6%, e più ipotesi si impilano più la banda di errore si allarga.
-            </p>
-          </div>
-        </Card>
       </div>
     </main>
   );

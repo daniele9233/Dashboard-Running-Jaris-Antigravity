@@ -794,6 +794,11 @@ _BADGE_STATE_DEFAULT = {
     "baseline_run_ids": [],
     "baseline": {},
     "unlocked": {},
+    # Quando è stato fatto il recupero iniziale: la prima valutazione sblocca in
+    # blocco tutto ciò che lo storico già soddisfa, e va fatta in silenzio. Senza
+    # questo flag la bacheca resta a zero finché non si preme "sincronizza", ed è
+    # esattamente il bug per cui esiste.
+    "backfilled_at": None,
 }
 
 
@@ -818,6 +823,7 @@ async def put_badge_state(request: Request):
         "baseline_run_ids": list(body.get("baseline_run_ids", [])),
         "baseline": dict(body.get("baseline", {})),
         "unlocked": dict(body.get("unlocked", {})),
+        "backfilled_at": body.get("backfilled_at"),
     }
     existing = await db.badge_state.find_one(sort=[("_id", -1)])
     if existing:

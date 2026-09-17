@@ -111,6 +111,8 @@ export const SYSTEM_ORDER: SystemId[] = ["mito", "soglia", "vo2", "tenuta", "cal
 
 export type SystemLevels = Record<SystemId, number>;
 const emptyLevels = (): SystemLevels => ({ mito: 0, soglia: 0, vo2: 0, tenuta: 0, caldo: 0 });
+/** Serbatoi tutti a zero: serve a chi simula uno stop totale dall'esterno. */
+export const zeroLevels = emptyLevels;
 
 /**
  * Le dosi del giorno: dove finiscono i minuti appena corsi.
@@ -379,6 +381,29 @@ const DOSE_WINDOW = 42;        // su quante settimane si legge "come ti alleni"
 const HISTORY_DAYS = 365;
 const FORECAST_DAYS = 900;     // due anni e mezzo: oltre, promettere è ridicolo
 const MAX_VDOT_PER_MONTH = 1.0;
+
+/**
+ * Il tetto di adattamento: quanti punti di VDOT al mese il corpo può salire.
+ *
+ * Esiste perché i serbatoi, da soli, salirebbero più in fretta di quanto
+ * qualsiasi atleta migliori davvero. Ma un tetto FISSO ha un difetto che si
+ * vede appena si mette in mano a un cursore: venti chilometri a settimana e
+ * centoquaranta producono la stessa salita massima, quindi il piano non conta
+ * niente e la pagina sembra rotta. Il tetto è reale, il suo valore no: si alza
+ * con lo stimolo, con rendimenti decrescenti.
+ *
+ * Chi non passa nulla ottiene il vecchio 1,0 punti/mese, così ogni altra
+ * schermata resta identica a prima.
+ */
+export function adaptationCeiling(plan: {
+  km: number; qualitySessions: number; qualityMinutes: number; longRunMinutes: number;
+}): number {
+  const kmScore = clamp(plan.km / 70, 0, 1.25);
+  const qScore = clamp((plan.qualitySessions * plan.qualityMinutes) / 60, 0, 1);
+  const lrScore = clamp((plan.longRunMinutes - 60) / 60, 0, 1);
+  const stimulus = 0.55 * kmScore + 0.3 * qScore + 0.15 * lrScore;
+  return clamp(0.35 + 1.25 * stimulus, 0.3, 1.6);
+}
 
 export interface GoalDef { id: string; group: string; label: string; m: number; sec: number }
 export const GOALS: GoalDef[] = [
@@ -780,6 +805,7 @@ export interface ScenarioPoint { day: number; iso: string; vdotCool: number; sec
  */
 export function runScenario(
   model: PhysioModel, dose: SystemLevels, distM: number, days = 540,
+  maxVdotPerMonth = MAX_VDOT_PER_MONTH,
 ): { points: ScenarioPoint[]; bestSec: number; bestDay: number | null } {
   let lv = { ...model.levels };
   let capped = model.base + vdotContribution(pctOf(model.levels), 5);
@@ -789,7 +815,7 @@ export function runScenario(
   for (let i = 1; i <= days; i++) {
     lv = integrate(lv, dose);
     const rawCool = model.base + vdotContribution(pctOf(lv), 5);
-    capped = Math.min(rawCool, capped + MAX_VDOT_PER_MONTH / 30);
+    capped = Math.min(rawCool, capped + maxVdotPerMonth / 30);
     const shift = capped - rawCool;
     const d = model.today + i;
     const temp = climateAt(model.climate, d);
@@ -818,13 +844,14 @@ export function runScenario(
 export function walkPlan(
   model: PhysioModel, dose: SystemLevels, distM: number, days: number,
   visit: (i: number, sec: number, tempC: number) => boolean | void,
+  maxVdotPerMonth = MAX_VDOT_PER_MONTH,
 ): void {
   let lv = { ...model.levels };
   let capped = model.base + vdotContribution(pctOf(model.levels), 5);
   for (let i = 1; i <= days; i++) {
     lv = integrate(lv, dose);
     const rawCool = model.base + vdotContribution(pctOf(lv), 5);
-    capped = Math.min(rawCool, capped + MAX_VDOT_PER_MONTH / 30);
+    capped = Math.min(rawCool, capped + maxVdotPerMonth / 30);
     const temp = climateAt(model.climate, model.today + i);
     if (visit(i, seasonalTime(lv, model.base + capped - rawCool, distM, temp), temp)) return;
   }
@@ -847,6 +874,7 @@ export function etaUnderPlan(
 /** Che tempo faresti su quella distanza a una certa data, sotto quel piano. */
 export function timeAtDay(
   model: PhysioModel, dose: SystemLevels, distM: number, dayOffset: number,
+  maxVdotPerMonth = MAX_VDOT_PER_MONTH,
 ): { sec: number; tempC: number } {
   let lv = { ...model.levels };
   let capped = model.base + vdotContribution(pctOf(model.levels), 5);
@@ -854,7 +882,7 @@ export function timeAtDay(
   for (let i = 1; i <= Math.max(0, dayOffset); i++) {
     lv = integrate(lv, dose);
     rawCool = model.base + vdotContribution(pctOf(lv), 5);
-    capped = Math.min(rawCool, capped + MAX_VDOT_PER_MONTH / 30);
+    capped = Math.min(rawCool, capped + maxVdotPerMonth / 30);
   }
   const temp = climateAt(model.climate, model.today + Math.max(0, dayOffset));
   return {

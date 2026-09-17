@@ -9,6 +9,8 @@ import { GridCard } from '../GridCard';
 import { AnalyticsV2 } from './AnalyticsV2';
 import { AnalyticsV3 } from './AnalyticsV3';
 import { BiologyFutureV2 } from './BiologyFutureV2';
+import { PotentialProgressV3 } from './PotentialProgressV3';
+import { BiologyFutureV3 } from './BiologyFutureV3';
 import { BiologyFutureLab } from './BiologyFutureLab';
 import { EnvironmentalNormalizerView } from './EnvironmentalNormalizerView';
 import { PaceCalculator } from './PaceCalculator';
@@ -60,6 +62,8 @@ import {
   Plus,
   RotateCcw,
   Calculator,
+  Sparkles,
+  Microscope,
 } from 'lucide-react';
 import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 import {
@@ -919,10 +923,12 @@ export function StatisticsView() {
   const tabs = [
     { id: 'analytics-cf-v2', label: t('statsTabs.loadForm'),          icon: BarChart3  },
     { id: 'analyticsv2',    label: t('statsTabs.potentialProgress'),  icon: Radar },
+    { id: 'potential-v3',   label: t('statsTabs.potentialV2'),        icon: Sparkles },
     { id: 'analyticsv3', label: t('statsTabs.biomechanics'),          icon: Activity },
     { id: 'biology',     label: t('statsTabs.biologyFuture'),         icon: FlaskConical },
     { id: 'environment', label: t('statsTabs.climatePace'),           icon: CloudSun },
     { id: 'biologyv2',   label: t('statsTabs.detraining'),            icon: Dna },
+    { id: 'biology-v3',  label: t('statsTabs.biologyV2'),             icon: Microscope },
     { id: 'pace-calc',   label: 'Calcolatore',                       icon: Calculator },
   ];
 
@@ -2470,6 +2476,24 @@ export function StatisticsView() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <BiologyFutureV2 data={biologyData} profile={profileData ?? null} runs={runs} vdot={vdot} />
             <BiologyFutureLab profile={profileData ?? null} runs={runs} vdot={vdot} />
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════
+            POTENZIALE & PROGRESSI V2 — sezione nuova, motore physio
+        ════════════════════════════════════════════════════ */}
+        {activeTab === 'potential-v3' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <PotentialProgressV3 runs={runs} />
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════
+            BIOLOGIA & FUTURO V2 — sezione nuova
+        ════════════════════════════════════════════════════ */}
+        {activeTab === 'biology-v3' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <BiologyFutureV3 runs={runs} profile={profileData ?? null} />
           </div>
         )}
 

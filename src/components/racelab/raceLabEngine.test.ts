@@ -4,7 +4,7 @@ import {
   solvePlan, successProbability, whatIf, type Conditions, type Effort,
 } from "./raceLabEngine";
 import { ECON_TO_PACE, SHOES, nitrateGainPct, rpeMaxGainPct, shoeGainPct, shoeById } from "./shoeLab";
-import { buildPhysio } from "../gamification/physioEngine";
+import { adaptationCeiling, buildPhysio } from "../gamification/physioEngine";
 import { predictSec, vdotFrom } from "../gamification/gamiCore";
 import type { Run, Split } from "../../types/api";
 
@@ -391,5 +391,94 @@ describe("quando arrivo all'obiettivo, e cosa devo fare", () => {
     expect(r.atTarget).not.toBeNull();
     expect(r.atTarget!.sec).toBeGreaterThan(0);
     expect(r.gapSec).toBe(Math.round(r.atTarget!.sec - 1200));
+  });
+});
+
+/**
+ * La segnalazione che ha aperto questa revisione: «muovo i cursori del piano e
+ * la probabilità non cambia». Erano due bug sovrapposti, e tocca a due test
+ * separati tenerli chiusi.
+ */
+describe("il piano deve contare: probabilità, orizzonte e tetto di adattamento", () => {
+  const TODAY = "2026-11-15";
+  const physio = buildPhysio(season(20, TODAY), TODAY, 48);
+  const SETUP = defaultSetup("superblast3");
+  const now = currentPlan(physio.weeklyKm, physio.weeklyZone.threshold + physio.weeklyZone.vo2, 105, 12);
+  const goal = (plan: Parameters<typeof planGoal>[3]["plan"]) =>
+    planGoal(physio.model, 5000, 1200, {
+      deadlineDays: null, easyPaceSec: 340, setup: SETUP, vdot: 48, current: now, plan,
+    });
+
+  it("più carico, più probabilità: i cursori spostano il numero", () => {
+    // il primo bug: senza data di gara la probabilità si leggeva alla data in cui
+    // il piano stesso arrivava all'80%, quindi diceva 80 qualunque fosse il piano
+    const scarso = goal({ ...now, km: 20, qualitySessions: 1, longRunMinutes: 60 });
+    const medio = goal({ ...now, km: 45, qualitySessions: 2, longRunMinutes: 100 });
+    const pieno = goal({ ...now, km: 80, qualitySessions: 3, longRunMinutes: 140 });
+
+    expect(medio.probability).toBeGreaterThan(scarso.probability);
+    expect(pieno.probability).toBeGreaterThanOrEqual(medio.probability);
+    expect(pieno.probability - scarso.probability).toBeGreaterThan(0.02);
+  });
+
+  it("l'orizzonte della probabilità non dipende dal piano", () => {
+    // se l'ancora si muove insieme al piano, il confronto non vuol dire niente
+    const a = goal({ ...now, km: 25 });
+    const b = goal({ ...now, km: 95, qualitySessions: 3 });
+    expect(a.horizon.days).toBe(b.horizon.days);
+    expect(a.horizon.source).toBe(b.horizon.source);
+    // le due fonti ammesse sono entrambe indipendenti dal piano simulato
+    expect(["gara", "carico-attuale", "convenzione"]).toContain(a.horizon.source);
+    expect(a.horizon.iso).toBe(b.horizon.iso);
+  });
+
+  it("il carico attuale è il metro: probabilityNow non si muove coi cursori", () => {
+    const a = goal({ ...now, km: 25 });
+    const b = goal({ ...now, km: 95, qualitySessions: 3 });
+    expect(a.probabilityNow).toBeCloseTo(b.probabilityNow, 6);
+  });
+
+  it("il tetto di adattamento cresce col carico, ma non all'infinito", () => {
+    // il secondo bug: un tetto fisso di 1 punto/mese rendeva identici 20 e 140 km
+    const c = (km: number, q = 2, lr = 100) =>
+      adaptationCeiling({ km, qualitySessions: q, qualityMinutes: 26, longRunMinutes: lr });
+    expect(c(20)).toBeLessThan(c(45));
+    expect(c(45)).toBeLessThan(c(75));
+    expect(c(140)).toBeLessThanOrEqual(1.6);
+    expect(c(10, 0, 40)).toBeGreaterThanOrEqual(0.3);
+    // la qualità conta, ma meno dei chilometri
+    expect(c(45, 3) - c(45, 1)).toBeLessThan(c(75, 2) - c(25, 2));
+  });
+
+  it("la traiettoria parte da oggi, arriva alla data e porta la banda", () => {
+    const r = goal({ ...now, km: 50 });
+    expect(r.curve.length).toBeGreaterThan(10);
+    expect(r.curve[0].day).toBe(0);
+    expect(r.curve[r.curve.length - 1].day).toBeGreaterThanOrEqual(r.horizon.days);
+    for (const p of r.curve.slice(1)) {
+      expect(p.loSec).toBeLessThan(p.planSec);          // banda sotto
+      expect(p.hiSec).toBeGreaterThan(p.planSec);       // e sopra
+      expect(p.planProb).toBeGreaterThanOrEqual(0);
+      expect(p.planProb).toBeLessThanOrEqual(1);
+    }
+    // il piano più carico non può essere più lento del carico attuale, a fine corsa
+    const last = r.curve[r.curve.length - 1];
+    expect(last.planSec).toBeLessThanOrEqual(last.nowSec + 1);
+  });
+
+  it("le leve dicono quanto valgono, e le due famiglie restano separate", () => {
+    const r = planGoal(physio.model, 5000, 1200, {
+      deadlineDays: 90, easyPaceSec: 340, setup: SETUP, vdot: 48, current: now,
+      plan: { ...now, km: 45 }, fastestShoeId: "alphafly3",
+    });
+    expect(r.levers.length).toBeGreaterThan(3);
+    expect(r.levers.some((l) => l.kind === "forma")).toBe(true);
+    expect(r.levers.some((l) => l.kind === "giornata")).toBe(true);
+    // il taper e le scarpe sono leve da giornata, i chilometri no
+    expect(r.levers.find((l) => l.id === "taper")?.kind).toBe("giornata");
+    expect(r.levers.find((l) => l.id === "km")?.kind).toBe("forma");
+    // ordinate per resa
+    const gains = r.levers.map((l) => l.gainSec);
+    expect([...gains].sort((a, b) => b - a)).toEqual(gains);
   });
 });

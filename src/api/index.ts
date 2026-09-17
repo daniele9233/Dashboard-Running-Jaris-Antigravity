@@ -355,6 +355,8 @@ export interface BadgeState {
   baseline_run_ids: string[];
   baseline: Record<string, unknown>;
   unlocked: Record<string, BadgeUnlock>;
+  /** Data del recupero iniziale: la prima valutazione sblocca in silenzio. */
+  backfilled_at?: string | null;
 }
 export const getBadgeState = () => api.get<BadgeState>('/api/badges/state');
 export const saveBadgeState = (state: BadgeState) =>

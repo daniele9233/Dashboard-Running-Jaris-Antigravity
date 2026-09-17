@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { buildMetrics, evaluateMet, vdotFrom } from "./badgeRules";
+import { buildMetrics, evaluateMet, isAutoDetectable, vdotFrom } from "./badgeRules";
+import { badgeProgressMap } from "./badgeProgress";
 import type { Run, Lap, Split } from "../../types/api";
 
 /**
@@ -270,5 +271,54 @@ describe("storia dei record", () => {
       .map((p) => mkRun({ distance_km: 10, avg_pace: p }));
     expect(withNew(base, [mkRun({ distance_km: 10, avg_pace: "4:58" })]).has("rank-up")).toBe(true);
     expect(withNew(base, [mkRun({ distance_km: 10, avg_pace: "5:10" })]).has("rank-up")).toBe(false);
+  });
+});
+
+/**
+ * La bacheca non deve più dire soltanto "chiuso": per ogni criterio numerico
+ * serve una percentuale onesta e una riga leggibile. Questi test tengono
+ * allineata la tabella dei progressi ai criteri veri — una soglia cambiata in
+ * BADGE_RULES senza cambiare badgeProgress darebbe una barra che mente.
+ */
+describe("quanto manca a un traguardo", () => {
+  it("un obiettivo a metà strada dà una percentuale a metà strada", () => {
+    const runs = Array.from({ length: 50 }, () => mkRun({ distance_km: 10 }));   // 500 km
+    const p = badgeProgressMap(runs, runs.map((r) => r.id));
+    expect(p["total-1000k"].pct).toBeCloseTo(0.5, 1);
+    expect(p["total-1000k"].label).toContain("/ 1000 km");
+    expect(p["total-1000k"].remaining).toContain("500");
+  });
+
+  it("i criteri al ribasso si misurano al contrario: 21:00 è vicino ai 20:00", () => {
+    const runs = [mkRun({ distance_km: 5, avg_pace: "4:12" })];                  // 21:00
+    const p = badgeProgressMap(runs, runs.map((r) => r.id));
+    expect(p["sub20-5k"].pct).toBeGreaterThan(0.9);
+    expect(p["sub20-5k"].pct).toBeLessThan(1);
+    expect(p["sub25-5k"].pct).toBe(1);                                            // già preso
+  });
+
+  it("un badge-record mostra il numero da battere, non una percentuale", () => {
+    const runs = [mkRun({ distance_km: 5, avg_pace: "4:12" })];
+    const p = badgeProgressMap(runs, runs.map((r) => r.id));
+    expect(p["best-5k"].pct).toBeNull();
+    expect(p["best-5k"].label.toLowerCase()).toContain("battere");
+  });
+
+  it("una percentuale non esce mai dai binari", () => {
+    const runs = Array.from({ length: 300 }, () => mkRun({ distance_km: 15 }));
+    const p = badgeProgressMap(runs, runs.map((r) => r.id));
+    for (const [id, v] of Object.entries(p)) {
+      if (v.pct == null) continue;
+      expect(v.pct, id).toBeGreaterThanOrEqual(0);
+      expect(v.pct, id).toBeLessThanOrEqual(1);
+      expect(v.label.length, id).toBeGreaterThan(0);
+    }
+  });
+
+  it("ogni voce dei progressi corrisponde a un badge che esiste", () => {
+    const runs = [mkRun({ distance_km: 10 })];
+    for (const id of Object.keys(badgeProgressMap(runs, []))) {
+      expect(isAutoDetectable(id), id).toBe(true);
+    }
   });
 });

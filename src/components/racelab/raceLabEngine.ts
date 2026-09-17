@@ -4,7 +4,7 @@ import {
   predictSec, vdotFrom,
 } from "../gamification/gamiCore";
 import {
-  planToDose, timeAtDay, walkPlan,
+  adaptationCeiling, planToDose, timeAtDay, walkPlan,
   type PhysioModel, type SystemLevels, type WeeklyPlan,
 } from "../gamification/physioEngine";
 import {
@@ -325,15 +325,53 @@ export function raceFactor(
 function walkRace(
   model: PhysioModel, dose: SystemLevels, distM: number, setup: RaceSetup, vdot: number, days: number,
   visit: (i: number, raceSec: number, tempC: number) => boolean | void,
+  ceiling?: number,
 ): void {
   const distKm = distM / 1000;
   walkPlan(model, dose, distM, days, (i, sec, dayTemp) => {
     const { factor } = raceFactor(setup, distKm, dayTemp, sec / distKm, vdot);
     return visit(i, sec * factor, setup.tempC ?? dayTemp);
-  });
+  }, ceiling);
 }
 
 // ── L'OBIETTIVO ───────────────────────────────────────────────────────────────
+
+/** Un punto della traiettoria: cosa faresti quel giorno, col piano e senza. */
+export interface GoalCurvePoint {
+  day: number;
+  iso: string;
+  /** Tempo previsto sotto il piano simulato, in quelle condizioni di gara. */
+  planSec: number;
+  /** Tempo previsto tenendo il carico di adesso: il confronto che dà senso al piano. */
+  nowSec: number;
+  /** Banda di incertezza del piano (±1 deviazione standard). */
+  loSec: number;
+  hiSec: number;
+  /** Probabilità di stare sotto il tempo obiettivo quel giorno, col piano. */
+  planProb: number;
+  /** Probabilità tenendo il carico di adesso. */
+  nowProb: number;
+  /** Temperatura attesa: il perché delle gobbe estive. */
+  tempC: number;
+}
+
+/** Quanto sposta una singola leva, a parità di tutto il resto. */
+export interface Lever {
+  id: string;
+  label: string;
+  detail: string;
+  /** Secondi guadagnati alla data di riferimento (positivo = più veloce). */
+  gainSec: number;
+  /** Secondi guadagnati sei mesi dopo la data di riferimento: la leva lenta si vede la'. */
+  gainSecLate: number;
+  /** Giorni guadagnati sulla data in cui l'obiettivo diventa probabile. */
+  daysEarlier: number | null;
+  /** Punti di probabilità guadagnati alla data di riferimento. */
+  probPoints: number;
+  /** Si compra con l'allenamento (mesi) o la mattina della gara (una scelta). */
+  kind: "forma" | "giornata";
+}
+
 export interface GoalPlanResult {
   /** Data prevista al carico attuale, e sotto il piano proposto. */
   etaNow: { days: number; iso: string; tempC: number } | null;
@@ -347,14 +385,32 @@ export interface GoalPlanResult {
   todaySec: number;
   /** Da dove vengono i secondi che le condizioni scelte regalano o tolgono. */
   factors: Factor[];
-  /** Probabilità di farcela alla data-obiettivo (o all'ETA del piano). */
+  /** Probabilità di farcela alla data di riferimento. */
   probability: number;
+  /** La stessa probabilità tenendo il carico di adesso: il valore del piano. */
+  probabilityNow: number;
+  /**
+   * La data a cui si legge la probabilità, e perché.
+   *
+   * È il pezzo che prima mancava: senza data di gara la probabilità veniva letta
+   * alla data in cui il piano stesso arrivava all'80%, quindi diceva sempre 80 e
+   * i cursori del piano non muovevano niente. Ora l'ancora è indipendente dal
+   * piano — la data della gara, o quella in cui il carico ATTUALE toccherebbe il
+   * tempo — così cambiare carico cambia il numero, che è tutto il punto.
+   */
+  horizon: { days: number; iso: string; source: "gara" | "carico-attuale" | "convenzione" };
   /** Quanto manca, in secondi, alla data di riferimento. */
   gapSec: number | null;
   /** Il piano più leggero che porta all'obiettivo entro la data. */
   suggested: WeeklyPlan | null;
   /** Perché non ci si arriva, quando non ci si arriva. */
   blocker: string | null;
+  /** Punti di VDOT al mese che quel carico rende possibili: il tetto di adattamento. */
+  ceilingPerMonth: number;
+  /** La traiettoria, per disegnarla. */
+  curve: GoalCurvePoint[];
+  /** Cosa sposta la data, leva per leva. */
+  levers: Lever[];
 }
 
 /**
@@ -401,7 +457,7 @@ export function successProbability(predictedSec: number, targetSec: number, hori
  */
 export function etaAtConfidence(
   model: PhysioModel, dose: SystemLevels, distM: number, targetSec: number,
-  confidence: number, setup: RaceSetup, vdot: number, days = 540,
+  confidence: number, setup: RaceSetup, vdot: number, days = 540, ceiling?: number,
 ): { days: number; iso: string; tempC: number } | null {
   let hit: { days: number; iso: string; tempC: number } | null = null;
   walkRace(model, dose, distM, setup, vdot, days, (i, sec, temp) => {
@@ -409,14 +465,14 @@ export function etaAtConfidence(
       hit = { days: i, iso: dayToIso(model.today + i), tempC: Math.round(temp) };
       return true;
     }
-  });
+  }, ceiling);
   return hit;
 }
 
 /** Il primo giorno in cui il piano, in quelle condizioni, tocca il tempo. */
 export function raceEta(
   model: PhysioModel, dose: SystemLevels, distM: number, targetSec: number,
-  setup: RaceSetup, vdot: number, days = 540,
+  setup: RaceSetup, vdot: number, days = 540, ceiling?: number,
 ): { days: number; iso: string; tempC: number } | null {
   let hit: { days: number; iso: string; tempC: number } | null = null;
   walkRace(model, dose, distM, setup, vdot, days, (i, sec, temp) => {
@@ -424,16 +480,16 @@ export function raceEta(
       hit = { days: i, iso: dayToIso(model.today + i), tempC: Math.round(temp) };
       return true;
     }
-  });
+  }, ceiling);
   return hit;
 }
 
 /** Che tempo faresti fra `dayOffset` giorni, in quelle condizioni. */
 export function raceTimeAtDay(
   model: PhysioModel, dose: SystemLevels, distM: number, dayOffset: number,
-  setup: RaceSetup, vdot: number,
+  setup: RaceSetup, vdot: number, ceiling?: number,
 ): { sec: number; tempC: number; factors: Factor[]; uncertaintyPct: number } {
-  const plain = timeAtDay(model, dose, distM, dayOffset);
+  const plain = timeAtDay(model, dose, distM, dayOffset, ceiling);
   const distKm = distM / 1000;
   const { factor, factors, uncertaintyPct } = raceFactor(setup, distKm, plain.tempC, plain.sec / distKm, vdot);
   return { sec: plain.sec * factor, tempC: setup.tempC ?? plain.tempC, factors, uncertaintyPct };
@@ -498,27 +554,179 @@ export function solvePlan(
   return best;
 }
 
+/** La traiettoria settimanale sotto due carichi, già convertita in tempi di gara. */
+function goalCurve(
+  model: PhysioModel, doseNow: SystemLevels, dosePlan: SystemLevels, distM: number,
+  targetSec: number, setup: RaceSetup, vdot: number, days: number,
+  ceilNow: number, ceilPlan: number,
+): GoalCurvePoint[] {
+  const plan = new Map<number, { sec: number; tempC: number }>();
+  const now = new Map<number, number>();
+  const step = days > 400 ? 14 : 7;
+
+  walkRace(model, doseNow, distM, setup, vdot, days, (i, sec) => {
+    if (i % step === 0 || i === days) now.set(i, sec);
+  }, ceilNow);
+  walkRace(model, dosePlan, distM, setup, vdot, days, (i, sec, temp) => {
+    if (i % step === 0 || i === days) plan.set(i, { sec, tempC: temp });
+  }, ceilPlan);
+
+  const out: GoalCurvePoint[] = [];
+  const today = raceTimeAtDay(model, dosePlan, distM, 0, setup, vdot, ceilPlan);
+  out.push({
+    day: 0, iso: dayToIso(model.today), planSec: today.sec, nowSec: today.sec,
+    loSec: today.sec, hiSec: today.sec,
+    planProb: successProbability(today.sec, targetSec, 0),
+    nowProb: successProbability(today.sec, targetSec, 0),
+    tempC: Math.round(today.tempC),
+  });
+
+  for (const [i, p] of [...plan.entries()].sort((a, b) => a[0] - b[0])) {
+    const sd = (p.sec * predictionSdPct(i)) / 100;
+    const nowSec = now.get(i) ?? p.sec;
+    out.push({
+      day: i, iso: dayToIso(model.today + i),
+      planSec: Math.round(p.sec), nowSec: Math.round(nowSec),
+      loSec: Math.round(p.sec - sd), hiSec: Math.round(p.sec + sd),
+      planProb: successProbability(p.sec, targetSec, i),
+      nowProb: successProbability(nowSec, targetSec, i),
+      tempC: Math.round(p.tempC),
+    });
+  }
+  return out;
+}
+
+/**
+ * Cosa sposta la data, una leva alla volta.
+ *
+ * Ogni riga è il modello rifatto girare cambiando una cosa sola: dieci
+ * chilometri a settimana in più, una seduta di qualità, il lungo, le scarpe, il
+ * taper, dieci gradi in meno. Serve perché "aumenta il carico" non è un
+ * consiglio: sapere che i km valgono tre settimane e le scarpe trentadue
+ * secondi, sì. Le leve di forma si comprano in mesi, quelle di giornata la
+ * mattina della gara — ed è la distinzione che questa pagina esiste per fare.
+ */
+function goalLevers(
+  model: PhysioModel, distM: number, targetSec: number, easyPaceSec: number,
+  plan: WeeklyPlan, setup: RaceSetup, vdot: number, horizonDays: number,
+  baseSec: number, baseLateSec: number, baseSafeDays: number | null, coolShoeId: string | null,
+): Lever[] {
+  const out: Lever[] = [];
+  const add = (
+    id: string, label: string, detail: string, kind: Lever["kind"],
+    p: WeeklyPlan, s: RaceSetup,
+  ) => {
+    const dose = planToDose(p, easyPaceSec);
+    const ceil = adaptationCeiling(p);
+    const at = raceTimeAtDay(model, dose, distM, horizonDays, s, vdot, ceil);
+    const safe = etaAtConfidence(model, dose, distM, targetSec, 0.8, s, vdot, 540, ceil);
+    const gainSec = Math.round(baseSec - at.sec);
+    // le leve di forma restano in tabella anche quando a questa data non pagano:
+    // "zero adesso, un minuto fra sei mesi" e' un'informazione, non un vuoto
+    const late = raceTimeAtDay(
+      model, dose, distM, Math.min(540, horizonDays + 180), s, vdot, ceil);
+    const gainSecLate = Math.round(baseLateSec - late.sec);
+    if (Math.abs(gainSec) < 1 && Math.abs(gainSecLate) < 1) return;
+    out.push({
+      id, label, detail, kind, gainSec, gainSecLate,
+      daysEarlier: safe && baseSafeDays != null ? baseSafeDays - safe.days : null,
+      probPoints: Math.round(
+        (successProbability(at.sec, targetSec, horizonDays)
+          - successProbability(baseSec, targetSec, horizonDays)) * 100,
+      ),
+    });
+  };
+
+  add("km", "+10 km a settimana", "Il chilometraggio è la leva più lenta e la più affidabile.",
+    "forma", { ...plan, km: clamp(plan.km + 10, 20, 160) }, setup);
+  add("quality", "+1 seduta di qualità", "Costa recupero: va aggiunta dopo i chilometri, non prima.",
+    "forma", { ...plan, qualitySessions: clamp(plan.qualitySessions + 1, 0, 4) }, setup);
+  add("long", "+20′ di lungo", "Tenuta: pesa sulle distanze lunghe, quasi niente sui 5 km.",
+    "forma", { ...plan, longRunMinutes: clamp(plan.longRunMinutes + 20, 40, 220) }, setup);
+  if (coolShoeId && coolShoeId !== setup.shoeId) {
+    add("shoe", "Scarpe da gara", "Si mette il giorno della gara e vale mesi di allenamento.",
+      "giornata", plan, { ...setup, shoeId: coolShoeId });
+  }
+  if (setup.taper !== "full") {
+    add("taper", "Taper pieno", "Dieci-quattordici giorni di scarico: la leva gratuita più grande.",
+      "giornata", plan, { ...setup, taper: "full" });
+  }
+  if (!setup.nitrate) {
+    add("nitrate", "Nitrati", "Succo di barbabietola nei giorni prima: piccolo, ma reale.",
+      "giornata", plan, { ...setup, nitrate: true });
+  }
+  if (!setup.pack) {
+    add("pack", "In gara, non da solo", "Aria e ritmo tenuti da altri.",
+      "giornata", plan, { ...setup, pack: true });
+  }
+  const coolTarget = setup.tempC != null ? Math.min(10, setup.tempC - 6) : 10;
+  add("temp",
+    setup.tempC != null
+      ? `${Math.round(coolTarget)}°C invece di ${Math.round(setup.tempC)}°`
+      : `${Math.round(coolTarget)}°C invece del clima del mese`,
+    "Il fresco non si allena: si sceglie l'ora di partenza, o il mese.",
+    "giornata", plan, { ...setup, tempC: coolTarget });
+
+  return out.sort((a, b) => b.gainSec - a.gainSec);
+}
+
 export function planGoal(
   model: PhysioModel, distM: number, targetSec: number,
   opt: {
     deadlineDays: number | null; easyPaceSec: number;
     current: WeeklyPlan; plan: WeeklyPlan; setup: RaceSetup; vdot: number;
+    /** La scarpa da gara più veloce che l'atleta ha in rastrelliera, per la leva. */
+    fastestShoeId?: string | null;
+    /** Quanti giorni disegnare nella traiettoria. */
+    curveDays?: number;
   },
 ): GoalPlanResult {
   const doseNow = planToDose(opt.current, opt.easyPaceSec);
   const dosePlan = planToDose(opt.plan, opt.easyPaceSec);
   const { setup, vdot } = opt;
+  /**
+   * Il tetto di adattamento dipende dal carico, non e' una costante: con venti
+   * chilometri a settimana non si sale come con settanta. Senza questo, ogni
+   * piano sopra il minimo dava la stessa data e la stessa probabilita' -- i
+   * cursori del piano sembravano scollegati, ed e' la segnalazione da cui e'
+   * partita questa revisione.
+   */
+  const ceilNow = adaptationCeiling(opt.current);
+  const ceilPlan = adaptationCeiling(opt.plan);
 
-  const etaNow = raceEta(model, doseNow, distM, targetSec, setup, vdot);
-  const etaPlan = raceEta(model, dosePlan, distM, targetSec, setup, vdot);
-  const etaSafe = etaAtConfidence(model, dosePlan, distM, targetSec, 0.8, setup, vdot);
+  const etaNow = raceEta(model, doseNow, distM, targetSec, setup, vdot, 540, ceilNow);
+  const etaPlan = raceEta(model, dosePlan, distM, targetSec, setup, vdot, 540, ceilPlan);
+  const etaSafe = etaAtConfidence(
+    model, dosePlan, distM, targetSec, 0.8, setup, vdot, 540, ceilPlan);
 
-  // senza una data di gara la probabilità si legge dove serve: alla data in cui
-  // il piano diventa affidabile, non a quella in cui è una monetina
-  const horizon = opt.deadlineDays ?? etaSafe?.days ?? etaPlan?.days ?? 365;
-  const at = raceTimeAtDay(model, dosePlan, distM, horizon, setup, vdot);
-  const probability = successProbability(at.sec, targetSec, horizon);
-  const todayRace = raceTimeAtDay(model, dosePlan, distM, 0, setup, vdot);
+  /**
+   * L'ancora della probabilità deve essere INDIPENDENTE dal piano, altrimenti
+   * spostare i cursori sposta anche il metro e il numero non si muove mai. In
+   * ordine: la data della gara se c'è; se no il giorno in cui il carico attuale
+   * toccherebbe il tempo (il confronto naturale: "e se invece mi allenassi
+   * così?"); se il carico attuale non ci arriva mai, sei mesi per convenzione.
+   */
+  const horizonDays = opt.deadlineDays ?? etaNow?.days ?? 180;
+  const horizonSource: GoalPlanResult["horizon"]["source"] =
+    opt.deadlineDays != null ? "gara" : etaNow ? "carico-attuale" : "convenzione";
+  const horizon = {
+    days: horizonDays,
+    iso: dayToIso(model.today + horizonDays),
+    source: horizonSource,
+  };
+
+  const at = raceTimeAtDay(model, dosePlan, distM, horizonDays, setup, vdot, ceilPlan);
+  const atNow = raceTimeAtDay(model, doseNow, distM, horizonDays, setup, vdot, ceilNow);
+  const probability = successProbability(at.sec, targetSec, horizonDays);
+  const probabilityNow = successProbability(atNow.sec, targetSec, horizonDays);
+  const todayRace = raceTimeAtDay(model, dosePlan, distM, 0, setup, vdot, ceilPlan);
+  const atLate = raceTimeAtDay(
+    model, dosePlan, distM, Math.min(540, horizonDays + 180), setup, vdot, ceilPlan);
+
+  const curveDays = clamp(
+    opt.curveDays ?? Math.max(180, Math.round(((etaSafe?.days ?? horizonDays) + 60) / 7) * 7),
+    90, 540,
+  );
 
   return {
     etaNow, etaPlan, etaSafe,
@@ -526,11 +734,20 @@ export function planGoal(
     todaySec: todayRace.sec,
     factors: todayRace.factors,
     probability,
+    probabilityNow,
+    horizon,
     gapSec: Math.round(at.sec - targetSec),
     suggested: solvePlan(model, distM, targetSec, opt.deadlineDays, opt.easyPaceSec, opt.current, setup, vdot),
     blocker: etaPlan
       ? null
       : "Con questo piano, in queste condizioni, i sistemi si stabilizzano prima del tempo obiettivo: serve più carico, più tempo, o una giornata migliore.",
+    ceilingPerMonth: ceilPlan,
+    curve: goalCurve(
+      model, doseNow, dosePlan, distM, targetSec, setup, vdot, curveDays, ceilNow, ceilPlan),
+    levers: goalLevers(
+      model, distM, targetSec, opt.easyPaceSec, opt.plan, setup, vdot, horizonDays,
+      at.sec, atLate.sec, etaSafe?.days ?? null, opt.fastestShoeId ?? null,
+    ),
   };
 }
 
