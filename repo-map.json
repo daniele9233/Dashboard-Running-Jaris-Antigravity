@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-09-18T13:23:11.117Z",
+  "generated_at": "2026-09-18T16:05:54.989Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -4371,6 +4371,9 @@
       "purpose": "React component GoalTrajectory.",
       "touch_when": [
         "ai",
+        "garmin",
+        "layout",
+        "statistics",
         "training",
         "types"
       ],
@@ -4384,9 +4387,9 @@
         "./raceLabEngine",
         "react"
       ],
-      "hash": "cef3bb0cb6234b9833f21e9bfb2f99285e79781c92bc68db20d87cd4d21ee7a6",
-      "last_modified": "2026-09-18T11:30:38.291Z",
-      "size_bytes": 16389
+      "hash": "c5c824c9b88b31922f17fcafc7ac93a1757849b6a1de87126c3e7560d29906ea",
+      "last_modified": "2026-09-18T16:01:28.353Z",
+      "size_bytes": 34560
     },
     {
       "path": "src/components/racelab/raceLabEngine.test.ts",
@@ -4412,9 +4415,9 @@
         "./shoeLab",
         "vitest"
       ],
-      "hash": "5aeee1ffdddb97b52327aa4a522d033b313fd461a2374ba14c1b701c03166262",
-      "last_modified": "2026-09-17T19:30:13.545Z",
-      "size_bytes": 23236
+      "hash": "a5fefafb9308a660af9cbe536bd654ba07e58b95c9f49adeed8d7d26fc1cd527",
+      "last_modified": "2026-09-18T15:53:51.731Z",
+      "size_bytes": 29128
     },
     {
       "path": "src/components/racelab/raceLabEngine.ts",
@@ -4429,6 +4432,7 @@
       ],
       "exports": [
         "annotationOf",
+        "caffeineDose",
         "CLASS_LABEL",
         "conditionFactors",
         "Conditions",
@@ -4463,9 +4467,9 @@
         "../gamification/physioEngine",
         "./shoeLab"
       ],
-      "hash": "d7a92d052a0a95e1fc64b2d979ecf5ade8e64d0b3e1d8502de748207b7b4fab1",
-      "last_modified": "2026-09-17T19:29:05.856Z",
-      "size_bytes": 34583
+      "hash": "2675ff0ba2b63e45e4ff2be0b96dd369c819476e3cbcf877376c1bfea240280b",
+      "last_modified": "2026-09-18T16:05:54.989Z",
+      "size_bytes": 37760
     },
     {
       "path": "src/components/racelab/RaceLabView.tsx",
@@ -4475,6 +4479,7 @@
         "activities",
         "ai",
         "layout",
+        "profile",
         "training",
         "types"
       ],
@@ -4497,9 +4502,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "4925481a5b041787186e795709753428cb2566d26c9fff2bf059fd93995158e6",
-      "last_modified": "2026-09-18T11:30:38.291Z",
-      "size_bytes": 31179
+      "hash": "a5aaab0a2a749e1a10a358178e3bc5adabd9c3984d7f7ca14bde18290fc39393",
+      "last_modified": "2026-09-18T15:55:18.397Z",
+      "size_bytes": 34124
     },
     {
       "path": "src/components/racelab/shoeLab.ts",
@@ -4510,9 +4515,14 @@
         "types"
       ],
       "exports": [
+        "CAFFEINE_MAX_TABS",
+        "CAFFEINE_TAB_MG",
+        "CAFFEINE_UNCERTAINTY",
+        "caffeineGainPct",
         "DEFAULT_SHOE_ID",
         "ECON_TO_PACE",
         "NITRATE_UNCERTAINTY",
+        "NITRATE_WITH_CAFFEINE",
         "nitrateGainPct",
         "PACK_GAIN_PCT",
         "rpeMaxGainPct",
@@ -4532,9 +4542,9 @@
       ],
       "routes": [],
       "imports": [],
-      "hash": "a1558bea4082908639d8542af25400800b1e36cd2cdd4d21e184cb9bcef86f5f",
-      "last_modified": "2026-08-16T18:46:14.185Z",
-      "size_bytes": 10408
+      "hash": "8a376bd1e1eac73607aef8f503ace592c902f0ec52e55f18c5c7c93d40b07e06",
+      "last_modified": "2026-09-18T15:46:28.279Z",
+      "size_bytes": 12411
     },
     {
       "path": "src/components/RacePredictions.tsx",
@@ -6240,9 +6250,9 @@
       "exports": [],
       "routes": [],
       "imports": [],
-      "hash": "b7c81cd58dc8a94d9af0792dedb6acd53de6ddf60d9a52195f8d4498cd6ca75c",
-      "last_modified": "2026-09-18T11:30:38.298Z",
-      "size_bytes": 7292
+      "hash": "d32755395a6f7e88be1735d7f589b06f8157f3e7298e117a25eb676e72dff32e",
+      "last_modified": "2026-09-18T15:52:18.361Z",
+      "size_bytes": 8255
     },
     {
       "path": "src/lib/utils.ts",

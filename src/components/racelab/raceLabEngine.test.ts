@@ -1,9 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
-  REFERENCE, conditionFactors, currentPlan, defaultSetup, fastEfforts, planGoal, raceFactor,
+  REFERENCE, caffeineDose, conditionFactors, currentPlan, defaultSetup, fastEfforts, planGoal, raceFactor,
   solvePlan, successProbability, whatIf, type Conditions, type Effort,
 } from "./raceLabEngine";
-import { ECON_TO_PACE, SHOES, nitrateGainPct, rpeMaxGainPct, shoeGainPct, shoeById } from "./shoeLab";
+import {
+  ECON_TO_PACE, NITRATE_WITH_CAFFEINE, SHOES, caffeineGainPct, nitrateGainPct, rpeMaxGainPct, shoeGainPct, shoeById,
+} from "./shoeLab";
 import { adaptationCeiling, buildPhysio } from "../gamification/physioEngine";
 import { predictSec, vdotFrom } from "../gamification/gamiCore";
 import type { Run, Split } from "../../types/api";
@@ -79,6 +81,61 @@ describe("il catalogo delle scarpe regge alle proporzioni note", () => {
   it("i nitrati rendono meno a chi è già allenato", () => {
     expect(nitrateGainPct(45)).toBeGreaterThan(nitrateGainPct(55));
     expect(nitrateGainPct(70)).toBeLessThan(0.5);
+  });
+});
+
+describe("la caffeina: le Caffeine Tabs da 200 mg", () => {
+  it("una compressa sta dove la corsa la misura, fra l'1 e il 2%", () => {
+    // 200 mg su 68 kg = 2,9 mg/kg: la dose dei lavori sui 5 e sugli 8 km
+    const g = caffeineGainPct(200 / 68);
+    expect(g).toBeGreaterThan(1.0);
+    expect(g).toBeLessThan(2.0);
+    expect(caffeineGainPct(0)).toBe(0);
+    expect(caffeineGainPct(-1)).toBe(0);
+  });
+
+  it("la seconda compressa aggiunge poco, e oltre i 6 mg/kg niente", () => {
+    const una = caffeineGainPct(200 / 68), due = caffeineGainPct(400 / 68);
+    expect(due).toBeGreaterThan(una);
+    expect(due - una).toBeLessThan(una * 0.3);
+    expect(caffeineGainPct(12)).toBeCloseTo(caffeineGainPct(6), 10);
+  });
+
+  it("la dose si conta in mg per chilo, a compresse intere e con un tetto", () => {
+    expect(caffeineDose({ caffeineTabs: 1, bodyKg: 68 }).mg).toBe(200);
+    expect(caffeineDose({ caffeineTabs: 1, bodyKg: 68 }).mgPerKg).toBeCloseTo(2.94, 2);
+    expect(caffeineDose({ caffeineTabs: 5, bodyKg: 68 }).mg).toBe(400);
+    expect(caffeineDose({ caffeineTabs: 0, bodyKg: 68 }).mg).toBe(0);
+    // lo stesso numero di compresse pesa di più su chi pesa meno
+    expect(caffeineDose({ caffeineTabs: 1, bodyKg: 55 }).mgPerKg)
+      .toBeGreaterThan(caffeineDose({ caffeineTabs: 1, bodyKg: 80 }).mgPerKg);
+  });
+
+  it("entra nel conto della gara come ogni altra scelta di giornata", () => {
+    const base = defaultSetup("superblast3", 68);
+    const r = raceFactor({ ...base, caffeineTabs: 1 }, 21.1, 16, 285, 46);
+    expect(r.factor).toBeLessThan(1);
+    const f = r.factors.find((x) => x.id === "caffeine")!;
+    expect(f.label).toContain("Caffeine Tabs");
+    expect(f.label).toContain("200 mg");
+    expect(f.detail).toContain("2,9 mg/kg");
+    // un passo da mezza a 4:45: quattro secondi al km, non trenta
+    expect(f.secPerKm).toBeGreaterThan(2.5);
+    expect(f.secPerKm).toBeLessThan(6);
+  });
+
+  it("con la barbabietola non si somma per intero: dei nitrati conta metà", () => {
+    const base = defaultSetup("superblast3", 68);
+    const soloNitrati = raceFactor({ ...base, nitrate: true }, 21.1, 16, 285, 46);
+    const insieme = raceFactor({ ...base, nitrate: true, caffeineTabs: 1 }, 21.1, 16, 285, 46);
+    const soloCaffeina = raceFactor({ ...base, caffeineTabs: 1 }, 21.1, 16, 285, 46);
+    const n1 = soloNitrati.factors.find((x) => x.id === "nitrate")!.gainPct;
+    const n2 = insieme.factors.find((x) => x.id === "nitrate")!.gainPct;
+    expect(n2).toBeCloseTo(n1 * NITRATE_WITH_CAFFEINE, 6);
+    // insieme resta meglio di ciascuna da sola, ma meno della somma piena
+    expect(insieme.factor).toBeLessThan(soloCaffeina.factor);
+    expect(insieme.factor).toBeLessThan(soloNitrati.factor);
+    expect(insieme.factor).toBeGreaterThan(soloNitrati.factor * soloCaffeina.factor);
   });
 });
 
@@ -477,8 +534,71 @@ describe("il piano deve contare: probabilità, orizzonte e tetto di adattamento"
     // il taper e le scarpe sono leve da giornata, i chilometri no
     expect(r.levers.find((l) => l.id === "taper")?.kind).toBe("giornata");
     expect(r.levers.find((l) => l.id === "km")?.kind).toBe("forma");
+    // la caffeina è una scelta della mattina di gara, come i nitrati
+    expect(r.levers.find((l) => l.id === "caffeine")?.kind).toBe("giornata");
+    expect(r.levers.find((l) => l.id === "caffeine")!.gainSec).toBeGreaterThan(0);
     // ordinate per resa
     const gains = r.levers.map((l) => l.gainSec);
     expect([...gains].sort((a, b) => b - a)).toEqual(gains);
+  });
+
+  it("una leva già scelta non si ripropone", () => {
+    const r = planGoal(physio.model, 5000, 1200, {
+      deadlineDays: 90, easyPaceSec: 340, setup: { ...SETUP, caffeineTabs: 1, nitrate: true }, vdot: 48,
+      current: now, plan: { ...now, km: 45 },
+    });
+    expect(r.levers.find((l) => l.id === "caffeine")).toBeUndefined();
+    expect(r.levers.find((l) => l.id === "nitrate")).toBeUndefined();
+    expect(r.factors.some((f) => f.id === "caffeine")).toBe(true);
+  });
+});
+
+/**
+ * Il grafico della traiettoria: con una gara fra un mese la finestra deve
+ * guardare quella, non sei mesi in cui la gara finisce schiacciata in un angolo.
+ */
+describe("la traiettoria guarda la gara", () => {
+  const TODAY = "2026-11-15";
+  const physio = buildPhysio(season(20, TODAY), TODAY, 48);
+  const SETUP = defaultSetup("superblast3");
+  const now = currentPlan(physio.weeklyKm, physio.weeklyZone.threshold + physio.weeklyZone.vo2, 105, 12);
+  const goal = (deadlineDays: number | null, plan = now, setup = SETUP) =>
+    planGoal(physio.model, 21097, 6055, { deadlineDays, easyPaceSec: 340, setup, vdot: 48, current: now, plan });
+
+  it("con una gara vicina si legge al giorno, e il giorno della gara c'è esatto", () => {
+    const r = goal(30);
+    const days = r.curve.map((p) => p.day);
+    expect(days[0]).toBe(0);
+    expect(days[1]).toBe(1);                              // giorno per giorno
+    expect(days).toContain(30);                           // la gara, esatta
+    expect(days[days.length - 1]).toBeGreaterThanOrEqual(30 + 21);
+    expect(days[days.length - 1]).toBeLessThanOrEqual(70); // e non sei mesi
+  });
+
+  it("la finestra dipende dalla data, non dai cursori", () => {
+    const a = goal(30, { ...now, km: 25 });
+    const b = goal(30, { ...now, km: 90, qualitySessions: 3 });
+    expect(a.curve[a.curve.length - 1].day).toBe(b.curve[b.curve.length - 1].day);
+    expect(a.curve.length).toBe(b.curve.length);          // stessi punti: la curva può scorrere
+  });
+
+  it("anche oggi c'è una banda: la variabilità della giornata non aspetta", () => {
+    const r = goal(30);
+    expect(r.curve[0].loSec).toBeLessThan(r.curve[0].planSec);
+    expect(r.curve[0].hiSec).toBeGreaterThan(r.curve[0].planSec);
+  });
+
+  it("la caffeina sposta tutta la curva, non solo il giorno della gara", () => {
+    const nuda = goal(30);
+    const caff = goal(30, now, { ...SETUP, caffeineTabs: 1, bodyKg: 68 });
+    for (let i = 0; i < nuda.curve.length; i += 7) {
+      expect(caff.curve[i].planSec).toBeLessThan(nuda.curve[i].planSec);
+    }
+    expect(caff.probability).toBeGreaterThan(nuda.probability);
+  });
+
+  it("senza data si continua a guardare lontano", () => {
+    const r = goal(null);
+    expect(r.curve[r.curve.length - 1].day).toBeGreaterThanOrEqual(180);
   });
 });

@@ -8,7 +8,8 @@ import {
   type PhysioModel, type SystemLevels, type WeeklyPlan,
 } from "../gamification/physioEngine";
 import {
-  NITRATE_UNCERTAINTY, PACK_GAIN_PCT, nitrateGainPct, rpeMaxGainPct, shoeById, shoeGainPct,
+  CAFFEINE_MAX_TABS, CAFFEINE_TAB_MG, CAFFEINE_UNCERTAINTY, NITRATE_UNCERTAINTY, NITRATE_WITH_CAFFEINE,
+  PACK_GAIN_PCT, caffeineGainPct, nitrateGainPct, rpeMaxGainPct, shoeById, shoeGainPct,
   surfaceById, taperById, type ShoeClass, type SurfaceId, type TaperKind,
 } from "./shoeLab";
 
@@ -251,9 +252,9 @@ export function whatIf(base: Effort, target: Conditions, distM: number): WhatIf 
  * dalle corse dell'atleta, che sono state corse con le SUE scarpe. Applicare il
  * guadagno di una super scarpa rispetto a una flat da gara conterebbe due volte
  * quello che è già dentro il numero di partenza. Il confronto quindi è sempre
- * rispetto alla calzatura abituale — e per la stessa ragione il taper e i
- * nitrati partono da "no", perché così sono state corse le prove da cui il
- * modello ha imparato.
+ * rispetto alla calzatura abituale — e per la stessa ragione il taper, i
+ * nitrati e la caffeina partono da "no", perché così sono state corse le prove
+ * da cui il modello ha imparato.
  */
 export interface RaceSetup {
   shoeId: string;
@@ -261,14 +262,28 @@ export interface RaceSetup {
   baselineShoeId: string;
   taper: TaperKind;
   nitrate: boolean;
+  /** Compresse di caffeina (Caffeine Tabs da 200 mg) un'ora prima del via. 0 = niente. */
+  caffeineTabs: number;
+  /** Peso dell'atleta: la caffeina si dosa in mg per chilo, non a compresse. */
+  bodyKg: number;
   /** Temperatura della gara. Null = quella tipica del mese in cui cade. */
   tempC: number | null;
   pack: boolean;
 }
 
-export const defaultSetup = (baselineShoeId: string): RaceSetup => ({
-  shoeId: baselineShoeId, baselineShoeId, taper: "none", nitrate: false, tempC: null, pack: false,
+export const defaultSetup = (baselineShoeId: string, bodyKg = 70): RaceSetup => ({
+  shoeId: baselineShoeId, baselineShoeId, taper: "none", nitrate: false, caffeineTabs: 0, bodyKg,
+  tempC: null, pack: false,
 });
+
+/** Milligrammi di caffeina di quella scelta, e quanti per chilo. */
+export function caffeineDose(setup: Pick<RaceSetup, "caffeineTabs" | "bodyKg">): { mg: number; mgPerKg: number } {
+  const tabs = clamp(Math.round(setup.caffeineTabs || 0), 0, CAFFEINE_MAX_TABS);
+  const mg = tabs * CAFFEINE_TAB_MG;
+  return { mg, mgPerKg: mg / clamp(setup.bodyKg || 70, 40, 150) };
+}
+
+const fmtMgKg = (v: number) => v.toFixed(1).replace(".", ",");
 
 /**
  * Quanto quelle condizioni moltiplicano il tempo che il modello fisiologico
@@ -295,10 +310,21 @@ export function raceFactor(
   const taper = taperById(setup.taper);
   push("taper", `Taper: ${taper.label.toLowerCase()}`, taper.detail, taper.gainPct, taper.uncertaintyPct);
 
+  const caffeine = caffeineDose(setup);
   if (setup.nitrate) {
     push("nitrate", "Nitrati (succo di barbabietola)",
-      "Meno ossigeno per la stessa velocità: al tuo livello vale questo, e cala man mano che sali.",
-      nitrateGainPct(vdot), NITRATE_UNCERTAINTY);
+      caffeine.mg > 0
+        ? "Insieme alla caffeina ne conta metà: gli studi sulla combinazione non trovano la somma piena."
+        : "Meno ossigeno per la stessa velocità: al tuo livello vale questo, e cala man mano che sali.",
+      nitrateGainPct(vdot) * (caffeine.mg > 0 ? NITRATE_WITH_CAFFEINE : 1), NITRATE_UNCERTAINTY);
+  }
+  if (caffeine.mg > 0) {
+    const tabs = caffeine.mg / CAFFEINE_TAB_MG;
+    push("caffeine", `Caffeine Tabs · ${tabs === 1 ? "1 compressa" : `${tabs} compresse`} (${caffeine.mg} mg)`,
+      tabs === 1
+        ? `${fmtMgKg(caffeine.mgPerKg)} mg/kg un'ora prima del via: la dose con più prove. Il picco arriva in 45–60′ e copre la gara.`
+        : `${fmtMgKg(caffeine.mgPerKg)} mg/kg: la seconda compressa aggiunge poco e raddoppia il rischio di stomaco e battiti alti.`,
+      caffeineGainPct(caffeine.mgPerKg), CAFFEINE_UNCERTAINTY);
   }
   if (setup.pack) push("pack", "In gara, non da solo", "Aria e ritmo tenuti da altri.", PACK_GAIN_PCT, 0.4);
 
@@ -554,28 +580,41 @@ export function solvePlan(
   return best;
 }
 
-/** La traiettoria settimanale sotto due carichi, già convertita in tempi di gara. */
+/**
+ * La traiettoria sotto due carichi, già convertita in tempi di gara.
+ *
+ * Il passo di campionamento segue la finestra: giorno per giorno quando si
+ * guardano poche settimane (una gara vicina si legge al giorno, non alla
+ * settimana), più rado sugli orizzonti lunghi. I `keyDays` — la gara, le due
+ * date dell'obiettivo — ci sono sempre, così il grafico li legge esatti invece
+ * di arrotondarli al campione più vicino.
+ */
 function goalCurve(
   model: PhysioModel, doseNow: SystemLevels, dosePlan: SystemLevels, distM: number,
   targetSec: number, setup: RaceSetup, vdot: number, days: number,
-  ceilNow: number, ceilPlan: number,
+  ceilNow: number, ceilPlan: number, keyDays: number[] = [],
 ): GoalCurvePoint[] {
   const plan = new Map<number, { sec: number; tempC: number }>();
   const now = new Map<number, number>();
-  const step = days > 400 ? 14 : 7;
+  const step = days <= 120 ? 1 : days <= 240 ? 2 : days <= 400 ? 7 : 14;
+  const keys = new Set(keyDays.filter((d) => d > 0 && d <= days));
+  const keep = (i: number) => i % step === 0 || i === days || keys.has(i);
 
   walkRace(model, doseNow, distM, setup, vdot, days, (i, sec) => {
-    if (i % step === 0 || i === days) now.set(i, sec);
+    if (keep(i)) now.set(i, sec);
   }, ceilNow);
   walkRace(model, dosePlan, distM, setup, vdot, days, (i, sec, temp) => {
-    if (i % step === 0 || i === days) plan.set(i, { sec, tempC: temp });
+    if (keep(i)) plan.set(i, { sec, tempC: temp });
   }, ceilPlan);
 
   const out: GoalCurvePoint[] = [];
   const today = raceTimeAtDay(model, dosePlan, distM, 0, setup, vdot, ceilPlan);
+  // anche oggi la banda non è zero: la variabilità della giornata c'è comunque,
+  // ed è la stessa che entra nella probabilità di oggi
+  const sd0 = (today.sec * predictionSdPct(0)) / 100;
   out.push({
-    day: 0, iso: dayToIso(model.today), planSec: today.sec, nowSec: today.sec,
-    loSec: today.sec, hiSec: today.sec,
+    day: 0, iso: dayToIso(model.today), planSec: Math.round(today.sec), nowSec: Math.round(today.sec),
+    loSec: Math.round(today.sec - sd0), hiSec: Math.round(today.sec + sd0),
     planProb: successProbability(today.sec, targetSec, 0),
     nowProb: successProbability(today.sec, targetSec, 0),
     tempC: Math.round(today.tempC),
@@ -655,6 +694,10 @@ function goalLevers(
     add("nitrate", "Nitrati", "Succo di barbabietola nei giorni prima: piccolo, ma reale.",
       "giornata", plan, { ...setup, nitrate: true });
   }
+  if (caffeineDose(setup).mg === 0) {
+    add("caffeine", `Caffeine Tabs · ${CAFFEINE_TAB_MG} mg`, "Una compressa un'ora prima del via, se l'hai già provata in allenamento.",
+      "giornata", plan, { ...setup, caffeineTabs: 1 });
+  }
   if (!setup.pack) {
     add("pack", "In gara, non da solo", "Aria e ritmo tenuti da altri.",
       "giornata", plan, { ...setup, pack: true });
@@ -723,10 +766,18 @@ export function planGoal(
   const atLate = raceTimeAtDay(
     model, dosePlan, distM, Math.min(540, horizonDays + 180), setup, vdot, ceilPlan);
 
-  const curveDays = clamp(
-    opt.curveDays ?? Math.max(180, Math.round(((etaSafe?.days ?? horizonDays) + 60) / 7) * 7),
-    90, 540,
-  );
+  /**
+   * Quanto disegnare. Con una data di gara si guarda quella: fino a qualche
+   * settimana dopo il via e basta, così una gara fra un mese non finisce
+   * schiacciata nel primo sesto di un grafico da sei mesi. La finestra dipende
+   * solo dalla data, non dal piano: muovere i cursori non deve spostare l'asse.
+   */
+  const curveDays = opt.curveDays != null
+    ? clamp(opt.curveDays, 56, 540)
+    : opt.deadlineDays != null
+      ? clamp(Math.ceil(Math.max(opt.deadlineDays + 28, opt.deadlineDays * 1.6) / 7) * 7, 56, 540)
+      : clamp(Math.max(180, Math.round(((etaSafe?.days ?? horizonDays) + 60) / 7) * 7), 90, 540);
+  const keyDays = [horizonDays, etaPlan?.days, etaSafe?.days].filter((d): d is number => d != null);
 
   return {
     etaNow, etaPlan, etaSafe,
@@ -743,7 +794,7 @@ export function planGoal(
       : "Con questo piano, in queste condizioni, i sistemi si stabilizzano prima del tempo obiettivo: serve più carico, più tempo, o una giornata migliore.",
     ceilingPerMonth: ceilPlan,
     curve: goalCurve(
-      model, doseNow, dosePlan, distM, targetSec, setup, vdot, curveDays, ceilNow, ceilPlan),
+      model, doseNow, dosePlan, distM, targetSec, setup, vdot, curveDays, ceilNow, ceilPlan, keyDays),
     levers: goalLevers(
       model, distM, targetSec, opt.easyPaceSec, opt.plan, setup, vdot, horizonDays,
       at.sec, atLate.sec, etaSafe?.days ?? null, opt.fastestShoeId ?? null,

@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Target, FlaskConical, Users, Beaker } from "lucide-react";
+import { Target, FlaskConical, Users, Beaker, Pill } from "lucide-react";
 import { gsap } from "../celebrations/gsapSetup";
 import { useApi } from "../../hooks/useApi";
-import { getRuns } from "../../api";
+import { getProfile, getRuns } from "../../api";
 import { API_CACHE } from "../../hooks/apiCacheKeys";
-import type { RunsResponse } from "../../types/api";
+import type { Profile, RunsResponse } from "../../types/api";
 import { fmtClock } from "../gamification/gamiCore";
 import { usePhysio, fmtDate } from "../gamification/usePhysio";
 import { climateAt, humanDays } from "../gamification/physioEngine";
 import {
-  currentPlan, defaultSetup, planGoal,
+  caffeineDose, currentPlan, defaultSetup, planGoal,
   type Factor, type RaceSetup,
 } from "./raceLabEngine";
-import { DEFAULT_SHOE_ID, SHOES, TAPERS, shoeById, type TaperKind } from "./shoeLab";
+import { CAFFEINE_MAX_TABS, CAFFEINE_TAB_MG, DEFAULT_SHOE_ID, SHOES, TAPERS, shoeById, type TaperKind } from "./shoeLab";
 import { GoalTrajectory } from "./GoalTrajectory";
 
 const MONO = "'JetBrains Mono', monospace";
@@ -85,7 +85,7 @@ function Slider({ label, value, min, max, step, onChange, unit }: {
 
 function Toggle({ on, onClick, icon: Icon, label }: { on: boolean; onClick: () => void; icon: typeof Beaker; label: string }) {
   return (
-    <button type="button" onClick={onClick}
+    <button type="button" onClick={onClick} aria-pressed={on}
       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors border"
       style={{
         borderColor: on ? `${LIT}55` : "#ffffff14",
@@ -94,6 +94,41 @@ function Toggle({ on, onClick, icon: Icon, label }: { on: boolean; onClick: () =
       }}>
       <Icon className="w-3.5 h-3.5" />{label}
     </button>
+  );
+}
+
+/**
+ * Le Caffeine Tabs: un interruttore come la barbabietola, più il numero di
+ * compresse quando è acceso. La dose vera è in mg per chilo, e la si mostra.
+ */
+function CaffeineToggle({ tabs, bodyKg, onChange }: { tabs: number; bodyKg: number; onChange: (n: number) => void }) {
+  const on = tabs > 0;
+  const { mg, mgPerKg } = caffeineDose({ caffeineTabs: tabs, bodyKg });
+  return (
+    <div className="flex items-stretch rounded-lg border overflow-hidden transition-colors"
+      style={{ borderColor: on ? `${LIT}55` : "#ffffff14", background: on ? `${LIT}1a` : "transparent" }}>
+      <button type="button" onClick={() => onChange(on ? 0 : 1)} aria-pressed={on}
+        title={`Caffeine Tabs: ${CAFFEINE_TAB_MG} mg di caffeina per compressa, un'ora prima del via. Solo se provate in allenamento.`}
+        className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold transition-colors"
+        style={{ color: on ? LIT : "#9CA3AF" }}>
+        <Pill className="w-3.5 h-3.5" />Caffeine Tabs
+        <span className="font-normal tabular-nums" style={{ fontFamily: MONO, opacity: 0.75 }}>
+          {on ? `${mg} mg · ${mgPerKg.toFixed(1).replace(".", ",")} mg/kg` : `${CAFFEINE_TAB_MG} mg`}
+        </span>
+      </button>
+      {on && (
+        <div className="flex border-l" style={{ borderColor: `${LIT}33` }} role="group" aria-label="Compresse">
+          {Array.from({ length: CAFFEINE_MAX_TABS }, (_, i) => i + 1).map((n) => (
+            <button key={n} type="button" onClick={() => onChange(n)} aria-pressed={tabs === n}
+              aria-label={n === 1 ? "1 compressa" : `${n} compresse`}
+              className="px-2.5 text-[11px] font-black tabular-nums transition-colors"
+              style={{ fontFamily: MONO, color: tabs === n ? "#000" : LIT, background: tabs === n ? LIT : "transparent" }}>
+              {n}×
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -173,6 +208,8 @@ function SetupControls({ setup, onChange }: { setup: RaceSetup; onChange: (s: Ra
       <div className="flex flex-wrap gap-2">
         <Toggle on={setup.nitrate} onClick={() => onChange({ ...setup, nitrate: !setup.nitrate })}
           icon={Beaker} label="Succo di barbabietola" />
+        <CaffeineToggle tabs={setup.caffeineTabs} bodyKg={setup.bodyKg}
+          onChange={(n) => onChange({ ...setup, caffeineTabs: n })} />
         <Toggle on={setup.pack} onClick={() => onChange({ ...setup, pack: !setup.pack })}
           icon={Users} label="In gara, non da solo" />
       </div>
@@ -181,14 +218,16 @@ function SetupControls({ setup, onChange }: { setup: RaceSetup; onChange: (s: Ra
 }
 
 // ══ L'OBIETTIVO ═══════════════════════════════════════════════════
-function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
+function GoalSection({ physio, bodyKg }: { physio: ReturnType<typeof usePhysio>; bodyKg: number }) {
   const [distId, setDistId] = useState<string>("5k");
   const [timeStr, setTimeStr] = useState("19:50");
   const [deadline, setDeadline] = useState("");
   const [km, setKm] = useState(40);
   const [quality, setQuality] = useState(2);
   const [longRun, setLongRun] = useState(100);
-  const [setup, setSetup] = useState<RaceSetup>(() => defaultSetup(DEFAULT_SHOE_ID));
+  const [choices, setSetup] = useState<RaceSetup>(() => defaultSetup(DEFAULT_SHOE_ID, bodyKg));
+  // il peso arriva dal profilo, anche dopo: la caffeina si dosa su quello
+  const setup = useMemo(() => ({ ...choices, bodyKg }), [choices, bodyKg]);
 
   useEffect(() => {
     if (physio.ok && physio.weeklyKm > 0) setKm(Math.max(20, Math.round(physio.weeklyKm)));
@@ -344,8 +383,10 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
                 <SetupControls setup={setup} onChange={setSetup} />
                 <p className="mt-3 text-[10.5px] text-gray-500 leading-relaxed">
                   Tutto è misurato rispetto alle tue <b className="text-gray-400">{shoeById(setup.baselineShoeId)?.name}</b>{" "}
-                  senza taper, perché è così che hai corso le prove da cui viene la stima. Cambiare scarpa qui
-                  aggiunge solo la differenza, non il vantaggio pieno: altrimenti si conterebbe due volte.
+                  senza taper né integratori, perché è così che hai corso le prove da cui viene la stima. Cambiare
+                  scarpa qui aggiunge solo la differenza, non il vantaggio pieno: altrimenti si conterebbe due volte.
+                  La caffeina si dosa sui tuoi <b className="text-gray-400">{Math.round(bodyKg)} kg</b>, e come
+                  ogni cosa del giorno di gara va provata prima in allenamento.
                 </p>
               </div>
 
@@ -433,6 +474,8 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
                 <div className="text-[10.5px] text-gray-500">
                   {dist.label} · {km} km a settimana · {quality} di qualità · lungo {longRun}′
                   {setup.tempC != null ? ` · ${Math.round(setup.tempC)}°` : " · clima del mese"}
+                  {setup.nitrate ? " · barbabietola" : ""}
+                  {setup.caffeineTabs > 0 ? ` · caffeina ${caffeineDose(setup).mg} mg` : ""}
                 </div>
               </div>
               <GoalTrajectory
@@ -534,8 +577,10 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
 // ══ PAGINA ════════════════════════════════════════════════════════════════════
 export function RaceLabView() {
   const { data } = useApi<RunsResponse>(getRuns, { cacheKey: API_CACHE.RUNS });
+  const { data: profile } = useApi<Profile>(getProfile, { cacheKey: API_CACHE.PROFILE });
   const runs = useMemo(() => data?.runs ?? [], [data]);
   const physio = usePhysio(runs);
+  const bodyKg = Number(profile?.weight_kg) > 0 ? Number(profile!.weight_kg) : 70;
   const root = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -560,7 +605,7 @@ export function RaceLabView() {
           </p>
         </div>
 
-        <GoalSection physio={physio} />
+        <GoalSection physio={physio} bodyKg={bodyKg} />
 
       </div>
     </main>

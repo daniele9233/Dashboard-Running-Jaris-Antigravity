@@ -24,7 +24,8 @@
  * Riferimenti principali: Hoogkamer et al. 2018 (Vaporfly, −4% costo metabolico
  * vs flat da gara); Barnes & Kilding 2019; Bosquet et al. 2007 (meta-analisi
  * sul tapering); Senefeld et al. 2020 e McMahon et al. 2017 (meta-analisi sui
- * nitrati); Ely et al. 2007 (temperatura e prestazione di endurance).
+ * nitrati); Southward et al. 2018 e Guest et al. 2021 (caffeina); Ely et al.
+ * 2007 (temperatura e prestazione di endurance).
  */
 
 /**
@@ -167,6 +168,45 @@ export function nitrateGainPct(vdot: number): number {
   return 1.5 - ((vdot - 45) / 20) * 1.3;
 }
 export const NITRATE_UNCERTAINTY = 0.6;
+
+// ── CAFFEINA (CAFFEINE TABS) ──────────────────────────────────────────────────
+/** Le compresse in uso: 200 mg di caffeina l'una. */
+export const CAFFEINE_TAB_MG = 200;
+/** Oltre due compresse non si guadagna più niente: si rischia e basta. */
+export const CAFFEINE_MAX_TABS = 2;
+
+/**
+ * La caffeina è l'aiuto con più prove di tutta la nutrizione sportiva, e a
+ * differenza del nitrato non perde efficacia con l'allenamento: lavora sul
+ * sistema nervoso (blocca l'adenosina, abbassa la fatica percepita a parità di
+ * passo), non sull'efficienza del muscolo.
+ *
+ * Quanto: la meta-analisi di Southward 2018 dà circa il 2% sul tempo delle
+ * prove a cronometro, ma è in gran parte ciclismo; nella corsa i lavori sul
+ * campo stanno più bassi, fra l'1 e l'1,5% (O'Rourke 2008 sui 5 km, Bridge &
+ * Jones 2006 sugli 8 km). Qui si usa la corsa.
+ *
+ * Dose: la posizione ISSN (Guest 2021) indica 3-6 mg/kg circa un'ora prima, e
+ * le dosi basse rendono quasi quanto le alte (Spriet 2014): la curva sale in
+ * fretta e si appiattisce. Sopra i 6 mg/kg niente in più, solo effetti
+ * collaterali — stomaco, tremori, battiti alti.
+ *
+ * La risposta individuale è larga (genetica del CYP1A2, abitudine al caffè):
+ * da qui un punto intero di incertezza, il più largo fra gli aiuti.
+ */
+export function caffeineGainPct(mgPerKg: number): number {
+  if (!(mgPerKg > 0)) return 0;
+  return 1.7 * (1 - Math.exp(-Math.min(mgPerKg, 6) / 1.6));
+}
+export const CAFFEINE_UNCERTAINTY = 1.0;
+
+/**
+ * Nitrati e caffeina insieme non si sommano per intero: nei ciclisti allenati
+ * la combinazione non ha battuto la caffeina da sola (Lane 2014, Glaister 2015),
+ * in un altro lavoro un po' di somma c'è (Handzlik & Gleeson 2013). Si tiene la
+ * via di mezzo: con la caffeina, dei nitrati conta metà.
+ */
+export const NITRATE_WITH_CAFFEINE = 0.5;
 
 // ── ALTRE VARIABILI DI GIORNATA ───────────────────────────────────────────────
 /**
