@@ -150,7 +150,7 @@ const PaceTooltip = ({
   const entries = payload.filter((p) => p.value != null);
   return (
     <div className="bg-[#1E293B] border border-[#334155] p-3 rounded-xl shadow-xl text-xs min-w-[170px]">
-      <p className="text-[#C0FF00] font-bold mb-2 uppercase tracking-wider">{label}</p>
+      <p className="text-brand font-bold mb-2 uppercase tracking-wider">{label}</p>
       <div className="space-y-1.5">
         {entries.map((e) => (
           <div key={e.dataKey} className="flex justify-between gap-4">
@@ -224,7 +224,7 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
   }, [paceData, activeRace]);
 
   const FILTER_BUTTONS: { key: ActiveRace; label: string; color: string }[] = [
-    { key: "all", label: "Tutte", color: "#94A3B8" },
+    { key: "all", label: "Tutte", color: "#B8B8B8" },
     { key: "5K",  label: "5K",    color: "#14B8A6" },
     { key: "10K", label: "10K",   color: "#3B82F6" },
     { key: "HM",  label: "Mezza", color: "#F59E0B" },
@@ -232,16 +232,16 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
   ];
 
   return (
-    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 h-full flex flex-col">
+    <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-2">
-          <Timer className="w-4 h-4 text-[#C0FF00]" />
+          <Timer className="w-4 h-4 text-brand" />
           <h2 className="text-sm font-bold tracking-wider uppercase text-text-primary">
             Previsioni di Gara
           </h2>
           {vdot && (
-            <span className="text-[10px] bg-[#C0FF00]/10 text-[#C0FF00] font-black px-2 py-0.5 rounded-md border border-[#C0FF00]/20 uppercase tracking-wider">
+            <span className="text-[10px] bg-brand/10 text-brand font-black px-2 py-0.5 rounded-md border border-brand/20 uppercase tracking-wider">
               VDOT {vdot}
             </span>
           )}
@@ -272,9 +272,9 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
               style={{ borderColor: race.color + "30", backgroundColor: race.color + "06" }}
             >
               <div className="absolute top-0 left-0 h-0.5 w-0 group-hover:w-full transition-all duration-500" style={{ backgroundColor: race.color }} />
-              <div className="text-[9px] font-black uppercase tracking-widest" style={{ color: race.color }}>{race.label}</div>
+              <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: race.color }}>{race.label}</div>
               <div className="text-lg font-black text-white leading-tight">{displayTime ?? "—"}</div>
-              <div className="text-[9px] text-text-muted">{paceStr}</div>
+              <div className="text-[11px] text-text-muted">{paceStr}</div>
             </div>
           );
         })}
@@ -284,7 +284,7 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
       <div className="flex flex-col flex-1 min-h-0">
         {/* Chart header + filter */}
         <div className="flex items-center justify-between mb-2 shrink-0">
-          <div className="text-[9px] text-text-muted font-semibold tracking-wider uppercase">
+          <div className="text-[10px] text-text-muted font-semibold tracking-wider uppercase">
             Andamento Pace · 12 Mesi
           </div>
           {/* Filter buttons */}
@@ -293,7 +293,7 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
               <button
                 key={key}
                 onClick={() => setActiveRace(key)}
-                className="text-[9px] font-bold px-2 py-0.5 rounded-md transition-all border"
+                className="text-[11px] font-bold px-2 py-0.5 rounded-md transition-all border"
                 style={{
                   color: activeRace === key ? "#0F172A" : color,
                   backgroundColor: activeRace === key ? color : "transparent",
@@ -315,14 +315,14 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
                 dataKey="name"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#475569", fontSize: 9 }}
+                tick={{ fill: "#878787", fontSize: 10 }}
                 dy={6}
                 interval={1}
               />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#475569", fontSize: 9 }}
+                tick={{ fill: "#878787", fontSize: 10 }}
                 domain={yDomain}
                 tickFormatter={fmtPace}
                 dx={-4}

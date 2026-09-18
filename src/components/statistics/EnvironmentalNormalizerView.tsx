@@ -198,13 +198,12 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
 
   if (!paceQualifiedRuns.length) {
     return (
-      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
         <div
-          className="rounded-[28px] border p-8"
+          className="rounded-3xl border p-8"
           style={{
             background: 'radial-gradient(circle at top left, rgba(192,255,0,0.10), transparent 28%), radial-gradient(circle at bottom right, rgba(34,211,238,0.08), transparent 34%), #0B0B0B',
             borderColor: BORDER,
-            borderLeft: `3px solid ${NEON}`,
           }}
         >
           <div className="flex items-center gap-3 mb-4">
@@ -227,13 +226,12 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
 
   if (!enrichedRuns.length) {
     return (
-      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
         <div
-          className="rounded-[28px] border p-8"
+          className="rounded-3xl border p-8"
           style={{
             background: 'radial-gradient(circle at top left, rgba(192,255,0,0.10), transparent 28%), radial-gradient(circle at bottom right, rgba(34,211,238,0.08), transparent 34%), #0B0B0B',
             borderColor: BORDER,
-            borderLeft: `3px solid ${NEON}`,
           }}
         >
           <div className="flex items-center gap-3 mb-4">
@@ -256,13 +254,12 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <section
-        className="rounded-[30px] border overflow-hidden"
+        className="rounded-3xl border overflow-hidden"
         style={{
           background: 'radial-gradient(circle at top left, rgba(192,255,0,0.12), transparent 24%), radial-gradient(circle at bottom right, rgba(34,211,238,0.10), transparent 34%), #0A0A0A',
           borderColor: BORDER,
-          borderLeft: `3px solid ${NEON}`,
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02), 0 0 0 1px rgba(192,255,0,0.03)',
         }}
       >
@@ -358,7 +355,7 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
                 ))}
               </div>
 
-              <div className="rounded-[26px] border p-6" style={{ background: '#0D0D0D', borderColor: '#202020' }}>
+              <div className="rounded-3xl border p-6" style={{ background: '#0D0D0D', borderColor: '#202020' }}>
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div>
                     <div className="text-[10px] uppercase tracking-[0.26em] font-black" style={{ color: '#8A9562' }}>Actual vs STP</div>
@@ -414,7 +411,7 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
 
             <div className="space-y-6">
               <div
-                className="rounded-[28px] border p-6"
+                className="rounded-3xl border p-6"
                 style={{
                   background: 'linear-gradient(180deg, rgba(192,255,0,0.08), rgba(34,211,238,0.04)), #0E0E0E',
                   borderColor: '#273510',
@@ -443,14 +440,14 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
                   ].map((item) => (
                     <div key={item.label} className="rounded-2xl border p-4" style={{ background: '#101010', borderColor: '#232323' }}>
                       <item.icon className="w-4 h-4 mb-3" style={{ color: item.label === 'umidita' ? CYAN : item.label === 'temperatura' ? AMBER : NEON }} />
-                      <div className="text-[9px] uppercase tracking-[0.24em] font-black" style={{ color: MUTED }}>{item.label}</div>
+                      <div className="text-[10px] uppercase tracking-[0.24em] font-black" style={{ color: MUTED }}>{item.label}</div>
                       <div className="text-sm font-black mt-2 text-white">{item.value}</div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="rounded-[28px] border p-6" style={{ background: PANEL, borderColor: '#232323' }}>
+              <div className="rounded-3xl border p-6" style={{ background: PANEL, borderColor: '#232323' }}>
                 <div className="text-[10px] uppercase tracking-[0.24em] font-black mb-4" style={{ color: '#8A9562' }}>come leggere il booster</div>
                 <div className="space-y-4">
                   {[
@@ -471,7 +468,7 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
         )}
       </section>
 
-      <section className="rounded-[28px] border overflow-hidden" style={{ background: '#0B0B0B', borderColor: '#1E1E1E', borderLeft: `3px solid ${CYAN}` }}>
+      <section className="rounded-3xl border overflow-hidden" style={{ background: '#0B0B0B', borderColor: '#1E1E1E' }}>
         <div className="p-7 border-b border-white/[0.05] flex flex-col lg:flex-row lg:items-end justify-between gap-5">
           <div>
             <div className="text-[10px] font-black uppercase tracking-[0.28em]" style={{ color: '#4D9EAE' }}>ultime corse lette</div>
@@ -484,7 +481,7 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
         </div>
         <div className="p-7 grid grid-cols-1 xl:grid-cols-2 gap-4">
           {enrichedRuns.map((item) => (
-            <article key={item.run.id} className="rounded-[24px] border p-5" style={{ background: '#101010', borderColor: '#232323' }}>
+            <article key={item.run.id} className="rounded-3xl border p-5" style={{ background: '#101010', borderColor: '#232323' }}>
               <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-3 flex-wrap">
@@ -508,26 +505,26 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-5">
                 <div className="rounded-2xl border p-4" style={{ background: '#0C0C0C', borderColor: '#1F1F1F' }}>
-                  <div className="text-[9px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>passo reale</div>
+                  <div className="text-[10px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>passo reale</div>
                   <div className="text-[26px] font-black mt-2 text-white">{formatPace(item.actualPaceSec)}</div>
                   <div className="text-xs mt-1" style={{ color: '#7A838D' }}>/km</div>
                 </div>
                 <div className="rounded-2xl border p-4" style={{ background: '#0C0C0C', borderColor: '#1F1F1F' }}>
-                  <div className="text-[9px] uppercase tracking-[0.22em] font-black" style={{ color: '#8A9562' }}>ritmo STP</div>
+                  <div className="text-[10px] uppercase tracking-[0.22em] font-black" style={{ color: '#8A9562' }}>ritmo STP</div>
                   <div className="text-[26px] font-black mt-2" style={{ color: NEON }}>{formatPace(item.normalizedPaceSec)}</div>
                   <div className="text-xs mt-1" style={{ color: '#7EA533' }}>/km</div>
                 </div>
                 <div className="rounded-2xl border p-4" style={{ background: '#0C0C0C', borderColor: '#1F1F1F' }}>
                   <div className="flex items-center gap-2">
                     <ThermometerSun className="w-4 h-4" style={{ color: AMBER }} />
-                    <div className="text-[9px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>temperatura</div>
+                    <div className="text-[10px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>temperatura</div>
                   </div>
                   <div className="text-[24px] font-black mt-2 text-white">{formatTemperature(item.weather?.temperature)}</div>
                 </div>
                 <div className="rounded-2xl border p-4" style={{ background: '#0C0C0C', borderColor: '#1F1F1F' }}>
                   <div className="flex items-center gap-2">
                     <Droplets className="w-4 h-4" style={{ color: CYAN }} />
-                    <div className="text-[9px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>umidita</div>
+                    <div className="text-[10px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>umidita</div>
                   </div>
                   <div className="text-[24px] font-black mt-2 text-white">{formatHumidity(item.weather?.humidity)}</div>
                 </div>
@@ -537,7 +534,7 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
                 <div className="rounded-2xl border p-4" style={{ background: '#0C0C0C', borderColor: '#1F1F1F' }}>
                   <div className="flex items-center gap-2">
                     <Wind className="w-4 h-4" style={{ color: '#7ED6FF' }} />
-                    <div className="text-[9px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>vento</div>
+                    <div className="text-[10px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>vento</div>
                   </div>
                   <div className="text-lg font-black mt-2 text-white">
                     {item.weather?.wind != null ? `${Math.round(item.weather.wind)} km/h` : '—'}
@@ -546,7 +543,7 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
                 <div className="rounded-2xl border p-4" style={{ background: '#0C0C0C', borderColor: '#1F1F1F' }}>
                   <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4" style={{ color: '#9CA3AF' }} />
-                    <div className="text-[9px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>dislivello</div>
+                    <div className="text-[10px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>dislivello</div>
                   </div>
                   <div className="text-lg font-black mt-2 text-white">
                     {Math.round(item.run.elevation_gain ?? 0)} m
@@ -555,7 +552,7 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
                 <div className="rounded-2xl border p-4" style={{ background: '#0C0C0C', borderColor: '#1F1F1F' }}>
                   <div className="flex items-center gap-2">
                     <Gauge className="w-4 h-4" style={{ color: NEON }} />
-                    <div className="text-[9px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>lettura</div>
+                    <div className="text-[10px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>lettura</div>
                   </div>
                   <div className="text-sm font-black mt-2 text-white">
                     {item.weather?.source === 'archive'

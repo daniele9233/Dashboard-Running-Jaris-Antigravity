@@ -1,6 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { LucideIcon } from "lucide-react";
 import { useTranslation } from 'react-i18next';
+import { centerInStrip } from '../../navigation';
+import { Button } from '../ui/Button';
 import { StatsDrift } from './StatsDrift';
 import { MainChart } from '../MainChart';
 import { AnaerobicThreshold } from '../AnaerobicThreshold';
@@ -85,6 +87,7 @@ import {
   Legend
 } from 'recharts';
 import { CHART_SERIES, CHART_SURFACE } from './chartTheme';
+import { BRAND } from "../../theme/tokens";
 
 const ResponsiveGrid = WidthProvider(Responsive);
 
@@ -118,17 +121,17 @@ function InfoTooltip({ title, lines }: { title: string; lines: string[] }) {
         onMouseLeave={() => setOpen(false)}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
-        className="text-[#444] hover:text-[#888] transition-colors focus:outline-none"
+        className="text-gray-600 hover:text-[#888] transition-colors focus:outline-none"
       >
         <Info size={14} />
       </button>
       {open && (
         <div className="absolute z-50 top-full right-0 mt-2 w-72 bg-[#0D0D0D] border border-white/10 rounded-2xl p-4 shadow-2xl pointer-events-none">
-          <div className="text-[#C0FF00] text-[10px] font-black tracking-widest mb-2">{title}</div>
+          <div className="text-brand text-[11px] font-black tracking-widest mb-2">{title}</div>
           <ul className="space-y-1.5">
             {lines.map((l, i) => (
-              <li key={i} className="text-[#888] text-[10px] leading-relaxed flex gap-1.5">
-                <span className="text-[#444] shrink-0">·</span>{l}
+              <li key={i} className="text-[#888] text-[11px] leading-relaxed flex gap-1.5">
+                <span className="text-gray-600 shrink-0">·</span>{l}
               </li>
             ))}
           </ul>
@@ -203,7 +206,7 @@ function vdotLevel(v: number, t: (k: string) => string): { label: string; color:
 function Card({
   children,
   className = '',
-  accent = '#C0FF00',
+  accent: _accent = BRAND,
   variant = 'default',
 }: {
   children: React.ReactNode;
@@ -216,7 +219,6 @@ function Card({
     <div
       className={`${isPro ? 'rounded-2xl p-7 shadow-2xl' : 'rounded-3xl p-8'} backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 ${className}`}
       style={{
-        borderLeft: `3px solid ${isPro ? PRO_ACCENT : accent}`,
       }}
     >
       {children}
@@ -252,7 +254,7 @@ function CardHeader({
         <div>
           <h2 className={`${isPro ? 'text-sm text-white' : 'text-base'} font-black tracking-widest uppercase italic leading-none`}>{title}</h2>
           {subtitle && (
-            <p className={`text-[10px] ${isPro ? 'text-[#555]' : 'text-gray-500'} font-bold uppercase tracking-widest mt-1`}>{subtitle}</p>
+            <p className={`text-[10px] ${isPro ? 'text-gray-600' : 'text-gray-500'} font-bold uppercase tracking-widest mt-1`}>{subtitle}</p>
           )}
         </div>
       </div>
@@ -752,6 +754,11 @@ function buildClientAnalyticsFallbacks(runs: Run[]) {
 export function StatisticsView() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('analytics-cf-v2');
+  const tabStripRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const strip = tabStripRef.current;
+    centerInStrip(strip, strip?.querySelector<HTMLElement>('[data-active="true"]') ?? null);
+  }, [activeTab]);
   const [expandedChart, setExpandedChart] = useState<null | 'paces' | 'cadence' | 'gctMonthly'>(null);
   const [proSections, setProSections] = useState<ProAnalyticsResponse['sections']>({});
   const [proError, setProError] = useState<string | null>(null);
@@ -920,16 +927,21 @@ export function StatisticsView() {
   }, [statsRuns]);
 
 
+  /*
+   * Ogni tab dichiara la domanda a cui risponde. Due coppie si distinguono solo
+   * per "V2" — è un confronto voluto, finché non scegli quale tenere — e il
+   * suggerimento dice cosa cambia fra le due senza rinominarle.
+   */
   const tabs = [
-    { id: 'analytics-cf-v2', label: t('statsTabs.loadForm'),          icon: BarChart3  },
-    { id: 'analyticsv2',    label: t('statsTabs.potentialProgress'),  icon: Radar },
-    { id: 'potential-v3',   label: t('statsTabs.potentialV2'),        icon: Sparkles },
-    { id: 'analyticsv3', label: t('statsTabs.biomechanics'),          icon: Activity },
-    { id: 'biology',     label: t('statsTabs.biologyFuture'),         icon: FlaskConical },
-    { id: 'environment', label: t('statsTabs.climatePace'),           icon: CloudSun },
-    { id: 'biologyv2',   label: t('statsTabs.detraining'),            icon: Dna },
-    { id: 'biology-v3',  label: t('statsTabs.biologyV2'),             icon: Microscope },
-    { id: 'pace-calc',   label: 'Calcolatore',                       icon: Calculator },
+    { id: 'analytics-cf-v2', label: t('statsTabs.loadForm'),          icon: BarChart3,    hint: 'Quanto carico stai assorbendo, e quanto ti costa' },
+    { id: 'analyticsv2',    label: t('statsTabs.potentialProgress'),  icon: Radar,        hint: 'Come stai andando: record, previsioni, progressi' },
+    { id: 'potential-v3',   label: t('statsTabs.potentialV2'),        icon: Sparkles,     hint: 'Quanto puoi ancora migliorare, e cosa te lo impedisce' },
+    { id: 'analyticsv3', label: t('statsTabs.biomechanics'),          icon: Activity,     hint: 'Come corri: cadenza, contatto, oscillazione' },
+    { id: 'biology',     label: t('statsTabs.biologyFuture'),         icon: FlaskConical, hint: 'Gli adattamenti che maturano nei prossimi giorni' },
+    { id: 'environment', label: t('statsTabs.climatePace'),           icon: CloudSun,     hint: 'Quanto ti costano caldo e umidità' },
+    { id: 'biologyv2',   label: t('statsTabs.detraining'),            icon: Dna,          hint: 'Cosa perdi fermandoti' },
+    { id: 'biology-v3',  label: t('statsTabs.biologyV2'),             icon: Microscope,   hint: 'Stop, ricette, stagione ed età, nello stesso modello' },
+    { id: 'pace-calc',   label: 'Calcolatore',                       icon: Calculator,   hint: 'Ritmi di allenamento dal tuo VDOT' },
   ];
 
   const noData = (message = t('statsTabs.insufficientData')) => (
@@ -1057,33 +1069,37 @@ export function StatisticsView() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#0A0A0A] text-white p-4 md:p-6 lg:p-10">
+    <main className="flex-1 overflow-y-auto bg-[#0A0A0A] text-white p-4 md:p-6 lg:p-10">
       <div className="max-w-[1800px] mx-auto space-y-6 md:space-y-8">
 
         {/* ── HEADER ── */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 md:gap-8">
           <div>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter text-white uppercase italic">
-              Elite <span className="text-[#C0FF00]">Analytics</span>
+              Elite <span className="text-brand">Analytics</span>
             </h1>
             <p className="text-gray-600 text-[10px] font-black tracking-[0.3em] uppercase mt-2">
               Engineered for peak human performance
             </p>
           </div>
 
-          <div className="flex items-center bg-[#0D0D0D] p-1.5 rounded-2xl border border-[#1E1E1E] shadow-2xl overflow-x-auto whitespace-nowrap scrollbar-hide -mx-4 md:mx-0 px-1.5">
+          <div ref={tabStripRef} role="tablist" aria-label="Sezioni delle statistiche" className="flex items-center bg-[#0D0D0D] p-1.5 rounded-2xl border border-[#1E1E1E] overflow-x-auto whitespace-nowrap scrollbar-hide [mask-image:linear-gradient(to_right,#000_calc(100%-40px),transparent)] pr-8 -mx-4 md:mx-0 px-1.5">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                title={tab.hint}
+                data-active={activeTab === tab.id || undefined}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 md:px-6 py-3 rounded-xl text-[10px] font-black transition-all tracking-widest shrink-0 min-h-[44px] ${
+                className={`flex items-center gap-2 px-4 md:px-6 py-3 rounded-xl text-[11px] font-black transition-colors tracking-widest shrink-0 min-h-[44px] ${
                   activeTab === tab.id
-                    ? 'bg-[#1A1A1A] text-white shadow-lg border border-[#2A2A2A]'
-                    : 'text-gray-600 hover:text-gray-300'
+                    ? 'bg-[#1A1A1A] text-white border border-[#2A2A2A]'
+                    : 'text-gray-500 hover:text-gray-200'
                 }`}
               >
                 <tab.icon
-                  className={`w-4 h-4 ${activeTab === tab.id ? 'text-[#C0FF00]' : ''}`}
+                  className={`w-4 h-4 ${activeTab === tab.id ? 'text-brand' : ''}`}
                 />
                 {tab.label.toUpperCase()}
               </button>
@@ -1099,7 +1115,7 @@ export function StatisticsView() {
 
         {/* ANALYTICS PRO TAB — RIMOSSO (sostituito da CaricoFormaV2) */}
         {false && activeTab === '__removed_analytics__' && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
 
             <SectionLabel>CARICO — FITNESS · FATICA · FORMA</SectionLabel>
 
@@ -1107,24 +1123,24 @@ export function StatisticsView() {
               {!isMobile && (
                 <div className="flex items-center gap-2">
                   <div className="relative" ref={loadWidgetMenuRef}>
-                    <button
-                      type="button"
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={Plus}
                       onClick={() => setOpenLoadWidgetMenu((value) => !value)}
                       disabled={hiddenLoadWidgets.length === 0}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[#666] hover:text-[#C0FF00] hover:border-[#C0FF00]/30 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-[#666] disabled:hover:border-white/[0.06] text-[10px] font-black tracking-widest transition-colors"
                       title="Ripristina widget nascosti"
                     >
-                      <Plus size={12} />
                       AGGIUNGI WIDGET
                       {hiddenLoadWidgets.length > 0 && (
-                        <span className="bg-[#C0FF00] text-black rounded-full px-1.5 text-[9px] leading-4">
+                        <span className="bg-brand text-black rounded-full px-1.5 text-[11px] leading-4">
                           {hiddenLoadWidgets.length}
                         </span>
                       )}
-                    </button>
+                    </Button>
                     {openLoadWidgetMenu && hiddenLoadWidgets.length > 0 && (
                       <div className="absolute right-0 mt-2 w-64 bg-[#1a1a1a] border border-white/[0.08] rounded-2xl shadow-2xl z-40 p-2">
-                        <div className="text-[#666] text-[9px] font-black tracking-widest uppercase px-3 py-2">
+                        <div className="text-gray-600 text-[10px] font-black tracking-widest uppercase px-3 py-2">
                           Archivio ({hiddenLoadWidgets.length})
                         </div>
                         {hiddenLoadWidgets.map((widget) => (
@@ -1138,23 +1154,23 @@ export function StatisticsView() {
                             className="w-full text-left px-3 py-2 text-[12px] text-white hover:bg-white/[0.06] rounded-xl flex items-center justify-between group"
                           >
                             <span>{widget.label}</span>
-                            <Plus size={12} className="text-[#666] group-hover:text-[#C0FF00]" />
+                            <Plus size={12} className="text-gray-600 group-hover:text-brand" />
                           </button>
                         ))}
                       </div>
                     )}
                   </div>
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={RotateCcw}
                     onClick={() => {
                       if (window.confirm('Ripristinare il layout Carico & Forma?')) loadFormLayout.resetLayout();
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[#666] hover:text-[#C0FF00] hover:border-[#C0FF00]/30 text-[10px] font-black tracking-widest transition-colors"
                     title="Ripristina posizioni widget"
                   >
-                    <RotateCcw size={12} />
                     RESET LAYOUT
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -1162,7 +1178,8 @@ export function StatisticsView() {
             <ResponsiveGrid
               className="layout"
               layouts={loadFormLayout.layouts as any}
-              breakpoints={{ lg: 1200, md: 768, sm: 0 }}
+              // sotto i 900px due widget affiancati non ci stanno: "Zone di / Passo"
+              breakpoints={{ lg: 1200, md: 900, sm: 0 }}
               cols={{ lg: 12, md: 6, sm: 1 }}
               rowHeight={60}
               margin={[16, 16]}
@@ -1186,15 +1203,14 @@ export function StatisticsView() {
                       ].map((kpi, i) => (
                         <div
                           key={i}
-                          className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 relative overflow-hidden hover:border-white/[0.2] transition-colors"
-                          style={{ borderLeft: `3px solid ${kpi.color}` }}
+                          className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 relative overflow-hidden hover:border-white/[0.2] transition-colors"
                         >
                           <div className="flex justify-between items-start mb-4">
                             <div>
                               <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{kpi.label}</p>
                               <div className="flex items-baseline gap-2">
                                 <span className="text-3xl font-black italic">{kpi.value}</span>
-                                <span className={`text-xs font-bold ${kpi.trendUp ? 'text-[#C0FF00]' : 'text-[#F43F5E]'}`}>{kpi.trend}</span>
+                                <span className={`text-xs font-bold ${kpi.trendUp ? 'text-brand' : 'text-[#F43F5E]'}`}>{kpi.trend}</span>
                               </div>
                             </div>
                             <div className="p-3 rounded-xl bg-[#0D0D0D] border border-[#1E1E1E]" style={{ color: kpi.color }}>
@@ -1305,8 +1321,7 @@ export function StatisticsView() {
                ].map((kpi, i) => (
                  <div
                    key={i}
-                   className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 relative overflow-hidden hover:border-white/[0.2] transition-colors"
-                   style={{ borderLeft: `3px solid ${kpi.color}` }}
+                   className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 relative overflow-hidden hover:border-white/[0.2] transition-colors"
                  >
                    <div className="flex justify-between items-start mb-4">
                      <div>
@@ -1317,7 +1332,7 @@ export function StatisticsView() {
                          <span className="text-3xl font-black italic">{kpi.value}</span>
                          <span
                            className={`text-xs font-bold flex items-center ${
-                             kpi.trendUp ? 'text-[#C0FF00]' : 'text-[#F43F5E]'
+                             kpi.trendUp ? 'text-brand' : 'text-[#F43F5E]'
                            }`}
                          >
                            {kpi.trendUp ? '↑' : '↓'} {kpi.trend}
@@ -1627,10 +1642,10 @@ export function StatisticsView() {
                      return (
                        <div
                          key={key}
-                         className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center"
+                         className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center"
                        >
                          <div
-                           className="text-[9px] font-black uppercase tracking-widest mb-2"
+                           className="text-[10px] font-black uppercase tracking-widest mb-2"
                            style={{ color }}
                          >
                            {label}
@@ -1641,7 +1656,7 @@ export function StatisticsView() {
                                {avg}
                                <span className="text-xs text-gray-500 font-normal ml-1">ms</span>
                              </div>
-                             <div className="text-[9px] text-gray-500 mt-1">
+                             <div className="text-[11px] text-gray-500 mt-1">
                                min {min}ms · max {max}ms
                              </div>
                            </>
@@ -1675,7 +1690,7 @@ export function StatisticsView() {
                      <div className="text-xl font-black italic" style={{ color: PRO_ACCENT }}>
                        {elevationData.reduce((s, d) => s + d.dislivello, 0).toLocaleString('it')} m
                      </div>
-                     <div className="text-[9px] text-gray-500 font-black uppercase tracking-widest">
+                     <div className="text-[10px] text-gray-500 font-black uppercase tracking-widest">
                        Totale anno
                      </div>
                    </div>
@@ -1757,7 +1772,7 @@ export function StatisticsView() {
             CARICO & FORMA V2
         ════════════════════════════════════════════════════ */}
         {activeTab === 'analytics-cf-v2' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <CaricoFormaV2
               ffHistory={ffHistory}
               kmRuns={kmRuns}
@@ -1771,7 +1786,7 @@ export function StatisticsView() {
             ANALYTICS PRO V2 TAB
         ════════════════════════════════════════════════════ */}
         {activeTab === 'analyticsv2' && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <AnalyticsV2
               vdot={vdot}
               zoneDistribution={zoneDistribution}
@@ -1813,7 +1828,7 @@ export function StatisticsView() {
                   ].map(({ key, label, color, sub }) => (
                     <div
                       key={key}
-                      className="rounded-2xl p-5 text-center backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+                      className="rounded-2xl p-5 text-center border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
                     >
                       <div
                         className="text-[10px] font-black uppercase tracking-widest mb-1"
@@ -1821,11 +1836,11 @@ export function StatisticsView() {
                       >
                         {label}
                       </div>
-                      <div className="text-[9px] text-gray-600 font-bold mb-3">{sub}</div>
+                      <div className="text-[11px] text-gray-600 font-bold mb-3">{sub}</div>
                       <div className="text-2xl font-black italic text-white">
                         {(racePredictions as Record<string, string>)[key] ?? '—'}
                       </div>
-                      <div className="text-[9px] text-gray-500 font-bold mt-1">Daniels</div>
+                      <div className="text-[11px] text-gray-500 font-bold mt-1">Daniels</div>
                     </div>
                   ))}
                 </div>
@@ -1867,13 +1882,13 @@ export function StatisticsView() {
                   ].map(({ key, zone, name, desc, pct, color }) => (
                     <div
                       key={key}
-                      className="rounded-2xl p-5 flex flex-col gap-2 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+                      className="rounded-2xl p-5 flex flex-col gap-2 border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-2xl font-black italic" style={{ color }}>
                           {zone}
                         </span>
-                        <span className="text-[9px] font-bold text-gray-600 uppercase tracking-wider">
+                        <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">
                           {pct}
                         </span>
                       </div>
@@ -1884,7 +1899,7 @@ export function StatisticsView() {
                         {(paces as Record<string, string | null>)[key] ?? '—'}
                         <span className="text-xs text-gray-500 font-normal ml-1">/km</span>
                       </div>
-                      <div className="text-[10px] text-gray-500 italic leading-tight">{desc}</div>
+                      <div className="text-[11px] text-gray-500 italic leading-tight">{desc}</div>
                     </div>
                   ))}
                 </div>
@@ -1902,7 +1917,7 @@ export function StatisticsView() {
             ANALYTICS PRO V3 TAB
         ════════════════════════════════════════════════════ */}
         {activeTab === 'analyticsv3' && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <AnalyticsV3 data={biomechCharts} onRequestChartDetail={(chartId) => requestProChartDetail('biomechanics', chartId)} onTelemetrySync={async () => {
               const result = await linkGarminCsv();
               detailRequestsRef.current.clear();
@@ -2018,7 +2033,7 @@ export function StatisticsView() {
             (Supercompensazione legacy + Detraining Lab Coyle/Mujika)
         ════════════════════════════════════════════════════ */}
         {activeTab === 'biology' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
               <Card className="xl:col-span-8" accent={PRO_ACCENT} variant="pro">
                 <CardHeader
@@ -2076,10 +2091,10 @@ export function StatisticsView() {
                     </ResponsiveContainer>
                   </div>
                 ) : (
-                  <div className="h-[260px] flex items-center justify-center border border-dashed border-[#2A2A2A] rounded-[6px] text-center">
+                  <div className="h-[260px] flex items-center justify-center border border-dashed border-[#2A2A2A] rounded-lg text-center">
                     <div>
                       <div className="text-white font-black uppercase tracking-widest text-sm">Dati reali insufficienti</div>
-                      <div className="text-[#666] text-xs mt-2">Servono corse Strava recenti per calcolare la curva biologica.</div>
+                      <div className="text-gray-600 text-xs mt-2">Servono corse Strava recenti per calcolare la curva biologica.</div>
                     </div>
                   </div>
                 )}
@@ -2090,7 +2105,7 @@ export function StatisticsView() {
                   <Star className="w-5 h-5" style={{ color: PRO_ACCENT }} />
                   <div>
                     <div className="text-white font-black uppercase italic tracking-widest">Golden Day</div>
-                    <div className="text-[10px] text-[#666] uppercase tracking-widest font-bold">Picco aggregato</div>
+                    <div className="text-[10px] text-gray-600 uppercase tracking-widest font-bold">Picco aggregato</div>
                   </div>
                 </div>
                 <div className="flex-1 flex flex-col items-center justify-center text-center">
@@ -2111,11 +2126,11 @@ export function StatisticsView() {
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                       <span className="text-5xl font-black text-white italic">{biologyData.days_to_golden ?? '--'}</span>
-                      <span className="text-[10px] text-[#666] uppercase tracking-widest font-black">giorni</span>
+                      <span className="text-[10px] text-gray-600 uppercase tracking-widest font-black">giorni</span>
                     </div>
                   </div>
                   <div className="text-2xl font-black italic uppercase" style={{ color: PRO_ACCENT }}>{biologyGoldenLabel}</div>
-                  <div className="text-xs text-[#777] mt-3 font-bold leading-relaxed">
+                  <div className="text-xs text-gray-500 mt-3 font-bold leading-relaxed">
                     Readiness {biologyGoldenScore != null ? `${Math.round(biologyGoldenScore)}%` : 'N/D'} con carichi reali e freschezza disponibile.
                   </div>
                 </div>
@@ -2127,34 +2142,34 @@ export function StatisticsView() {
                 <Card key={key} accent={color} variant="pro">
                   <div className="flex items-start justify-between gap-4 mb-5">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-[6px] bg-[#111] border border-[#2A2A2A]">
+                      <div className="p-2 rounded-lg bg-[#111] border border-[#2A2A2A]">
                         <Icon className="w-4 h-4" style={{ color }} />
                       </div>
                       <div>
                         <div className="text-sm text-white font-black uppercase italic">{label}</div>
-                        <div className="text-[10px] text-[#666] font-bold uppercase tracking-widest">{desc}</div>
+                        <div className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">{desc}</div>
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-xl font-mono font-black" style={{ color }}>{total?.ready_pct ?? 0}%</div>
-                      <div className="text-[9px] text-[#666] uppercase font-black">maturato</div>
+                      <div className="text-[10px] text-gray-600 uppercase font-black">maturato</div>
                     </div>
                   </div>
                   <div className="h-2 rounded-full bg-[#1A1A1A] overflow-hidden mb-4">
                     <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, total?.ready_pct ?? 0))}%`, backgroundColor: color }} />
                   </div>
                   <div className="grid grid-cols-3 gap-3 text-center">
-                    <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+                    <div className="rounded-lg border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                       <div className="text-white font-mono font-black">{total?.runs ?? 0}</div>
-                      <div className="text-[9px] text-[#666] uppercase font-black">corse</div>
+                      <div className="text-[10px] text-gray-600 uppercase font-black">corse</div>
                     </div>
-                    <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+                    <div className="rounded-lg border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                       <div className="text-white font-mono font-black">{total?.load ?? 0}</div>
-                      <div className="text-[9px] text-[#666] uppercase font-black">carico</div>
+                      <div className="text-[10px] text-gray-600 uppercase font-black">carico</div>
                     </div>
-                    <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+                    <div className="rounded-lg border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                       <div className="text-white font-mono font-black">{total?.missing_pct ?? 0}%</div>
-                      <div className="text-[9px] text-[#666] uppercase font-black">manca</div>
+                      <div className="text-[10px] text-gray-600 uppercase font-black">manca</div>
                     </div>
                   </div>
                 </Card>
@@ -2186,22 +2201,22 @@ export function StatisticsView() {
                       ? new Date(`${run.benefit_date}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
                       : 'N/D';
                     return (
-                      <div key={`${run.id}-${run.date}`} className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 hover:border-white/[0.2] transition-colors">
+                      <div key={`${run.id}-${run.date}`} className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center rounded-lg border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 hover:border-white/[0.2] transition-colors">
                         <div className="lg:col-span-4 min-w-0">
                           <div className="text-white font-black uppercase tracking-wide truncate">{run.name || 'Corsa'}</div>
-                          <div className="text-[10px] text-[#666] font-bold uppercase tracking-widest mt-1">
+                          <div className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-1">
                             {run.date_label} - {run.distance_km.toFixed(2)} km - {run.avg_pace ?? 'N/D'}/km
                           </div>
                         </div>
                         <div className="lg:col-span-2">
-                          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-[6px] border border-[#2A2A2A] bg-[#0D0D0D]">
+                          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#2A2A2A] bg-[#0D0D0D]">
                             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
                             <span className="text-[10px] font-black uppercase tracking-widest" style={{ color }}>{run.adaptation_type}</span>
                           </div>
                         </div>
                         <div className="lg:col-span-3">
                           <div className="flex justify-between text-[10px] uppercase font-black tracking-widest mb-2">
-                            <span className="text-[#666]">Maturato</span>
+                            <span className="text-gray-600">Maturato</span>
                             <span className="text-white">{run.benefit_progress_pct}%</span>
                           </div>
                           <div className="h-2 bg-[#1A1A1A] rounded-full overflow-hidden">
@@ -2209,13 +2224,13 @@ export function StatisticsView() {
                           </div>
                         </div>
                         <div className="lg:col-span-3 grid grid-cols-2 gap-3">
-                          <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+                          <div className="rounded-lg border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                             <div className="text-lg font-mono font-black text-white">{run.missing_pct}%</div>
-                            <div className="text-[9px] text-[#666] uppercase font-black">manca</div>
+                            <div className="text-[10px] text-gray-600 uppercase font-black">manca</div>
                           </div>
-                          <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+                          <div className="rounded-lg border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                             <div className="text-lg font-mono font-black" style={{ color }}>{run.days_remaining}</div>
-                            <div className="text-[9px] text-[#666] uppercase font-black">gg - {benefitDate}</div>
+                            <div className="text-[10px] text-gray-600 uppercase font-black">gg - {benefitDate}</div>
                           </div>
                         </div>
                       </div>
@@ -2223,9 +2238,9 @@ export function StatisticsView() {
                   })}
                 </div>
               ) : (
-                <div className="p-8 text-center border border-dashed border-[#2A2A2A] rounded-[6px]">
+                <div className="p-8 text-center border border-dashed border-[#2A2A2A] rounded-lg">
                   <div className="text-white font-black uppercase tracking-widest">Dati reali insufficienti</div>
-                  <div className="text-[#666] text-xs mt-2">Quando arrivano corse syncate su Strava, qui compariranno adattamenti e Golden Day.</div>
+                  <div className="text-gray-600 text-xs mt-2">Quando arrivano corse syncate su Strava, qui compariranno adattamenti e Golden Day.</div>
                 </div>
               )}
             </Card>
@@ -2238,7 +2253,7 @@ export function StatisticsView() {
         )}
 
         {false && activeTab === 'biology-old-future' && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Grafico del Futuro */}
@@ -2403,7 +2418,7 @@ export function StatisticsView() {
                   ].map((item, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between p-4 rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+                      className="flex items-center justify-between p-4 rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
                     >
                       <div className="flex items-center gap-4">
                         <div className="p-2 rounded-xl bg-[#111] border border-[#1E1E1E]">
@@ -2411,7 +2426,7 @@ export function StatisticsView() {
                         </div>
                         <div>
                           <div className="text-sm font-black text-white uppercase">{item.name}</div>
-                          <div className="text-[10px] font-bold text-gray-500">{item.km}</div>
+                          <div className="text-[11px] font-bold text-gray-500">{item.km}</div>
                         </div>
                       </div>
                       <div className="text-right">
@@ -2421,14 +2436,14 @@ export function StatisticsView() {
                         >
                           {item.time}
                         </div>
-                        <div className="text-[10px] text-gray-600 font-bold italic">{item.effect}</div>
+                        <div className="text-[11px] text-gray-600 font-bold italic">{item.effect}</div>
                       </div>
                     </div>
                   ))}
                 </div>
               </Card>
 
-              <Card className="lg:col-span-5" accent="#C0FF00">
+              <Card className="lg:col-span-5" accent={BRAND}>
                 <CardHeader
                   icon={FlaskConical}
                   iconColor="#10B981"
@@ -2473,7 +2488,7 @@ export function StatisticsView() {
             BADGES TAB
         ════════════════════════════════════════════════════ */}
         {activeTab === 'biologyv2' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <BiologyFutureV2 data={biologyData} profile={profileData ?? null} runs={runs} vdot={vdot} />
             <BiologyFutureLab profile={profileData ?? null} runs={runs} vdot={vdot} />
           </div>
@@ -2483,7 +2498,7 @@ export function StatisticsView() {
             POTENZIALE & PROGRESSI V2 — sezione nuova, motore physio
         ════════════════════════════════════════════════════ */}
         {activeTab === 'potential-v3' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <PotentialProgressV3 runs={runs} />
           </div>
         )}
@@ -2492,14 +2507,14 @@ export function StatisticsView() {
             BIOLOGIA & FUTURO V2 — sezione nuova
         ════════════════════════════════════════════════════ */}
         {activeTab === 'biology-v3' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <BiologyFutureV3 runs={runs} profile={profileData ?? null} />
           </div>
         )}
 
         {/* ═══ CALCOLATORE PASSO ═══ */}
         {activeTab === 'pace-calc' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <PaceCalculator vdot={vdot} />
           </div>
         )}
@@ -2513,15 +2528,15 @@ export function StatisticsView() {
           details={
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Easy</p>
+                <p className="text-[10px] text-gray-500 font-black tracking-widest uppercase">Easy</p>
                 <p className="text-sm text-gray-300 font-bold mt-1">Passo lento, scala Y invertita</p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Tempo</p>
+                <p className="text-[10px] text-gray-500 font-black tracking-widest uppercase">Tempo</p>
                 <p className="text-sm text-gray-300 font-bold mt-1">Indicatore soglia lattato</p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Fast</p>
+                <p className="text-[10px] text-gray-500 font-black tracking-widest uppercase">Fast</p>
                 <p className="text-sm text-gray-300 font-bold mt-1">Ripetute e lavoro veloce</p>
               </div>
             </div>
@@ -2539,15 +2554,15 @@ export function StatisticsView() {
           details={
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Target</p>
+                <p className="text-[10px] text-gray-500 font-black tracking-widest uppercase">Target</p>
                 <p className="text-xl text-white font-black mt-1">170-185 <span className="text-xs text-gray-500">spm</span></p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Reference</p>
+                <p className="text-[10px] text-gray-500 font-black tracking-widest uppercase">Reference</p>
                 <p className="text-xl text-white font-black mt-1">180 <span className="text-xs text-gray-500">spm</span></p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Focus</p>
+                <p className="text-[10px] text-gray-500 font-black tracking-widest uppercase">Focus</p>
                 <p className="text-sm text-gray-300 font-bold mt-1">Stabilita e riduzione over-striding</p>
               </div>
             </div>
@@ -2565,15 +2580,15 @@ export function StatisticsView() {
           details={
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Lento</p>
+                <p className="text-[10px] text-gray-500 font-black tracking-widest uppercase">Lento</p>
                 <p className="text-sm text-gray-300 font-bold mt-1">&gt;= 5:30/km</p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Medio</p>
+                <p className="text-[10px] text-gray-500 font-black tracking-widest uppercase">Medio</p>
                 <p className="text-sm text-gray-300 font-bold mt-1">5:00-5:29/km</p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Veloce</p>
+                <p className="text-[10px] text-gray-500 font-black tracking-widest uppercase">Veloce</p>
                 <p className="text-sm text-gray-300 font-bold mt-1">&lt; 4:45/km</p>
               </div>
             </div>
@@ -2583,6 +2598,6 @@ export function StatisticsView() {
         </ChartFullscreenModal>
 
       </div>
-    </div>
+    </main>
   );
 }

@@ -74,10 +74,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   const runCount = activeCategories.length;
   return (
     <div className="bg-[#1E293B] border border-[#334155] p-3 rounded-lg shadow-xl text-xs min-w-[160px]">
-      <p className="text-[#C0FF00] font-bold mb-1 uppercase tracking-wider text-[11px]">{label}</p>
+      <p className="text-brand font-bold mb-1 uppercase tracking-wider text-[11px]">{label}</p>
       <p className="text-base font-black text-white mb-2">{total.toFixed(1)} km</p>
       {runCount > 0 && (
-        <p className="text-[10px] text-text-muted mb-2">{runCount} uscit{runCount === 1 ? "a" : "e"}</p>
+        <p className="text-[11px] text-text-muted mb-2">{runCount} uscit{runCount === 1 ? "a" : "e"}</p>
       )}
       <div className="border-t border-white/10 pt-2 space-y-1">
         {activeCategories.map((e: any, i: number) => (
@@ -259,9 +259,9 @@ export function MainChart({ runs }: MainChartProps) {
           key={key}
           type="button"
           onClick={() => setPeriod(key)}
-          className={`text-[10px] font-bold px-2.5 py-1.5 rounded-md transition-all ${
+          className={`text-[11px] font-bold px-2.5 py-1.5 rounded-md transition-all ${
             period === key
-              ? "bg-[#C0FF00] text-black"
+              ? "bg-brand text-black"
               : "text-text-muted hover:text-text-primary hover:bg-white/5"
           }`}
         >
@@ -283,14 +283,14 @@ export function MainChart({ runs }: MainChartProps) {
           dataKey="name"
           axisLine={false}
           tickLine={false}
-          tick={{ fill: "#64748B", fontSize: isExpanded ? 12 : 9 }}
+          tick={{ fill: "#878787", fontSize: isExpanded ? 12 : 9 }}
           dy={10}
           interval={period === "TUTTO" && chartData.length > 24 ? Math.floor(chartData.length / 12) : 0}
         />
         <YAxis
           axisLine={false}
           tickLine={false}
-          tick={{ fill: "#64748B", fontSize: isExpanded ? 12 : 10 }}
+          tick={{ fill: "#878787", fontSize: isExpanded ? 12 : 10 }}
           dx={-10}
           domain={[0, Math.ceil(maxKm * 1.15)]}
         />
@@ -324,8 +324,7 @@ export function MainChart({ runs }: MainChartProps) {
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex flex-col h-full group"
-      style={{ borderLeft: "3px solid #C0FF00" }}
+      className="relative overflow-hidden rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex flex-col h-full group"
     >
       {/* ── Header ── */}
       <div className="flex justify-between items-start mb-6">
@@ -335,7 +334,7 @@ export function MainChart({ runs }: MainChartProps) {
             <span className="text-sm text-text-muted font-normal ml-2">{periodLabel}</span>
           </div>
           {periodKm > 0 && (
-            <div className="flex gap-4 mt-1 text-[10px] text-text-muted font-semibold tracking-wider">
+            <div className="flex gap-4 mt-1 text-[11px] text-text-muted font-semibold tracking-wider">
               <span>{totalRuns} uscite</span>
               <span className="text-text-secondary">·</span>
               <span>avg {avgKm} km/{period === "1S" ? "giorno" : period.includes("S") ? "sett." : "mese"}</span>
@@ -361,12 +360,12 @@ export function MainChart({ runs }: MainChartProps) {
         <div className="hidden">
           <div className="mb-4">
             <h3 className="text-lg font-bold text-text-primary uppercase tracking-widest">CORSE RECENTI</h3>
-            <p className="text-[10px] text-text-muted font-bold tracking-wider">Ultime 5 uscite</p>
+            <p className="text-[11px] text-text-muted font-bold tracking-wider">Ultime 5 uscite</p>
           </div>
           <div className="flex-1 overflow-y-auto max-h-[300px] space-y-3">
             {recentRuns.length > 0 ? (
               recentRuns.map((run, i) => (
-                <div key={i} className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+                <div key={i} className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor:
                       run.run_type?.toLowerCase().includes('race') || run.run_type?.toLowerCase().includes('gara') ? '#8B5CF6' :
@@ -385,7 +384,7 @@ export function MainChart({ runs }: MainChartProps) {
                       {run.run_type || 'Corsa'}
                     </span>
                   </div>
-                  <div className="flex justify-between text-[10px] text-text-secondary">
+                  <div className="flex justify-between text-[11px] text-text-secondary">
                     <span>
                       {run.distance_km?.toFixed(1)} km
                     </span>
@@ -393,7 +392,7 @@ export function MainChart({ runs }: MainChartProps) {
                        {run.duration_minutes ? `${Math.floor(Math.round(run.duration_minutes) / 60)}:${String(Math.round(run.duration_minutes) % 60).padStart(2,'0')}` : '—'}
                      </span>
                   </div>
-                  <div className="text-[10px] text-text-muted mt-1">
+                  <div className="text-[11px] text-text-muted mt-1">
                     {new Date(run.date).toLocaleDateString('it', { day: '2-digit', month: 'short', year: '2-digit' })}
                   </div>
                 </div>
@@ -408,7 +407,7 @@ export function MainChart({ runs }: MainChartProps) {
       </div>
 
       {/* ── Legenda ── */}
-      <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-[#243018] text-[10px] text-text-muted font-semibold tracking-wider justify-center">
+      <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-[#243018] text-[11px] text-text-muted font-semibold tracking-wider justify-center">
         {[
           { color: "#14B8A6", label: "EASY RUN" },
           { color: "#3B82F6", label: "TEMPO" },
@@ -431,7 +430,7 @@ export function MainChart({ runs }: MainChartProps) {
         accent="#3B82F6"
         details={
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4 items-center">
-            <div className="flex flex-wrap gap-4 text-[10px] text-text-muted font-semibold tracking-wider">
+            <div className="flex flex-wrap gap-4 text-[11px] text-text-muted font-semibold tracking-wider">
               <span>{totalRuns} uscite</span>
               <span>avg {avgKm} km/{period === "1S" ? "giorno" : period.includes("S") ? "sett." : "mese"}</span>
               <span>max {maxWeekKm} km</span>

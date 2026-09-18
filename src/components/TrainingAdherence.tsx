@@ -1,5 +1,6 @@
 import { CheckCircle2, XCircle, AlertTriangle, TrendingDown, Thermometer, BatteryLow, Target, Minus } from "lucide-react";
 import type { Diagnosis, SessionEval, Verdict } from "../utils/trainingAdherence";
+import { BRAND } from "../theme/tokens";
 
 /**
  * UI dell'aderenza: il verdetto della singola seduta e la diagnosi sul pattern.
@@ -12,11 +13,11 @@ const fmtPace = (sec: number | null) =>
 
 export const VERDICT_STYLE: Record<Verdict, { label: string; color: string; bg: string; icon: typeof CheckCircle2 }> = {
   on_target:     { label: 'Centrata',        color: '#10B981', bg: 'rgba(16,185,129,0.10)',  icon: CheckCircle2 },
-  close:         { label: 'Quasi',           color: '#C0FF00', bg: 'rgba(192,255,0,0.10)',   icon: CheckCircle2 },
+  close:         { label: 'Quasi',           color: BRAND, bg: 'rgba(192,255,0,0.10)',   icon: CheckCircle2 },
   under:         { label: 'Sotto target',    color: '#F59E0B', bg: 'rgba(245,158,11,0.10)',  icon: TrendingDown },
   not_completed: { label: 'Non chiusa',      color: '#F43F5E', bg: 'rgba(244,63,94,0.10)',   icon: XCircle },
-  missed:        { label: 'Non svolta',      color: '#6B7280', bg: 'rgba(107,114,128,0.10)', icon: Minus },
-  unrated:       { label: 'Senza giri',      color: '#6B7280', bg: 'rgba(107,114,128,0.10)', icon: Minus },
+  missed:        { label: 'Non svolta',      color: '#878787', bg: 'rgba(107,114,128,0.10)', icon: Minus },
+  unrated:       { label: 'Senza giri',      color: '#878787', bg: 'rgba(107,114,128,0.10)', icon: Minus },
 };
 
 /** Verdetto della singola seduta, con i numeri che lo giustificano. */
@@ -65,11 +66,11 @@ export function SessionVerdict({ e }: { e: SessionEval }) {
 function Stat({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: string }) {
   return (
     <div>
-      <div className="text-[9px] font-black uppercase tracking-widest text-gray-500">{label}</div>
+      <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">{label}</div>
       <div className="text-lg font-black tabular-nums" style={{ color: accent ?? '#FFFFFF', fontFamily: "'JetBrains Mono', monospace" }}>
         {value}
       </div>
-      {sub && <div className="text-[9px] text-gray-600">{sub}</div>}
+      {sub && <div className="text-[11px] text-gray-600">{sub}</div>}
     </div>
   );
 }
@@ -89,7 +90,7 @@ const CAUSE_ICON = {
 export function AdherenceBanner({ d }: { d: Diagnosis }) {
   if (d.level === 'ok' && d.streak === 0) return null;
 
-  const color = d.level === 'recalibrate' ? '#F43F5E' : d.level === 'watch' ? '#F59E0B' : '#6B7280';
+  const color = d.level === 'recalibrate' ? '#F43F5E' : d.level === 'watch' ? '#F59E0B' : '#878787';
   const Icon = d.level === 'ok' ? CheckCircle2 : CAUSE_ICON[d.cause] ?? AlertTriangle;
 
   return (
@@ -105,7 +106,7 @@ export function AdherenceBanner({ d }: { d: Diagnosis }) {
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-sm font-black text-white">{d.headline}</h3>
             {d.streak >= 2 && (
-              <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ background: `${color}1f`, color }}>
+              <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ background: `${color}1f`, color }}>
                 {d.streak} di fila · su {d.considered} valutate
               </span>
             )}
@@ -113,7 +114,7 @@ export function AdherenceBanner({ d }: { d: Diagnosis }) {
           <p className="text-[12px] text-gray-300 leading-relaxed mt-1.5">{d.detail}</p>
           {d.action && (
             <p className="text-[12px] leading-relaxed mt-2 pt-2 border-t border-white/10" style={{ color }}>
-              <span className="font-black uppercase tracking-widest text-[9px] mr-1.5">Cosa fare</span>
+              <span className="font-black uppercase tracking-widest text-[10px] mr-1.5">Cosa fare</span>
               {d.action}
             </p>
           )}
@@ -129,7 +130,7 @@ export function AdherenceStrip({ evals }: { evals: SessionEval[] }) {
   if (key.length < 2) return null;
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">Ultime chiave</span>
+      <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Ultime chiave</span>
       <div className="flex items-center gap-1">
         {key.map((e, i) => {
           const s = VERDICT_STYLE[e.verdict];

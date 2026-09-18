@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { gsap, useGSAP } from "./gsapSetup";
 import { MONO, finish, type SceneProps } from "./sceneUtils";
+import { BRAND } from "../../theme/tokens";
 
 /**
  * Scene COSTANZA aggiuntive (10) — condizioni estreme e momenti speciali.
@@ -50,7 +51,7 @@ export function BirthdayScene({ accent, accent2 }: SceneProps) {
       .to(".bd-confetti", { y: "+=60", opacity: 0, duration: 0.9, stagger: 0.03, ease: "power1.in" }, "-=0.5");
     finish(tl);
   }, { scope: ref });
-  const cols = ["#C0FF00", "#22D3EE", "#F472B6", "#F59E0B", "#A78BFA"];
+  const cols = [BRAND, "#22D3EE", "#F472B6", "#F59E0B", "#A78BFA"];
   return (
     <div ref={ref} className="w-full h-full flex items-center justify-center">
       <svg viewBox="0 0 400 240" className="w-full h-full" fill="none">

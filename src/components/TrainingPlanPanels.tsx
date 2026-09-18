@@ -30,7 +30,7 @@ function SectionTitle({ icon: Icon, children, hint }: { icon: typeof Flag; child
     <div className="flex items-baseline gap-2 mb-3">
       <Icon className="w-4 h-4 self-center shrink-0" style={{ color: "var(--app-accent)" }} />
       <h2 className="text-[11px] font-black tracking-[0.22em] uppercase text-white/90">{children}</h2>
-      {hint && <span className="ml-auto text-[10px] text-gray-500 truncate">{hint}</span>}
+      {hint && <span className="ml-auto text-[11px] text-gray-500 truncate">{hint}</span>}
     </div>
   );
 }
@@ -76,7 +76,7 @@ export function NextSession({ todayIso, onOpen }: { todayIso: string; onOpen: (i
       <div className="flex items-center gap-2 text-[10px] font-black tracking-[0.22em] uppercase">
         <span style={{ color: isToday ? "var(--app-accent)" : "#9CA3AF" }}>{isToday ? "Oggi" : "Prossima seduta"}</span>
         <span className="text-gray-500 normal-case tracking-normal font-bold">{planDateLabel(day.date)}</span>
-        <span className="ml-auto px-1.5 py-0.5 rounded text-[9px]" style={{ color: col, background: `${col}1a` }}>{PLAN_KINDS[day.kind].label}</span>
+        <span className="ml-auto px-1.5 py-0.5 rounded text-[11px]" style={{ color: col, background: `${col}1a` }}>{PLAN_KINDS[day.kind].label}</span>
       </div>
       <div className="mt-1.5 text-2xl font-black text-white leading-tight">{day.title}</div>
       {(day.detail || day.km) && (
@@ -109,7 +109,7 @@ export function PlanWeeks({
               <div>
                 <h3 className="text-lg font-black text-white tracking-tight">
                   Settimana {w.n}
-                  {current && <span className="ml-2 align-middle text-[9px] font-black tracking-[0.2em] uppercase px-1.5 py-0.5 rounded" style={{ color: "#0A0A0A", background: "var(--app-accent)" }}>in corso</span>}
+                  {current && <span className="ml-2 align-middle text-[10px] font-black tracking-[0.2em] uppercase px-1.5 py-0.5 rounded" style={{ color: "#0A0A0A", background: "var(--app-accent)" }}>in corso</span>}
                 </h3>
                 <p className="text-[11px] text-gray-500">{w.dates}</p>
               </div>
@@ -141,7 +141,7 @@ function DayRow({ d, todayIso, manual, verdict, onOpen }: {
   return (
     <li>
       <button type="button" onClick={() => onOpen(d.date)}
-        className={`relative w-full grid grid-cols-[3rem_1fr_auto] gap-x-3 pl-5 pr-4 py-3 text-left transition-colors hover:bg-white/[0.03] ${isToday ? "bg-[#C0FF00]/[0.06]" : ""} ${past && !isToday ? "opacity-[0.55]" : ""}`}>
+        className={`relative w-full grid grid-cols-[3rem_1fr_auto] gap-x-3 pl-5 pr-4 py-3 text-left transition-colors hover:bg-white/[0.03] ${isToday ? "bg-brand/[0.06]" : ""} ${past && !isToday ? "opacity-[0.55]" : ""}`}>
         <span className="absolute left-2 top-3 bottom-3 w-1 rounded-full" style={{ background: col }} />
         <span className="flex flex-col leading-tight pt-0.5">
           <span className="text-[11px] text-gray-500">{DOW_SHORT[dt.getUTCDay()]}</span>
@@ -156,18 +156,18 @@ function DayRow({ d, todayIso, manual, verdict, onOpen }: {
             {auto && <span className="ml-2 text-[10px] font-black uppercase tracking-wider" style={{ color: auto.color }}>{auto.label}</span>}
           </span>
           {(d.detail || d.moved) && (
-            <span className="block mt-0.5 text-[12.5px] text-gray-400 leading-snug">
+            <span className="block mt-0.5 text-[12px] text-gray-400 leading-snug">
               {d.detail}{d.moved && <em className="text-gray-500"> {d.moved}</em>}
             </span>
           )}
           {d.verify && (
-            <span className="block mt-2 rounded-r-md border-l-2 bg-white/[0.03] px-2.5 py-1.5 text-[12px] text-gray-300 leading-snug" style={{ borderColor: col }}>
+            <span className="block mt-2 rounded-md border px-2.5 py-1.5 text-[12px] text-gray-300 leading-snug" style={{ borderColor: `${col}40`, backgroundColor: `${col}0f` }}>
               {d.verify}
             </span>
           )}
         </span>
         <span className="text-right whitespace-nowrap pt-0.5">
-          {d.km ? <span className="text-base font-black text-gray-200" style={MONO}>{kmFmt(d.km)}<span className="ml-0.5 text-[10px] font-normal text-gray-500">km</span></span> : null}
+          {d.km ? <span className="text-base font-black text-gray-200" style={MONO}>{kmFmt(d.km)}<span className="ml-0.5 text-[11px] font-normal text-gray-500">km</span></span> : null}
         </span>
       </button>
     </li>
@@ -191,9 +191,9 @@ export function PlanLegend() {
 function ZoneTable({ head, rows }: { head: [string, string, string]; rows: ZoneRow[] }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-[#2A2A2A] bg-[#141414]">
-      <table className="w-full text-[12.5px]">
+      <table className="w-full text-[12px]">
         <thead>
-          <tr className="text-left text-[9px] font-black uppercase tracking-[0.18em] text-gray-500 border-b border-[#2A2A2A]">
+          <tr className="text-left text-[10px] font-black uppercase tracking-[0.18em] text-gray-500 border-b border-[#2A2A2A]">
             {head.map((h) => <th key={h} className="px-3.5 py-2.5">{h}</th>)}
           </tr>
         </thead>
@@ -217,7 +217,7 @@ export function ZonesPanel() {
   return (
     <section id="piano-zone">
       <SectionTitle icon={HeartPulse} hint="soglia intorno a 155">Zone di frequenza cardiaca</SectionTitle>
-      <p className="text-[12.5px] text-gray-400 leading-relaxed mb-3">{ZONE_NOTES.intro}</p>
+      <p className="text-[12px] text-gray-400 leading-relaxed mb-3">{ZONE_NOTES.intro}</p>
       <div className="grid gap-3 lg:grid-cols-2">
         <ZoneTable head={["Corsa", "Passo", "FC"]} rows={RUN_ZONES} />
         <ZoneTable head={["Bici", "Uso", "FC"]} rows={BIKE_ZONES} />
@@ -252,7 +252,7 @@ export function TestPanel({ compact = false }: { compact?: boolean }) {
         <div className="grid grid-cols-5 gap-1.5">
           {TEST_5K.splits.map(([k, p]) => (
             <div key={k} className="rounded-lg border border-[#2A2A2A] bg-[#0F0F0F] py-2 text-center">
-              <span className="block text-[10px] text-gray-500">{k}</span>
+              <span className="block text-[11px] text-gray-500">{k}</span>
               <span className="block text-lg font-black text-white tabular-nums" style={MONO}>{p}</span>
             </div>
           ))}
@@ -268,9 +268,9 @@ export function RacePanel({ compact = false }: { compact?: boolean }) {
     <section id="piano-gara">
       {!compact && <SectionTitle icon={Flag} hint="domenica 18 ottobre">Mezza maratona</SectionTitle>}
       <div className="overflow-x-auto rounded-xl border border-[#2A2A2A] bg-[#141414]">
-        <table className="w-full text-[12.5px]">
+        <table className="w-full text-[12px]">
           <thead>
-            <tr className="text-left text-[9px] font-black uppercase tracking-[0.18em] text-gray-500 border-b border-[#2A2A2A]">
+            <tr className="text-left text-[10px] font-black uppercase tracking-[0.18em] text-gray-500 border-b border-[#2A2A2A]">
               <th className="px-3.5 py-2.5">Tratto</th><th className="px-3.5 py-2.5">Passo</th><th className="px-3.5 py-2.5">FC</th>
             </tr>
           </thead>
@@ -330,7 +330,7 @@ export function PlanDayBody({ day }: { day: PlanDay }) {
         <p className="text-gray-300 leading-relaxed">{day.detail}{day.moved && <em className="text-gray-500"> {day.moved}</em>}</p>
       )}
       {day.verify && (
-        <p className="rounded-r-lg border-l-2 bg-white/[0.03] px-3 py-2 text-[13px] text-gray-200 leading-snug" style={{ borderColor: col }}>{day.verify}</p>
+        <p className="rounded-lg border px-3 py-2 text-[13px] text-gray-200 leading-snug" style={{ borderColor: `${col}40`, backgroundColor: `${col}0f` }}>{day.verify}</p>
       )}
       {day.more === "test" && <TestPanel compact />}
       {day.more === "gara" && <RacePanel compact />}

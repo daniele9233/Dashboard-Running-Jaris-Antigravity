@@ -13,9 +13,10 @@ import {
 import {
   buildWorld, RANGE_PER_LONG_KM, type CountryState, type CountryStatus, type Wonder, type WorldState,
 } from "./worldEngine";
+import { BRAND } from "../../theme/tokens";
 
 const MONO = "'JetBrains Mono', monospace";
-const LIME = "#C0FF00";
+const LIME = BRAND;
 const GOLD = "#FBBF24";
 /** Prefisso degli id salvati nelle conquiste: le regioni italiane restano senza. */
 export const WORLD_PREFIX = "w:";
@@ -40,7 +41,7 @@ function styleOf(s: CountryState, passportColor: Record<BiomeId, string>) {
     case "home": return { fill: GOLD, fo: 0.5, line: GOLD, lw: 1.4 };
     case "owned": return { fill: LIME, fo: 0.42, line: LIME, lw: 1.1 };
     case "attackable": return { fill: "#FFFFFF", fo: 0.16, line: "#FFFFFF", lw: 0.9 };
-    case "poor": return { fill: "#94A3B8", fo: 0.1, line: "#64748B", lw: 0.6 };
+    case "poor": return { fill: "#B8B8B8", fo: 0.1, line: "#878787", lw: 0.6 };
     case "passport": return { fill: passportColor[s.country.biome], fo: 0.1, line: passportColor[s.country.biome], lw: 0.6 };
     default: return { fill: "#000000", fo: 0.01, line: "#1F2937", lw: 0.4 };
   }
@@ -246,11 +247,11 @@ export function WorldConquest({ runs, conquered, onToggle, token }: Props) {
       </div>
 
       {/* legenda della mappa */}
-      <div className="hidden lg:flex absolute bottom-4 left-4 z-10 flex-wrap gap-x-3 gap-y-1 px-3 py-2 rounded-xl border border-white/10 bg-black/60 backdrop-blur-xl text-[9px] text-gray-400">
+      <div className="hidden lg:flex absolute bottom-4 left-4 z-10 flex-wrap gap-x-3 gap-y-1 px-3 py-2 rounded-xl border border-white/10 bg-black/60 backdrop-blur-xl text-[11px] text-gray-400">
         <LegendSwatch color={GOLD}>casa</LegendSwatch>
         <LegendSwatch color={LIME}>tuo</LegendSwatch>
         <LegendSwatch color="#FFFFFF">attaccabile</LegendSwatch>
-        <LegendSwatch color="#64748B">servono XP</LegendSwatch>
+        <LegendSwatch color="#878787">servono XP</LegendSwatch>
         <LegendSwatch color={passportColor.g}>serve un passaporto</LegendSwatch>
         <LegendSwatch color="#1F2937">fuori gittata</LegendSwatch>
       </div>
@@ -264,7 +265,7 @@ export function WorldConquest({ runs, conquered, onToggle, token }: Props) {
             <div className="flex shrink-0 border-b border-white/10">
               {([["impero", "Impero"], ["fronte", "Il fronte"], ["meraviglie", "Meraviglie"]] as const).map(([id, label]) => (
                 <button key={id} type="button" onClick={() => setTab(id)}
-                  className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-[0.18em] transition-colors ${id === "impero" ? "md:hidden" : ""} ${tab === id ? "text-[#C0FF00] bg-white/[0.04]" : "text-gray-500 hover:text-white"}`}>
+                  className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-[0.18em] transition-colors ${id === "impero" ? "md:hidden" : ""} ${tab === id ? "text-brand bg-white/[0.04]" : "text-gray-500 hover:text-white"}`}>
                   {label}
                 </button>
               ))}
@@ -287,58 +288,58 @@ function Empire({ world }: { world: WorldState }) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
-        <Globe2 className="w-5 h-5 text-[#C0FF00]" />
-        <h1 className="text-lg font-black tracking-tight uppercase italic text-white">Conquista del <span className="text-[#C0FF00]">Mondo</span></h1>
+        <Globe2 className="w-5 h-5 text-brand" />
+        <h1 className="text-lg font-black tracking-tight uppercase italic text-white">Conquista del <span className="text-brand">Mondo</span></h1>
       </div>
-      <div className="text-[9px] font-black tracking-[0.3em] uppercase text-gray-500 mb-1">XP da spendere</div>
+      <div className="text-[10px] font-black tracking-[0.3em] uppercase text-gray-500 mb-1">XP da spendere</div>
       <div className="flex items-baseline gap-2">
         <span className="text-4xl font-black text-white" style={{ fontFamily: MONO }}>{fmt(world.availableXp)}</span>
         <span className="text-sm text-gray-500">XP</span>
       </div>
-      <div className="text-[10px] text-gray-500 mt-1" style={{ fontFamily: MONO }}>
+      <div className="text-[11px] text-gray-500 mt-1" style={{ fontFamily: MONO }}>
         {fmt(world.totalXp)} guadagnati · {fmt(world.spentXp)} spesi
         {world.discount > 0 && <span className="ml-1.5 font-black text-[#FBBF24]">sconto impero −{Math.round(world.discount * 100)}%</span>}
       </div>
-      <p className="mt-2 text-[10px] leading-snug text-gray-500">
+      <p className="mt-2 text-[11px] leading-snug text-gray-500">
         In Italia si marcia coi chilometri, il mondo si conquista con gli XP: le sedute di qualità valgono eserciti.
       </p>
 
       <div className="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
         <div className="h-full rounded-full" style={{ width: `${(world.owned / world.total) * 100}%`, background: `linear-gradient(90deg, ${GOLD}, ${LIME})` }} />
       </div>
-      <div className="flex items-center justify-between mt-1.5 text-[10px]">
+      <div className="flex items-center justify-between mt-1.5 text-[11px]">
         <span className="text-gray-500">nazioni conquistate</span>
-        <span className="font-black text-[#C0FF00]" style={{ fontFamily: MONO }}>{world.owned}/{world.total}</span>
+        <span className="font-black text-brand" style={{ fontFamily: MONO }}>{world.owned}/{world.total}</span>
       </div>
 
       <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-3">
-        <div className="flex items-center gap-1.5 text-[9px] font-black tracking-[0.22em] uppercase text-gray-400">
-          <Route className="w-3 h-3 text-[#C0FF00]" />Gittata
+        <div className="flex items-center gap-1.5 text-[10px] font-black tracking-[0.22em] uppercase text-gray-400">
+          <Route className="w-3 h-3 text-brand" />Gittata
         </div>
         <div className="mt-1 flex items-baseline gap-1.5">
           <span className="text-2xl font-black text-white" style={{ fontFamily: MONO }}>{fmt(world.range)}</span>
           <span className="text-[11px] text-gray-500">km</span>
         </div>
-        <p className="text-[10px] leading-snug text-gray-500">
+        <p className="text-[11px] leading-snug text-gray-500">
           Il tuo lungo più lungo è {world.stats.longestKm.toLocaleString("it-IT", { maximumFractionDigits: 1 })} km: ogni km in più allunga il braccio di {RANGE_PER_LONG_KM} km.
         </p>
       </div>
 
       <div className="mt-4">
-        <div className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-400 mb-2">Passaporti</div>
+        <div className="text-[10px] font-black tracking-[0.22em] uppercase text-gray-400 mb-2">Passaporti</div>
         <div className="grid grid-cols-2 gap-1.5">
           {locked.map((p) => (
             <div key={p.biome} className="rounded-lg border px-2.5 py-2" style={{ borderColor: p.unlocked ? `${p.color}55` : "rgba(255,255,255,0.08)", background: p.unlocked ? `${p.color}10` : "transparent" }}
               title={p.requirement}>
               <div className="flex items-center gap-1.5">
                 <span className="text-[13px]">{p.emoji}</span>
-                <span className="text-[10px] font-black text-white/90 truncate">{p.name}</span>
+                <span className="text-[11px] font-black text-white/90 truncate">{p.name}</span>
                 {p.unlocked ? <Check className="ml-auto w-3 h-3 shrink-0" style={{ color: p.color }} /> : <Lock className="ml-auto w-3 h-3 shrink-0 text-gray-600" />}
               </div>
               <div className="mt-1.5 h-1 rounded-full bg-white/10 overflow-hidden">
                 <div className="h-full rounded-full" style={{ width: `${p.progress * 100}%`, background: p.color }} />
               </div>
-              <div className="mt-1 text-[8.5px] text-gray-500 truncate" style={{ fontFamily: MONO }}>
+              <div className="mt-1 text-[11px] text-gray-500 truncate" style={{ fontFamily: MONO }}>
                 {fmt(p.value)}/{fmt(p.target)} {p.unit}
               </div>
             </div>
@@ -347,12 +348,12 @@ function Empire({ world }: { world: WorldState }) {
       </div>
 
       <div className="mt-4">
-        <div className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-400 mb-2">Continenti</div>
+        <div className="text-[10px] font-black tracking-[0.22em] uppercase text-gray-400 mb-2">Continenti</div>
         <div className="space-y-1.5">
           {world.continents.map((c) => (
             <div key={c.id}>
-              <div className="flex items-baseline justify-between text-[10px]">
-                <span className={c.done ? "font-black text-[#C0FF00]" : "text-gray-300"}>{c.name}{c.done && " ✓"}</span>
+              <div className="flex items-baseline justify-between text-[11px]">
+                <span className={c.done ? "font-black text-brand" : "text-gray-300"}>{c.name}{c.done && " ✓"}</span>
                 <span className="text-gray-500" style={{ fontFamily: MONO }}>{c.owned}/{c.total}</span>
               </div>
               <div className="mt-0.5 h-1 rounded-full bg-white/10 overflow-hidden">
@@ -361,7 +362,7 @@ function Empire({ world }: { world: WorldState }) {
             </div>
           ))}
         </div>
-        <p className="mt-2 text-[9px] leading-snug text-gray-600">Ogni continente completato toglie il 10% a tutti i prezzi, ogni meraviglia il 3%.</p>
+        <p className="mt-2 text-[11px] leading-snug text-gray-600">Ogni continente completato toglie il 10% a tutti i prezzi, ogni meraviglia il 3%.</p>
       </div>
     </div>
   );
@@ -389,8 +390,8 @@ function FrontGroup({ title, hint, rows, onPick, world }: { title: string; hint?
   return (
     <div>
       <div className="flex items-baseline justify-between mb-1.5">
-        <span className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-400">{title}</span>
-        {hint && <span className="text-[9px] text-gray-600" style={{ fontFamily: MONO }}>{hint}</span>}
+        <span className="text-[10px] font-black tracking-[0.22em] uppercase text-gray-400">{title}</span>
+        {hint && <span className="text-[11px] text-gray-600" style={{ fontFamily: MONO }}>{hint}</span>}
       </div>
       <div className="space-y-1 max-h-[280px] overflow-y-auto pr-1">
         {rows.map((s) => (
@@ -399,11 +400,11 @@ function FrontGroup({ title, hint, rows, onPick, world }: { title: string; hint?
             <Flag iso={s.country.iso} size={20} />
             <div className="min-w-0 flex-1">
               <div className="text-[11px] font-bold text-white/90 truncate">{s.country.name}</div>
-              <div className="text-[9px] text-gray-500 truncate">
+              <div className="text-[11px] text-gray-500 truncate">
                 {world ? `${world.passports[s.country.biome].emoji} ${world.passports[s.country.biome].name}` : `${fmt(s.distanceKm)} km da ${s.nearest?.capital ?? "casa"}`}
               </div>
             </div>
-            <span className="text-[11px] font-black shrink-0" style={{ fontFamily: MONO, color: s.status === "attackable" ? LIME : "#94A3B8" }}>{fmt(s.cost)}</span>
+            <span className="text-[11px] font-black shrink-0" style={{ fontFamily: MONO, color: s.status === "attackable" ? LIME : "#B8B8B8" }}>{fmt(s.cost)}</span>
           </button>
         ))}
       </div>
@@ -415,7 +416,7 @@ function FrontGroup({ title, hint, rows, onPick, world }: { title: string; hint?
 function Wonders({ list, onPick }: { list: Wonder[]; onPick: (iso: string) => void }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-[10px] leading-snug text-gray-500 mb-2">
+      <p className="text-[11px] leading-snug text-gray-500 mb-2">
         Le città delle grandi maratone, più Roma. Una meraviglia è tua quando tieni la nazione <b className="text-gray-300">e</b> hai fatto l'impresa.
       </p>
       {list.map((w) => (
@@ -426,18 +427,18 @@ function Wonders({ list, onPick }: { list: Wonder[]; onPick: (iso: string) => vo
             <span className="text-[16px]">{w.def.emoji}</span>
             <div className="min-w-0 flex-1">
               <div className="text-[11px] font-black text-white/90 truncate">{w.def.city} · <span className="text-gray-400 font-bold">{w.def.title}</span></div>
-              <div className="text-[9px] text-gray-500 truncate">{w.def.challenge}</div>
+              <div className="text-[11px] text-gray-500 truncate">{w.def.challenge}</div>
             </div>
-            <span className="text-[8.5px] font-black uppercase tracking-wider shrink-0 px-1.5 py-0.5 rounded"
-              style={w.claimed ? { color: "#0a0a0a", background: GOLD } : w.met ? { color: "#FFFFFF", background: "rgba(255,255,255,0.12)" } : { color: "#94A3B8", background: "rgba(255,255,255,0.05)" }}>
+            <span className="text-[10px] font-black uppercase tracking-wider shrink-0 px-1.5 py-0.5 rounded"
+              style={w.claimed ? { color: "#0a0a0a", background: GOLD } : w.met ? { color: "#FFFFFF", background: "rgba(255,255,255,0.12)" } : { color: "#B8B8B8", background: "rgba(255,255,255,0.05)" }}>
               {w.claimed ? "tua" : w.met ? `prendi ${COUNTRY_BY_ISO[w.def.iso].name}` : "in corso"}
             </span>
           </div>
           <div className="mt-1.5 flex items-center gap-2">
             <div className="h-1 flex-1 rounded-full bg-white/10 overflow-hidden">
-              <div className="h-full rounded-full" style={{ width: `${w.progress * 100}%`, background: w.met ? GOLD : "#94A3B8" }} />
+              <div className="h-full rounded-full" style={{ width: `${w.progress * 100}%`, background: w.met ? GOLD : "#B8B8B8" }} />
             </div>
-            <span className="text-[9px] text-gray-500 shrink-0" style={{ fontFamily: MONO }}>{w.status}</span>
+            <span className="text-[11px] text-gray-500 shrink-0" style={{ fontFamily: MONO }}>{w.status}</span>
           </div>
         </button>
       ))}
@@ -462,10 +463,10 @@ function CountryCard({ s, world, pace, onClose, onConquer, onRelease }: {
           <Flag iso={c.iso} size={48} />
           <div className="min-w-0">
             <div className="text-lg font-black text-white leading-tight truncate">{c.name}</div>
-            <div className="text-[10px] text-gray-400 truncate">{c.capital} · {CONTINENTS[c.continent].name}</div>
+            <div className="text-[11px] text-gray-400 truncate">{c.capital} · {CONTINENTS[c.continent].name}</div>
             <div className="mt-1 flex flex-wrap gap-1">
               <Chip color={passport.color}>{passport.emoji} {passport.name}</Chip>
-              <Chip color={s.status === "attackable" ? LIME : s.status === "owned" || s.status === "home" ? GOLD : "#94A3B8"}>{STATUS_LABEL[s.status]}</Chip>
+              <Chip color={s.status === "attackable" ? LIME : s.status === "owned" || s.status === "home" ? GOLD : "#B8B8B8"}>{STATUS_LABEL[s.status]}</Chip>
             </div>
           </div>
         </div>
@@ -497,7 +498,7 @@ function CountryCard({ s, world, pace, onClose, onConquer, onRelease }: {
           </button>
         )}
         {s.status === "poor" && (
-          <Note icon={Lock} color="#94A3B8">
+          <Note icon={Lock} color="#B8B8B8">
             Ti mancano <b className="text-white">{fmt(s.missingXp)} XP</b>{sessions != null && <> — circa <b className="text-white">{sessions} {sessions === 1 ? "seduta" : "sedute"}</b> al tuo ritmo</>}.
           </Note>
         )}
@@ -509,11 +510,11 @@ function CountryCard({ s, world, pace, onClose, onConquer, onRelease }: {
             <div className="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden">
               <div className="h-full rounded-full" style={{ width: `${passport.progress * 100}%`, background: passport.color }} />
             </div>
-            <div className="mt-1 text-[10px] text-gray-400" style={{ fontFamily: MONO }}>{fmt(passport.value)}/{fmt(passport.target)} {passport.unit}</div>
+            <div className="mt-1 text-[11px] text-gray-400" style={{ fontFamily: MONO }}>{fmt(passport.value)}/{fmt(passport.target)} {passport.unit}</div>
           </div>
         )}
         {s.status === "range" && (
-          <Note icon={Route} color="#94A3B8">
+          <Note icon={Route} color="#B8B8B8">
             Fuori gittata: <b className="text-white">{fmt(s.distanceKm)} km</b> dalla tua capitale più vicina, la gittata è {fmt(world.range)} km.{" "}
             {s.longRunNeeded <= 42
               ? <>Un lungo da <b className="text-white">{s.longRunNeeded} km</b> la apre — oppure conquista una capitale più vicina.</>
@@ -527,10 +528,10 @@ function CountryCard({ s, world, pace, onClose, onConquer, onRelease }: {
               <span className="text-[18px]">{w.def.emoji}</span>
               <div className="min-w-0">
                 <div className="text-[11px] font-black text-white">Meraviglia · {w.def.city}</div>
-                <div className="text-[10px] text-gray-400">{w.def.title}: {w.def.challenge}</div>
+                <div className="text-[11px] text-gray-400">{w.def.title}: {w.def.challenge}</div>
               </div>
             </div>
-            <div className="mt-2 text-[10px]" style={{ fontFamily: MONO, color: w.claimed ? GOLD : w.met ? "#FFFFFF" : "#94A3B8" }}>
+            <div className="mt-2 text-[11px]" style={{ fontFamily: MONO, color: w.claimed ? GOLD : w.met ? "#FFFFFF" : "#B8B8B8" }}>
               {w.claimed ? "tua: −3% su tutti i prezzi" : w.met ? "impresa fatta: conquista la nazione per prenderla" : w.status}
             </div>
           </div>
@@ -559,9 +560,9 @@ function Flag({ iso, size }: { iso: string; size: number }) {
 function Fact({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
-      <div className="text-[8.5px] font-black tracking-[0.2em] uppercase text-gray-500">{label}</div>
+      <div className="text-[10px] font-black tracking-[0.2em] uppercase text-gray-500">{label}</div>
       <div className="text-[14px] font-black text-white" style={{ fontFamily: MONO }}>{value}</div>
-      {sub && <div className="text-[9px] text-gray-500 truncate">{sub}</div>}
+      {sub && <div className="text-[11px] text-gray-500 truncate">{sub}</div>}
     </div>
   );
 }
@@ -577,7 +578,7 @@ function Note({ icon: Icon, color, children }: { icon: LucideIcon; color: string
 
 function Chip({ color, children }: { color: string; children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide" style={{ color, background: `${color}1a` }}>
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wide" style={{ color, background: `${color}1a` }}>
       {children}
     </span>
   );

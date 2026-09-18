@@ -51,7 +51,7 @@ export function RunnerDnaLoading({ label = "Sequenziamento Runner DNA" }: { labe
               <h2 className="mt-3 text-4xl font-black uppercase tracking-tight text-white">
                 Analisi in corso
               </h2>
-              <p className="mt-3 text-sm leading-6 text-slate-400">
+              <p className="mt-3 text-sm leading-6 text-gray-400">
                 Sto leggendo i dati reali del tuo profilo, le corse sincronizzate e le metriche Garmin disponibili.
               </p>
 
@@ -65,7 +65,7 @@ export function RunnerDnaLoading({ label = "Sequenziamento Runner DNA" }: { labe
                     transition={{ duration: 1.8, repeat: Infinity, delay: index * 0.25 }}
                   >
                     <span className="h-2 w-2 rounded-full bg-[#C8FF2D] shadow-[0_0_14px_rgba(200,255,45,0.8)]" />
-                    <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-300">{step}</span>
+                    <span className="text-xs font-black uppercase tracking-[0.16em] text-gray-300">{step}</span>
                   </motion.div>
                 ))}
               </div>

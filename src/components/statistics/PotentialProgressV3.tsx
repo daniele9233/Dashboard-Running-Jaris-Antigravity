@@ -50,7 +50,7 @@ function Panel({ icon: Icon, title, hint, children, className = "" }: {
       <div className="flex items-baseline gap-2 px-5 pt-4 pb-3">
         <Icon className="w-4 h-4 self-center" style={{ color: LIME }} />
         <h3 className="text-[11px] font-black tracking-[0.2em] uppercase text-white">{title}</h3>
-        {hint && <span className="ml-auto text-[10px] truncate" style={{ color: CHART_TEXT.faint }}>{hint}</span>}
+        {hint && <span className="ml-auto text-[11px] truncate" style={{ color: CHART_TEXT.faint }}>{hint}</span>}
       </div>
       <div className="px-5 pb-5">{children}</div>
     </section>
@@ -64,13 +64,13 @@ function Kpi({ label, value, unit, sub, color = LIME, icon: Icon }: {
     <div className="rounded-xl border p-4" style={{ borderColor: BORDER, background: "#0A0A0A" }}>
       <div className="flex items-center gap-1.5 mb-1.5">
         {Icon && <Icon className="w-3.5 h-3.5" style={{ color }} />}
-        <span className="text-[9px] font-black tracking-[0.2em] uppercase" style={{ color: CHART_TEXT.axis }}>{label}</span>
+        <span className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: CHART_TEXT.axis }}>{label}</span>
       </div>
       <div className="flex items-baseline gap-1">
         <span className="text-[26px] font-black tabular-nums leading-none" style={{ fontFamily: MONO, color }}>{value}</span>
-        {unit && <span className="text-[10px]" style={{ color: CHART_TEXT.muted }}>{unit}</span>}
+        {unit && <span className="text-[11px]" style={{ color: CHART_TEXT.muted }}>{unit}</span>}
       </div>
-      {sub && <div className="mt-1.5 text-[10.5px] leading-snug" style={{ color: CHART_TEXT.muted }}>{sub}</div>}
+      {sub && <div className="mt-1.5 text-[11px] leading-snug" style={{ color: CHART_TEXT.muted }}>{sub}</div>}
     </div>
   );
 }
@@ -253,7 +253,7 @@ export function PotentialProgressV3({ runs }: { runs: Run[] }) {
             </ComposedChart>
           </ResponsiveContainer>
         </div>
-        <p className="mt-2 text-[10.5px] leading-relaxed" style={{ color: CHART_TEXT.muted }}>
+        <p className="mt-2 text-[11px] leading-relaxed" style={{ color: CHART_TEXT.muted }}>
           La curva piena è quello che i tuoi allenamenti hanno già costruito, ricalcolato giorno per giorno
           sull'ultimo anno. Il tratteggio è dove porta lo stesso carico se non cambi niente: si appiattisce
           perché i serbatoi si avvicinano al loro pieno, non perché ti stanchi.
@@ -289,19 +289,19 @@ export function PotentialProgressV3({ runs }: { runs: Run[] }) {
               >
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full shrink-0" style={{ background: t.color }} />
-                  <span className="text-[11.5px] font-bold text-white/90 flex-1 min-w-0 truncate">{t.name}</span>
+                  <span className="text-[11px] font-bold text-white/90 flex-1 min-w-0 truncate">{t.name}</span>
                   <span className="text-[11px] font-black tabular-nums shrink-0" style={{ fontFamily: MONO, color: t.color }}>
                     {t.pct}%
                   </span>
-                  <span className="text-[10px] tabular-nums shrink-0 w-12 text-right" style={{ fontFamily: MONO, color: trendCol(t.trend) }}>
+                  <span className="text-[11px] tabular-nums shrink-0 w-12 text-right" style={{ fontFamily: MONO, color: trendCol(t.trend) }}>
                     {t.trend > 0 ? "+" : ""}{t.trend}
                   </span>
-                  <span className="text-[9.5px] tabular-nums shrink-0 w-16 text-right" style={{ fontFamily: MONO, color: CHART_TEXT.faint }}>
+                  <span className="text-[11px] tabular-nums shrink-0 w-16 text-right" style={{ fontFamily: MONO, color: CHART_TEXT.faint }}>
                     → {t.settles}%
                   </span>
                 </div>
                 {sysSel === t.id && (
-                  <div className="mt-1.5 pl-4 text-[10.5px] leading-relaxed" style={{ color: CHART_TEXT.muted }}>
+                  <div className="mt-1.5 pl-4 text-[11px] leading-relaxed" style={{ color: CHART_TEXT.muted }}>
                     {t.what} Si alimenta con {t.from}; costante di tempo {t.tau} giorni.
                     Adesso ne ricevi <b className="text-white">{t.dose}′</b> a settimana contro i{" "}
                     <b className="text-white">{t.full}′</b> che lo terrebbero pieno.
@@ -309,7 +309,7 @@ export function PotentialProgressV3({ runs }: { runs: Run[] }) {
                 )}
               </button>
             ))}
-            <div className="flex items-center gap-2 pt-1 text-[9px] tracking-[0.15em] uppercase" style={{ color: CHART_TEXT.faint }}>
+            <div className="flex items-center gap-2 pt-1 text-[10px] tracking-[0.15em] uppercase" style={{ color: CHART_TEXT.faint }}>
               <span className="w-12 text-right">28 gg</span>
               <span className="w-16 text-right">si ferma a</span>
             </div>
@@ -351,10 +351,10 @@ export function PotentialProgressV3({ runs }: { runs: Run[] }) {
           </div>
           {limiter && (
             <div className="mt-2 rounded-xl border p-3" style={{ borderColor: `${limiter.def.color}44`, background: `${limiter.def.color}0d` }}>
-              <div className="text-[9px] font-black tracking-[0.2em] uppercase mb-1" style={{ color: limiter.def.color }}>
+              <div className="text-[10px] font-black tracking-[0.2em] uppercase mb-1" style={{ color: limiter.def.color }}>
                 Il collo di bottiglia
               </div>
-              <p className="text-[11.5px] leading-relaxed text-gray-300">
+              <p className="text-[11px] leading-relaxed text-gray-300">
                 <b className="text-white">{limiter.def.name}</b> è al {Math.round(limiter.pct)}% e vale{" "}
                 {SYSTEMS[limiter.def.id].vdotSpan.toFixed(1)} punti da vuoto a pieno: è lì che il prossimo mese
                 rende di più. {limiter.def.what}
@@ -377,7 +377,7 @@ export function PotentialProgressV3({ runs }: { runs: Run[] }) {
           </div>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
             {minutesTree.map((z) => (
-              <span key={z.name} className="flex items-center gap-1.5 text-[10px]" style={{ color: CHART_TEXT.muted }}>
+              <span key={z.name} className="flex items-center gap-1.5 text-[11px]" style={{ color: CHART_TEXT.muted }}>
                 <span className="w-2 h-2 rounded-sm" style={{ background: z.color }} />
                 {z.name} <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>{z.size}′</b>
               </span>
@@ -423,7 +423,7 @@ export function PotentialProgressV3({ runs }: { runs: Run[] }) {
               </ScatterChart>
             </ResponsiveContainer>
           </div>
-          <p className="mt-2 text-[10.5px] leading-relaxed" style={{ color: CHART_TEXT.muted }}>
+          <p className="mt-2 text-[11px] leading-relaxed" style={{ color: CHART_TEXT.muted }}>
             Ogni bolla è una corsa, in alto quelle che hanno costruito più potenziale. I numeri sono piccoli di
             proposito — nessuna singola uscita cambia una stagione — ma sono nella stessa unità, quindi due
             sedute si possono finalmente confrontare.
@@ -440,17 +440,17 @@ export function PotentialProgressV3({ runs }: { runs: Run[] }) {
               return (
                 <div key={g.id}>
                   <div className="flex items-baseline gap-2 mb-1">
-                    <span className="text-[11.5px] font-bold text-white/90 flex-1 min-w-0 truncate">{g.label}</span>
+                    <span className="text-[11px] font-bold text-white/90 flex-1 min-w-0 truncate">{g.label}</span>
                     {g.done ? (
                       <span className="text-[10px] font-black tracking-[0.15em] uppercase" style={{ color: CHART_SERIES.positive }}>
                         già tuo
                       </span>
                     ) : (
                       <>
-                        <span className="text-[10.5px] tabular-nums" style={{ fontFamily: MONO, color: CHART_TEXT.muted }}>
+                        <span className="text-[11px] tabular-nums" style={{ fontFamily: MONO, color: CHART_TEXT.muted }}>
                           {g.iso ? fmtDate(g.iso) : "—"}
                         </span>
-                        <span className="text-[10px] shrink-0 w-24 text-right" style={{ fontFamily: MONO, color: LIME }}>
+                        <span className="text-[11px] shrink-0 w-24 text-right" style={{ fontFamily: MONO, color: LIME }}>
                           {g.human}
                         </span>
                       </>
@@ -469,31 +469,31 @@ export function PotentialProgressV3({ runs }: { runs: Run[] }) {
                     />
                   </div>
                   {!g.done && g.blocker && (
-                    <div className="mt-1 text-[10px]" style={{ color: CHART_TEXT.faint }}>{g.blocker}</div>
+                    <div className="mt-1 text-[11px]" style={{ color: CHART_TEXT.faint }}>{g.blocker}</div>
                   )}
                 </div>
               );
             })}
             {goals.length === 0 && (
-              <p className="text-[11.5px]" style={{ color: CHART_TEXT.muted }}>
+              <p className="text-[11px]" style={{ color: CHART_TEXT.muted }}>
                 Nessun traguardo aperto raggiungibile con questo carico: servirebbe più carico, o un obiettivo
                 più ambizioso di quelli in lista.
               </p>
             )}
             {doneGoals.length > 0 && (
               <div className="pt-2 mt-1 border-t" style={{ borderColor: BORDER }}>
-                <div className="text-[9px] font-black tracking-[0.2em] uppercase mb-1.5" style={{ color: CHART_SERIES.positive }}>
+                <div className="text-[10px] font-black tracking-[0.2em] uppercase mb-1.5" style={{ color: CHART_SERIES.positive }}>
                   {doneGoals.length} già alla tua portata, oggi
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {doneGoals.map((g) => (
-                    <span key={g.id} className="text-[10px] px-2 py-1 rounded-md"
+                    <span key={g.id} className="text-[11px] px-2 py-1 rounded-md"
                       style={{ background: `${CHART_SERIES.positive}14`, color: CHART_SERIES.positive }}>
                       {g.label}
                     </span>
                   ))}
                 </div>
-                <p className="mt-1.5 text-[10px] leading-relaxed" style={{ color: CHART_TEXT.faint }}>
+                <p className="mt-1.5 text-[11px] leading-relaxed" style={{ color: CHART_TEXT.faint }}>
                   "Alla tua portata" vuol dire che il modello ti dà quel tempo in giornata ideale, non che
                   l'hai già corso: il cronometro va ancora fatto girare.
                 </p>
@@ -515,19 +515,19 @@ export function PotentialProgressV3({ runs }: { runs: Run[] }) {
                     </span>
                   )}
                 </div>
-                <div className="mt-1 text-[10.5px] leading-snug" style={{ color: CHART_TEXT.muted }}>{p.detail}</div>
+                <div className="mt-1 text-[11px] leading-snug" style={{ color: CHART_TEXT.muted }}>{p.detail}</div>
                 <div className="mt-2 flex items-center gap-2">
                   <div className="flex-1 h-[3px] rounded-full overflow-hidden" style={{ background: "#151515" }}>
                     <div className="h-full rounded-full" style={{ width: `${Math.min(100, p.in8w)}%`, background: p.system.color }} />
                   </div>
-                  <span className="text-[9.5px] tabular-nums shrink-0" style={{ fontFamily: MONO, color: CHART_TEXT.faint }}>
+                  <span className="text-[11px] tabular-nums shrink-0" style={{ fontFamily: MONO, color: CHART_TEXT.faint }}>
                     {Math.round(p.nowPct)}% → {Math.round(p.in8w)}% · +{p.vdotGain.toFixed(2)} VDOT
                   </span>
                 </div>
               </div>
             ))}
             {physio.prescriptions.length === 0 && (
-              <p className="text-[11.5px]" style={{ color: CHART_TEXT.muted }}>
+              <p className="text-[11px]" style={{ color: CHART_TEXT.muted }}>
                 Niente da aggiungere: con questo carico i serbatoi sono già al loro pieno sostenibile.
               </p>
             )}

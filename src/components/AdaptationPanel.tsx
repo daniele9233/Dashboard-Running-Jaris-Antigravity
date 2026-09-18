@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Run } from "../types/api";
+import { BRAND } from "../theme/tokens";
 
 interface AdaptationPanelProps {
   runs: Run[];
@@ -125,14 +126,14 @@ export function AdaptationPanel({ runs }: AdaptationPanelProps) {
 
   if (runs.length === 0) {
     return (
-      <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 h-full flex items-center justify-center">
+      <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 h-full flex items-center justify-center">
         <p className="text-xs text-text-muted">Sincronizza le corse per vedere gli adattamenti</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 h-full flex flex-col overflow-hidden">
+    <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 h-full flex flex-col overflow-hidden">
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-4 pt-3 pb-2 shrink-0 border-b border-[#1E293B]">
         <div className="flex items-center gap-2">
@@ -140,7 +141,7 @@ export function AdaptationPanel({ runs }: AdaptationPanelProps) {
           <h3 className="text-[11px] font-black uppercase tracking-wider text-text-primary">
             Adattamenti
           </h3>
-          <span className="text-[9px] text-text-muted">Quando emergerà ogni corsa</span>
+          <span className="text-[11px] text-text-muted">Quando emergerà ogni corsa</span>
         </div>
         {/* Period tabs */}
         <div className="flex gap-1">
@@ -148,10 +149,10 @@ export function AdaptationPanel({ runs }: AdaptationPanelProps) {
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className="text-[9px] font-black px-2 py-1 rounded-md transition-all"
+              className="text-[11px] font-black px-2 py-1 rounded-md transition-all"
               style={{
-                color:           period === p ? "#0F172A" : "#64748B",
-                backgroundColor: period === p ? "#C0FF00" : "transparent",
+                color:           period === p ? "#0F172A" : "#878787",
+                backgroundColor: period === p ? BRAND : "transparent",
               }}
             >
               {p}gg
@@ -190,13 +191,13 @@ export function AdaptationPanel({ runs }: AdaptationPanelProps) {
                 {/* Run info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-[10px] font-black text-white">
+                    <span className="text-[11px] font-black text-white">
                       {run.distance_km.toFixed(1)} km
                     </span>
-                    <span className="text-[9px] text-[#475569]">
+                    <span className="text-[11px] text-gray-600">
                       {new Date(run.date).toLocaleDateString("it", { day: "numeric", month: "short" })}
                     </span>
-                    <span className="text-[9px] text-[#475569]">· {run.avg_pace}/km</span>
+                    <span className="text-[11px] text-gray-600">· {run.avg_pace}/km</span>
                   </div>
                   {/* Maturation bar */}
                   <div className="flex items-center gap-2 mt-1">
@@ -205,13 +206,13 @@ export function AdaptationPanel({ runs }: AdaptationPanelProps) {
                         className="h-full rounded-full transition-all"
                         style={{
                           width: `${pct}%`,
-                          backgroundColor: isReady ? "#C0FF00" : cfg.color,
+                          backgroundColor: isReady ? BRAND : cfg.color,
                           opacity: isReady ? 1 : 0.8,
                         }}
                       />
                     </div>
                     <span
-                      className="text-[9px] font-bold shrink-0"
+                      className="text-[11px] font-bold shrink-0"
                       style={{ color: cfg.color }}
                     >
                       {pct}%
@@ -222,15 +223,15 @@ export function AdaptationPanel({ runs }: AdaptationPanelProps) {
                 {/* Peak info */}
                 <div className="text-right shrink-0">
                   <div
-                    className="text-[9px] font-black uppercase tracking-wider"
+                    className="text-[10px] font-black uppercase tracking-wider"
                     style={{ color: cfg.color }}
                   >
                     {cfg.label.split("")[0]}{cfg.label.slice(1, 6)}.
                   </div>
                   {isReady ? (
-                    <div className="text-[9px] font-black text-[#C0FF00]">✓ Attivo</div>
+                    <div className="text-[11px] font-black text-brand">✓ Attivo</div>
                   ) : (
-                    <div className="text-[9px] text-[#64748B]">
+                    <div className="text-[11px] text-gray-600">
                       {dLeft <= 1 ? "Domani" : `${peakStr}`}
                     </div>
                   )}
@@ -245,7 +246,7 @@ export function AdaptationPanel({ runs }: AdaptationPanelProps) {
 
         {/* Right: summary for selected period */}
         <div className="w-[175px] shrink-0 flex flex-col gap-3 p-3 overflow-hidden">
-          <div className="text-[9px] text-text-muted font-bold uppercase tracking-widest">
+          <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest">
             Ultimi {period} giorni
           </div>
 
@@ -253,9 +254,9 @@ export function AdaptationPanel({ runs }: AdaptationPanelProps) {
           <div className="flex gap-3">
             <div className="flex flex-col">
               <span className="text-xl font-black text-white leading-none">
-                {summary.totalKm.toFixed(0)}<span className="text-xs text-[#475569] ml-0.5">km</span>
+                {summary.totalKm.toFixed(0)}<span className="text-xs text-gray-600 ml-0.5">km</span>
               </span>
-              <span className="text-[9px] text-[#64748B]">{summary.totalRuns} corse</span>
+              <span className="text-[11px] text-gray-600">{summary.totalRuns} corse</span>
             </div>
           </div>
 
@@ -269,10 +270,10 @@ export function AdaptationPanel({ runs }: AdaptationPanelProps) {
               return (
                 <div key={cat}>
                   <div className="flex items-center justify-between mb-0.5">
-                    <span className="flex items-center gap-1 text-[9px] font-bold" style={{ color: cfg.color }}>
+                    <span className="flex items-center gap-1 text-[11px] font-bold" style={{ color: cfg.color }}>
                       {cfg.icon} {cfg.label.slice(0, 8)}.
                     </span>
-                    <span className="text-[9px] text-[#64748B]">{data.km.toFixed(0)} km</span>
+                    <span className="text-[11px] text-gray-600">{data.km.toFixed(0)} km</span>
                   </div>
                   <div className="h-1 bg-[#1E293B] rounded-full overflow-hidden">
                     <div
@@ -280,7 +281,7 @@ export function AdaptationPanel({ runs }: AdaptationPanelProps) {
                       style={{ width: `${pct}%`, backgroundColor: cfg.color }}
                     />
                   </div>
-                  <div className="text-[8px] text-[#334155] mt-0.5">{cfg.rangeLabel} · {cfg.desc}</div>
+                  <div className="text-[11px] text-[#334155] mt-0.5">{cfg.rangeLabel} · {cfg.desc}</div>
                 </div>
               );
             })}
@@ -289,7 +290,7 @@ export function AdaptationPanel({ runs }: AdaptationPanelProps) {
           {/* Dominant adaptation insight */}
           {summary.dominant && (
             <div
-              className="rounded-lg px-2 py-1.5 text-[9px] leading-snug border mt-auto"
+              className="rounded-lg px-2 py-1.5 text-[11px] leading-snug border mt-auto"
               style={{
                 borderColor: CATEGORIES[summary.dominant].color + "30",
                 backgroundColor: CATEGORIES[summary.dominant].color + "10",

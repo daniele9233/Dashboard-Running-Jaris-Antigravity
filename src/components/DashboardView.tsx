@@ -50,6 +50,8 @@ import { DetrainingWidget } from "./DetrainingWidget";
 import { computeDrift as computeDriftCanonical } from "../utils/cardiacDrift";
 import { parsePaceToSecs, secsToPaceStr, hmsToSecs, formatDuration, fmtPbTime } from "../utils/paceFormat";
 import { buildRacePredictions } from "../utils/racePredictions";
+import { BRAND, INK_DIM } from "../theme/tokens";
+import { Button } from "./ui/Button";
 
 // `bestPbTime` rimosso (round 6 — #3 dead code). Backend espone già le PB
 // projections via `analytics.race_predictions` + `buildRacePredictions` util.
@@ -113,7 +115,7 @@ export function DashboardView() {
 
   // Fatigue color — shared across Status of Form, Fatigue card, Next Optimal Session
   // Red when ATL > 50 (high fatigue), amber 30-50, green < 30
-  const faticaColor = atl > 50 ? "#F43F5E" : atl > 30 ? "#F59E0B" : "#C0FF00";
+  const faticaColor = atl > 50 ? "#F43F5E" : atl > 30 ? "#F59E0B" : BRAND;
   const faticaLabel = atl > 50 ? "HIGH" : atl > 30 ? "MODERATE" : "LOW";
 
   // Peak Score — map TSB [-40..+30] → [0..100]. Linear, clamped.
@@ -123,9 +125,9 @@ export function DashboardView() {
 
   const status =
     tsb === null
-      ? { label: "—",          color: "#64748B" }
+      ? { label: "—",          color: INK_DIM }
       : tsb > 10
-      ? { label: "FRESH",      color: "#C0FF00" }
+      ? { label: "FRESH",      color: BRAND }
       : tsb > -5
       ? { label: "NEUTRAL",    color: "#14B8A6" }
       : tsb > -20
@@ -167,8 +169,8 @@ export function DashboardView() {
 
   // ─── Human-friendly metaphors (no jargon) ─────────────────────────────
   const tsbMeta = (() => {
-    if (tsb === null) return { icon: "🪫", label: "—", sub: "Dati non disponibili", color: "#64748B" };
-    if (tsb > 10)   return { icon: "🔋", label: "Pieno",    sub: "Sei fresco, spingi!",        color: "#C0FF00" };
+    if (tsb === null) return { icon: "🪫", label: "—", sub: "Dati non disponibili", color: INK_DIM };
+    if (tsb > 10)   return { icon: "🔋", label: "Pieno",    sub: "Sei fresco, spingi!",        color: BRAND };
     if (tsb > -5)   return { icon: "🔋", label: "Buono",    sub: "Equilibrio perfetto",        color: "#14B8A6" };
     if (tsb > -15)  return { icon: "🪫", label: "Medio",    sub: "Fase di allenamento",        color: "#F59E0B" };
     if (tsb > -25)  return { icon: "🪫", label: "Scarico",  sub: "Recupera!",                  color: "#F59E0B" };
@@ -321,7 +323,7 @@ export function DashboardView() {
 
   return (
     <main className="flex-1 overflow-y-auto custom-scrollbar">
-      <div className="px-4 sm:px-6 md:px-8 lg:px-14 py-4 md:py-6 max-w-[2200px] mx-auto space-y-4 md:space-y-6">
+      <div className="px-4 sm:px-6 md:px-8 lg:px-14 py-4 md:py-6 max-w-[1800px] mx-auto space-y-4 md:space-y-6">
 
         {/* Header */}
         {dashLoading && <div className="h-10 bg-white/5 rounded-xl animate-pulse" />}
@@ -340,31 +342,31 @@ export function DashboardView() {
                 {profile?.race_goal}
                 {raceDate && ` — ${raceDate}`}
                 {daysToRace !== null && (
-                  <span className="ml-3 text-[#C0FF00] font-black">{t("dashboard.daysToRace", { days: daysToRace })}</span>
+                  <span className="ml-3 text-brand font-black">{t("dashboard.daysToRace", { days: daysToRace })}</span>
                 )}
               </p>
             </div>
             {!isMobile && (
               <div className="flex items-center gap-2 shrink-0">
                 <div className="relative" ref={addMenuRef}>
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={Plus}
                     onClick={() => setOpenAddMenu((v) => !v)}
                     disabled={hiddenMeta.length === 0}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[#666] hover:text-[#C0FF00] hover:border-[#C0FF00]/30 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-[#666] disabled:hover:border-white/[0.06] text-[10px] font-black tracking-widest transition-colors"
                     title={t("dashboard.restoreHiddenWidgets")}
                   >
-                    <Plus size={12} />
                     AGGIUNGI WIDGET
                     {hiddenMeta.length > 0 && (
-                      <span className="bg-[#C0FF00] text-black rounded-full px-1.5 text-[9px] leading-4">
+                      <span className="bg-brand text-black rounded-full px-1.5 text-[11px] leading-4">
                         {hiddenMeta.length}
                       </span>
                     )}
-                  </button>
+                  </Button>
                   {openAddMenu && hiddenMeta.length > 0 && (
-                    <div className="absolute right-0 mt-2 w-64 bg-[#1a1a1a] border border-white/[0.08] rounded-[16px] shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-40 p-2">
-                      <div className="text-[#666] text-[9px] font-black tracking-widest uppercase px-3 py-2">
+                    <div className="absolute right-0 mt-2 w-64 bg-[#1a1a1a] border border-white/[0.08] rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-40 p-2">
+                      <div className="text-gray-600 text-[10px] font-black tracking-widest uppercase px-3 py-2">
                         Archivio ({hiddenMeta.length})
                       </div>
                       {hiddenMeta.map((w) => (
@@ -375,25 +377,26 @@ export function DashboardView() {
                             restoreWidget(w.key);
                             setOpenAddMenu(false);
                           }}
-                          className="w-full text-left px-3 py-2 text-[12px] text-white hover:bg-white/[0.06] rounded-[12px] flex items-center justify-between group"
+                          className="w-full text-left px-3 py-2 text-[12px] text-white hover:bg-white/[0.06] rounded-xl flex items-center justify-between group"
                         >
                           <span>{w.label}</span>
-                          <Plus size={12} className="text-[#666] group-hover:text-[#C0FF00]" />
+                          <Plus size={12} className="text-gray-600 group-hover:text-brand" />
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={RotateCcw}
                   onClick={() => {
                     if (confirm("Ripristinare il layout predefinito?")) resetLayout();
                   }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[#666] hover:text-[#C0FF00] hover:border-[#C0FF00]/30 text-[10px] font-black tracking-widest transition-colors"
                   title={t("dashboard.restoreWidgetPositions")}
                 >
-                  <RotateCcw size={12} />
                   RESET LAYOUT
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -422,7 +425,7 @@ export function DashboardView() {
           {!hiddenKeys.includes("status-form") && (
           <div key="status-form">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("status-form")}>
-            <div className="h-full rounded-[24px] p-8 relative overflow-hidden flex flex-col justify-between backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+            <div className="h-full rounded-3xl p-8 relative overflow-hidden flex flex-col justify-between border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
             <div className="flex justify-between items-start mb-6">
               <div>
                 <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-2">LIVE BIO-FEED</div>
@@ -485,7 +488,7 @@ export function DashboardView() {
                   <span className="text-4xl md:text-5xl font-black" style={{ color: faticaColor }}>
                     {readiness !== null ? readiness.toFixed(0) : "—"}
                   </span>
-                  <span className="text-[#A0A0A0] text-[10px] md:text-xs font-black tracking-widest mt-1">{t("dashboard.peakScore").toUpperCase()}</span>
+                  <span className="text-[#A0A0A0] text-[11px] md:text-xs font-black tracking-widest mt-1">{t("dashboard.peakScore").toUpperCase()}</span>
                 </div>
               </div>
 
@@ -494,9 +497,9 @@ export function DashboardView() {
                 <div>
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">{t("dashboard.fuelTitle")}</span>
-                    <span className="text-[#C0FF00]/70 text-[9px] font-black tracking-widest">TSB</span>
+                    <span className="text-brand/70 text-[11px] font-black tracking-widest">TSB</span>
                   </div>
-                  <div className="text-[#555] text-[9px] font-semibold italic mb-1">{t("dashboard.fuelSub")}</div>
+                  <div className="text-gray-600 text-[11px] font-semibold italic mb-1">{t("dashboard.fuelSub")}</div>
                   <div className="text-xl font-black whitespace-nowrap" style={{ color: tsbMeta.color }}>
                     <span className="mr-1.5 font-mono tabular-nums">{tsbValue}</span>{tsbMeta.label}
                   </div>
@@ -505,9 +508,9 @@ export function DashboardView() {
                 <div>
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">{t("dashboard.powerTitle")}</span>
-                    <span className="text-[#C0FF00]/70 text-[9px] font-black tracking-widest">EFF</span>
+                    <span className="text-brand/70 text-[11px] font-black tracking-widest">EFF</span>
                   </div>
-                  <div className="text-[#555] text-[9px] font-semibold italic mb-1">{t("dashboard.powerSub")}</div>
+                  <div className="text-gray-600 text-[11px] font-semibold italic mb-1">{t("dashboard.powerSub")}</div>
                   <div className="text-white text-xl font-black whitespace-nowrap">
                     <span className="mr-1.5 font-mono tabular-nums">{effValue}</span>{effMeta.label}
                   </div>
@@ -520,9 +523,9 @@ export function DashboardView() {
                 <div>
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">{t("dashboard.engineTitle")}</span>
-                    <span className="text-[#C0FF00]/70 text-[9px] font-black tracking-widest">CTL</span>
+                    <span className="text-brand/70 text-[11px] font-black tracking-widest">CTL</span>
                   </div>
-                  <div className="text-[#555] text-[9px] font-semibold italic mb-1">{t("dashboard.engineSub")}</div>
+                  <div className="text-gray-600 text-[11px] font-semibold italic mb-1">{t("dashboard.engineSub")}</div>
                   <div className="text-white text-xl font-black whitespace-nowrap">
                     <span className="mr-1.5 font-mono tabular-nums">{ctlValue}</span>{ctlMeta.label}
                   </div>
@@ -531,9 +534,9 @@ export function DashboardView() {
                 <div>
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">{t("dashboard.workTitle")}</span>
-                    <span className="text-[#C0FF00]/70 text-[9px] font-black tracking-widest">ATL</span>
+                    <span className="text-brand/70 text-[11px] font-black tracking-widest">ATL</span>
                   </div>
-                  <div className="text-[#555] text-[9px] font-semibold italic mb-1">{t("dashboard.workSub")}</div>
+                  <div className="text-gray-600 text-[11px] font-semibold italic mb-1">{t("dashboard.workSub")}</div>
                   <div className="text-white text-xl font-black whitespace-nowrap">
                     <span className="mr-1.5 font-mono tabular-nums">{atlValue}</span>{atlMeta.label}
                   </div>
@@ -546,7 +549,7 @@ export function DashboardView() {
             {insightData?.insight && (
               <div className="mt-2 pt-2 border-t border-white/[0.06]">
                 <div className="flex items-start gap-2.5">
-                  <Sparkles className="text-[#C0FF00] mt-0.5 shrink-0" size={14} />
+                  <Sparkles className="text-brand mt-0.5 shrink-0" size={14} />
                   <p className="text-[#A0A0A0] text-[12px] leading-snug whitespace-pre-line">
                     {insightData.insight}
                   </p>
@@ -562,10 +565,10 @@ export function DashboardView() {
           {!hiddenKeys.includes("vo2max") && (
           <div key="vo2max">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("vo2max")}>
-            <div className="h-full rounded-[24px] p-6 flex flex-col justify-between backdrop-blur-2xl border border-white/[0.12] border-t-4 border-t-[#C0FF00] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+            <div className="h-full rounded-3xl p-6 flex flex-col justify-between border border-brand/30 shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
             <div className="flex justify-between items-start">
-              <Wind className="text-[#C0FF00]" size={24} />
-              <div className="bg-white/10 text-[#A0A0A0] px-2 py-1 rounded-[12px] text-[10px] font-black tracking-widest">
+              <Wind className="text-brand" size={24} />
+              <div className="bg-white/10 text-[#A0A0A0] px-2 py-1 rounded-xl text-[11px] font-black tracking-widest">
                 {t("dashboard.vdotScore").toUpperCase()}
               </div>
             </div>
@@ -587,9 +590,9 @@ export function DashboardView() {
           {!hiddenKeys.includes("previsione-gara") && (
           <div key="previsione-gara">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("previsione-gara")}>
-            <div className="h-full rounded-[24px] p-6 flex flex-col backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+            <div className="h-full rounded-3xl p-6 flex flex-col border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
             <div className="flex items-center gap-2 mb-3">
-              <Target className="text-[#C0FF00]" size={14} />
+              <Target className="text-brand" size={14} />
               <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">{t("dashboard.racePrediction")}</span>
             </div>
 
@@ -604,14 +607,14 @@ export function DashboardView() {
                       type="button"
                       onClick={() => setTempBandKey(b.key)}
                       title={`${b.range} · umidità ~${b.humidity}%`}
-                      className={`flex flex-col items-center py-1.5 px-1 rounded-[12px] border transition-colors ${
+                      className={`flex flex-col items-center py-1.5 px-1 rounded-xl border transition-colors ${
                         active
-                          ? "border-[#C0FF00]/40 bg-[#C0FF00]/10 text-[#C0FF00]"
-                          : "border-white/[0.06] bg-white/[0.02] text-[#777] hover:text-white hover:border-white/[0.12]"
+                          ? "border-brand/40 bg-brand/10 text-brand"
+                          : "border-white/[0.06] bg-white/[0.02] text-gray-500 hover:text-white hover:border-white/[0.12]"
                       }`}
                     >
-                      <span className="text-[8px] font-black tracking-[0.1em] uppercase leading-tight">{b.label}</span>
-                      <span className="text-[7px] font-bold opacity-70 leading-tight mt-0.5">{b.range}</span>
+                      <span className="text-[10px] font-black tracking-[0.1em] uppercase leading-tight">{b.label}</span>
+                      <span className="text-[11px] font-bold opacity-70 leading-tight mt-0.5">{b.range}</span>
                     </button>
                   );
                 })}
@@ -623,7 +626,7 @@ export function DashboardView() {
                 const delta = p.deltaSec;
                 const improved = delta !== null && delta < 0;
                 const worsened = delta !== null && delta > 0;
-                const deltaColor = improved ? "#16A34A" : worsened ? "#F43F5E" : "#64748B";
+                const deltaColor = improved ? "#16A34A" : worsened ? "#F43F5E" : "#878787";
                 const deltaBg    = improved ? "rgba(22,163,74,0.18)" : worsened ? "rgba(244,63,94,0.15)" : "rgba(100,116,139,0.12)";
                 // Strava-style: "8m 22sec" when ≥60s, else "45sec"
                 const fmtDelta = (s: number) => {
@@ -644,7 +647,7 @@ export function DashboardView() {
                 return (
                   <div
                     key={p.short}
-                    className="flex items-center justify-between py-2 px-3 rounded-[16px] bg-white/[0.02] border border-white/[0.04]"
+                    className="flex items-center justify-between py-2 px-3 rounded-2xl bg-white/[0.02] border border-white/[0.04]"
                   >
                     <span className="text-[#A0A0A0] text-[11px] font-black tracking-widest w-10">
                       {p.short}
@@ -654,31 +657,31 @@ export function DashboardView() {
                     </span>
                     {showClimate ? (
                       <span
-                        className="inline-flex items-center px-2 py-1 rounded-[12px] text-[9px] font-black tracking-widest uppercase"
+                        className="inline-flex items-center px-2 py-1 rounded-xl text-[10px] font-black tracking-widest uppercase"
                         style={{
                           background: tempBandKey === "ideale" ? "rgba(192,255,0,0.12)" : "rgba(244,63,94,0.12)",
-                          color: tempBandKey === "ideale" ? "#C0FF00" : "#F43F5E",
+                          color: tempBandKey === "ideale" ? BRAND : "#F43F5E",
                         }}
                       >
                         {activeBand?.label}
                       </span>
                     ) : delta !== null && delta !== 0 ? (
                       <span
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-[12px] text-[11px] font-bold"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-xl text-[11px] font-bold"
                         style={{ background: deltaBg, color: deltaColor }}
                       >
                         <span className="leading-none">{improved ? "▼" : "▲"}</span>
                         <span className="leading-none font-mono">{fmtDelta(delta)}</span>
                       </span>
                     ) : (
-                      <span className="text-[#555] text-[9px] font-black tracking-widest uppercase">—</span>
+                      <span className="text-gray-600 text-[10px] font-black tracking-widest uppercase">—</span>
                     )}
                   </div>
                 );
               })}
             </div>
 
-            <div className="text-[#555] text-[9px] tracking-wider mt-3 text-center">
+            <div className="text-gray-600 text-[11px] tracking-wider mt-3 text-center">
               {tempBands.length > 0
                 ? `previsione a ${activeBand?.range ?? "clima ideale"} · umidità ~${activeBand?.humidity ?? 65}%`
                 : "stimolo fisiologico ultima corsa → beneficio per distanza"}
@@ -706,19 +709,22 @@ export function DashboardView() {
           {!hiddenKeys.includes("fatigue-atl") && (
           <div key="fatigue-atl">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("fatigue-atl")}>
+            {/* un solo riempimento saturo per schermata: lo stato vive nel
+                numero e nel bordo, non nel fondo di un'informazione secondaria */}
             <div
-              className="h-full rounded-[24px] p-6 flex flex-col justify-between shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
-              style={{ backgroundColor: faticaColor }}
+              className="h-full rounded-3xl p-6 flex flex-col justify-between border"
+              style={{ backgroundColor: `${faticaColor}0d`, borderColor: `${faticaColor}40` }}
             >
             <div className="flex justify-between items-start">
-              <TrendingDown className="text-black/70" size={24} />
-              <div className="bg-black/10 text-black/70 px-2 py-1 rounded-[12px] text-[10px] font-black tracking-widest">
+              <TrendingDown style={{ color: faticaColor }} size={24} />
+              <div className="px-2 py-1 rounded-xl text-[11px] font-black tracking-widest"
+                style={{ color: faticaColor, backgroundColor: `${faticaColor}1a` }}>
                 {faticaLabel}
               </div>
             </div>
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-black/60 text-xs font-black tracking-widest">{t("dashboard.fatigueATL").toUpperCase()}</span>
+                <span className="text-gray-400 text-xs font-black tracking-widest">{t("dashboard.fatigueATL").toUpperCase()}</span>
                 <InfoTooltip title="FATIGUE — ATL" lines={[
                   "ATL (Acute Training Load) = carico ultimi 7 giorni. Media mobile esponenziale.",
                   "ATL > 80: HIGH RISK — recupero insufficiente.",
@@ -729,10 +735,10 @@ export function DashboardView() {
                 ]} />
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-black text-5xl font-black tracking-tight">
+                <span className="text-5xl font-black tracking-tight tabular-nums" style={{ color: faticaColor }}>
                   {atl > 0 ? atl.toFixed(1) : "—"}
                 </span>
-                <span className="text-black/60 text-sm font-black">{faticaLabel}</span>
+                <span className="text-gray-500 text-sm font-black">{faticaLabel}</span>
               </div>
             </div>
             </div>
@@ -744,8 +750,8 @@ export function DashboardView() {
           {!hiddenKeys.includes("soglia") && (
           <div key="soglia">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("soglia")}>
-            <div className="h-full rounded-[24px] p-6 flex flex-col justify-between backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
-            <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">{t("dashboard.anaerobicThreshold").toUpperCase()}</div>
+            <div className="h-full rounded-3xl p-6 flex flex-col justify-between border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+            <div className="text-[#A0A0A0] text-[11px] font-black tracking-widest mb-4">{t("dashboard.anaerobicThreshold").toUpperCase()}</div>
             <div className="flex items-stretch gap-5 mb-4">
               <div className="flex-1">
                 <div className="flex items-baseline gap-1.5">
@@ -783,19 +789,19 @@ export function DashboardView() {
           {!hiddenKeys.includes("deriva") && (
           <div key="deriva">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("deriva")}>
-            <div className="h-full rounded-[24px] p-6 flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+            <div className="h-full rounded-3xl p-6 flex flex-col overflow-hidden border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-              <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest">
+              <div className="text-[#A0A0A0] text-[11px] font-black tracking-widest">
                 {t("dashboard.cardiacDrift").toUpperCase()}
               </div>
               {lastDrift !== null && (() => {
                 const abs = Math.abs(lastDrift);
-                const col = abs < 3.5 ? "#C0FF00" : abs < 5 ? "#F59E0B" : "#F43F5E";
+                const col = abs < 3.5 ? BRAND : abs < 5 ? "#F59E0B" : "#F43F5E";
                 const lbl = abs < 3.5 ? "Ottima" : abs < 5 ? "Normale" : "Elevata";
                 return (
                   <span
-                    className="px-2 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase"
+                    className="px-2 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase"
                     style={{ background: `${col}15`, border: `1px solid ${col}44`, color: col }}
                   >
                     {lbl}
@@ -809,8 +815,8 @@ export function DashboardView() {
               <span
                 className="text-5xl font-black"
                 style={{
-                  color: lastDrift === null ? "#666"
-                    : Math.abs(lastDrift) < 3.5 ? "#C0FF00"
+                  color: lastDrift === null ? "#878787"
+                    : Math.abs(lastDrift) < 3.5 ? BRAND
                     : Math.abs(lastDrift) < 5 ? "#F59E0B" : "#F43F5E",
                 }}
               >
@@ -818,7 +824,7 @@ export function DashboardView() {
               </span>
               <span className="text-[#A0A0A0] text-sm font-black">%</span>
             </div>
-            <div className="text-[#666] text-[10px] tracking-wider mb-4">
+            <div className="text-gray-600 text-[11px] tracking-wider mb-4">
               ΔFC 2ª metà vs 1ª metà · ultima corsa
             </div>
 
@@ -828,7 +834,7 @@ export function DashboardView() {
               const media = vals.reduce((s, v) => s + v, 0) / vals.length;
               const best = Math.min(...vals);
               const worst = Math.max(...vals);
-              const colorFor = (v: number) => v < 3.5 ? "#C0FF00" : v < 5 ? "#F59E0B" : "#F43F5E";
+              const colorFor = (v: number) => v < 3.5 ? BRAND : v < 5 ? "#F59E0B" : "#F43F5E";
               const Row = ({ label, value, color }: { label: string; value: string; color: string }) => (
                 <div className="flex items-center justify-between py-2.5 border-b border-white/[0.04] last:border-0">
                   <div className="flex items-center gap-2.5">
@@ -840,7 +846,7 @@ export function DashboardView() {
               );
               return (
                 <div className="flex-1 flex flex-col justify-center">
-                  <div className="text-[#A0A0A0] text-[9px] font-black tracking-widest uppercase mb-1">
+                  <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase mb-1">
                     Ultime {driftSeries.length} corse
                   </div>
                   <Row label="Media"    value={`${media.toFixed(1)}%`} color={colorFor(media)} />
@@ -849,7 +855,7 @@ export function DashboardView() {
                 </div>
               );
             })() : (
-              <div className="flex-1 flex items-center justify-center text-[#666] text-[10px] font-black tracking-widest uppercase">
+              <div className="flex-1 flex items-center justify-center text-gray-600 text-[10px] font-black tracking-widest uppercase">
                 dati insufficienti
               </div>
             )}
@@ -859,7 +865,7 @@ export function DashboardView() {
               {[...Array(6)].map((_, i) => {
                 const driftPct = lastDrift !== null ? Math.abs(lastDrift) : 0;
                 const filled = Math.round(Math.min(6, driftPct / 2));
-                const color = driftPct < 3.5 ? "#C0FF00" : driftPct < 5 ? "#F59E0B" : "#F43F5E";
+                const color = driftPct < 3.5 ? BRAND : driftPct < 5 ? "#F59E0B" : "#F43F5E";
                 return <div key={i} className="flex-1 rounded-full" style={{ backgroundColor: i < filled ? color : "#333" }} />;
               })}
             </div>
@@ -881,7 +887,7 @@ export function DashboardView() {
           {!hiddenKeys.includes("last-run-map") && (
           <div key="last-run-map">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("last-run-map")}>
-            <div className="h-full rounded-[24px] overflow-hidden relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+            <div className="h-full rounded-3xl overflow-hidden relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
               <div className="absolute inset-0">
                 <LastRunMap run={lastRunForMap} />
               </div>
@@ -934,7 +940,7 @@ export function DashboardView() {
                 { key: "marathon",   label: "Marathon Pace",          abbr: "M", color: "#34D399", desc: "Lungo specifico maratona" },
                 { key: "threshold",  label: "Threshold / Tempo",      abbr: "T", color: "#F59E0B", desc: "Tempo run 20-40 min" },
                 { key: "interval",   label: "Interval (VO2max)",      abbr: "I", color: "#F43F5E", desc: "Ripetute 800m-1600m" },
-                { key: "repetition", label: "Repetition / Speed",     abbr: "R", color: "#C0FF00", desc: "Ripetizioni 200-400m" },
+                { key: "repetition", label: "Repetition / Speed",     abbr: "R", color: BRAND, desc: "Ripetizioni 200-400m" },
               ];
 
               // Compute range ±5% intorno al passo centrale Daniels
@@ -948,11 +954,11 @@ export function DashboardView() {
                 `${Math.floor(Math.round(s) / 60)}:${String(Math.round(s) % 60).padStart(2, "0")}`;
 
               return (
-                <div className="h-full rounded-[24px] p-5 flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+                <div className="h-full rounded-3xl p-5 flex flex-col overflow-hidden border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
                   {/* Header */}
                   <div className="flex items-center justify-between mb-4 shrink-0">
                     <div>
-                      <div className="text-[#A0A0A0] text-[9px] font-black tracking-[0.2em] uppercase">
+                      <div className="text-[#A0A0A0] text-[10px] font-black tracking-[0.2em] uppercase">
                         Training Paces
                       </div>
                       <div className="text-white text-xs font-black italic tracking-tight mt-0.5">
@@ -961,8 +967,8 @@ export function DashboardView() {
                     </div>
                     {vdot && (
                       <div className="flex flex-col items-end">
-                        <span className="text-[#A0A0A0] text-[9px] font-black tracking-widest uppercase">VDOT</span>
-                        <span className="text-[#C0FF00] text-xl font-black leading-none">{vdot.toFixed(1)}</span>
+                        <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">VDOT</span>
+                        <span className="text-brand text-xl font-black leading-none">{vdot.toFixed(1)}</span>
                       </div>
                     )}
                   </div>
@@ -970,7 +976,7 @@ export function DashboardView() {
                   {/* Column headers */}
                   {paces ? (
                     <>
-                      <div className="grid grid-cols-[28px_1fr_auto] gap-x-3 text-[9px] font-black tracking-widest text-[#555] uppercase mb-2 px-1 shrink-0">
+                      <div className="grid grid-cols-[28px_1fr_auto] gap-x-3 text-[10px] font-black tracking-widest text-gray-600 uppercase mb-2 px-1 shrink-0">
                         <div />
                         <div>Zone</div>
                         <div className="text-right">Passo</div>
@@ -984,12 +990,12 @@ export function DashboardView() {
                           const hiSecs = Math.round(centerSecs * 1.03);
                           return (
                             <div key={z.key}
-                              className="grid grid-cols-[28px_1fr_auto] gap-x-3 items-center px-1 py-2 rounded-[16px]"
+                              className="grid grid-cols-[28px_1fr_auto] gap-x-3 items-center px-1 py-2 rounded-2xl"
                               style={{ background: `${z.color}08`, border: `1px solid ${z.color}18` }}
                             >
                               {/* Abbr badge */}
                               <div
-                                className="w-7 h-7 rounded-[12px] flex items-center justify-center text-[11px] font-black"
+                                className="w-7 h-7 rounded-xl flex items-center justify-center text-[11px] font-black"
                                 style={{ background: `${z.color}22`, color: z.color }}
                               >
                                 {z.abbr}
@@ -998,7 +1004,7 @@ export function DashboardView() {
                               {/* Name + desc */}
                               <div className="min-w-0">
                                 <div className="text-white text-[11px] font-black truncate">{z.label}</div>
-                                <div className="text-[#555] text-[9px] truncate">{z.desc}</div>
+                                <div className="text-gray-600 text-[11px] truncate">{z.desc}</div>
                               </div>
 
                               {/* Pace range */}
@@ -1006,7 +1012,7 @@ export function DashboardView() {
                                 <div className="font-black font-mono text-[11px]" style={{ color: z.color }}>
                                   {fmtSecs(loSecs)} – {fmtSecs(hiSecs)}
                                 </div>
-                                <div className="text-[#555] text-[9px]">min/km</div>
+                                <div className="text-gray-600 text-[11px]">min/km</div>
                               </div>
                             </div>
                           );
@@ -1014,17 +1020,17 @@ export function DashboardView() {
                       </div>
 
                       {/* Footer note */}
-                      <div className="text-[#444] text-[9px] tracking-wider mt-3 shrink-0 text-center">
+                      <div className="text-gray-600 text-[11px] tracking-wider mt-3 shrink-0 text-center">
                         basate su formula Daniels 2013 · aggiornate automaticamente
                       </div>
                     </>
                   ) : (
                     <div className="flex-1 flex flex-col items-center justify-center gap-2">
-                      <div className="text-[#555] text-[9px] font-black tracking-widest uppercase text-center">
+                      <div className="text-gray-600 text-[10px] font-black tracking-widest uppercase text-center">
                         {vdot ? "Calcolo paces…" : "Nessun dato VDOT disponibile"}
                       </div>
                       {!vdot && (
-                        <div className="text-[#444] text-[9px] text-center">
+                        <div className="text-gray-600 text-[11px] text-center">
                           Registra una corsa a sforzo medio-alto per calibrare il VDOT
                         </div>
                       )}
@@ -1051,15 +1057,15 @@ export function DashboardView() {
           <div key="session-logs">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("session-logs")}>
           {recentRuns.length > 0 ? (
-            <div className="h-full rounded-[24px] p-4 md:p-6 lg:p-8 w-full overflow-auto backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+            <div className="h-full rounded-3xl p-4 md:p-6 lg:p-8 w-full overflow-auto border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
             <div className="mb-6 md:mb-8">
-              <div className="text-[#A0A0A0] text-[10px] md:text-xs font-black tracking-widest mb-2">{t("dashboard.sessionLogs").toUpperCase()}</div>
+              <div className="text-[#A0A0A0] text-[11px] md:text-xs font-black tracking-widest mb-2">{t("dashboard.sessionLogs").toUpperCase()}</div>
               <h2 className="text-white text-xl md:text-2xl font-black tracking-tighter italic">{t("dashboard.performanceHistory")}</h2>
             </div>
 
             <div className="w-full">
               {/* Desktop header — hidden on mobile */}
-              <div className="hidden md:grid md:grid-cols-7 text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4 px-4">
+              <div className="hidden md:grid md:grid-cols-7 text-[#A0A0A0] text-[11px] font-black tracking-widest mb-4 px-4">
                 <div className="col-span-2">{t("dashboard.type")}</div>
                 <div>{t("dashboard.date")}</div>
                 <div>{t("dashboard.duration")}</div>
@@ -1081,39 +1087,39 @@ export function DashboardView() {
                     : "—";
                   const teColor =
                     teRaw === null ? "#A0A0A0"
-                    : teRaw >= 4 ? "#C0FF00"
+                    : teRaw >= 4 ? BRAND
                     : teRaw >= 3 ? "#60A5FA"
                     : "#A0A0A0";
                   return (
                     <div
                       key={run.id}
                       onClick={() => navigate(`/activities/${run.id}`)}
-                      className="flex flex-col gap-3 md:grid md:grid-cols-7 md:gap-0 md:items-center rounded-[16px] backdrop-blur-2xl border border-white/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.05)] bg-gradient-to-br from-white/[0.04] to-black/40 p-4 cursor-pointer hover:border-white/[0.18] transition-all"
+                      className="flex flex-col gap-3 md:grid md:grid-cols-7 md:gap-0 md:items-center rounded-2xl border border-white/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.05)] bg-gradient-to-br from-white/[0.04] to-black/40 p-4 cursor-pointer hover:border-white/[0.18] transition-all"
                     >
                       <div className="md:col-span-2 flex items-center gap-3">
-                        <Activity className="text-[#C0FF00] shrink-0" size={18} />
+                        <Activity className="text-brand shrink-0" size={18} />
                         <span className="text-white font-black text-sm truncate">{run.name || run.run_type || "Run"}</span>
-                        <span className="md:hidden text-[#C0FF00] font-black text-[10px] ml-auto shrink-0">● {t("dashboard.verified").toUpperCase()}</span>
+                        <span className="md:hidden text-brand font-black text-[11px] ml-auto shrink-0">● {t("dashboard.verified").toUpperCase()}</span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 md:contents text-xs">
                         <div className="text-[#A0A0A0] text-xs md:text-sm">
-                          <span className="md:hidden text-[#666] text-[9px] font-black tracking-widest uppercase block">{t("dashboard.date")}</span>
+                          <span className="md:hidden text-gray-600 text-[10px] font-black tracking-widest uppercase block">{t("dashboard.date")}</span>
                           {new Date(run.date).toLocaleDateString(i18n.language === "en" ? "en-GB" : "it-IT", { day: "numeric", month: "short" })}
                         </div>
                         <div className="text-white font-black text-xs md:text-sm">
-                          <span className="md:hidden text-[#666] text-[9px] font-black tracking-widest uppercase block">{t("dashboard.duration")}</span>
+                          <span className="md:hidden text-gray-600 text-[10px] font-black tracking-widest uppercase block">{t("dashboard.duration")}</span>
                           {formatDuration(run.duration_minutes)}
                         </div>
                         <div className="text-[#A0A0A0] text-xs md:text-sm">
-                          <span className="md:hidden text-[#666] text-[9px] font-black tracking-widest uppercase block">{t("dashboard.pace")}</span>
+                          <span className="md:hidden text-gray-600 text-[10px] font-black tracking-widest uppercase block">{t("dashboard.pace")}</span>
                           {run.avg_pace}/km
                         </div>
                         <div className="text-xs font-black md:text-xs" style={{ color: teColor }}>
-                          <span className="md:hidden text-[#666] text-[9px] font-black tracking-widest uppercase block">TE</span>
+                          <span className="md:hidden text-gray-600 text-[10px] font-black tracking-widest uppercase block">TE</span>
                           {teRaw !== null ? teRaw.toFixed(1) + " · " : ""}{teLabel}
                         </div>
                       </div>
-                      <div className="hidden md:block text-right text-[#C0FF00] font-black text-xs">
+                      <div className="hidden md:block text-right text-brand font-black text-xs">
                         ● {t("dashboard.verified").toUpperCase()}
                       </div>
                     </div>
@@ -1123,7 +1129,7 @@ export function DashboardView() {
             </div>
             </div>
           ) : (
-            <div className="h-full flex items-center justify-center text-[#666] text-[10px] font-black tracking-widest">
+            <div className="h-full flex items-center justify-center text-gray-600 text-[11px] font-black tracking-widest">
               NESSUNA CORSA RECENTE
             </div>
           )}

@@ -6,6 +6,7 @@ import { JarvisOrb } from './JarvisOrb';
 import { useJarvis } from '../hooks/useJarvis';
 import { syncStrava, syncGarminAll, clearRunnerDnaCache } from '../api';
 import type { JarvisAction, JarvisDisplayMode, OrbState } from '../types/jarvis';
+import { BRAND } from "../theme/tokens";
 
 // ── Voice commands list ────────────────────────────────────────────────────
 const COMMANDS = [
@@ -33,12 +34,12 @@ const COMMANDS = [
 ];
 
 const CAT_STYLE: Record<string, string> = {
-  nav:    'text-[#C0FF00]/70',
+  nav:    'text-brand/70',
   data:   'text-[#00FFAA]/70',
   action: 'text-white/50',
 };
 const CAT_DOT: Record<string, string> = {
-  nav:    'bg-[#C0FF00]',
+  nav:    'bg-brand',
   data:   'bg-[#00FFAA]',
   action: 'bg-white/40',
 };
@@ -174,13 +175,13 @@ export function JarvisOverlay() {
       case 'thinking':
         return <span className="text-teal-400 font-bold tracking-widest animate-pulse">Processing…</span>;
       case 'speaking':
-        return <span className="text-[#C0FF00]/90 italic">{response}</span>;
+        return <span className="text-brand/90 italic">{response}</span>;
       case 'navigating':
         return <span className="text-purple-400 font-bold tracking-widest animate-pulse">Navigating…</span>;
       default:
         // Persistent text logic, falls back to default prompt
         if (persistentMessage) {
-            return <span className="text-[#C0FF00]/60 italic">« {persistentMessage} »</span>;
+            return <span className="text-brand/60 italic">« {persistentMessage} »</span>;
         }
         return 'Say "Jarvis…" or click the orb';
     }
@@ -216,7 +217,7 @@ export function JarvisOverlay() {
                 <p className="text-[10px] font-black tracking-[0.6em] text-white/15 uppercase mb-3">
                   J · A · R · V · I · S
                 </p>
-                <p className="text-sm font-mono tracking-widest text-[#C0FF00]/60 min-h-[1.5em]">
+                <p className="text-sm font-mono tracking-widest text-brand/60 min-h-[1.5em]">
                   {statusText()}
                 </p>
               </div>
@@ -229,14 +230,14 @@ export function JarvisOverlay() {
               transition={{ delay: 0.5, duration: 0.6 }}
               className="absolute bottom-6 left-6 space-y-1 pointer-events-none"
             >
-              <p className="text-[9px] font-black tracking-[0.35em] text-white/20 uppercase mb-2">
+              <p className="text-[10px] font-black tracking-[0.35em] text-white/20 uppercase mb-2">
                 Voice Commands
               </p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
                 {COMMANDS.map((cmd, i) => (
                   <div key={i} className="flex items-center gap-1.5">
                     <div className={`w-1 h-1 rounded-full shrink-0 ${CAT_DOT[cmd.cat]}`} />
-                    <span className={`text-[10px] font-mono ${CAT_STYLE[cmd.cat]}`}>
+                    <span className={`text-[11px] font-mono ${CAT_STYLE[cmd.cat]}`}>
                       {cmd.text}
                     </span>
                   </div>
@@ -245,16 +246,16 @@ export function JarvisOverlay() {
               {/* Legend */}
               <div className="flex items-center gap-4 mt-2">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-1 h-1 rounded-full bg-[#C0FF00]" />
-                  <span className="text-[8px] text-white/20 uppercase tracking-widest">Navigation</span>
+                  <div className="w-1 h-1 rounded-full bg-brand" />
+                  <span className="text-[10px] text-white/20 uppercase tracking-widest">Navigation</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-1 h-1 rounded-full bg-[#00FFAA]" />
-                  <span className="text-[8px] text-white/20 uppercase tracking-widest">Data</span>
+                  <span className="text-[10px] text-white/20 uppercase tracking-widest">Data</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-1 h-1 rounded-full bg-white/40" />
-                  <span className="text-[8px] text-white/20 uppercase tracking-widest">Actions</span>
+                  <span className="text-[10px] text-white/20 uppercase tracking-widest">Actions</span>
                 </div>
               </div>
             </motion.div>
@@ -281,7 +282,7 @@ export function JarvisOverlay() {
             exit={{ scale: 0, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
             onClick={() => dispatch({ type: 'MINI_CLICK' })}
-            className="fixed bottom-6 left-6 z-[9999] w-14 h-14 rounded-full bg-black border border-[#C0FF00]/40 cursor-pointer flex items-center justify-center"
+            className="fixed bottom-6 left-6 z-[9999] w-14 h-14 rounded-full bg-black border border-brand/40 cursor-pointer flex items-center justify-center"
             style={{
               boxShadow: visualOrbState === 'listening' || visualOrbState === 'speaking'
                 ? '0 0 30px rgba(192,255,0,0.5), 0 0 60px rgba(192,255,0,0.2)'
@@ -290,14 +291,14 @@ export function JarvisOverlay() {
             title="Click to open Jarvis"
           >
             {/* Animated rings */}
-            <div className="absolute inset-0 rounded-full border border-[#C0FF00]/20 animate-ping" />
+            <div className="absolute inset-0 rounded-full border border-brand/20 animate-ping" />
             {/* Core dot */}
             <div
               className="w-5 h-5 rounded-full"
               style={{
                 background: visualOrbState === 'thinking' || visualOrbState === 'speaking' || visualOrbState === 'navigating'
                   ? 'radial-gradient(circle, #00FFAA, #00FFAA44)'
-                  : 'radial-gradient(circle, #C0FF00, #C0FF0044)',
+                  : `radial-gradient(circle, ${BRAND}, ${BRAND}44)`,
               }}
             />
           </motion.button>

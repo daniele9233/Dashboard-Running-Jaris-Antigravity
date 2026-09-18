@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
 import type { Run } from "../types/api";
+import { BRAND } from "../theme/tokens";
 
 // ─── Ultimi 8 blocchi da 7 giorni ────────────────────────────────────────────
 function buildWeeklyData(runs: Run[]) {
@@ -35,9 +36,9 @@ const BarTooltip = ({ active, payload, label }: any) => {
   const { km, count } = payload[0].payload;
   return (
     <div className="bg-[#1E293B] border border-[#334155] px-2.5 py-2 rounded-lg shadow-xl text-xs">
-      <p className="text-[#C0FF00] font-bold mb-0.5">{label}</p>
+      <p className="text-brand font-bold mb-0.5">{label}</p>
       <p className="text-white font-black">{km.toFixed(1)} km</p>
-      <p className="text-[#64748B]">{count} {count === 1 ? "corsa" : "corse"}</p>
+      <p className="text-gray-600">{count} {count === 1 ? "corsa" : "corse"}</p>
     </div>
   );
 };
@@ -52,14 +53,14 @@ export function WeeklyStatsPanel({ runs }: WeeklyStatsPanelProps) {
 
   if (runs.length === 0) {
     return (
-      <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 flex items-center justify-center h-full">
+      <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 flex items-center justify-center h-full">
         <p className="text-xs text-text-muted">Sincronizza corse per i dati settimanali</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 h-full flex overflow-hidden">
+    <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 h-full flex overflow-hidden">
       {/* Left: weekly km bars */}
       <div className="flex-1 p-4 flex flex-col min-w-0">
         <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest mb-2">
@@ -72,7 +73,7 @@ export function WeeklyStatsPanel({ runs }: WeeklyStatsPanelProps) {
                 dataKey="label"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#475569", fontSize: 8 }}
+                tick={{ fill: "#878787", fontSize: 10 }}
                 dy={4}
               />
               <Tooltip content={<BarTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
@@ -80,7 +81,7 @@ export function WeeklyStatsPanel({ runs }: WeeklyStatsPanelProps) {
                 {weeklyData.map((entry, idx) => (
                   <Cell
                     key={idx}
-                    fill={entry.current ? "#C0FF00" : "#3B82F6"}
+                    fill={entry.current ? BRAND : "#3B82F6"}
                     fillOpacity={entry.km > 0 ? (entry.current ? 0.9 : 0.6) : 0.12}
                   />
                 ))}
@@ -107,10 +108,10 @@ export function WeeklyStatsPanel({ runs }: WeeklyStatsPanelProps) {
               <div className="min-w-0 flex items-center gap-2">
                 <div
                   className="w-1 h-6 rounded-full shrink-0"
-                  style={{ backgroundColor: i === 0 ? "#C0FF00" : "#1E293B" }}
+                  style={{ backgroundColor: i === 0 ? BRAND : "#1E293B" }}
                 />
                 <div>
-                  <div className="text-[9px] text-[#64748B]">
+                  <div className="text-[11px] text-gray-600">
                     {new Date(run.date).toLocaleDateString("it", { day: "numeric", month: "short" })}
                   </div>
                   <div className="text-xs font-black text-white leading-none">
@@ -119,11 +120,11 @@ export function WeeklyStatsPanel({ runs }: WeeklyStatsPanelProps) {
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <div className="text-[10px] font-bold text-[#14B8A6]">{run.avg_pace}/km</div>
+                <div className="text-[11px] font-bold text-[#14B8A6]">{run.avg_pace}/km</div>
                 {run.avg_hr ? (
-                  <div className="text-[9px] text-[#F43F5E]">♥ {run.avg_hr}</div>
+                  <div className="text-[11px] text-[#F43F5E]">♥ {run.avg_hr}</div>
                 ) : (
-                  <div className="text-[9px] text-[#334155]">
+                  <div className="text-[11px] text-[#334155]">
                     {run.duration_minutes < 60
                       ? `${Math.round(run.duration_minutes)}m`
                       : `${Math.floor(Math.round(run.duration_minutes) / 60)}h${Math.round(run.duration_minutes) % 60}m`}

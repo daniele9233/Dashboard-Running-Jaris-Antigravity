@@ -21,6 +21,7 @@ import { cadenceSpmFromRun } from '../../utils/cadence';
 import { computeDrift } from '../../utils/cardiacDrift';
 import { AthletePotentialVector } from './AthletePotentialVector';
 import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from './chartTheme';
+import { BRAND } from "../../theme/tokens";
 
 /** Soglia anaerobica HR utente — verdict 2026-05 da analisi corsa 4km
  *  (FC ultimo km 162 bpm = 89% maxHr 182, stabilizzata 164 bpm ultimi 200m).
@@ -98,17 +99,17 @@ function V2Info({ title, lines }: { title: string; lines: string[] }) {
       <button
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
-        className="text-[#3A3A3A] hover:text-[#666] transition-colors focus:outline-none"
+        className="text-[#3A3A3A] hover:text-gray-600 transition-colors focus:outline-none"
       >
         <Info size={14} />
       </button>
       {open && (
         <div className="absolute z-50 top-full right-0 mt-2 w-72 bg-[#141414] border border-[#2A2A2A] rounded-2xl p-4 shadow-2xl pointer-events-none">
-          <div className="text-[10px] font-black tracking-widest mb-2" style={{ color: NEON }}>{title}</div>
+          <div className="text-[11px] font-black tracking-widest mb-2" style={{ color: NEON }}>{title}</div>
           <ul className="space-y-1.5">
             {lines.map((l, i) => (
-              <li key={i} className="text-[#777] text-[10px] leading-relaxed flex gap-1.5">
-                <span className="text-[#444] shrink-0">›</span>{l}
+              <li key={i} className="text-gray-500 text-[11px] leading-relaxed flex gap-1.5">
+                <span className="text-gray-600 shrink-0">›</span>{l}
               </li>
             ))}
           </ul>
@@ -164,9 +165,9 @@ function SemiGauge({
         </text>
       </svg>
       <div className="text-center -mt-1">
-        <div className="text-[10px] font-black text-[#555] uppercase tracking-[0.2em]">{label}</div>
+        <div className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em]">{label}</div>
         {trend !== undefined && (
-          <div className={`text-xs font-black mt-0.5 ${trend >= 0 ? 'text-[#C0FF00]' : 'text-[#F43F5E]'}`}>
+          <div className={`text-xs font-black mt-0.5 ${trend >= 0 ? 'text-brand' : 'text-[#F43F5E]'}`}>
             {trend >= 0 ? '▲' : '▼'} {Math.abs(trend)}
           </div>
         )}
@@ -181,12 +182,12 @@ function SemiGauge({
 function V2Tooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl backdrop-blur-sm">
+    <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
       <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>{label}</p>
       {payload.map((p: any, i: number) => (
         <div key={i} className="flex items-center gap-2 text-xs mb-0.5">
           <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.color || p.stroke }} />
-          <span className="text-[#777]">{p.name}:</span>
+          <span className="text-gray-500">{p.name}:</span>
           <span className="text-white font-bold">{typeof p.value === 'number' ? p.value.toFixed(1) : p.value}</span>
         </div>
       ))}
@@ -200,7 +201,7 @@ function V2Tooltip({ active, payload, label }: any) {
 function V2Card({
   children,
   className = '',
-  accent = NEON,
+  accent: _accent = NEON,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -208,9 +209,8 @@ function V2Card({
 }) {
   return (
     <div
-      className={`rounded-2xl p-4 md:p-7 relative group backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 ${className}`}
+      className={`rounded-2xl p-4 md:p-7 relative group border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 ${className}`}
       style={{
-        borderLeft: `3px solid ${accent}`,
       }}
     >
       {children}
@@ -267,24 +267,24 @@ function RacePredictionsBox({
   });
 
   return (
-    <div className="rounded-3xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 xl:p-8 flex flex-col gap-5 h-full">
+    <div className="rounded-3xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 xl:p-8 flex flex-col gap-5 h-full">
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="font-mono text-[10px] tracking-[0.25em] text-[#555] mb-1">PREVISIONI GARA</p>
+          <p className="font-mono text-[11px] tracking-[0.25em] text-gray-600 mb-1">PREVISIONI GARA</p>
           <h2 className="text-white text-xl font-bold tracking-tight leading-tight">Tempi Stimati</h2>
-          <p className="text-[#444] text-[11px] mt-1 leading-relaxed">
+          <p className="text-gray-600 text-[11px] mt-1 leading-relaxed">
             Calcolati dal VDOT attuale · Daniels Running Formula
           </p>
         </div>
         <div className="text-right shrink-0">
-          <p className="font-mono text-[9px] tracking-widest text-[#555] mb-1 uppercase">Prontezza</p>
+          <p className="font-mono text-[10px] tracking-widest text-gray-600 mb-1 uppercase">Prontezza</p>
           <div className="flex items-end gap-0.5 justify-end">
-            <span className="text-[#C0FF00] font-light text-4xl tabular-nums leading-none">{confidence}</span>
-            <span className="text-[#555] text-sm mb-1">/100</span>
+            <span className="text-brand font-light text-4xl tabular-nums leading-none">{confidence}</span>
+            <span className="text-gray-600 text-sm mb-1">/100</span>
           </div>
           <div className="mt-1.5 h-1 w-16 ml-auto bg-[#1a1a1a] rounded-full overflow-hidden">
-            <div className="h-full rounded-full bg-[#C0FF00]" style={{ width: `${confidence}%` }} />
+            <div className="h-full rounded-full bg-brand" style={{ width: `${confidence}%` }} />
           </div>
         </div>
       </div>
@@ -301,7 +301,7 @@ function RacePredictionsBox({
               key={m.distance}
               className={`rounded-2xl p-4 flex items-center gap-4 relative overflow-hidden transition-colors ${
                 isBest
-                  ? 'border border-[#C0FF00]/25 bg-[#C0FF00]/[0.04]'
+                  ? 'border border-brand/25 bg-brand/[0.04]'
                   : 'border border-[#1E1E1E] bg-[#111111]'
               }`}
             >
@@ -313,7 +313,7 @@ function RacePredictionsBox({
                 >
                   {m.distance}
                 </div>
-                <div className="text-[#3a3a3a] text-[9px] mt-0.5 uppercase tracking-wider font-mono">
+                <div className="text-[#3a3a3a] text-[10px] mt-0.5 uppercase tracking-wider font-mono">
                   {m.note}
                 </div>
               </div>
@@ -323,7 +323,7 @@ function RacePredictionsBox({
                 <div className="font-mono text-[22px] font-light tabular-nums text-white leading-none">
                   {m.time}
                 </div>
-                <div className="text-[#444] text-[10px] mt-1 font-mono tabular-nums">{paceKm}</div>
+                <div className="text-gray-600 text-[11px] mt-1 font-mono tabular-nums">{paceKm}</div>
               </div>
 
               {/* Score bar + trend */}
@@ -344,14 +344,14 @@ function RacePredictionsBox({
                     }}
                   />
                 </div>
-                <div className="font-mono text-[9px] mt-1 text-[#444] tabular-nums">
+                <div className="font-mono text-[11px] mt-1 text-gray-600 tabular-nums">
                   {m.score}% pronto
                 </div>
               </div>
 
               {/* BEST badge */}
               {isBest && (
-                <span className="absolute top-2 right-2 bg-[#C0FF00] text-black font-mono text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest">
+                <span className="absolute top-2 right-2 bg-brand text-black font-mono text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest">
                   BEST
                 </span>
               )}
@@ -362,19 +362,19 @@ function RacePredictionsBox({
 
       {/* ── Readiness Axes ─────────────────────────────────── */}
       <div>
-        <p className="font-mono text-[9px] tracking-[0.22em] text-[#444] mb-3 uppercase">
+        <p className="font-mono text-[10px] tracking-[0.22em] text-gray-600 mb-3 uppercase">
           Fattori di Prontezza
         </p>
         <div className="flex flex-col gap-2">
           {readiness.axes.map((axis) => {
             const barColor =
-              axis.value >= 75 ? '#C0FF00'
+              axis.value >= 75 ? BRAND
               : axis.value >= 55 ? '#38BDF8'
               : axis.value >= 40 ? '#F59E0B'
               : '#F43F5E';
             return (
               <div key={axis.label} className="flex items-center gap-3">
-                <div className="w-[80px] text-[#555] text-[10px] font-mono uppercase tracking-wide shrink-0 truncate">
+                <div className="w-[80px] text-gray-600 text-[10px] font-mono uppercase tracking-wide shrink-0 truncate">
                   {axis.label}
                 </div>
                 <div className="flex-1 h-1 bg-[#1a1a1a] rounded-full overflow-hidden">
@@ -384,7 +384,7 @@ function RacePredictionsBox({
                   />
                 </div>
                 <div
-                  className="font-mono text-[10px] w-7 text-right tabular-nums shrink-0"
+                  className="font-mono text-[11px] w-7 text-right tabular-nums shrink-0"
                   style={{ color: barColor }}
                 >
                   {axis.value}
@@ -396,17 +396,17 @@ function RacePredictionsBox({
       </div>
 
       {/* ── Limiter + Advice ───────────────────────────────── */}
-      <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+      <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
         <div className="flex items-center gap-2 mb-2">
           <div className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] shrink-0" />
-          <span className="font-mono text-[9px] text-[#555] uppercase tracking-widest">
+          <span className="font-mono text-[10px] text-gray-600 uppercase tracking-widest">
             Fattore Limitante
           </span>
           <span className="ml-auto font-mono text-[11px] text-[#F59E0B] font-black uppercase">
             {readiness.limiter}
           </span>
         </div>
-        <p className="text-[#666] text-[12px] leading-relaxed">{readiness.advice}</p>
+        <p className="text-gray-600 text-[12px] leading-relaxed">{readiness.advice}</p>
       </div>
     </div>
   );
@@ -480,7 +480,7 @@ function RacePredictionCard({
   trendColor,
 }: RacePredictionCardData) {
   return (
-    <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 relative flex flex-col overflow-hidden hover:border-white/[0.2] transition-colors group aspect-square min-h-0">
+    <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 relative flex flex-col overflow-hidden hover:border-white/[0.2] transition-colors group aspect-square min-h-0">
       <div className="absolute top-0 left-0 right-0 h-1 transition-all group-hover:h-1.5" style={{ backgroundColor: color }} />
 
       <div className="flex justify-between items-start mb-5">
@@ -489,14 +489,14 @@ function RacePredictionCard({
       </div>
 
       <div className="mb-4">
-        <div className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-1">Projected Time</div>
+        <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Projected Time</div>
         <div
           className="text-3xl font-black font-mono tracking-tighter -ml-0.5"
           style={{ color, textShadow: `0 0 15px ${color}40` }}
         >
           {time}
         </div>
-        <div className="text-[10px] mt-2 font-mono tracking-wide font-medium" style={{ color: trendColor }}>
+        <div className="text-[11px] mt-2 font-mono tracking-wide font-medium" style={{ color: trendColor }}>
           {trend}
         </div>
       </div>
@@ -511,12 +511,12 @@ function RacePredictionCard({
 
       <div className="mt-auto border-t border-[#1E1E1E] pt-4 flex justify-between items-end">
         <div>
-          <div className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mb-1">Target Pace</div>
+          <div className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-1">Target Pace</div>
           <div className="text-sm font-black font-mono text-gray-200">
-            {pace} <span className="text-[10px] text-gray-500 font-sans tracking-wide">/km</span>
+            {pace} <span className="text-[11px] text-gray-500 font-sans tracking-wide">/km</span>
           </div>
         </div>
-        <div className="text-[9px] uppercase tracking-widest font-black flex items-center gap-1" style={{ color }}>
+        <div className="text-[10px] uppercase tracking-widest font-black flex items-center gap-1" style={{ color }}>
           Analyze
         </div>
       </div>
@@ -568,9 +568,9 @@ function RaceLinearBar({ value, color, target }: { value: number; color: string;
           className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full"
           style={{ left: `calc(${clamp01(target) * 100}% - 6px)`, backgroundColor: RACE_ORANGE, boxShadow: `0 0 8px ${RACE_ORANGE}` }}
         />
-        <div className="absolute top-5 left-0 text-[9px] text-gray-600 uppercase font-black tracking-widest">Base</div>
-        <div className="absolute top-5 left-1/2 -translate-x-1/2 text-[9px] text-gray-600 uppercase font-black tracking-widest">Threshold</div>
-        <div className="absolute top-5 right-0 text-[9px] text-gray-600 uppercase font-black tracking-widest" style={{ color: `${RACE_ORANGE}AA` }}>Max</div>
+        <div className="absolute top-5 left-0 text-[10px] text-gray-600 uppercase font-black tracking-widest">Base</div>
+        <div className="absolute top-5 left-1/2 -translate-x-1/2 text-[10px] text-gray-600 uppercase font-black tracking-widest">Threshold</div>
+        <div className="absolute top-5 right-0 text-[10px] text-gray-600 uppercase font-black tracking-widest" style={{ color: `${RACE_ORANGE}AA` }}>Max</div>
       </div>
     </div>
   );
@@ -678,26 +678,26 @@ function RaceReadinessRadarCard({
         </div>
         <div className="lg:col-span-2 space-y-3">
           {axes.map((axis) => (
-            <div key={axis.label} className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+            <div key={axis.label} className="rounded-lg border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] text-[#777] font-black uppercase tracking-widest">{axis.label}</span>
+                <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{axis.label}</span>
                 <span className="text-sm font-mono font-black text-white">{axis.value}%</span>
               </div>
               <div className="h-1.5 bg-[#1A1A1A] rounded-full overflow-hidden">
                 <div className="h-full rounded-full" style={{ width: `${axis.value}%`, backgroundColor: NEON }} />
               </div>
-              <div className="text-[9px] text-[#555] font-bold mt-2 uppercase tracking-widest">{axis.hint}</div>
+              <div className="text-[10px] text-gray-600 font-bold mt-2 uppercase tracking-widest">{axis.hint}</div>
             </div>
           ))}
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-5">
-        <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-          <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Fattore limitante</div>
+        <div className="rounded-lg border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+          <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Fattore limitante</div>
           <div className="text-white font-black uppercase italic">{limiter}</div>
         </div>
-        <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-          <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Mossa pratica</div>
+        <div className="rounded-lg border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+          <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Mossa pratica</div>
           <div className="text-white text-xs font-bold leading-relaxed">{advice}</div>
         </div>
       </div>
@@ -735,11 +735,11 @@ function RaceForecastLab({
         }}
       />
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-        <div className="xl:col-span-4 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex flex-col justify-between min-h-[220px]">
+        <div className="xl:col-span-4 rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex flex-col justify-between min-h-[220px]">
           <div>
-            <div className="text-[10px] text-[#555] uppercase tracking-widest font-black">Distanza piu pronta oggi</div>
+            <div className="text-[10px] text-gray-600 uppercase tracking-widest font-black">Distanza piu pronta oggi</div>
             <div className="text-5xl font-black italic mt-4" style={{ color: NEON }}>{bestDistance}</div>
-            <div className="text-[11px] text-[#777] font-bold uppercase tracking-widest mt-3">Confidenza previsione</div>
+            <div className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-3">Confidenza previsione</div>
           </div>
           <div>
             <div className="flex items-end gap-2">
@@ -753,15 +753,15 @@ function RaceForecastLab({
         </div>
         <div className="xl:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
           {rows.map((row) => (
-            <div key={row.distance} className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+            <div key={row.distance} className="rounded-lg border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
               <div className="flex justify-between items-start gap-3 mb-3">
                 <div>
                   <div className="text-white text-lg font-black italic">{row.distance}</div>
-                  <div className="text-[10px] text-[#666] uppercase tracking-widest font-bold">{row.note}</div>
+                  <div className="text-[10px] text-gray-600 uppercase tracking-widest font-bold">{row.note}</div>
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-mono font-black" style={{ color: row.color }}>{row.time}</div>
-                  <div className="text-[9px] text-[#666] font-bold">{row.pace}/km</div>
+                  <div className="text-[11px] text-gray-600 font-bold">{row.pace}/km</div>
                 </div>
               </div>
               <div className="h-1.5 bg-[#1A1A1A] rounded-full overflow-hidden">
@@ -771,12 +771,12 @@ function RaceForecastLab({
           ))}
         </div>
         <div className="xl:col-span-3 space-y-3">
-          <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-            <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-2">Limitante</div>
+          <div className="rounded-lg border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+            <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-2">Limitante</div>
             <div className="text-white font-black uppercase italic">{limiter}</div>
           </div>
-          <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-            <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-2">Prossimo focus</div>
+          <div className="rounded-lg border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+            <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-2">Prossimo focus</div>
             <div className="text-[#BDBDBD] text-xs font-bold leading-relaxed">{advice}</div>
           </div>
         </div>
@@ -852,13 +852,13 @@ const EvolutionTooltip = ({ active, payload, color }: any) => {
 
   return (
     <div className="bg-[#111] border border-[#2A2A2A] p-2.5 rounded-lg shadow-xl whitespace-nowrap z-50 flex flex-col gap-1.5 min-w-[120px]">
-      <span className="text-[9px] text-gray-400 font-bold tracking-widest uppercase mb-0.5">{data.label}</span>
+      <span className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mb-0.5">{data.label}</span>
       <div className="flex items-center justify-between gap-4">
-        <span className="text-gray-500 text-[9px] uppercase font-bold tracking-wider">Tempo</span>
+        <span className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Tempo</span>
         <span className="font-mono font-black text-xs" style={{ color }}>{data.time}</span>
       </div>
       <div className="flex items-center justify-between gap-4">
-        <span className="text-gray-500 text-[9px] uppercase font-bold tracking-wider">Pace</span>
+        <span className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Pace</span>
         <span className="font-mono font-bold text-xs text-gray-200">{data.pace}</span>
       </div>
     </div>
@@ -883,7 +883,7 @@ function FitnessEvolutionCard({
   const gradientId = `fitness-evolution-${title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`;
 
   return (
-    <div className={`rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 relative flex flex-col overflow-hidden hover:border-white/[0.2] transition-colors group min-h-0 ${fullscreen ? 'h-full' : 'aspect-square'}`}>
+    <div className={`rounded-lg border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 relative flex flex-col overflow-hidden hover:border-white/[0.2] transition-colors group min-h-0 ${fullscreen ? 'h-full' : 'aspect-square'}`}>
       <div className="absolute top-0 left-0 right-0 h-1 transition-all group-hover:h-1.5" style={{ backgroundColor: color }} />
 
       <div className="flex justify-between items-start mb-2 relative z-10">
@@ -891,7 +891,7 @@ function FitnessEvolutionCard({
           <span className="text-[10px] text-gray-300 font-bold tracking-[0.15em] uppercase mb-1 block truncate">{title}</span>
           <div className="flex items-baseline gap-1">
             <span className="text-2xl xl:text-3xl font-black text-white tracking-tight font-mono">{value}</span>
-            <span className="text-[10px] xl:text-xs font-bold ml-1" style={{ color }}>{unit}</span>
+            <span className="text-[11px] xl:text-xs font-bold ml-1" style={{ color }}>{unit}</span>
           </div>
         </div>
         <div className="w-8 h-8 rounded-lg bg-[#1A1A1A] flex items-center justify-center border border-[#2A2A2A] transition-transform group-hover:scale-105 shrink-0">
@@ -925,7 +925,7 @@ function FitnessEvolutionCard({
         </ResponsiveContainer>
       </div>
 
-      <div className="flex justify-between items-center text-[8px] text-gray-500 font-bold tracking-[0.1em] mt-2 px-1">
+      <div className="flex justify-between items-center text-[11px] text-gray-500 font-bold tracking-[0.1em] mt-2 px-1">
         {data.map((d, i) => <span key={`${d.label}-${i}`}>{d.label}</span>)}
       </div>
 
@@ -935,7 +935,7 @@ function FitnessEvolutionCard({
             key={range}
             type="button"
             onClick={() => onTimeRangeChange(range)}
-            className={`flex-1 text-center py-1.5 text-[9px] font-bold rounded-md transition-all cursor-pointer ${
+            className={`flex-1 text-center py-1.5 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
               range === timeRange ? 'bg-[#333] text-gray-200 shadow-md' : 'text-gray-500 hover:text-gray-300'
             }`}
           >
@@ -1003,12 +1003,12 @@ function V2Header({
         <Icon className="w-4 h-4 shrink-0" style={{ color: NEON }} />
         <div>
           <h3 className="text-sm font-black tracking-widest uppercase italic leading-none text-white">{title}</h3>
-          {subtitle && <p className="text-[9px] font-bold uppercase tracking-widest mt-1" style={{ color: LABEL_COLOR }}>{subtitle}</p>}
+          {subtitle && <p className="text-[10px] font-bold uppercase tracking-widest mt-1" style={{ color: LABEL_COLOR }}>{subtitle}</p>}
         </div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
         {onExpand && (
-          <button onClick={onExpand} className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#2A2A2A] text-[#555] hover:text-[#C0FF00]">
+          <button onClick={onExpand} className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#2A2A2A] text-gray-600 hover:text-brand">
             <Maximize2 size={15} />
           </button>
         )}
@@ -1051,12 +1051,12 @@ function WeeklyDetailTable({
   if (!visibleRows.length) return null;
 
   return (
-    <div className="rounded-[6px] border border-[#242424] bg-[#101010] p-3">
+    <div className="rounded-lg border border-[#242424] bg-[#101010] p-3">
       <div className="flex items-center justify-between gap-4 mb-3">
         <div className="text-[10px] uppercase tracking-widest font-black" style={{ color: NEON }}>
           Dettaglio settimana per settimana
         </div>
-        <div className="text-[9px] uppercase tracking-widest font-black text-[#555]">
+        <div className="text-[10px] uppercase tracking-widest font-black text-gray-600">
           ultime {visibleRows.length}
         </div>
       </div>
@@ -1065,9 +1065,9 @@ function WeeklyDetailTable({
           className="grid gap-x-4 gap-y-2 min-w-[560px]"
           style={{ gridTemplateColumns: `1.2fr repeat(${columns.length}, minmax(90px, 1fr))` }}
         >
-          <div className="text-[9px] uppercase tracking-widest font-black text-[#555]">Settimana</div>
+          <div className="text-[10px] uppercase tracking-widest font-black text-gray-600">Settimana</div>
           {columns.map((column) => (
-            <div key={column.key} className="text-[9px] uppercase tracking-widest font-black text-[#555]">
+            <div key={column.key} className="text-[10px] uppercase tracking-widest font-black text-gray-600">
               {column.label}
             </div>
           ))}
@@ -1766,7 +1766,7 @@ export function AnalyticsV2({
   const raceConfidence = Math.round(Math.max(0, Math.min(100, raceForecastRows.reduce((sum, row) => sum + row.score, 0) / Math.max(1, raceForecastRows.length))));
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
+    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300 relative">
       <GlowDefs />
 
       {/* ════════════════════════════════════════════════════
@@ -1792,7 +1792,7 @@ export function AnalyticsV2({
             ],
           }}
         />
-        <div className="flex gap-6 text-[9px] font-black uppercase tracking-widest mb-6">
+        <div className="flex gap-6 text-[10px] font-black uppercase tracking-widest mb-6">
           <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#6366F1]" /> Fitness (CTL)</span>
           <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#F43F5E]" /> Fatigue (ATL)</span>
           <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: NEON }} /> Form (TSB)</span>
@@ -1862,18 +1862,18 @@ export function AnalyticsV2({
                      <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
                        <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>{d.name}</p>
                        <div className="flex items-center gap-2 text-xs mb-0.5">
-                         <span className="text-[#777]">VDOT:</span>
+                         <span className="text-gray-500">VDOT:</span>
                          <span className="text-white font-bold">{d.vdot}</span>
                        </div>
                        {d.vdot && (
                          <div className="flex items-center gap-2 text-xs">
-                           <span className="text-[#777]">Passo soglia:</span>
+                           <span className="text-gray-500">Passo soglia:</span>
                            <span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span>
                          </div>
                        )}
                        {d.vdot && (
                          <div className="flex items-center gap-2 text-xs">
-                           <span className="text-[#777]">Soglia teorica:</span>
+                           <span className="text-gray-500">Soglia teorica:</span>
                            <span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span>
                          </div>
                        )}
@@ -1898,18 +1898,18 @@ export function AnalyticsV2({
               const tPace = getThresholdDisplay(currentVdot);
              return (
                <>
-                 <div className="flex-1 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                   <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">VDOT Attuale</div>
+                 <div className="flex-1 rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                   <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">VDOT Attuale</div>
                    <div className="text-xl font-mono font-black" style={{ color: NEON }}>{currentVdot ?? '—'}</div>
                  </div>
-                 <div className="flex-1 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                   <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Trend 3M</div>
+                 <div className="flex-1 rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                   <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Trend 3M</div>
                    <div className="text-xl font-mono font-black" style={{ color: trend3m == null ? '#555' : trend3m >= 0 ? NEON : '#F43F5E' }}>
                      {trend3m == null ? '—' : `${trend3m >= 0 ? '+' : ''}${trend3m.toFixed(1)}`}
                    </div>
                  </div>
-                 <div className="flex-1 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                    <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo soglia (Daniels)</div>
+                 <div className="flex-1 rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                    <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Passo soglia (Daniels)</div>
                    <div className="text-xl font-mono font-black text-white">{tPace ?? '—'} {tPace ? '/km' : ''}</div>
                  </div>
                </>
@@ -1942,21 +1942,20 @@ export function AnalyticsV2({
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
            {/* Anaerobic Threshold Trend — left column */}
            <div
-              className="xl:col-span-2 rounded-2xl p-6 flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_246px] gap-6 relative group overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+              className="xl:col-span-2 rounded-2xl p-6 flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_246px] gap-6 relative group overflow-hidden border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
               style={{
                 minHeight: 402,
-                borderLeft: `3px solid ${NEON}`,
               }}
            >
                 <div className="min-w-0 flex flex-col">
                 <div className="flex items-start justify-between gap-4 mb-5">
                   <div>
                      <h3 className="text-[15px] md:text-base font-black tracking-wider uppercase italic text-[#E7E7E7] leading-none">{t('statsCards.progressioneTemporale')}</h3>
-                     <p className="text-[9px] font-black uppercase tracking-widest mt-2 text-[#787878]">
+                     <p className="text-[10px] font-black uppercase tracking-widest mt-2 text-[#787878]">
                        {t('statsCards.progressioneTemporaleSub')}
                     </p>
                   </div>
-                  <div className="hidden sm:flex items-center gap-5 pr-8 text-[9px] font-black uppercase tracking-widest text-[#3A3A3A]">
+                  <div className="hidden sm:flex items-center gap-5 pr-8 text-[10px] font-black uppercase tracking-widest text-[#3A3A3A]">
                     <span className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full" style={{ backgroundColor: NEON }} />
                       Passo
@@ -1967,7 +1966,7 @@ export function AnalyticsV2({
                     </span>
                     <button
                       onClick={() => openExpandedChart('threshold_progression', setAtExpanded)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#2A2A2A] text-[#555] hover:text-[#C0FF00]"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#2A2A2A] text-gray-600 hover:text-brand"
                       title={t('statsCards.expand')}
                     >
                       <Maximize2 size={15} />
@@ -2023,8 +2022,8 @@ export function AnalyticsV2({
               </div>
 
               <div className="grid grid-rows-2 gap-5 min-h-[312px]">
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] border-l-2 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex flex-col justify-center relative" style={{ borderLeftColor: NEON }}>
-                  <div className="absolute right-4 top-4 w-9 h-9 rounded-[8px] bg-[#2D350A] flex items-center justify-center">
+                <div className="rounded-xl border border-white/[0.10] bg-white/[0.03] p-6 flex flex-col justify-center relative" style={{ borderLeftColor: NEON }}>
+                  <div className="absolute right-4 top-4 w-9 h-9 rounded-lg bg-[#2D350A] flex items-center justify-center">
                     <Timer className="w-4 h-4" style={{ color: NEON }} />
                   </div>
                   {/* Passo di soglia REALE (da VDOT), non l'ultimo punto della
@@ -2047,8 +2046,8 @@ export function AnalyticsV2({
                   </div>
                 </div>
 
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] border-l-2 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex flex-col justify-center relative" style={{ borderLeftColor: '#FF4B93' }}>
-                  <div className="absolute right-4 top-4 w-9 h-9 rounded-[8px] bg-[#3A202D] flex items-center justify-center">
+                <div className="rounded-xl border border-white/[0.10] bg-white/[0.03] p-6 flex flex-col justify-center relative" style={{ borderLeftColor: '#FF4B93' }}>
+                  <div className="absolute right-4 top-4 w-9 h-9 rounded-lg bg-[#3A202D] flex items-center justify-center">
                     <Heart className="w-4 h-4 fill-[#FF4B93]" style={{ color: '#FF4B93' }} />
                   </div>
                   <div className="text-[10px] uppercase tracking-widest font-black text-[#A6A6A6]">
@@ -2112,12 +2111,12 @@ export function AnalyticsV2({
                          <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
                            <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>{d.name}</p>
                            <div className="flex items-center gap-2 text-xs mb-0.5">
-                             <span className="text-[#777]">VDOT:</span>
+                             <span className="text-gray-500">VDOT:</span>
                              <span className="text-white font-bold">{d.vdot}</span>
                            </div>
                            {d.vdot && (
                              <div className="flex items-center gap-2 text-xs">
-                               <span className="text-[#777]">Passo soglia:</span>
+                               <span className="text-gray-500">Passo soglia:</span>
                                <span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span>
                              </div>
                            )}
@@ -2142,18 +2141,18 @@ export function AnalyticsV2({
                  const tPace = getThresholdDisplay(currentVdot);
                  return (
                    <>
-                     <div className="flex-1 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                       <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">VDOT Attuale</div>
+                     <div className="flex-1 rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                       <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">VDOT Attuale</div>
                        <div className="text-xl font-mono font-black" style={{ color: NEON }}>{currentVdot ?? '—'}</div>
                      </div>
-                     <div className="flex-1 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                       <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Trend 3M</div>
+                     <div className="flex-1 rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                       <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Trend 3M</div>
                        <div className="text-xl font-mono font-black" style={{ color: trend3m == null ? '#555' : trend3m >= 0 ? NEON : '#F43F5E' }}>
                          {trend3m == null ? '—' : `${trend3m >= 0 ? '+' : ''}${trend3m.toFixed(1)}`}
                        </div>
                      </div>
-                     <div className="flex-1 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                       <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo soglia</div>
+                     <div className="flex-1 rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                       <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Passo soglia</div>
                        <div className="text-xl font-mono font-black text-white">{tPace ?? '—'} {tPace ? '/km' : ''}</div>
                      </div>
                    </>
@@ -2222,7 +2221,7 @@ export function AnalyticsV2({
           />
           <div className="mt-3 text-center">
             <span className="text-lg font-black italic text-white">{atPace}</span>
-            <span className="text-[10px] text-[#666] ml-1">/km</span>
+            <span className="text-[11px] text-gray-600 ml-1">/km</span>
           </div>
         </V2Card>
 
@@ -2264,7 +2263,7 @@ export function AnalyticsV2({
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} vertical={false} />
-                <XAxis dataKey="km" stroke="#333" fontSize={9} tickLine={false} axisLine={false} label={{ value: 'km', position: 'insideBottomRight', offset: -5, fill: '#555', fontSize: 9 }} />
+                <XAxis dataKey="km" stroke="#333" fontSize={9} tickLine={false} axisLine={false} label={{ value: 'km', position: 'insideBottomRight', offset: -5, fill: "#878787", fontSize: 10 }} />
                 <YAxis
                   yAxisId="pace"
                   stroke="#555"
@@ -2294,12 +2293,12 @@ export function AnalyticsV2({
                       <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>KM {d.km}</p>
                       <div className="flex items-center gap-2 text-xs mb-0.5">
                         <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: NEON }} />
-                        <span className="text-[#777]">Pace:</span>
+                        <span className="text-gray-500">Pace:</span>
                         <span className="text-white font-bold">{formatPaceStr(d.pace)} /km</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs">
                         <div className="w-1.5 h-1.5 rounded-full bg-[#F43F5E]" />
-                        <span className="text-[#777]">HR:</span>
+                        <span className="text-gray-500">HR:</span>
                         <span className="text-white font-bold">{d.hr} bpm</span>
                       </div>
                     </div>
@@ -2333,7 +2332,7 @@ export function AnalyticsV2({
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex items-center gap-6 mt-4 text-[9px] font-black uppercase tracking-widest">
+          <div className="flex items-center gap-6 mt-4 text-[10px] font-black uppercase tracking-widest">
             <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: NEON }} /> Pace</span>
             <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#F43F5E]" /> Heart Rate</span>
             <span className="flex items-center gap-2 text-[#F43F5E]/60"><div className="w-6 h-2 bg-[#F43F5E]/10 rounded" /> Zona Drift</span>
@@ -2395,7 +2394,7 @@ export function AnalyticsV2({
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-2xl font-black italic text-white">{totalZoneMin}</span>
-                <span className="text-[9px] font-black text-[#555] uppercase tracking-widest">min totali</span>
+                <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">min totali</span>
               </div>
             </div>
           </div>
@@ -2405,9 +2404,9 @@ export function AnalyticsV2({
             {zonesChartData.map((z) => (
               <div key={z.zone}>
                 <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-1">
-                  <span className="text-[#888]">{z.zone} <span className="text-[#555]">{z.name}</span></span>
+                  <span className="text-[#888]">{z.zone} <span className="text-gray-600">{z.name}</span></span>
                   <div className="flex items-center gap-3">
-                    <span className="text-[#555]">{z.min} min</span>
+                    <span className="text-gray-600">{z.min} min</span>
                     <span className="text-white w-8 text-right">{z.pct}%</span>
                   </div>
                 </div>
@@ -2447,7 +2446,7 @@ export function AnalyticsV2({
           }}
         />
 
-        <div className="flex items-center gap-6 mb-4 text-[9px] font-black uppercase tracking-widest">
+        <div className="flex items-center gap-6 mb-4 text-[10px] font-black uppercase tracking-widest">
           <span className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: NEON }} />
             Zona Ottimale (cadenza &gt; 175 · GCT &lt; 240)
@@ -2501,11 +2500,11 @@ export function AnalyticsV2({
                         {optimal ? 'ZONA OTTIMALE' : 'FUORI ZONA'}
                       </p>
                       <div className="flex items-center gap-2 text-xs mb-0.5">
-                        <span className="text-[#777]">Cadenza:</span>
+                        <span className="text-gray-500">Cadenza:</span>
                         <span className="text-white font-bold">{d.cadence} spm</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs">
-                        <span className="text-[#777]">GCT:</span>
+                        <span className="text-gray-500">GCT:</span>
                         <span className="text-white font-bold">{d.gct} ms</span>
                       </div>
                     </div>
@@ -2538,7 +2537,7 @@ export function AnalyticsV2({
         const improvement = first && last ? first.pace - last.pace : 0;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]">
 
               {/* Modal header */}
               <div className="flex justify-between items-center mb-6">
@@ -2573,10 +2572,10 @@ export function AnalyticsV2({
                     <XAxis dataKey="month" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} interval="preserveStartEnd" minTickGap={22} tickFormatter={(value) => formatWeekBucketLabel(String(value))} />
                     <YAxis yAxisId="pace" reversed stroke="#555" fontSize={12} tickLine={false} axisLine={false}
                       tickFormatter={formatPaceSecs} domain={['dataMin - 15', 'dataMax + 15']}
-                      label={{ value: 'Pace (min/km)', angle: -90, position: 'insideLeft', fill: '#555', dy: 55, fontSize: 10 }} />
+                      label={{ value: 'Pace (min/km)', angle: -90, position: 'insideLeft', fill: "#878787", dy: 55, fontSize: 10 }} />
                     <YAxis yAxisId="hr" orientation="right" stroke="#555" fontSize={12} tickLine={false} axisLine={false}
                       domain={['dataMin - 10', 'dataMax + 10']} tickFormatter={(v) => `${v} bpm`}
-                      label={{ value: 'Heart Rate (bpm)', angle: 90, position: 'insideRight', fill: '#555', dy: -60, fontSize: 10 }} />
+                      label={{ value: 'Heart Rate (bpm)', angle: 90, position: 'insideRight', fill: "#878787", dy: -60, fontSize: 10 }} />
                     <Tooltip
                       contentStyle={{ backgroundColor: '#151515', borderColor: '#2A2A2A', borderRadius: '4px' }}
                       itemStyle={{ color: '#fff' }}
@@ -2598,16 +2597,16 @@ export function AnalyticsV2({
               {/* Info panels */}
               <div className="space-y-4 mt-6 shrink-0">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-                  <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                    <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo Iniziale</div>
+                  <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                    <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Passo Iniziale</div>
                     <div className="text-xl font-mono font-black text-white">{first ? formatPaceSecs(first.pace) : '--'}</div>
                   </div>
-                  <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                    <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo Attuale</div>
+                  <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                    <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Passo Attuale</div>
                     <div className="text-xl font-mono font-black" style={{ color: NEON }}>{last ? formatPaceSecs(last.pace) : '--'}</div>
                   </div>
-                  <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                    <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Miglioramento</div>
+                  <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                    <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Miglioramento</div>
                     <div className="text-xl font-mono font-black" style={{ color: improvement > 0 ? NEON : '#F43F5E' }}>
                       {improvement > 0 ? '-' : '+'}{formatPaceSecs(Math.abs(improvement))} /km
                     </div>
@@ -2633,7 +2632,7 @@ export function AnalyticsV2({
         const lastPmc = pmcChartData[pmcChartData.length - 1];
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]">
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -2672,16 +2671,16 @@ export function AnalyticsV2({
                 </ResponsiveContainer>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">CTL Attuale</div>
+                <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                  <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">CTL Attuale</div>
                   <div className="text-xl font-mono font-black" style={{ color: '#6366F1' }}>{lastPmc?.ctl ?? '--'}</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">ATL Attuale</div>
+                <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                  <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">ATL Attuale</div>
                   <div className="text-xl font-mono font-black" style={{ color: '#F43F5E' }}>{lastPmc?.atl ?? '--'}</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">TSB (Form)</div>
+                <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                  <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">TSB (Form)</div>
                   <div className="text-xl font-mono font-black" style={{ color: lastPmc && lastPmc.tsb >= 0 ? NEON : '#F43F5E' }}>
                     {lastPmc?.tsb ?? '--'}
                   </div>
@@ -2701,7 +2700,7 @@ export function AnalyticsV2({
         const trendSecs = paces.length >= 2 ? Math.round((paces[0] - paces[paces.length - 1]) * 60) : null;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]">
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -2746,16 +2745,16 @@ export function AnalyticsV2({
                 </ResponsiveContainer>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo Più Veloce</div>
+                <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                  <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Passo Più Veloce</div>
                   <div className="text-xl font-mono font-black" style={{ color: NEON }}>{fastestPace ? formatPaceStr(fastestPace) : '--'} /km</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo Più Lento</div>
+                <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                  <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Passo Più Lento</div>
                   <div className="text-xl font-mono font-black text-white">{slowestPace ? formatPaceStr(slowestPace) : '--'} /km</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Trend (secs)</div>
+                <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                  <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Trend (secs)</div>
                   <div className="text-xl font-mono font-black" style={{ color: trendSecs == null ? '#555' : trendSecs > 0 ? NEON : '#F43F5E' }}>
                     {trendSecs == null ? '—' : `${trendSecs > 0 ? '-' : '+'}${Math.abs(trendSecs)}s`}
                   </div>
@@ -2786,7 +2785,7 @@ export function AnalyticsV2({
         const driftPct = first3Hr > 0 ? ((last3Hr - first3Hr) / first3Hr * 100) : 0;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]">
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -2825,8 +2824,8 @@ export function AnalyticsV2({
                       return (
                         <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
                           <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>KM {d.km}</p>
-                          <div className="flex items-center gap-2 text-xs mb-0.5"><span className="text-[#777]">Pace:</span><span className="text-white font-bold">{formatPaceStr(d.pace)} /km</span></div>
-                          <div className="flex items-center gap-2 text-xs"><span className="text-[#777]">HR:</span><span className="text-white font-bold">{d.hr} bpm</span></div>
+                          <div className="flex items-center gap-2 text-xs mb-0.5"><span className="text-gray-500">Pace:</span><span className="text-white font-bold">{formatPaceStr(d.pace)} /km</span></div>
+                          <div className="flex items-center gap-2 text-xs"><span className="text-gray-500">HR:</span><span className="text-white font-bold">{d.hr} bpm</span></div>
                         </div>
                       );
                     }} />
@@ -2840,16 +2839,16 @@ export function AnalyticsV2({
                 </ResponsiveContainer>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo Medio</div>
+                <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                  <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Passo Medio</div>
                   <div className="text-xl font-mono font-black text-white">{formatPaceStr(avgPace)} /km</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">FC Primi 3km</div>
+                <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                  <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">FC Primi 3km</div>
                   <div className="text-xl font-mono font-black text-white">{first3Hr > 0 ? Math.round(first3Hr) : '--'} bpm</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">FC Ultimi 3km + Drift</div>
+                <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                  <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">FC Ultimi 3km + Drift</div>
                   <div className="text-xl font-mono font-black" style={{ color: driftPct > 10 ? '#F43F5E' : driftPct > 5 ? '#F59E0B' : NEON }}>
                     {last3Hr > 0 ? Math.round(last3Hr) : '--'} bpm
                     {driftPct !== 0 && <span className="text-sm ml-2">(+{driftPct.toFixed(1)}%)</span>}
@@ -2867,7 +2866,7 @@ export function AnalyticsV2({
         const z2 = zonesChartData.find(z => z.zone === 'Z2');
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]">
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -2894,8 +2893,8 @@ export function AnalyticsV2({
                       return (
                         <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
                           <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: d.color }}>{d.zone} — {d.name}</p>
-                          <div className="text-xs"><span className="text-[#777]">Percentuale: </span><span className="text-white font-bold">{d.pct}%</span></div>
-                          <div className="text-xs"><span className="text-[#777]">Minuti: </span><span className="text-white font-bold">{d.min}</span></div>
+                          <div className="text-xs"><span className="text-gray-500">Percentuale: </span><span className="text-white font-bold">{d.pct}%</span></div>
+                          <div className="text-xs"><span className="text-gray-500">Minuti: </span><span className="text-white font-bold">{d.min}</span></div>
                         </div>
                       );
                     }} />
@@ -2906,18 +2905,18 @@ export function AnalyticsV2({
                 </ResponsiveContainer>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Minuti Totali</div>
+                <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                  <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Minuti Totali</div>
                   <div className="text-xl font-mono font-black text-white">{totalZoneMin}</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Zona Dominante</div>
+                <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                  <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Zona Dominante</div>
                   <div className="text-xl font-mono font-black" style={{ color: dominantZone?.color ?? NEON }}>
                     {dominantZone ? `${dominantZone.zone} ${dominantZone.name}` : '--'}
                   </div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Z2 Aerobic %</div>
+                <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                  <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Z2 Aerobic %</div>
                   <div className="text-xl font-mono font-black" style={{ color: (z2?.pct ?? 0) >= 70 ? NEON : (z2?.pct ?? 0) >= 50 ? '#F59E0B' : '#F43F5E' }}>
                     {z2?.pct ?? '--'}%
                   </div>
@@ -2937,7 +2936,7 @@ export function AnalyticsV2({
           ? Math.round(scatterData.reduce((s, d) => s + d.gct, 0) / scatterData.length) : 0;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]">
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -2972,8 +2971,8 @@ export function AnalyticsV2({
                             <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: optimal ? NEON : '#888' }}>
                               {optimal ? 'ZONA OTTIMALE' : 'FUORI ZONA'}
                             </p>
-                            <div className="text-xs mb-0.5"><span className="text-[#777]">Cadenza: </span><span className="text-white font-bold">{d.cadence} spm</span></div>
-                            <div className="text-xs"><span className="text-[#777]">GCT: </span><span className="text-white font-bold">{d.gct} ms</span></div>
+                            <div className="text-xs mb-0.5"><span className="text-gray-500">Cadenza: </span><span className="text-white font-bold">{d.cadence} spm</span></div>
+                            <div className="text-xs"><span className="text-gray-500">GCT: </span><span className="text-white font-bold">{d.gct} ms</span></div>
                           </div>
                         );
                       }} />
@@ -2987,16 +2986,16 @@ export function AnalyticsV2({
                 </ResponsiveContainer>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Zona Ottimale</div>
+                <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                  <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Zona Ottimale</div>
                   <div className="text-xl font-mono font-black" style={{ color: NEON }}>{optimalCount} / {scatterData.length}</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Cadenza Media</div>
+                <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                  <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Cadenza Media</div>
                   <div className="text-xl font-mono font-black text-white">{avgCadence > 0 ? `${avgCadence} spm` : '--'}</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">GCT Medio</div>
+                <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                  <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">GCT Medio</div>
                   <div className="text-xl font-mono font-black text-white">{avgGct > 0 ? `${avgGct} ms` : '--'}</div>
                 </div>
               </div>
@@ -3015,7 +3014,7 @@ export function AnalyticsV2({
         const tPace = getThresholdDisplay(currentVdot);
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
+            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]">
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
@@ -3050,8 +3049,8 @@ export function AnalyticsV2({
                       return (
                         <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
                           <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>{d.name}</p>
-                          <div className="flex items-center gap-2 text-xs mb-0.5"><span className="text-[#777]">VDOT:</span><span className="text-white font-bold">{d.vdot}</span></div>
-                          {d.vdot && <div className="flex items-center gap-2 text-xs"><span className="text-[#777]">Passo soglia:</span><span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span></div>}
+                          <div className="flex items-center gap-2 text-xs mb-0.5"><span className="text-gray-500">VDOT:</span><span className="text-white font-bold">{d.vdot}</span></div>
+                          {d.vdot && <div className="flex items-center gap-2 text-xs"><span className="text-gray-500">Passo soglia:</span><span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span></div>}
                         </div>
                       );
                     }} />
@@ -3062,18 +3061,18 @@ export function AnalyticsV2({
                 </ResponsiveContainer>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">VDOT Attuale</div>
+                <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                  <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">VDOT Attuale</div>
                   <div className="text-xl font-mono font-black" style={{ color: NEON }}>{currentVdot ?? '—'}</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Trend 3M</div>
+                <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                  <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Trend 3M</div>
                   <div className="text-xl font-mono font-black" style={{ color: trend3m == null ? '#555' : trend3m >= 0 ? NEON : '#F43F5E' }}>
                     {trend3m == null ? '—' : `${trend3m >= 0 ? '+' : ''}${trend3m.toFixed(1)}`}
                   </div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo soglia</div>
+                <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+                  <div className="text-gray-600 text-[10px] uppercase tracking-widest font-black mb-1">Passo soglia</div>
                   <div className="text-xl font-mono font-black text-white">{tPace ?? '—'} {tPace ? '/km' : ''}</div>
                 </div>
               </div>

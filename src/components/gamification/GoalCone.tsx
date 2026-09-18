@@ -54,14 +54,14 @@ export function GoalCone({ physio, mine, xp }: Props) {
   return (
     <section className="aef-rise min-w-0">
       <Title icon={Target} hint="carico delle ultime 6 settimane · clima del mese">Il cono del traguardo</Title>
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-4 md:p-5">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
         {/* gli obiettivi: il tuo per primo */}
         <div className="flex flex-wrap gap-1.5 mb-4" role="radiogroup" aria-label="Obiettivo">
           {goals.map((g) => {
             const sel = g.id === goal.id;
             return (
               <button key={g.id} type="button" role="radio" aria-checked={sel} onClick={() => setGoalId(g.id)}
-                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black tracking-wide border transition-colors ${sel ? "bg-[#C0FF00]/12 border-[#C0FF00]/50 text-white" : "border-white/10 text-gray-400 hover:text-white hover:border-white/25"}`}
+                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black tracking-wide border transition-colors ${sel ? "bg-brand/12 border-brand/50 text-white" : "border-white/10 text-gray-400 hover:text-white hover:border-white/25"}`}
                 style={{ fontFamily: MONO }}>
                 {g.mine && <span className="mr-1" style={{ color: LIME }}>★</span>}
                 {g.label}
@@ -79,18 +79,18 @@ export function GoalCone({ physio, mine, xp }: Props) {
           <EtaTile label="Probabile" chance="80%" eta={cone.likely} empty="non a questo carico" note="la data su cui prenotare" />
           {cone.race ? (
             <div className="rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 min-w-0">
-              <div className="text-[9px] font-black tracking-[0.2em] uppercase text-gray-500">Gara · {shortDate(cone.race.iso)}</div>
+              <div className="text-[10px] font-black tracking-[0.2em] uppercase text-gray-500">Gara · {shortDate(cone.race.iso)}</div>
               <div className="mt-1 flex items-baseline gap-1.5">
                 <span className="text-xl font-black text-white" style={{ fontFamily: MONO }}>{fmtClock(cone.race.sec)}</span>
                 <span className="text-[11px] font-black text-gray-300" style={{ fontFamily: MONO }}>{pct(cone.race.p)}</span>
               </div>
-              <div className="text-[9px] text-gray-500 truncate">previsto · circa {cone.race.tempC}° quel mese</div>
+              <div className="text-[11px] text-gray-500 truncate">previsto · circa {cone.race.tempC}° quel mese</div>
             </div>
           ) : (
             <div className="rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 min-w-0">
-              <div className="text-[9px] font-black tracking-[0.2em] uppercase text-gray-500">Il meglio previsto</div>
+              <div className="text-[10px] font-black tracking-[0.2em] uppercase text-gray-500">Il meglio previsto</div>
               <div className="mt-1 text-xl font-black text-white" style={{ fontFamily: MONO }}>{fmtClock(best.sec)}</div>
-              <div className="text-[9px] text-gray-500 truncate">intorno al {shortDate(best.iso)}</div>
+              <div className="text-[11px] text-gray-500 truncate">intorno al {shortDate(best.iso)}</div>
             </div>
           )}
         </div>
@@ -100,7 +100,7 @@ export function GoalCone({ physio, mine, xp }: Props) {
         </div>
 
         {/* legenda: due serie, ognuna con la sua chiave di linea */}
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px] text-gray-400">
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-gray-400">
           <LineKey color={LIME}>previsione se continui così</LineKey>
           <span className="inline-flex items-center gap-1.5">
             <span className="w-4 h-2.5 rounded-sm" style={{ background: `${LIME}26` }} />forchetta 20-80%
@@ -165,20 +165,20 @@ function Headline({ cone, best }: { cone: Cone; best: ConePoint }) {
       <b className="text-white">{fmtClock(best.sec)}</b>
       {cone.possible ? <>: il {t} è possibile dal <b className="text-white">{shortDate(cone.possible.iso)}</b> solo con una giornata perfetta.</> : <>: per il {t} serve un carico diverso, non altro tempo.</>}{race}</>;
   }
-  return <p className="text-[12.5px] leading-relaxed text-gray-400">{body}</p>;
+  return <p className="text-[12px] leading-relaxed text-gray-400">{body}</p>;
 }
 
 function EtaTile({ label, chance, eta, empty, note, strong }: {
   label: string; chance: string; eta: ConeEta | null; empty: string; note: string; strong?: boolean;
 }) {
   return (
-    <div className={`rounded-xl border px-3 py-2.5 min-w-0 ${strong ? "border-[#C0FF00]/35 bg-[#C0FF00]/[0.05]" : "border-white/10 bg-black/25"}`}>
+    <div className={`rounded-xl border px-3 py-2.5 min-w-0 ${strong ? "border-brand/35 bg-brand/[0.05]" : "border-white/10 bg-black/25"}`}>
       <div className="flex items-baseline justify-between gap-1">
-        <span className="text-[9px] font-black tracking-[0.2em] uppercase text-gray-500">{label}</span>
-        <span className="text-[9px] font-black text-gray-500" style={{ fontFamily: MONO }}>{chance}</span>
+        <span className="text-[10px] font-black tracking-[0.2em] uppercase text-gray-500">{label}</span>
+        <span className="text-[11px] font-black text-gray-500" style={{ fontFamily: MONO }}>{chance}</span>
       </div>
       <div className="mt-1 text-xl font-black text-white truncate" style={{ fontFamily: MONO }}>{eta ? shortDate(eta.iso) : "—"}</div>
-      <div className="text-[9px] text-gray-500 truncate">{eta ? note : empty}</div>
+      <div className="text-[11px] text-gray-500 truncate">{eta ? note : empty}</div>
     </div>
   );
 }
@@ -194,8 +194,8 @@ function LineKey({ color, dashed, children }: { color: string; dashed?: boolean;
 function Title({ icon: Icon, children, hint }: { icon: LucideIcon; children: React.ReactNode; hint?: string }) {
   return (
     <div className="flex items-center justify-between gap-3 mb-3 px-0.5">
-      <div className="flex items-center gap-2 min-w-0"><Icon className="w-4 h-4 text-[#C0FF00] shrink-0" /><h2 className="text-[11px] font-black tracking-[0.28em] uppercase text-white/90 truncate">{children}</h2></div>
-      {hint && <span className="hidden sm:inline text-[9px] tracking-widest uppercase text-gray-600 shrink-0 truncate">{hint}</span>}
+      <div className="flex items-center gap-2 min-w-0"><Icon className="w-4 h-4 text-brand shrink-0" /><h2 className="text-[11px] font-black tracking-[0.28em] uppercase text-white/90 truncate">{children}</h2></div>
+      {hint && <span className="hidden sm:inline text-[10px] tracking-widest uppercase text-gray-600 shrink-0 truncate">{hint}</span>}
     </div>
   );
 }
@@ -398,7 +398,7 @@ function ConeTable({ cone }: { cone: Cone }) {
     <div className="mt-3 overflow-x-auto rounded-xl border border-white/10">
       <table className="w-full text-[11px]" style={{ fontFamily: MONO }}>
         <thead>
-          <tr className="text-left text-[9px] uppercase tracking-wider text-gray-500 border-b border-white/10">
+          <tr className="text-left text-[10px] uppercase tracking-wider text-gray-500 border-b border-white/10">
             <th className="px-3 py-2 font-black">Data</th>
             <th className="px-3 py-2 font-black text-right">Previsto</th>
             <th className="px-3 py-2 font-black text-right">Forchetta 20-80%</th>

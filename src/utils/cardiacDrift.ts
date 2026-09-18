@@ -1,4 +1,5 @@
 import type { Run, Split } from "../types/api";
+import { BRAND } from "../theme/tokens";
 
 export interface DriftResult {
   drift: number;       // % (positive = HR rose = worse)
@@ -21,7 +22,7 @@ export interface DriftResult {
  * questo è un modulo puro di utility: non deve dipendere dai componenti.
  */
 export function driftLabel(d: number): { label: string; color: string } {
-  if (d < 3.5) return { label: "Eccellente",    color: "#C0FF00" };
+  if (d < 3.5) return { label: "Eccellente",    color: BRAND };
   if (d < 5.0) return { label: "Buona",         color: "#22D3EE" };
   if (d < 7.5) return { label: "Da migliorare", color: "#F59E0B" };
   return            { label: "Insufficiente",   color: "#F43F5E" };

@@ -1,3 +1,4 @@
+import { BRAND } from "../../theme/tokens";
 // Helper condivisi tra le varianti Runner DNA (V1/V2).
 // RunnerDnaView.tsx ha copie locali: non toccarlo, è la versione stabile.
 
@@ -41,7 +42,7 @@ export const DISTANCE_LABELS: Record<string, string> = {
 export const DISTANCE_ORDER = ["5K", "10K", "HALF MARATHON", "MARATHON"];
 
 export const TREND_COLORS: Record<string, string> = {
-  "In Forte Crescita": "#C0FF00",
+  "In Forte Crescita": BRAND,
   "In Crescita": "#34D399",
   "Stabile": "#F59E0B",
   "In Calo": "#F97316",

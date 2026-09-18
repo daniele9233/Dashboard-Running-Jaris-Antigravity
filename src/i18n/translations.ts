@@ -245,6 +245,10 @@ export const translations = {
     // ── Profile
     profile: {
       title: "Profilo",
+      share: "Condividi",
+      edit: "Modifica",
+      editProfileSuffix: "profilo",
+      editProfile: "Modifica profilo",
       personalInfo: "Info Personali",
       name: "Nome",
       age: "Età",
@@ -670,6 +674,10 @@ export const translations = {
       storico12Mesi: "12-Month History",
     },
     profile: {
+      share: "Share",
+      edit: "Edit",
+      editProfileSuffix: "profile",
+      editProfile: "Edit profile",
       title: "Profile",
       personalInfo: "Personal Info",
       name: "Name",

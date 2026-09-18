@@ -64,7 +64,7 @@ interface Props {
 function Card({
   children,
   className = '',
-  accent = ACCENT,
+  accent: _accent = ACCENT,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -76,7 +76,6 @@ function Card({
       style={{
         background: PANEL,
         border: `1px solid ${BORDER_STRONG}`,
-        borderLeft: `3px solid ${accent}`,
       }}
     >
       {children}
@@ -101,7 +100,7 @@ function CardHeader({
       <div>
         <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">{title}</h2>
         {subtitle && (
-          <p className="text-[10px] text-[#555] font-bold uppercase tracking-widest mt-1">{subtitle}</p>
+          <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-1">{subtitle}</p>
         )}
       </div>
     </div>
@@ -110,10 +109,10 @@ function CardHeader({
 
 function StatChip({ label, value, hint, color = ACCENT }: { label: string; value: string; hint?: string; color?: string }) {
   return (
-    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+    <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
       <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">{label}</div>
       <div className="mt-2 text-2xl font-black leading-none" style={{ color }}>{value}</div>
-      {hint && <div className="mt-2 text-[10px] font-semibold leading-relaxed text-gray-600">{hint}</div>}
+      {hint && <div className="mt-2 text-[11px] font-semibold leading-relaxed text-gray-600">{hint}</div>}
     </div>
   );
 }
@@ -160,7 +159,7 @@ function PaceTable({ projection }: { projection: PaceProjection[] }) {
                   <td key={r.day} className="py-2 px-3 font-bold text-gray-300">
                     {r.paceLabel}
                     <div
-                      className="text-[9px] font-bold"
+                      className="text-[11px] font-bold"
                       style={{ color: isBoost ? '#22C55E' : r.lossPct > 5 ? '#F43F5E' : '#666' }}
                     >
                       {isBoost ? '↓' : r.lossPct > 0 ? '+' : ''}{Math.abs(r.lossPct).toFixed(1)}%
@@ -190,8 +189,7 @@ function FlowDiagram() {
       {steps.map((step, i) => (
         <div
           key={step.label}
-          className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 relative"
-          style={{ borderLeft: `3px solid ${step.color}` }}
+          className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 relative"
         >
           <div className="flex items-center gap-2 mb-3">
             <step.icon className="w-4 h-4" style={{ color: step.color }} />
@@ -230,13 +228,13 @@ export function BiologyFutureLab({ profile, runs, vdot }: Props) {
     : 'VDOT non disponibile';
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
 
       {/* HERO — PROFILO + DIAGNOSI */}
       <Card accent={ACCENT}>
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           <div className="xl:col-span-7">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#C0FF00]/25 bg-[#C0FF00]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: ACCENT }}>
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand/25 bg-brand/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: ACCENT }}>
               <FlaskConical className="w-3.5 h-3.5" />
               REFERTO DETRAINING
             </div>
@@ -350,21 +348,21 @@ export function BiologyFutureLab({ profile, runs, vdot }: Props) {
       <Card accent="#22C55E">
         <CardHeader icon={Sparkle} title="Perche D0-D7 NON e Detraining" subtitle="Tapering science (Bosquet 2007 - Mujika 2018)" accent="#22C55E" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+          <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
             <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#22C55E' }}>FATICA RESIDUA ↓</div>
             <p className="mt-2 text-[12px] font-semibold text-gray-400 leading-relaxed">
               Lo stop dissipa ATL accumulato. <span className="text-white font-black">TSB sale</span>: muscoli rigenerano,
               cortisol scende, sistema nervoso recupera reattivita. Nessuna perdita strutturale.
             </p>
           </div>
-          <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+          <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
             <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#22C55E' }}>GLICOGENO ↑ +4%</div>
             <p className="mt-2 text-[12px] font-semibold text-gray-400 leading-relaxed">
               Senza scarico quotidiano, le riserve di glicogeno muscolare super-compensano.
               Hematocrit sale +2% bilanciando il calo plasmatico (Mujika 2010).
             </p>
           </div>
-          <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+          <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
             <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#22C55E' }}>PERFORMANCE +1/+3%</div>
             <p className="mt-2 text-[12px] font-semibold text-gray-400 leading-relaxed">
               Bosquet 2007 (meta-analisi 27 studi): taper di 8-14gg con riduzione volume 41-60% migliora la performance
@@ -372,7 +370,7 @@ export function BiologyFutureLab({ profile, runs, vdot }: Props) {
             </p>
           </div>
         </div>
-        <div className="mt-5 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+        <div className="mt-5 rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Quando inizia il vero detraining</div>
           <p className="mt-2 text-[12px] font-semibold text-gray-400 leading-relaxed">
             Coyle 1984 mostra il primo calo VO2max <span className="text-white font-black">a 12 giorni di stop completo</span> (-2.6%).
@@ -415,7 +413,7 @@ export function BiologyFutureLab({ profile, runs, vdot }: Props) {
                   <td className="py-2 pr-3" rowSpan={2}>
                     <span className="font-black" style={{ color: row.color }}>{row.label}</span>
                   </td>
-                  <td className="py-2 px-3 text-[10px] font-black" style={{ color: '#22C55E' }}>T</td>
+                  <td className="py-2 px-3 text-[11px] font-black" style={{ color: '#22C55E' }}>T</td>
                   {snap.map((p) => {
                     const val = (1 - (p as any)[row.key]) * 100;
                     return (<td key={p.day} className="py-2 px-3 font-bold">-{val.toFixed(1)}%</td>);
@@ -423,7 +421,7 @@ export function BiologyFutureLab({ profile, runs, vdot }: Props) {
                   <td className="py-2 px-3 font-black" style={{ color: row.color }}>-{(row.capT * 100).toFixed(0)}%</td>
                 </tr>,
                 <tr key={`${row.key}-full`} className="border-t border-white/5 bg-white/[0.015]">
-                  <td className="py-2 px-3 text-[10px] font-black" style={{ color: RED }}>F</td>
+                  <td className="py-2 px-3 text-[11px] font-black" style={{ color: RED }}>F</td>
                   {[3, 7, 14, 30, 60].map((d) => {
                     const val = (1 - (summaryFull.curve[d] as any)[row.key]) * 100;
                     return (<td key={d} className="py-2 px-3 font-bold" style={{ color: '#FCA5A5' }}>-{val.toFixed(1)}%</td>);
@@ -433,19 +431,19 @@ export function BiologyFutureLab({ profile, runs, vdot }: Props) {
               ])}
               <tr className="border-t border-white/5">
                 <td className="py-2 pr-3"><span className="font-black" style={{ color: BLUE }}>Volume plasmatico</span></td>
-                <td className="py-2 px-3 text-[10px] text-gray-500 font-black">=</td>
+                <td className="py-2 px-3 text-[11px] text-gray-500 font-black">=</td>
                 {snap.map((p) => (<td key={p.day} className="py-2 px-3 font-bold">-{((1 - p.plasmaPct) * 100).toFixed(1)}%</td>))}
                 <td className="py-2 px-3 font-black" style={{ color: BLUE }}>-{(summary.plasmaLossCap * 100).toFixed(0)}%</td>
               </tr>
               <tr className="border-t border-white/5">
                 <td className="py-2 pr-3"><span className="font-black" style={{ color: RED }}>FC riposo</span></td>
-                <td className="py-2 px-3 text-[10px] font-black" style={{ color: '#22C55E' }}>T</td>
+                <td className="py-2 px-3 text-[11px] font-black" style={{ color: '#22C55E' }}>T</td>
                 {snap.map((p) => (<td key={p.day} className="py-2 px-3 font-bold">+{p.restingHrDelta.toFixed(1)} bpm</td>))}
                 <td className="py-2 px-3 font-black" style={{ color: RED }}>+{(5 + 5 * summary.trainingFactor).toFixed(0)} bpm</td>
               </tr>
               <tr className="border-t border-white/5 bg-white/[0.015]">
                 <td className="py-2 pr-3"></td>
-                <td className="py-2 px-3 text-[10px] font-black" style={{ color: RED }}>F</td>
+                <td className="py-2 px-3 text-[11px] font-black" style={{ color: RED }}>F</td>
                 {[3, 7, 14, 30, 60].map((d) => (<td key={d} className="py-2 px-3 font-bold" style={{ color: '#FCA5A5' }}>+{summaryFull.curve[d].restingHrDelta.toFixed(1)} bpm</td>))}
                 <td className="py-2 px-3 font-black" style={{ color: RED }}>+{(5 + 5 * summaryFull.trainingFactor).toFixed(0)} bpm</td>
               </tr>
@@ -519,7 +517,7 @@ export function BiologyFutureLab({ profile, runs, vdot }: Props) {
         <CardHeader icon={Repeat} title="Back-to-Fit Ratio" subtitle="Giorni di richiamo per recuperare" />
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {summary.backToFit.map((b) => (
-            <div key={b.daysOff} className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+            <div key={b.daysOff} className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
               <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Stop {b.daysOff} giorni</div>
               <div className="mt-3 flex items-baseline gap-1">
                 <span className="text-3xl font-black text-white">{b.daysToRecover}</span>
@@ -532,7 +530,7 @@ export function BiologyFutureLab({ profile, runs, vdot }: Props) {
             </div>
           ))}
         </div>
-        <div className="mt-5 rounded-xl backdrop-blur-2xl border border-[#C0FF00]/20 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 flex gap-3">
+        <div className="mt-5 rounded-xl border border-brand/20 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 flex gap-3">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: ACCENT }} />
           <p className="text-[12px] font-semibold text-gray-300 leading-relaxed">
             Il ratio aumenta con eta sopra 35a e con basso storico. Il tuo ratio personale e

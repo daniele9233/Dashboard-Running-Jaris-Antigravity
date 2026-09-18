@@ -52,9 +52,9 @@ export function HRZones({ lastRun }: { lastRun: Run | null }) {
   const maxPct = Math.max(...zones.map((z) => z.pct), 1);
 
   return (
-    <div className="rounded-[24px] p-5 h-full flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+    <div className="rounded-3xl p-5 h-full flex flex-col overflow-hidden border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
       {/* ── top label ── */}
-      <div className="text-[#A0A0A0] text-[9px] font-black tracking-[0.2em] uppercase mb-3 shrink-0">
+      <div className="text-[#A0A0A0] text-[10px] font-black tracking-[0.2em] uppercase mb-3 shrink-0">
         Heart Rate Zones
       </div>
 
@@ -121,7 +121,7 @@ export function HRZones({ lastRun }: { lastRun: Run | null }) {
               <div
                 key={z.n}
                 onMouseEnter={() => setActive(i)}
-                className="flex items-center gap-2.5 px-2.5 py-2 rounded-[12px] cursor-pointer transition-all"
+                className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl cursor-pointer transition-all"
                 style={{
                   background: i === active ? "rgba(255,255,255,0.06)" : "transparent",
                   border: i === active ? `1px solid ${z.color}30` : "1px solid transparent",
@@ -141,14 +141,14 @@ export function HRZones({ lastRun }: { lastRun: Run | null }) {
                     <span className="text-white text-[10px] font-black tracking-widest uppercase truncate">
                       {z.n} · {z.label}
                     </span>
-                    <span className="text-[#A0A0A0] text-[10px] font-bold ml-2 shrink-0" style={{ fontFamily: "JetBrains Mono" }}>
+                    <span className="text-[#A0A0A0] text-[11px] font-bold ml-2 shrink-0" style={{ fontFamily: "JetBrains Mono" }}>
                       {z.pct}%
                     </span>
                   </div>
                   <div className="h-[3px] rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
                     <div
-                      className="h-full rounded-full"
-                      style={{ width: `${(z.pct / maxPct) * 100}%`, background: z.color, transition: "width .6s ease", opacity: i === active ? 1 : 0.6 }}
+                      className="h-full w-full origin-left"
+                      style={{ transform: `scaleX(${z.pct / maxPct})`, background: z.color, transition: "transform .5s cubic-bezier(0.22,1,0.36,1)", opacity: i === active ? 1 : 0.6 }}
                     />
                   </div>
                 </div>

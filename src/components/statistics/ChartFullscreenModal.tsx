@@ -1,5 +1,6 @@
 import React from 'react';
 import { Maximize2, X } from 'lucide-react';
+import { BRAND } from "../../theme/tokens";
 
 type ChartFullscreenModalProps = {
   open: boolean;
@@ -16,7 +17,7 @@ export function ChartFullscreenModal({
   onClose,
   title,
   subtitle,
-  accent = '#C0FF00',
+  accent: _accent = BRAND,
   children,
   details,
 }: ChartFullscreenModalProps) {
@@ -31,7 +32,7 @@ export function ChartFullscreenModal({
     >
       <div
         className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-[92vw] max-w-[1500px] shadow-2xl flex flex-col"
-        style={{ height: '68vh', borderLeft: `3px solid ${accent}` }}
+        style={{ height: '68vh' }}
       >
         <div className="flex justify-between items-center mb-6 gap-4">
           <div>
@@ -71,7 +72,7 @@ export function ChartExpandButton({
     <button
       type="button"
       onClick={onClick}
-      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#2A2A2A] text-[#555] hover:text-[#C0FF00]"
+      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#2A2A2A] text-gray-600 hover:text-brand"
       title={title}
       aria-label={title}
     >

@@ -1202,7 +1202,7 @@ export const KIKKO_SUB20_TARGETS = [
 export const KIKKO_SUB20_LEGEND: { color: string; label: string; opacity?: number }[] = [
   { color: "#EF4444", label: "Qualità 1 · intervalli a ritmo gara" },
   { color: "#F97316", label: "Qualità 2 · resistenza o soglia" },
-  { color: "#6B7280", label: "Lenta" },
+  { color: "#878787", label: "Lenta" },
   { color: "#10B981", label: "Lungo" },
   { color: "#2A2A2A", label: "Riposo", opacity: 0.3 },
 ];

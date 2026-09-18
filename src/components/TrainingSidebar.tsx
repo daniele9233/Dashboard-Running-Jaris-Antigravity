@@ -91,7 +91,7 @@ export function TrainingSidebar() {
           </div>
 
           <div className="absolute top-4 left-4">
-            <span className="bg-white/20 backdrop-blur-md text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+            <span className="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
               No Injury
             </span>
           </div>
@@ -119,13 +119,13 @@ export function TrainingSidebar() {
                   dataKey="name"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#6B7280', fontSize: 12 }}
+                  tick={{ fill: "#878787", fontSize: 12 }}
                   dy={10}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#6B7280', fontSize: 12 }}
+                  tick={{ fill: "#878787", fontSize: 12 }}
                   domain={[0, yMax]}
                   ticks={[0, Math.round(yMax / 4), Math.round(yMax / 2), Math.round(yMax * 3 / 4), yMax]}
                 />
@@ -179,12 +179,12 @@ export function TrainingSidebar() {
           {weeklyMenu.map((item, idx) => (
             <div
               key={idx}
-              className={`flex items-center justify-between p-3 rounded-lg border-l-4 ${
-                item.status === 'rest' ? 'opacity-40' : 'bg-[#121212]'
-              } ${item.today ? 'ring-1 ring-[#C0FF00]/40' : ''}`}
-              style={{ borderLeftColor: item.color || '#2A2A2A' }}
+              className={`flex items-center justify-between p-3 rounded-lg ${
+                item.status === 'rest' ? 'opacity-40' : 'bg-surface-2'
+              } ${item.today ? 'ring-1 ring-brand/40' : ''}`}
             >
-              <div className="flex items-center gap-4 min-w-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: item.color || '#2A2A2A' }} aria-hidden />
                 <span className="text-xs font-semibold text-gray-500 w-24 shrink-0">{item.date}</span>
                 <div className="min-w-0">
                   <span className={`text-sm font-medium block truncate ${item.status === 'rest' ? 'text-gray-500' : 'text-gray-200'}`}>
@@ -204,7 +204,7 @@ export function TrainingSidebar() {
         </div>
 
         {/* Riepilogo della settimana */}
-        <div className="mt-6 p-4 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 space-y-2">
+        <div className="mt-6 p-4 rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 space-y-2">
           <div className="flex justify-between text-xs text-gray-500">
             <span>Km della settimana</span>
             <span className="text-white font-bold">{week.km}</span>

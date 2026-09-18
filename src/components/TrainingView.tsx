@@ -7,7 +7,7 @@ export function TrainingView() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-[#121212] text-white relative">
+    <main className="flex-1 flex flex-col md:flex-row overflow-hidden bg-canvas text-white relative">
       {/* Main Grid Area */}
       <div className="flex-1 flex flex-col overflow-hidden md:border-r border-[#2A2A2A]">
         <TrainingGrid />
@@ -22,7 +22,7 @@ export function TrainingView() {
       <button
         type="button"
         onClick={() => setMobileSidebarOpen((v) => !v)}
-        className="md:hidden fixed bottom-4 right-4 z-40 bg-[#C0FF00] text-black font-black text-[10px] tracking-widest uppercase px-4 py-3 rounded-full shadow-2xl flex items-center gap-2 min-h-[44px]"
+        className="md:hidden fixed bottom-4 right-4 z-40 bg-brand text-black font-black text-[10px] tracking-widest uppercase px-4 py-3 rounded-full shadow-2xl flex items-center gap-2 min-h-[44px]"
         aria-label="Apri pannello training"
       >
         {mobileSidebarOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
@@ -45,6 +45,6 @@ export function TrainingView() {
           </div>
         </>
       )}
-    </div>
+    </main>
   );
 }

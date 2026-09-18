@@ -265,7 +265,7 @@ export function kikkoSub135HeatInfo(
 export const KIKKO_SUB135_LEGEND: { color: string; label: string; opacity?: number }[] = [
   { color: "#F97316", label: "Qualità · soglia lunga" },
   { color: "#EF4444", label: "Qualità · ritmo gara o 2-3 km" },
-  { color: "#6B7280", label: "Lenta" },
+  { color: "#878787", label: "Lenta" },
   { color: "#10B981", label: "Lungo · negli ultimi finisce a ritmo gara" },
   { color: "#2A2A2A", label: "Riposo", opacity: 0.3 },
 ];

@@ -17,13 +17,14 @@ import { GoalTimeline, PhysioVerdict } from "./PhysioVerdict";
 import { usePhysio } from "./usePhysio";
 import { GoalCone } from "./GoalCone";
 import { PLAN_GOALS } from "../../data/mezzaOttobrePlan";
+import { BRAND } from "../../theme/tokens";
 
 const MONO = "'JetBrains Mono', monospace";
 const ICONS: Record<string, LucideIcon> = { Footprints, Sparkles, Flame, Zap, Medal, Award, Target, Trophy, Gem, Crown };
 const RUN_COLOR: Record<string, string> = { long: "#34D399", intervals: "#F43F5E", repetition: "#F43F5E", vo2max: "#F43F5E", tempo: "#FBBF24", threshold: "#FBBF24", fartlek: "#FB923C", progression: "#A3E635", easy: "#22D3EE", recovery: "#A78BFA", race: "#E879F9", trail: "#FB923C" };
 
 function Panel({ children, className = "", style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
-  return <div className={`rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl ${className}`} style={style}>{children}</div>;
+  return <div className={`rounded-2xl border border-white/10 bg-white/[0.03] ${className}`} style={style}>{children}</div>;
 }
 
 const LEVEL_KEY = "aef-last-level";
@@ -203,9 +204,9 @@ function Hero({ sys }: { sys: LevelSystem }) {
   return (
     <Panel className="p-5 md:p-6 aef-rise relative overflow-hidden" style={{ background: `radial-gradient(130% 150% at 0% 0%, ${sys.tier.color}22, transparent 55%), rgba(255,255,255,0.03)` }}>
       <div className="flex items-center gap-2 mb-5">
-        <Dna className="w-5 h-5 text-[#C0FF00]" />
-        <h1 className="text-lg md:text-xl font-black tracking-tight uppercase italic">Athlete <span className="text-[#C0FF00]">Evolution</span></h1>
-        <span className="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-black tabular-nums"
+        <Dna className="w-5 h-5 text-brand" />
+        <h1 className="text-lg md:text-xl font-black tracking-tight uppercase italic">Athlete <span className="text-brand">Evolution</span></h1>
+        <span className="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-black tabular-nums"
           style={{ fontFamily: MONO, background: `${trendCol}1f`, color: trendCol }} title="Forma stimata a temperatura ideale">
           <Gauge className="w-3 h-3" />VDOT {sys.currentVdot}
           {p.ok && <><TrendIcon className="w-3 h-3 ml-0.5" />{p.perMonth > 0 ? "+" : ""}{p.perMonth.toFixed(2)}/mese</>}
@@ -219,7 +220,7 @@ function Hero({ sys }: { sys: LevelSystem }) {
             <TierIcon className="w-9 h-9" style={{ color: sys.tier.color }} />
           </div>
           <div>
-            <div className="text-[9px] font-black tracking-[0.3em] uppercase text-gray-500">Livello</div>
+            <div className="text-[10px] font-black tracking-[0.3em] uppercase text-gray-500">Livello</div>
             <div className="flex items-end gap-1">
               <span className="text-6xl font-black tabular-nums leading-none" style={{ fontFamily: MONO, color: sys.tier.color }}>{sys.level}</span>
               <span className="text-lg font-black text-gray-600 mb-1">/{sys.maxLevel}</span>
@@ -230,16 +231,16 @@ function Hero({ sys }: { sys: LevelSystem }) {
 
         {/* barra XP + stats */}
         <div className="min-w-0">
-          <div className="flex justify-between items-baseline text-[10px] mb-1.5">
+          <div className="flex justify-between items-baseline text-[11px] mb-1.5">
             <span className="text-gray-500 uppercase tracking-wider">{sys.maxed ? "Livello massimo raggiunto" : <>verso <b className="text-white/80">Lv {sys.level + 1}</b></>}</span>
             <span style={{ fontFamily: MONO }} className="text-gray-400">{sys.intoLevel.toLocaleString("it-IT")}/{sys.spanLevel.toLocaleString("it-IT")} XP</span>
           </div>
           <div className="h-3 rounded-full bg-white/10 overflow-hidden">
-            <div className="aef-xpfill h-full rounded-full" style={{ width: `${sys.pct}%`, background: `linear-gradient(90deg, ${sys.tier.color}, #C0FF00)` }} />
+            <div className="aef-xpfill h-full rounded-full" style={{ width: `${sys.pct}%`, background: `linear-gradient(90deg, ${sys.tier.color}, ${BRAND})` }} />
           </div>
           <div className="flex justify-between items-center mt-1.5">
-            <span className="text-[10px] text-gray-600" style={{ fontFamily: MONO }}>{sys.totalXp.toLocaleString("it-IT")} XP totali</span>
-            {!sys.maxed && <span className="text-[10px] font-black" style={{ fontFamily: MONO, color: "#C0FF00" }}>−{sys.xpToNext.toLocaleString("it-IT")} XP al prossimo</span>}
+            <span className="text-[11px] text-gray-600" style={{ fontFamily: MONO }}>{sys.totalXp.toLocaleString("it-IT")} XP totali</span>
+            {!sys.maxed && <span className="text-[11px] font-black" style={{ fontFamily: MONO, color: BRAND }}>−{sys.xpToNext.toLocaleString("it-IT")} XP al prossimo</span>}
           </div>
 
           <div className="mt-4 grid grid-cols-3 gap-2">
@@ -255,9 +256,9 @@ function Hero({ sys }: { sys: LevelSystem }) {
 function Stat({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
     <div className="rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-center">
-      <div className="text-[8px] font-black tracking-widest uppercase text-gray-500">{label}</div>
+      <div className="text-[10px] font-black tracking-widest uppercase text-gray-500">{label}</div>
       <div className="text-lg font-black tabular-nums text-white leading-tight" style={{ fontFamily: MONO }}>{value}</div>
-      <div className="text-[8px] text-gray-600">{unit}</div>
+      <div className="text-[11px] text-gray-600">{unit}</div>
     </div>
   );
 }
@@ -293,7 +294,7 @@ function ProjectionPanel({ p }: { p: Projection }) {
         <p className="text-[12px] leading-relaxed text-gray-400 mb-4">{headline}</p>
 
         {p.stale && (
-          <div className="mb-3 rounded-xl border px-3 py-2 text-[10px] leading-snug"
+          <div className="mb-3 rounded-xl border px-3 py-2 text-[11px] leading-snug"
             style={{ borderColor: `${CHART_SERIES.load}55`, background: `${CHART_SERIES.load}12`, color: CHART_SERIES.load }}>
             Ultima corsa {p.daysSinceLastRun} giorni fa: il ritmo di XP sta scendendo e con lui questa proiezione.
           </div>
@@ -307,7 +308,7 @@ function ProjectionPanel({ p }: { p: Projection }) {
 
         <div className="mt-3 flex flex-wrap gap-1.5">
           {p.milestones.map((m) => (
-            <span key={m.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black border"
+            <span key={m.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black border"
               style={{ fontFamily: MONO, borderColor: m.xpNeeded == null ? "rgba(255,255,255,0.08)" : `${CHART_SERIES.primary}44`, color: m.xpNeeded == null ? CHART_TEXT.axis : CHART_SERIES.primary }}>
               {m.label}
               <span className="opacity-70">
@@ -317,7 +318,7 @@ function ProjectionPanel({ p }: { p: Projection }) {
           ))}
         </div>
 
-        <p className="mt-3 text-[9px] leading-relaxed text-gray-600">
+        <p className="mt-3 text-[11px] leading-relaxed text-gray-600">
           Passa il dito o il mouse sulla curva (frecce da tastiera) per leggere cosa compri a ogni quota di XP.
           Prezzi calcolati sul tuo ritmo attuale: {xpFmt(p.xpPerDay)} XP al giorno, {xpFmt(p.xpPerSession)} XP a seduta.
           Tempi a temperatura ideale (con i 20-30°C di Roma aggiungi ~{p.hotDelta5k}s sui 5 km).
@@ -333,10 +334,10 @@ function LevelCost({ l, vdotNow }: { l: LevelGain; vdotNow: number }) {
   return (
     <div className="rounded-xl border border-white/10 bg-black/25 p-2.5">
       <div className="flex items-baseline justify-between mb-1.5">
-        <span className="text-[9px] font-black tracking-[0.2em] uppercase text-gray-500">Lv {l.level}</span>
+        <span className="text-[10px] font-black tracking-[0.2em] uppercase text-gray-500">Lv {l.level}</span>
         <span className="text-[11px] font-black tabular-nums" style={{ fontFamily: MONO, color: CHART_SERIES.primary }}>+{xpFmt(l.xpNeeded)}</span>
       </div>
-      <div className="text-[9px] text-gray-600 mb-1.5" style={{ fontFamily: MONO }}>
+      <div className="text-[11px] text-gray-600 mb-1.5" style={{ fontFamily: MONO }}>
         ≈ {l.sessions} sedute{l.days != null && ` · ${l.days} gg`}
       </div>
       <Row k="VDOT" v={gain ? `${l.vdot.toFixed(1)} +${l.dVdot.toFixed(2)}` : vdotNow.toFixed(1)} />
@@ -349,7 +350,7 @@ function LevelCost({ l, vdotNow }: { l: LevelGain; vdotNow: number }) {
 function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex items-baseline justify-between gap-1">
-      <span className="text-[9px] text-gray-500 shrink-0">{k}</span>
+      <span className="text-[11px] text-gray-500 shrink-0">{k}</span>
       <span className="text-[12px] font-black tabular-nums text-white truncate" style={{ fontFamily: MONO }}>{v}</span>
     </div>
   );
@@ -572,7 +573,7 @@ function XpLegendPanel({ sys }: { sys: LevelSystem }) {
         </div>
 
         <div className="mt-4 pt-3.5 border-t border-white/10">
-          <div className="text-[9px] font-black tracking-[0.25em] uppercase text-gray-500 mb-2">Bonus</div>
+          <div className="text-[10px] font-black tracking-[0.25em] uppercase text-gray-500 mb-2">Bonus</div>
           <div className="grid grid-cols-2 gap-1.5">
             <Bonus label="Record personale" xp={XP_BONUS.pb} col="#FBBF24" />
             <Bonus label="Gara" xp={XP_BONUS.race} col="#E879F9" />
@@ -598,7 +599,7 @@ function LegendRow({ l, max }: { l: XpExample; max: number }) {
         <div className="h-1 flex-1 rounded-full bg-white/[0.06] overflow-hidden">
           <div className="h-full rounded-full" style={{ width: `${(l.xp / max) * 100}%`, background: l.zone.color }} />
         </div>
-        <span className="text-[8px] text-gray-600 shrink-0" style={{ fontFamily: MONO }}>{l.detail}</span>
+        <span className="text-[11px] text-gray-600 shrink-0" style={{ fontFamily: MONO }}>{l.detail}</span>
       </div>
     </div>
   );
@@ -607,7 +608,7 @@ function LegendRow({ l, max }: { l: XpExample; max: number }) {
 function Bonus({ label, xp, col }: { label: string; xp: number; col: string }) {
   return (
     <div className="flex items-center justify-between rounded-lg border border-white/[0.07] bg-black/25 px-2.5 py-1.5">
-      <span className="text-[10px] text-gray-400 truncate">{label}</span>
+      <span className="text-[11px] text-gray-400 truncate">{label}</span>
       <span className="text-[11px] font-black tabular-nums shrink-0 ml-1.5" style={{ fontFamily: MONO, color: col }}>+{xp}</span>
     </div>
   );
@@ -646,7 +647,7 @@ function PathPanel({ sys, trackRef }: { sys: LevelSystem; trackRef: React.RefObj
                         boxShadow: c.current ? `0 0 12px ${c.color}` : "none",
                         opacity: c.unlocked ? 1 : 0.85,
                       }}>
-                      {!c.unlocked && <Lock className="absolute inset-0 m-auto w-2.5 h-2.5 text-gray-600" />}
+                      {!c.unlocked && <Lock className="absolute inset-0 m-auto w-3 h-3 text-gray-600" />}
                       {c.current && <span className="absolute inset-0 rounded-md animate-pulse" style={{ boxShadow: `inset 0 0 0 2px #fff` }} />}
                     </button>
                   ))}
@@ -661,12 +662,12 @@ function PathPanel({ sys, trackRef }: { sys: LevelSystem; trackRef: React.RefObj
             <span className="grid place-items-center w-8 h-8 rounded-lg text-[11px] font-black tabular-nums" style={{ background: `${info.color}22`, color: info.color, fontFamily: MONO }}>{info.n}</span>
             <div>
               <div className="text-[12px] font-black" style={{ color: info.color }}>{info.title}</div>
-              <div className="text-[9px] text-gray-500">{info.unlocked ? (info.current ? "livello attuale" : "sbloccato") : "bloccato"}</div>
+              <div className="text-[11px] text-gray-500">{info.unlocked ? (info.current ? "livello attuale" : "sbloccato") : "bloccato"}</div>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-[9px] uppercase tracking-widest text-gray-500">soglia</div>
-            <div className="text-sm font-black tabular-nums" style={{ fontFamily: MONO, color: info.unlocked ? "#C0FF00" : "#94A3B8" }}>{info.cumXp.toLocaleString("it-IT")} XP</div>
+            <div className="text-[10px] uppercase tracking-widest text-gray-500">soglia</div>
+            <div className="text-sm font-black tabular-nums" style={{ fontFamily: MONO, color: info.unlocked ? BRAND : "#B8B8B8" }}>{info.cumXp.toLocaleString("it-IT")} XP</div>
           </div>
         </div>
       </Panel>
@@ -693,9 +694,9 @@ function TierNode({ t, last, isNext }: { t: TierState; last: boolean; isNext: bo
           : <Icon className="w-5 h-5" style={{ color: t.color }} />}
       </div>
       <div className="mt-2 text-center px-1">
-        <div className="text-[9px] font-black uppercase tracking-wide leading-tight" style={{ color: done || current || isNext ? t.color : "#6b7280" }}>{t.name}</div>
-        <div className="text-[8px] text-gray-600" style={{ fontFamily: MONO }}>Lv {t.levelStart}–{t.levelEnd}</div>
-        {current && <div className="mt-0.5 text-[8px] font-black text-white/80 tabular-nums" style={{ fontFamily: MONO }}>{t.unlockedLevels}/10 ✓</div>}
+        <div className="text-[10px] font-black uppercase tracking-wide leading-tight" style={{ color: done || current || isNext ? t.color : "#878787" }}>{t.name}</div>
+        <div className="text-[11px] text-gray-600" style={{ fontFamily: MONO }}>Lv {t.levelStart}–{t.levelEnd}</div>
+        {current && <div className="mt-0.5 text-[11px] font-black text-white/80 tabular-nums" style={{ fontFamily: MONO }}>{t.unlockedLevels}/10 ✓</div>}
       </div>
     </div>
   );
@@ -724,7 +725,7 @@ function RecentRuns({ sys }: { sys: LevelSystem }) {
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: col }} />
                 <div className="min-w-0 flex-1">
                   <div className="text-[12px] font-bold text-white/90 truncate">{r.name}</div>
-                  <div className="text-[9px] text-gray-500 truncate" style={{ fontFamily: MONO }}>
+                  <div className="text-[11px] text-gray-500 truncate" style={{ fontFamily: MONO }}>
                     {r.date} · {r.km.toLocaleString("it-IT")} km{r.parts > 1 && ` · ${r.parts} parti`}
                     {r.structured && <span className="ml-1.5 font-black" style={{ color: XP_ZONES[4].color }}>RIPETUTE</span>}
                     {r.isRace && <span className="ml-1.5 text-[#E879F9] font-black">GARA</span>}
@@ -736,22 +737,22 @@ function RecentRuns({ sys }: { sys: LevelSystem }) {
                     ))}
                   </div>
                 </div>
-                <span className="text-[13px] font-black tabular-nums shrink-0" style={{ fontFamily: MONO, color: "#C0FF00" }}>+{r.xp}</span>
-                <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-transform ${isOpen ? "rotate-90 text-gray-400" : "text-gray-700"}`} />
+                <span className="text-[13px] font-black tabular-nums shrink-0" style={{ fontFamily: MONO, color: BRAND }}>+{r.xp}</span>
+                <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-transform ${isOpen ? "rotate-90 text-gray-400" : "text-gray-600"}`} />
               </button>
               {isOpen && (
                 <div className="px-3 pb-2.5 pl-8">
                   {r.lines.map((l) => (
                     <div key={l.label} className="flex items-baseline gap-2 py-0.5">
                       <span className="w-1.5 h-1.5 rounded-full shrink-0 self-center" style={{ background: l.color }} />
-                      <span className="text-[10px] font-bold text-gray-300 shrink-0">{l.label}</span>
-                      <span className="text-[9px] text-gray-600 truncate" style={{ fontFamily: MONO }}>{l.detail}</span>
-                      <span className="ml-auto text-[10px] font-black tabular-nums shrink-0" style={{ fontFamily: MONO, color: l.color }}>+{l.xp}</span>
+                      <span className="text-[11px] font-bold text-gray-300 shrink-0">{l.label}</span>
+                      <span className="text-[11px] text-gray-600 truncate" style={{ fontFamily: MONO }}>{l.detail}</span>
+                      <span className="ml-auto text-[11px] font-black tabular-nums shrink-0" style={{ fontFamily: MONO, color: l.color }}>+{l.xp}</span>
                     </div>
                   ))}
-                  <div className="mt-1 pt-1 border-t border-white/[0.06] flex justify-between text-[10px] font-black" style={{ fontFamily: MONO }}>
-                    <span className="text-gray-500 uppercase tracking-wider text-[9px]">Totale</span>
-                    <span style={{ color: "#C0FF00" }}>+{r.xp} XP</span>
+                  <div className="mt-1 pt-1 border-t border-white/[0.06] flex justify-between text-[11px] font-black" style={{ fontFamily: MONO }}>
+                    <span className="text-gray-500 uppercase tracking-wider text-[10px]">Totale</span>
+                    <span style={{ color: BRAND }}>+{r.xp} XP</span>
                   </div>
                 </div>
               )}
@@ -766,8 +767,8 @@ function RecentRuns({ sys }: { sys: LevelSystem }) {
 function SectionTitle({ icon: Icon, children, hint }: { icon: LucideIcon; children: React.ReactNode; hint?: string }) {
   return (
     <div className="flex items-center justify-between gap-3 mb-3 px-0.5">
-      <div className="flex items-center gap-2 min-w-0"><Icon className="w-4 h-4 text-[#C0FF00] shrink-0" /><h2 className="text-[11px] font-black tracking-[0.28em] uppercase text-white/90 truncate">{children}</h2></div>
-      {hint && <span className="text-[9px] tracking-widest uppercase text-gray-600 shrink-0 truncate">{hint}</span>}
+      <div className="flex items-center gap-2 min-w-0"><Icon className="w-4 h-4 text-brand shrink-0" /><h2 className="text-[11px] font-black tracking-[0.28em] uppercase text-white/90 truncate">{children}</h2></div>
+      {hint && <span className="text-[10px] tracking-widest uppercase text-gray-600 shrink-0 truncate">{hint}</span>}
     </div>
   );
 }
