@@ -40,6 +40,7 @@ import { NextOptimalSessionWidget } from "./dashboard/widgets/NextOptimalSession
 import { FieldTestWidget } from "./dashboard/widgets/FieldTestWidget";
 import { FieldTestRecalibrationBanner } from "./dashboard/widgets/FieldTestRecalibrationBanner";
 import { WeatherNormalizerWidget } from "./dashboard/widgets/WeatherNormalizerWidget";
+import { TaperWidget } from "./dashboard/widgets/TaperWidget";
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Line, CartesianGrid, Area, ComposedChart } from "recharts";
 import { useApi } from "../hooks/useApi";
@@ -417,6 +418,15 @@ export function DashboardView() {
           onLayoutChange={onLayoutChange as any}
           useCSSTransforms={true}
         >
+
+          {/* ── Freschezza e taper: il piano della mezza ── */}
+          {!hiddenKeys.includes("taper") && (
+          <div key="taper">
+           <GridCard disabled={isMobile} onRemove={() => hideWidget("taper")}>
+            <TaperWidget ff={dashData?.fitness_freshness} />
+           </GridCard>
+          </div>
+          )}
 
           {/* ── Status of Form ── */}
           {!hiddenKeys.includes("status-form") && (

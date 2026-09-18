@@ -1,19 +1,19 @@
 import { useState } from "react";
-import { ChevronDown, Flag, HeartPulse, ListChecks, Sparkles, Timer } from "lucide-react";
+import { ChevronDown, Dumbbell, Flag, HeartPulse, ListChecks, ShieldCheck, Sparkles } from "lucide-react";
 import type { SessionEval } from "../utils/trainingAdherence";
 import { VERDICT_STYLE } from "./TrainingAdherence";
 import {
-  AFTER_RACE, BIKE_ZONES, PLAN_BIBS, PLAN_CHANGES, PLAN_KINDS, PLAN_LEGEND, PLAN_WEEKS, RACE_HM,
-  RUN_ZONES, TEST_5K, ZONE_NOTES, nextPlanDay, planDateLabel,
-  type PlanDay, type ZoneRow,
+  AFTER_RACE, BIKE_ZONES, PLAN_BIBS, PLAN_CHANGES, PLAN_KINDS, PLAN_LEGEND, PLAN_RULES, PLAN_WEEKS, RACE_FUEL, RACE_HM,
+  ROUTINES, ROUTINE_GEAR, ROUTINE_RULES, RUN_ZONES, ZONE_NOTES, nextPlanDay, planDateLabel, routineDays,
+  type PlanDay, type Routine, type ZoneRow,
 } from "../data/mezzaOttobrePlan";
 
 /**
- * I pezzi del piano "test 5 km e mezza" nella pagina Training.
+ * I pezzi del piano della mezza nella pagina Training.
  *
- * Le due targhe restano identiche all'originale — sono il motivo per cui il
- * piano piaceva così com'era. Tutto il resto parla la lingua del sito: fondi
- * scuri a strati, etichette in maiuscolo spaziato, numeri in JetBrains Mono.
+ * La targa resta identica all'originale — è il motivo per cui il piano
+ * piaceva così com'era. Tutto il resto parla la lingua del sito: fondi scuri a
+ * strati, etichette in maiuscolo spaziato, numeri in JetBrains Mono.
  */
 
 const MONO = { fontFamily: "'JetBrains Mono', monospace" };
@@ -35,14 +35,14 @@ function SectionTitle({ icon: Icon, children, hint }: { icon: typeof Flag; child
   );
 }
 
-// ── le targhe ─────────────────────────────────────────────────────────────────
+// ── la targa ──────────────────────────────────────────────────────────────────
 /** Come nel piano originale: pettorale bianco, banda di zona, quattro spille. */
 export function PlanBibs() {
   const pin = (pos: React.CSSProperties) => (
     <span className="absolute rounded-full" style={{ width: "0.6rem", height: "0.6rem", border: "1.5px solid #9AA3AD", background: PAGE_BG, ...pos }} />
   );
   return (
-    <div className="grid gap-[0.9rem] sm:grid-cols-2">
+    <div className="grid gap-[0.9rem]">
       {PLAN_BIBS.map((b) => (
         <div key={b.id} className="relative overflow-hidden"
           style={{ background: "#F4F6F8", color: "#111820", borderRadius: 6, padding: "1.7rem 1.4rem 1.1rem", border: "1px solid #2D3540", fontFamily: BODY }}>
@@ -71,9 +71,9 @@ export function NextSession({ todayIso, onOpen }: { todayIso: string; onOpen: (i
   const col = PLAN_KINDS[day.kind].color;
   return (
     <button type="button" onClick={() => onOpen(day.date)}
-      className="relative w-full text-left rounded-xl border border-[#2A2A2A] bg-[#181818] overflow-hidden pl-5 pr-4 py-4 hover:border-white/20 transition-colors">
+      className="relative w-full h-full flex flex-col justify-center text-left rounded-xl border border-[#2A2A2A] bg-[#181818] overflow-hidden pl-5 pr-4 py-4 hover:border-white/20 transition-colors">
       <span className="absolute left-0 top-0 bottom-0 w-1.5" style={{ background: col }} />
-      <div className="flex items-center gap-2 text-[10px] font-black tracking-[0.22em] uppercase">
+      <div className="w-full flex items-center gap-2 text-[10px] font-black tracking-[0.22em] uppercase">
         <span style={{ color: isToday ? "var(--app-accent)" : "#9CA3AF" }}>{isToday ? "Oggi" : "Prossima seduta"}</span>
         <span className="text-gray-500 normal-case tracking-normal font-bold">{planDateLabel(day.date)}</span>
         <span className="ml-auto px-1.5 py-0.5 rounded text-[9px]" style={{ color: col, background: `${col}1a` }}>{PLAN_KINDS[day.kind].label}</span>
@@ -230,7 +230,7 @@ export function ZonesPanel() {
   );
 }
 
-// ── test e gara ───────────────────────────────────────────────────────────────
+// ── regole e gara ───────────────────────────────────────────────────────────────
 function Bullets({ items }: { items: readonly string[] }) {
   return (
     <ul className="space-y-1.5">
@@ -243,22 +243,11 @@ function Bullets({ items }: { items: readonly string[] }) {
   );
 }
 
-export function TestPanel({ compact = false }: { compact?: boolean }) {
+export function RulesPanel() {
   return (
-    <section id="piano-test">
-      {!compact && <SectionTitle icon={Timer} hint="sabato 10 ottobre">Test 5 km</SectionTitle>}
-      <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4 space-y-4">
-        <Bullets items={TEST_5K.before} />
-        <div className="grid grid-cols-5 gap-1.5">
-          {TEST_5K.splits.map(([k, p]) => (
-            <div key={k} className="rounded-lg border border-[#2A2A2A] bg-[#0F0F0F] py-2 text-center">
-              <span className="block text-[10px] text-gray-500">{k}</span>
-              <span className="block text-lg font-black text-white tabular-nums" style={MONO}>{p}</span>
-            </div>
-          ))}
-        </div>
-        <Bullets items={TEST_5K.after} />
-      </div>
+    <section id="piano-regole">
+      <SectionTitle icon={ShieldCheck} hint="per tutte le settimane">Regole d'oro</SectionTitle>
+      <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4"><Bullets items={PLAN_RULES} /></div>
     </section>
   );
 }
@@ -266,7 +255,7 @@ export function TestPanel({ compact = false }: { compact?: boolean }) {
 export function RacePanel({ compact = false }: { compact?: boolean }) {
   return (
     <section id="piano-gara">
-      {!compact && <SectionTitle icon={Flag} hint="domenica 18 ottobre">Mezza maratona</SectionTitle>}
+      {!compact && <SectionTitle icon={Flag} hint="domenica 18 ottobre">Mezza maratona di Roma</SectionTitle>}
       <div className="overflow-x-auto rounded-xl border border-[#2A2A2A] bg-[#141414]">
         <table className="w-full text-[12.5px]">
           <thead>
@@ -277,8 +266,11 @@ export function RacePanel({ compact = false }: { compact?: boolean }) {
           <tbody>
             {RACE_HM.segments.map((s) => (
               <tr key={s.stretch} className="border-b border-[#1E1E1E] last:border-0">
-                <td className="px-3.5 py-2 whitespace-nowrap font-bold text-gray-200">{s.stretch}</td>
-                <td className="px-3.5 py-2 text-white font-bold" style={MONO}>{s.pace}</td>
+                <td className="px-3.5 py-2">
+                  <span className="block whitespace-nowrap font-bold text-gray-200">{s.stretch}</span>
+                  <span className="block text-[11.5px] text-gray-500 leading-snug">{s.where}</span>
+                </td>
+                <td className="px-3.5 py-2 whitespace-nowrap text-white font-bold" style={MONO}>{s.pace}</td>
                 <td className="px-3.5 py-2 text-gray-300" style={MONO}>{s.hr}</td>
               </tr>
             ))}
@@ -288,6 +280,65 @@ export function RacePanel({ compact = false }: { compact?: boolean }) {
       <div className="mt-3 rounded-xl border border-[#2A2A2A] bg-[#141414] p-4">
         <Bullets items={RACE_HM.notes} />
       </div>
+      <h3 className="mt-4 mb-2 text-[10px] font-black tracking-[0.2em] uppercase text-gray-400">Il serbatoio</h3>
+      <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] p-4">
+        <Bullets items={RACE_FUEL} />
+      </div>
+    </section>
+  );
+}
+
+// ── forza a casa ─────────────────────────────────────────────────────────────
+const shortDate = (iso: string) => {
+  const dt = new Date(iso + "T00:00:00Z");
+  return `${DOW_SHORT[dt.getUTCDay()]} ${dt.getUTCDate()}/${dt.getUTCMonth() + 1}`;
+};
+
+/** Una seduta di forza o di mobilità: a cosa serve, esercizi, dosi, recuperi. */
+export function RoutineCard({ routine, showDays = false }: { routine: Routine; showDays?: boolean }) {
+  const col = routine.id === "M" ? PLAN_KINDS.rest.color : PLAN_KINDS.strength.color;
+  const days = showDays ? routineDays(routine.id) : [];
+  return (
+    <div className="rounded-xl border border-[#2A2A2A] bg-[#141414] overflow-hidden">
+      <div className="relative pl-5 pr-4 pt-3.5 pb-3 border-b border-[#232323]">
+        <span className="absolute left-2 top-3.5 bottom-3 w-1 rounded-full" style={{ background: col }} />
+        <div className="flex items-baseline gap-3">
+          <h3 className="text-[15px] font-black text-white">{routine.name}</h3>
+          <span className="ml-auto text-[12px] text-gray-400 whitespace-nowrap" style={MONO}>~{routine.minutes}'</span>
+        </div>
+        <p className="mt-0.5 text-[12.5px] text-gray-400 leading-snug">{routine.purpose}</p>
+        {days.length > 0 && (
+          <p className="mt-1.5 flex flex-wrap gap-1.5">
+            {days.map((d) => (
+              <span key={d.date} className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ ...MONO, color: col, background: `${col}1a` }}>{shortDate(d.date)}</span>
+            ))}
+          </p>
+        )}
+      </div>
+      <ol className="divide-y divide-[#1E1E1E]">
+        {routine.exercises.map((e, i) => (
+          <li key={e.name} className="grid grid-cols-[1.25rem_1fr_auto] gap-x-2 px-4 py-2.5">
+            <span className="text-[11px] text-gray-600 pt-0.5" style={MONO}>{i + 1}</span>
+            <span className="min-w-0 text-[13.5px] font-bold text-gray-100">{e.name}</span>
+            <span className="text-[13px] font-black text-white whitespace-nowrap" style={MONO}>{e.dose}</span>
+            <span className="col-start-2 col-span-2 mt-0.5 text-[12px] text-gray-400 leading-snug">{e.how}</span>
+          </li>
+        ))}
+      </ol>
+      <p className="px-4 py-2.5 border-t border-[#232323] text-[11.5px] text-gray-500">{routine.rest}</p>
+    </div>
+  );
+}
+
+export function StrengthPanel() {
+  return (
+    <section id="piano-forza">
+      <SectionTitle icon={Dumbbell} hint="senza palestra">Forza a casa</SectionTitle>
+      <p className="text-[12.5px] text-gray-400 leading-relaxed mb-3">{ROUTINE_GEAR}</p>
+      <div className="grid gap-3 lg:grid-cols-2 items-start">
+        {Object.values(ROUTINES).map((r) => <RoutineCard key={r.id} routine={r} showDays />)}
+      </div>
+      <div className="mt-3 rounded-xl border border-[#2A2A2A] bg-[#141414] p-4"><Bullets items={ROUTINE_RULES} /></div>
     </section>
   );
 }
@@ -309,7 +360,7 @@ export function ChangesPanel() {
       <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}
         className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-white/[0.02]">
         <Sparkles className="w-4 h-4 shrink-0" style={{ color: "var(--app-accent)" }} />
-        <span className="text-[10px] font-black tracking-[0.2em] uppercase text-gray-300">Cosa cambia rispetto al 14 settembre</span>
+        <span className="text-[10px] font-black tracking-[0.2em] uppercase text-gray-300">Cosa cambia rispetto al 16 settembre</span>
         <ChevronDown className={`ml-auto w-4 h-4 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && <div className="px-4 pb-4"><Bullets items={PLAN_CHANGES} /></div>}
@@ -332,7 +383,7 @@ export function PlanDayBody({ day }: { day: PlanDay }) {
       {day.verify && (
         <p className="rounded-r-lg border-l-2 bg-white/[0.03] px-3 py-2 text-[13px] text-gray-200 leading-snug" style={{ borderColor: col }}>{day.verify}</p>
       )}
-      {day.more === "test" && <TestPanel compact />}
+      {day.routine && <RoutineCard routine={ROUTINES[day.routine]} />}
       {day.more === "gara" && <RacePanel compact />}
     </div>
   );

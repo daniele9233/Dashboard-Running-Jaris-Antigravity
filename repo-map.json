@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-09-17T19:32:29.221Z",
+  "generated_at": "2026-09-18T13:23:11.117Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 238,
+    "files": 241,
     "backend_routes": 68,
     "frontend_routes": 18,
     "api_clients": 77
@@ -1336,7 +1336,7 @@
       "routes": [],
       "imports": [],
       "hash": "b3c4e7b72a9c7a94abac5d42b83f4f4a95be794c6cb18a35fb39930f30b135d4",
-      "last_modified": "2026-09-14T18:32:17.403Z",
+      "last_modified": "2026-09-18T11:30:38.278Z",
       "size_bytes": 835
     },
     {
@@ -1990,7 +1990,7 @@
         "react-router-dom"
       ],
       "hash": "38b74f987ae49107bbb3a523b2b851d4a83b7d3c868152b53128675ee6aab566",
-      "last_modified": "2026-09-16T12:47:06.034Z",
+      "last_modified": "2026-09-18T11:30:38.279Z",
       "size_bytes": 11283
     },
     {
@@ -2027,7 +2027,7 @@
         "react-map-gl/mapbox"
       ],
       "hash": "a536291dcc7e19523784e9c2543785f0abce75809c9dc76897b53c06216b1e6d",
-      "last_modified": "2026-07-26T11:05:15.243Z",
+      "last_modified": "2026-09-18T11:30:38.280Z",
       "size_bytes": 45008
     },
     {
@@ -2047,8 +2047,8 @@
         "react"
       ],
       "hash": "0bb8e765ee44ccacf21e0a676b133947a88e28b591b025dcdece71448295f001",
-      "last_modified": "2026-05-16T19:11:20.057Z",
-      "size_bytes": 12037
+      "last_modified": "2026-09-18T11:30:38.280Z",
+      "size_bytes": 12346
     },
     {
       "path": "src/components/AnaerobicThreshold.tsx",
@@ -2072,7 +2072,7 @@
         "recharts"
       ],
       "hash": "6ba9e9abce95109fef8ebd0fafd3942ca8cf766c570dd3a6e98828f20f5b9341",
-      "last_modified": "2026-07-26T11:04:53.562Z",
+      "last_modified": "2026-09-18T11:30:38.280Z",
       "size_bytes": 15578
     },
     {
@@ -2098,8 +2098,8 @@
         "react-i18next"
       ],
       "hash": "ab4c4b5983bb49bd49c24b66bac2f94a9781999bfe7c6bd17190123d804a4ce5",
-      "last_modified": "2026-09-17T19:07:32.000Z",
-      "size_bytes": 21556
+      "last_modified": "2026-09-18T11:30:38.280Z",
+      "size_bytes": 21961
     },
     {
       "path": "src/components/CardiacDrift.tsx",
@@ -2125,8 +2125,8 @@
         "recharts"
       ],
       "hash": "ea0ebafca71163276c45caca87ce1fef2ad55d5032ca82be013607f2cba43c8e",
-      "last_modified": "2026-07-26T11:01:19.496Z",
-      "size_bytes": 10041
+      "last_modified": "2026-09-18T11:30:38.281Z",
+      "size_bytes": 10247
     },
     {
       "path": "src/components/celebrations/badgeProgress.ts",
@@ -2341,8 +2341,8 @@
         "react"
       ],
       "hash": "01f42842a6fe7480a121512947a6521a9ff21bc83a3ead5c20ad5874e677437a",
-      "last_modified": "2026-07-27T19:45:00.199Z",
-      "size_bytes": 31570
+      "last_modified": "2026-09-18T11:30:38.287Z",
+      "size_bytes": 31981
     },
     {
       "path": "src/components/celebrations/gsapSetup.ts",
@@ -2362,8 +2362,8 @@
         "gsap/SplitText"
       ],
       "hash": "50800ec2d160053f663f0112d4153e905e138d0bec5bd988628a53e2d7622b1e",
-      "last_modified": "2026-06-12T05:27:19.483Z",
-      "size_bytes": 808
+      "last_modified": "2026-09-18T11:30:38.287Z",
+      "size_bytes": 826
     },
     {
       "path": "src/components/celebrations/MultiCelebrationOverlay.tsx",
@@ -2385,8 +2385,8 @@
         "react-dom"
       ],
       "hash": "caab2f0becfe14b2db0d1be936b1271e177cff7902b110498307757cf8aefc3e",
-      "last_modified": "2026-06-13T16:03:20.159Z",
-      "size_bytes": 5584
+      "last_modified": "2026-09-18T11:30:38.286Z",
+      "size_bytes": 5737
     },
     {
       "path": "src/components/celebrations/RiveLayer.tsx",
@@ -2554,8 +2554,8 @@
         "react"
       ],
       "hash": "4ee6c6f477ca2cdf85ba87c528cb5692d26a5c2e3f8e8fcc791e88b991e59d0f",
-      "last_modified": "2026-07-27T19:41:24.244Z",
-      "size_bytes": 19096
+      "last_modified": "2026-09-18T11:30:38.287Z",
+      "size_bytes": 19397
     },
     {
       "path": "src/components/celebrations/scenesPace.tsx",
@@ -2678,8 +2678,8 @@
         "react"
       ],
       "hash": "85775ce27347f43cd2f73882a51e6cc5130d6353a075d01b8dc82b1ace726152",
-      "last_modified": "2026-07-27T19:41:38.460Z",
-      "size_bytes": 26963
+      "last_modified": "2026-09-18T11:30:38.287Z",
+      "size_bytes": 27419
     },
     {
       "path": "src/components/celebrations/scenesSpeed.tsx",
@@ -2782,9 +2782,9 @@
       ],
       "routes": [],
       "imports": [],
-      "hash": "5f3bdb56fd93d710dbeaab015893f1acd575f6e5edf966fb154bd8052b91a822",
-      "last_modified": "2026-07-26T13:42:46.739Z",
-      "size_bytes": 1059
+      "hash": "022ff7abc36bc10d46a3944427546b9db06b1463af3bdfa3d3f1ccbdd052052c",
+      "last_modified": "2026-09-18T13:19:17.585Z",
+      "size_bytes": 1119
     },
     {
       "path": "src/components/dashboard/widgets/FieldTestRecalibrationBanner.tsx",
@@ -2808,8 +2808,8 @@
         "react"
       ],
       "hash": "8d0efa4c2c6cd6fef2771ba1659f8f9a80d46789d16b57170f3487ffca895b92",
-      "last_modified": "2026-05-17T18:50:31.248Z",
-      "size_bytes": 4884
+      "last_modified": "2026-09-18T11:30:38.287Z",
+      "size_bytes": 5015
     },
     {
       "path": "src/components/dashboard/widgets/FieldTestWidget.tsx",
@@ -2833,8 +2833,8 @@
         "react"
       ],
       "hash": "8aa20b3485e4c66844eb2d79f5a4d10890695ad18385694675e858889c9dfe93",
-      "last_modified": "2026-07-26T11:02:18.868Z",
-      "size_bytes": 10060
+      "last_modified": "2026-09-18T11:30:38.288Z",
+      "size_bytes": 10321
     },
     {
       "path": "src/components/dashboard/widgets/FitnessChart.tsx",
@@ -2858,8 +2858,8 @@
         "react"
       ],
       "hash": "2070d6be0f19b8d58e783ec6883e42b14ef326559b5e00e8f063713caf14b89c",
-      "last_modified": "2026-05-16T21:13:57.506Z",
-      "size_bytes": 11011
+      "last_modified": "2026-09-18T11:30:38.288Z",
+      "size_bytes": 11269
     },
     {
       "path": "src/components/dashboard/widgets/HRZones.tsx",
@@ -2881,8 +2881,8 @@
         "react"
       ],
       "hash": "5cbf14e878b0edb691db746b69f8c02d6966347b6272e6a76faa55f39af6deed",
-      "last_modified": "2026-05-16T21:14:07.132Z",
-      "size_bytes": 7324
+      "last_modified": "2026-09-18T11:30:38.288Z",
+      "size_bytes": 7486
     },
     {
       "path": "src/components/dashboard/widgets/InfoTooltip.tsx",
@@ -2901,8 +2901,8 @@
         "react-dom"
       ],
       "hash": "5281c199c380f17934320f52f05e1b985a4c7696956edd6df148dd06ae471623",
-      "last_modified": "2026-05-16T21:14:20.923Z",
-      "size_bytes": 2144
+      "last_modified": "2026-09-18T11:30:38.288Z",
+      "size_bytes": 2205
     },
     {
       "path": "src/components/dashboard/widgets/NextOptimalSessionWidget.tsx",
@@ -2926,8 +2926,38 @@
         "react"
       ],
       "hash": "9d5600e54266b1dd68fb5c4a164e811e57af18eeac40183c099f83c7db8fffa8",
-      "last_modified": "2026-05-16T21:14:15.482Z",
-      "size_bytes": 7515
+      "last_modified": "2026-09-18T11:30:38.288Z",
+      "size_bytes": 7705
+    },
+    {
+      "path": "src/components/dashboard/widgets/TaperWidget.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component TaperWidget.",
+      "touch_when": [
+        "ai",
+        "dashboard",
+        "layout",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "TaperWidget"
+      ],
+      "routes": [],
+      "imports": [
+        "../../../data/mezzaOttobrePlan",
+        "../../../types/api",
+        "../../../utils/taperForecast",
+        "../../statistics/chartTheme",
+        "./InfoTooltip",
+        "lucide-react",
+        "react",
+        "recharts"
+      ],
+      "hash": "df7024f20c067bb758ea6abb506a2faefbbc22d30ad4045efa864e8bcab5e9b1",
+      "last_modified": "2026-09-18T13:23:11.118Z",
+      "size_bytes": 9916
     },
     {
       "path": "src/components/dashboard/widgets/WeatherNormalizerWidget.tsx",
@@ -2953,7 +2983,7 @@
         "react"
       ],
       "hash": "fd8dd3656ad0cc7dd9c90281e4e58e7a792f1edf1cc28a9d5114ca6722fd6c12",
-      "last_modified": "2026-07-27T05:27:02.019Z",
+      "last_modified": "2026-09-18T11:30:38.288Z",
       "size_bytes": 10462
     },
     {
@@ -2983,8 +3013,8 @@
         "recharts"
       ],
       "hash": "4dceb0a1f9545dcbbfa8fe17f8661e000ed061a69e9324afbaaa0e94de08ae0a",
-      "last_modified": "2026-08-02T15:48:52.564Z",
-      "size_bytes": 21595
+      "last_modified": "2026-09-18T11:30:38.289Z",
+      "size_bytes": 22036
     },
     {
       "path": "src/components/DashboardView.tsx",
@@ -3024,6 +3054,7 @@
         "./dashboard/widgets/HRZones",
         "./dashboard/widgets/InfoTooltip",
         "./dashboard/widgets/NextOptimalSessionWidget",
+        "./dashboard/widgets/TaperWidget",
         "./dashboard/widgets/WeatherNormalizerWidget",
         "./dashboard/widgets/WeeklyKmChart",
         "./DetrainingWidget",
@@ -3038,9 +3069,9 @@
         "react-router-dom",
         "recharts"
       ],
-      "hash": "69607190f47ab281114e807cbf9092569b7ca2ff8ff5fe6aea264798945dfc30",
-      "last_modified": "2026-07-26T13:43:09.209Z",
-      "size_bytes": 62479
+      "hash": "0b87cf6bd2edb48c90452612268bef7036bd976d3f8e8ce57c6da930fb3c118f",
+      "last_modified": "2026-09-18T13:19:17.586Z",
+      "size_bytes": 62893
     },
     {
       "path": "src/components/DetrainingWidget.tsx",
@@ -3067,8 +3098,8 @@
         "react"
       ],
       "hash": "dcd42e1f3261bec8855469f370ec34c729a400b6b25b57e549652250cd42af02",
-      "last_modified": "2026-06-14T16:35:05.223Z",
-      "size_bytes": 8030
+      "last_modified": "2026-09-18T11:30:38.281Z",
+      "size_bytes": 8031
     },
     {
       "path": "src/components/ErrorBoundary.tsx",
@@ -3092,8 +3123,8 @@
         "react"
       ],
       "hash": "a38aea6c65b3390fdfeb6998289f9b719a5fe926f1fb41d89002f6e95efa7206",
-      "last_modified": "2026-04-29T11:04:58.270Z",
-      "size_bytes": 4223
+      "last_modified": "2026-09-18T11:30:38.281Z",
+      "size_bytes": 4352
     },
     {
       "path": "src/components/FirstRunOnboarding.tsx",
@@ -3146,8 +3177,8 @@
         "recharts"
       ],
       "hash": "4adb9578b81db4e4037d6a276462dead665b095e10b51c82dde408432023c975",
-      "last_modified": "2026-05-16T19:22:49.897Z",
-      "size_bytes": 19020
+      "last_modified": "2026-09-18T11:30:38.281Z",
+      "size_bytes": 19456
     },
     {
       "path": "src/components/gamification/AthleteEvolutionFramework.tsx",
@@ -3183,7 +3214,7 @@
         "react"
       ],
       "hash": "35ec4db33eaadcd87d02ac1ec4ef4df396f5d17e4cb30fe6935cb2030979f825",
-      "last_modified": "2026-09-17T09:14:04.988Z",
+      "last_modified": "2026-09-18T11:30:38.289Z",
       "size_bytes": 45419
     },
     {
@@ -3260,7 +3291,7 @@
         "./gamiCore"
       ],
       "hash": "d9b34efe3b1638f1e5ae9889d6a3614a8a682f7feefcf2c264a9caf69d51322e",
-      "last_modified": "2026-09-16T15:42:31.448Z",
+      "last_modified": "2026-09-18T11:30:38.290Z",
       "size_bytes": 45612
     },
     {
@@ -3413,7 +3444,7 @@
         "react-map-gl/mapbox"
       ],
       "hash": "f9374cc010f4ede3f426b0b3899a22c2bfa9ed95e6a8d468dc404396ec89d9cb",
-      "last_modified": "2026-09-16T15:50:10.842Z",
+      "last_modified": "2026-09-18T11:30:38.289Z",
       "size_bytes": 16820
     },
     {
@@ -3441,7 +3472,7 @@
         "react"
       ],
       "hash": "6a62eae2fc2067564d59934cd687c45e60246a526dff14d03faf22ecc0957e4b",
-      "last_modified": "2026-09-17T09:14:04.988Z",
+      "last_modified": "2026-09-18T11:30:38.290Z",
       "size_bytes": 24525
     },
     {
@@ -3625,8 +3656,8 @@
         "lucide-react"
       ],
       "hash": "48e3f5e13787a339a63163aadf2f0c6763b68d5ff01828870ca0dbe9b29083f3",
-      "last_modified": "2026-08-16T17:59:20.403Z",
-      "size_bytes": 17717
+      "last_modified": "2026-09-18T11:30:38.290Z",
+      "size_bytes": 18055
     },
     {
       "path": "src/components/gamification/useAthleteVdot.ts",
@@ -3708,7 +3739,7 @@
         "react-map-gl/mapbox"
       ],
       "hash": "1058a19e22d0b16544f8cdab8057deb2ec28200aca86b520c266f6946118c8bb",
-      "last_modified": "2026-09-16T15:48:24.563Z",
+      "last_modified": "2026-09-18T11:30:38.290Z",
       "size_bytes": 33239
     },
     {
@@ -3834,8 +3865,8 @@
         "react"
       ],
       "hash": "8161ef068ea11ba2262b9132bdf1828812e808885daa978b01df724b4535b201",
-      "last_modified": "2026-05-21T15:16:54.672Z",
-      "size_bytes": 2634
+      "last_modified": "2026-09-18T11:30:38.282Z",
+      "size_bytes": 2700
     },
     {
       "path": "src/components/hero/AnimatedWordmark.tsx",
@@ -3913,9 +3944,9 @@
       "exports": [],
       "routes": [],
       "imports": [],
-      "hash": "83d1108aa481b13b2dd3e6e1ef2e89d510e3a4627b78ea7e6b2693e574901c98",
-      "last_modified": "2026-09-14T18:56:25.366Z",
-      "size_bytes": 28847
+      "hash": "500197a9a0ddf1556822c7c5f34c43ddecf0516ad0f2176dedfa76817a4eaa1f",
+      "last_modified": "2026-09-18T12:36:31.352Z",
+      "size_bytes": 28987
     },
     {
       "path": "src/components/hero/HeroArtwork.tsx",
@@ -3971,9 +4002,9 @@
       "imports": [
         "../../data/mezzaOttobrePlan"
       ],
-      "hash": "5e82ae70c5da290fb80af64a68a8a561938bdbc096c7255c7529d3e8c2255b2a",
-      "last_modified": "2026-09-17T09:14:04.987Z",
-      "size_bytes": 3079
+      "hash": "83ee386c52a660e39c533edd4e6fb9cb8ccb259ab0d16c0fb831258aaac11d89",
+      "last_modified": "2026-09-18T12:35:33.339Z",
+      "size_bytes": 3174
     },
     {
       "path": "src/components/hero/HeroGlyphs.tsx",
@@ -3996,9 +4027,9 @@
       "imports": [
         "./heroContent"
       ],
-      "hash": "e88a024de0019ed5fa6ca519ce7eb3aa29e24bd65a2dda7d04987704ce83e92d",
-      "last_modified": "2026-09-14T18:53:54.854Z",
-      "size_bytes": 5389
+      "hash": "1a783a581f35e124baf361fdae6ae2eede2be687834ac03c32f72f58b0d8e351",
+      "last_modified": "2026-09-18T12:36:31.352Z",
+      "size_bytes": 5591
     },
     {
       "path": "src/components/hero/heroMotion.ts",
@@ -4192,8 +4223,8 @@
         "react-router-dom"
       ],
       "hash": "1036e4f5b8a3c5baf59e647edc986c07e891c8ac4cd6eb57e3c3b268b67f9ed3",
-      "last_modified": "2026-04-13T08:38:05.794Z",
-      "size_bytes": 12626
+      "last_modified": "2026-09-18T11:30:38.282Z",
+      "size_bytes": 12643
     },
     {
       "path": "src/components/LastRunMap.tsx",
@@ -4219,7 +4250,7 @@
         "react-map-gl/mapbox"
       ],
       "hash": "a22c933d943fa730492672bb57f0e8dcbd4712fd6cf9f8ed15817358cabf0336",
-      "last_modified": "2026-05-21T05:13:52.956Z",
+      "last_modified": "2026-09-18T11:30:38.282Z",
       "size_bytes": 11357
     },
     {
@@ -4249,7 +4280,7 @@
         "react-map-gl/mapbox"
       ],
       "hash": "9906298e53f79cab9694010c7c96191aed9533b99b369eae5e3606d4d65620e6",
-      "last_modified": "2026-07-26T11:01:45.618Z",
+      "last_modified": "2026-09-18T11:30:38.282Z",
       "size_bytes": 27770
     },
     {
@@ -4275,7 +4306,7 @@
         "recharts"
       ],
       "hash": "e76609d55e4a5298822c5628cd1033ec6bcd7dc8b6e9d1a89908f8ffc6a2fc43",
-      "last_modified": "2026-07-26T11:02:52.781Z",
+      "last_modified": "2026-09-18T11:30:38.282Z",
       "size_bytes": 20166
     },
     {
@@ -4294,8 +4325,8 @@
         "lucide-react"
       ],
       "hash": "de00e2116b6301152c917a21adc64bb25249771237ecf0cfa31df5cebc65ba87",
-      "last_modified": "2026-04-13T08:59:20.288Z",
-      "size_bytes": 1709
+      "last_modified": "2026-09-18T11:30:38.282Z",
+      "size_bytes": 1756
     },
     {
       "path": "src/components/ProfileView.tsx",
@@ -4331,7 +4362,7 @@
         "react-router-dom"
       ],
       "hash": "21a5bd138ee79f618c31c64a6008f69c323eb96afbfc71d5ec6736c4409f00f2",
-      "last_modified": "2026-07-27T10:16:15.544Z",
+      "last_modified": "2026-09-18T11:30:38.283Z",
       "size_bytes": 66270
     },
     {
@@ -4354,8 +4385,8 @@
         "react"
       ],
       "hash": "cef3bb0cb6234b9833f21e9bfb2f99285e79781c92bc68db20d87cd4d21ee7a6",
-      "last_modified": "2026-09-17T19:32:29.221Z",
-      "size_bytes": 16037
+      "last_modified": "2026-09-18T11:30:38.291Z",
+      "size_bytes": 16389
     },
     {
       "path": "src/components/racelab/raceLabEngine.test.ts",
@@ -4467,8 +4498,8 @@
         "react"
       ],
       "hash": "4925481a5b041787186e795709753428cb2566d26c9fff2bf059fd93995158e6",
-      "last_modified": "2026-09-17T19:29:05.856Z",
-      "size_bytes": 30611
+      "last_modified": "2026-09-18T11:30:38.291Z",
+      "size_bytes": 31179
     },
     {
       "path": "src/components/racelab/shoeLab.ts",
@@ -4528,7 +4559,7 @@
         "recharts"
       ],
       "hash": "91ad6442a7c86a7e6399306ae901b2a6a96f42395b411bf100eeb5153df3bdd8",
-      "last_modified": "2026-07-26T11:05:39.768Z",
+      "last_modified": "2026-09-18T11:30:38.283Z",
       "size_bytes": 16607
     },
     {
@@ -4557,8 +4588,8 @@
         "recharts"
       ],
       "hash": "5ade6cc3c380ba7f9cc7f6937d66f10b01758ab6c5922411086fd4b7a1600352",
-      "last_modified": "2026-07-26T11:01:31.089Z",
-      "size_bytes": 66211
+      "last_modified": "2026-09-18T11:30:38.283Z",
+      "size_bytes": 67684
     },
     {
       "path": "src/components/RecentActivities.tsx",
@@ -4579,8 +4610,8 @@
         "react-router-dom"
       ],
       "hash": "bf110b60971600e23c81443eeeeb40d6902570f181bf2eefb18b9da5cede5d98",
-      "last_modified": "2026-05-16T19:11:18.216Z",
-      "size_bytes": 5850
+      "last_modified": "2026-09-18T11:30:38.284Z",
+      "size_bytes": 5975
     },
     {
       "path": "src/components/RoutesView.tsx",
@@ -4618,7 +4649,7 @@
         "recharts"
       ],
       "hash": "1c24d9a4d60218b7bdc0f2fd5c67ff56872b3f428c6613b3d2c41fd3147337f5",
-      "last_modified": "2026-07-27T05:54:37.264Z",
+      "last_modified": "2026-09-18T11:30:38.284Z",
       "size_bytes": 49999
     },
     {
@@ -4645,8 +4676,8 @@
       "routes": [],
       "imports": [],
       "hash": "b33dd7c48a51c678b808dc900d3c8691bb34cb39b01ed3ee8b7e0ff15bc02e5a",
-      "last_modified": "2026-06-10T11:57:02.659Z",
-      "size_bytes": 1921
+      "last_modified": "2026-09-18T11:30:38.291Z",
+      "size_bytes": 1978
     },
     {
       "path": "src/components/runner-dna/RunnerDnaLoading.tsx",
@@ -4669,8 +4700,8 @@
         "motion/react"
       ],
       "hash": "486db194a01e9b2d9cffcaf7e91a834e8c49e7b7fc9305d34914c411cedf1149",
-      "last_modified": "2026-04-22T19:30:15.157Z",
-      "size_bytes": 3494
+      "last_modified": "2026-09-18T11:30:38.291Z",
+      "size_bytes": 3572
     },
     {
       "path": "src/components/RunnerDnaView.tsx",
@@ -4698,7 +4729,7 @@
         "react-i18next"
       ],
       "hash": "3f1380cacc44943d1110dcdb24832a4c41249178d7fc86a75a4987d90bcad1f0",
-      "last_modified": "2026-07-18T16:36:51.276Z",
+      "last_modified": "2026-09-18T11:30:38.284Z",
       "size_bytes": 28966
     },
     {
@@ -4739,8 +4770,8 @@
         "react-i18next"
       ],
       "hash": "c2f24528b61554765c87b1c2c5b69426c25d7f13597177ea2b3ecfc15c2ad62b",
-      "last_modified": "2026-05-16T07:33:07.821Z",
-      "size_bytes": 5284
+      "last_modified": "2026-09-18T11:30:38.285Z",
+      "size_bytes": 5441
     },
     {
       "path": "src/components/Skeleton.tsx",
@@ -4796,7 +4827,7 @@
         "recharts"
       ],
       "hash": "7bd665a08a4f2a87a6a87e0c925a3f684428426f64e6f06046181e41d6b9b78a",
-      "last_modified": "2026-09-16T15:57:01.212Z",
+      "last_modified": "2026-09-18T11:30:38.292Z",
       "size_bytes": 165831
     },
     {
@@ -4830,7 +4861,7 @@
         "recharts"
       ],
       "hash": "9940924d67d0591e3b0e9f9c9af2b337c25c06ac495ce667c556e8dbde47adf6",
-      "last_modified": "2026-09-16T15:57:01.209Z",
+      "last_modified": "2026-09-18T11:30:38.292Z",
       "size_bytes": 54609
     },
     {
@@ -4862,7 +4893,7 @@
         "recharts"
       ],
       "hash": "e6155ed486bc45610e6a088dfb433925034d34fdd99874370ef48f5e3a8696cb",
-      "last_modified": "2026-09-16T15:57:01.212Z",
+      "last_modified": "2026-09-18T11:30:38.293Z",
       "size_bytes": 37584
     },
     {
@@ -4894,7 +4925,7 @@
         "recharts"
       ],
       "hash": "b005ba975d30f2cba27772c3ca4ee4298c2e452b2a876d4b853405225a517fe2",
-      "last_modified": "2026-07-26T11:13:20.208Z",
+      "last_modified": "2026-09-18T11:30:38.293Z",
       "size_bytes": 46493
     },
     {
@@ -4926,8 +4957,8 @@
         "recharts"
       ],
       "hash": "cf987868aa649548b74978a8bf0f40a49a7b93e677c5dd0a4ab74a7245edee22",
-      "last_modified": "2026-07-26T11:10:22.842Z",
-      "size_bytes": 40911
+      "last_modified": "2026-09-18T11:30:38.293Z",
+      "size_bytes": 41698
     },
     {
       "path": "src/components/statistics/BiologyFutureLab.tsx",
@@ -4956,7 +4987,7 @@
         "recharts"
       ],
       "hash": "24808eb61097804526c614e517b9221e739cbbcb6f99e2be98d1a9d889253ef9",
-      "last_modified": "2026-07-26T11:11:51.618Z",
+      "last_modified": "2026-09-18T11:30:38.293Z",
       "size_bytes": 30822
     },
     {
@@ -4986,8 +5017,8 @@
         "recharts"
       ],
       "hash": "e2441b3b00eed721f1772c558ac64106ab18480db01446579df11a24ab9fd37b",
-      "last_modified": "2026-07-26T11:12:14.512Z",
-      "size_bytes": 38237
+      "last_modified": "2026-09-18T11:30:38.294Z",
+      "size_bytes": 39112
     },
     {
       "path": "src/components/statistics/BiologyFutureV3.tsx",
@@ -5018,8 +5049,8 @@
         "recharts"
       ],
       "hash": "088b68c0e5e036b87279dbe1bab16952a99c8879cf32b1722f1d6299739171bf",
-      "last_modified": "2026-09-17T19:27:28.655Z",
-      "size_bytes": 27902
+      "last_modified": "2026-09-18T11:30:38.294Z",
+      "size_bytes": 28439
     },
     {
       "path": "src/components/statistics/CaricoFormaV2.tsx",
@@ -5046,8 +5077,8 @@
         "recharts"
       ],
       "hash": "4207639493d9e9a8e0fafce1c97b1ff04953e48ad90c48ed282dd687e5e9ed7e",
-      "last_modified": "2026-08-01T14:50:14.029Z",
-      "size_bytes": 46468
+      "last_modified": "2026-09-18T11:30:38.294Z",
+      "size_bytes": 47448
     },
     {
       "path": "src/components/statistics/ChartFullscreenModal.tsx",
@@ -5068,7 +5099,7 @@
         "react"
       ],
       "hash": "361736cd090e28c466e161258f8f8104f4fd51d0ce82e5015b9bcdb7011a2c65",
-      "last_modified": "2026-07-18T16:36:51.279Z",
+      "last_modified": "2026-09-18T11:30:38.294Z",
       "size_bytes": 2228
     },
     {
@@ -5099,8 +5130,8 @@
       "routes": [],
       "imports": [],
       "hash": "f030a953599a88f7850bd2c761fc7293511f2875d2f25b3635958be79b05fb41",
-      "last_modified": "2026-07-26T11:16:51.245Z",
-      "size_bytes": 5101
+      "last_modified": "2026-09-18T11:30:38.297Z",
+      "size_bytes": 5229
     },
     {
       "path": "src/components/statistics/ChartTooltip.tsx",
@@ -5150,7 +5181,7 @@
         "recharts"
       ],
       "hash": "7aafd3071d5a0d2dd5a171915456b5640922333ff2b4f9743a4487f991de75fa",
-      "last_modified": "2026-07-27T05:27:02.020Z",
+      "last_modified": "2026-09-18T11:30:38.295Z",
       "size_bytes": 32108
     },
     {
@@ -5178,8 +5209,8 @@
         "react"
       ],
       "hash": "e56339abaad7b6ee04fbf0b5138c05bde70db0ce94e5d29c1a291b9a621b9fb3",
-      "last_modified": "2026-09-16T16:02:10.451Z",
-      "size_bytes": 15130
+      "last_modified": "2026-09-18T11:30:38.295Z",
+      "size_bytes": 15392
     },
     {
       "path": "src/components/statistics/PaceCalculator.tsx",
@@ -5202,7 +5233,7 @@
         "react-i18next"
       ],
       "hash": "40251aafddb2a0b052ef36810acbdd827c5ff1e1f9ed02e215e6859a680349a6",
-      "last_modified": "2026-07-27T05:27:02.020Z",
+      "last_modified": "2026-09-18T11:30:38.295Z",
       "size_bytes": 20955
     },
     {
@@ -5232,8 +5263,8 @@
         "recharts"
       ],
       "hash": "b1e654a960eb2217c402292c30d22d2dd0c130079a2a7f350ecb431bd2e1f86a",
-      "last_modified": "2026-09-17T19:26:15.218Z",
-      "size_bytes": 28838
+      "last_modified": "2026-09-18T11:30:38.295Z",
+      "size_bytes": 29407
     },
     {
       "path": "src/components/statistics/PotenzialProgressiV2.tsx",
@@ -5262,8 +5293,8 @@
         "recharts"
       ],
       "hash": "b27b6e433fa19234e11ef47e8f759f18e8f31703ce9c4724ab9dae5115124201",
-      "last_modified": "2026-07-26T11:10:10.431Z",
-      "size_bytes": 54311
+      "last_modified": "2026-09-18T11:30:38.296Z",
+      "size_bytes": 55275
     },
     {
       "path": "src/components/statistics/StatisticsView.tsx",
@@ -5318,8 +5349,8 @@
         "recharts"
       ],
       "hash": "08b446c96abb99ea2969fa5c9d622c59013e4e7e27dfb73dd29fda7856934fa6",
-      "last_modified": "2026-09-17T19:24:17.817Z",
-      "size_bytes": 124330
+      "last_modified": "2026-09-18T11:30:38.296Z",
+      "size_bytes": 126918
     },
     {
       "path": "src/components/statistics/StatsCalc.tsx",
@@ -5340,7 +5371,7 @@
         "recharts"
       ],
       "hash": "ba7d2a17a6540b6bca9b0f8cf3931f9d5e77a4818df7ea250704a225221664f2",
-      "last_modified": "2026-05-16T19:16:09.287Z",
+      "last_modified": "2026-09-18T11:30:38.296Z",
       "size_bytes": 14074
     },
     {
@@ -5369,7 +5400,7 @@
         "recharts"
       ],
       "hash": "3a0ed06803b17a35db3a675c3ba72544cfc27b1333af2f6bb178963a5eeb7012",
-      "last_modified": "2026-07-26T11:11:13.378Z",
+      "last_modified": "2026-09-18T11:30:38.297Z",
       "size_bytes": 18587
     },
     {
@@ -5392,7 +5423,7 @@
         "recharts"
       ],
       "hash": "7a35182307a252688c8b91716b46517f8eb04e104fceaae6cc0bc5518e516e0d",
-      "last_modified": "2026-05-16T19:15:54.188Z",
+      "last_modified": "2026-09-18T11:30:38.297Z",
       "size_bytes": 14480
     },
     {
@@ -5418,8 +5449,8 @@
         "recharts"
       ],
       "hash": "a7cccce5f3ff822a4b08a3dc6d79def097f5ecc321c64ef889971b6a32a9785a",
-      "last_modified": "2026-05-16T19:11:26.805Z",
-      "size_bytes": 11866
+      "last_modified": "2026-09-18T11:30:38.285Z",
+      "size_bytes": 12190
     },
     {
       "path": "src/components/TopStats.tsx",
@@ -5441,8 +5472,8 @@
         "recharts"
       ],
       "hash": "842c07e170fff7a17436ec8c345014f418a524089b2ae0a184950e5566e33691",
-      "last_modified": "2026-05-16T19:11:23.696Z",
-      "size_bytes": 5336
+      "last_modified": "2026-09-18T11:30:38.285Z",
+      "size_bytes": 5454
     },
     {
       "path": "src/components/TrainingAdherence.tsx",
@@ -5466,7 +5497,7 @@
         "lucide-react"
       ],
       "hash": "6a67fd0bbb7b80c69d87b6f7dd1520d4c12bb2e6c2ef19f3b256a779bcd6f49e",
-      "last_modified": "2026-09-17T09:10:26.084Z",
+      "last_modified": "2026-09-18T11:30:38.285Z",
       "size_bytes": 6734
     },
     {
@@ -5497,16 +5528,15 @@
         "react",
         "react-i18next"
       ],
-      "hash": "d4a1f8ee5ce778fce4ff290575aea1da96421d1174a357898ebe31bfff7a86fa",
-      "last_modified": "2026-09-17T09:16:40.625Z",
-      "size_bytes": 23098
+      "hash": "4a70f64e1a8c5a89c2a8b74b5a316bc9d5c9f0fe455eae07ca38bd277cb5724a",
+      "last_modified": "2026-09-18T13:13:02.542Z",
+      "size_bytes": 23577
     },
     {
       "path": "src/components/TrainingPlanPanels.tsx",
       "kind": "frontend-component",
       "purpose": "React component TrainingPlanPanels.",
       "touch_when": [
-        "activities",
         "ai",
         "garmin",
         "layout",
@@ -5523,7 +5553,9 @@
         "PlanLegend",
         "PlanWeeks",
         "RacePanel",
-        "TestPanel",
+        "RoutineCard",
+        "RulesPanel",
+        "StrengthPanel",
         "ZonesPanel"
       ],
       "routes": [],
@@ -5534,9 +5566,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "baf5646b14343bfa78e462efa71fa29887c1ff47cf5eefb9bcd89ab4e4375e19",
-      "last_modified": "2026-09-17T09:11:28.632Z",
-      "size_bytes": 17053
+      "hash": "5e36c43c02c10e4e70eb65eaf515e80feb580c349751e13ff300981353ea6b7e",
+      "last_modified": "2026-09-18T13:13:02.542Z",
+      "size_bytes": 20482
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -5566,8 +5598,8 @@
         "recharts"
       ],
       "hash": "9b643df65e5a1d8301b3a7237588f74a743c4bf51115ad3409c24d2d0898a9d6",
-      "last_modified": "2026-09-17T09:13:41.730Z",
-      "size_bytes": 10363
+      "last_modified": "2026-09-18T11:30:38.286Z",
+      "size_bytes": 10590
     },
     {
       "path": "src/components/TrainingView.tsx",
@@ -5589,7 +5621,7 @@
         "react"
       ],
       "hash": "ce17d8bf8a62bf8f20b0fc8c0ea72b24bcb1cd7a6221a68dbec7d978fb5b4129",
-      "last_modified": "2026-08-20T14:09:16.562Z",
+      "last_modified": "2026-09-18T11:30:38.286Z",
       "size_bytes": 2075
     },
     {
@@ -5614,7 +5646,7 @@
         "recharts"
       ],
       "hash": "26674ddad68e2d0537b6c3eb44f2db6044341b11f38f3a848531f8f75d085c9c",
-      "last_modified": "2026-07-26T11:04:59.579Z",
+      "last_modified": "2026-09-18T11:30:38.286Z",
       "size_bytes": 13027
     },
     {
@@ -5637,7 +5669,7 @@
         "recharts"
       ],
       "hash": "0e2ad7c359b6ab18bb45cda4974c48dca964daefd68ac6182daac541096f92f2",
-      "last_modified": "2026-07-26T11:02:57.573Z",
+      "last_modified": "2026-09-18T11:30:38.286Z",
       "size_bytes": 5897
     },
     {
@@ -5709,9 +5741,9 @@
         "../api",
         "react"
       ],
-      "hash": "e67f991964eb1f037b85d602b9455ee90dcdeb3b477bed4e0d37ced82b3c0dc6",
-      "last_modified": "2026-05-17T18:05:41.990Z",
-      "size_bytes": 10994
+      "hash": "354effd501c19b72211c87ba09a28ee0b2fd38de56fb5a22dda5d468dc6f205e",
+      "last_modified": "2026-09-18T13:19:17.585Z",
+      "size_bytes": 11224
     },
     {
       "path": "src/context/ThemeContext.tsx",
@@ -5811,7 +5843,7 @@
         "./kikkoSub20Plan"
       ],
       "hash": "553d5e08caca2281d083e298a68737202446b11be3b5002aa0cf3c37d4495f79",
-      "last_modified": "2026-08-20T18:48:00.754Z",
+      "last_modified": "2026-09-18T11:30:38.297Z",
       "size_bytes": 12751
     },
     {
@@ -5912,8 +5944,8 @@
         "./kikkoEvidence"
       ],
       "hash": "9569d78d594fe5870b13d37fa5f179be5b0af2eded7738dffbba9fbae931ac85",
-      "last_modified": "2026-09-05T13:11:43.182Z",
-      "size_bytes": 49805
+      "last_modified": "2026-09-18T11:30:38.297Z",
+      "size_bytes": 51013
     },
     {
       "path": "src/data/mezzaOttobrePlan.test.ts",
@@ -5931,9 +5963,9 @@
         "./mezzaOttobrePlan",
         "vitest"
       ],
-      "hash": "3a011d459bb1100736b3efc5940fc18e92ae3b59c08980ff69a1803dd8400d5b",
-      "last_modified": "2026-09-17T09:14:55.805Z",
-      "size_bytes": 3710
+      "hash": "1e607ce5c8cd3b1eef633250be06b2512bc7610861c1e9d654a6d7d61db4d26c",
+      "last_modified": "2026-09-18T13:11:50.273Z",
+      "size_bytes": 5763
     },
     {
       "path": "src/data/mezzaOttobrePlan.ts",
@@ -5949,6 +5981,7 @@
       "exports": [
         "AFTER_RACE",
         "BIKE_ZONES",
+        "Exercise",
         "nextPlanDay",
         "PLAN_BIBS",
         "PLAN_CHANGES",
@@ -5958,6 +5991,7 @@
         "PLAN_KINDS",
         "PLAN_LEGEND",
         "PLAN_META",
+        "PLAN_RULES",
         "PLAN_WEEKS",
         "planDateLabel",
         "PlanDay",
@@ -5965,9 +5999,15 @@
         "planRunSessions",
         "PlanWeek",
         "planWeekOf",
+        "RACE_FUEL",
         "RACE_HM",
+        "Routine",
+        "ROUTINE_GEAR",
+        "ROUTINE_RULES",
+        "routineDays",
+        "RoutineId",
+        "ROUTINES",
         "RUN_ZONES",
-        "TEST_5K",
         "ZONE_NOTES",
         "ZoneRow"
       ],
@@ -5975,9 +6015,9 @@
       "imports": [
         "../types/api"
       ],
-      "hash": "7288bbfdf2553994b296f811e217e41890575fd926a308675e3703728b09a61a",
-      "last_modified": "2026-09-17T09:10:03.089Z",
-      "size_bytes": 14865
+      "hash": "549822c0739306e4ea7069ea712f824e150bcf6e9adef7d4592626ceed7949e0",
+      "last_modified": "2026-09-18T13:13:02.541Z",
+      "size_bytes": 25222
     },
     {
       "path": "src/data/sub20Plan.ts",
@@ -6005,7 +6045,7 @@
         "../types/api"
       ],
       "hash": "d929ff604dbcc63255fea4ba11f0b228e416c047420f968e30322ff6b9cb8dbd",
-      "last_modified": "2026-08-20T14:09:16.564Z",
+      "last_modified": "2026-09-18T11:30:38.298Z",
       "size_bytes": 20848
     },
     {
@@ -6182,8 +6222,8 @@
       "routes": [],
       "imports": [],
       "hash": "ab71095dd9c53efa565ba4d9cc607bc7da7e078f5a8140360720aec99b108c89",
-      "last_modified": "2026-09-17T19:24:12.700Z",
-      "size_bytes": 27526
+      "last_modified": "2026-09-18T11:30:38.298Z",
+      "size_bytes": 28380
     },
     {
       "path": "src/index.css",
@@ -6201,7 +6241,7 @@
       "routes": [],
       "imports": [],
       "hash": "b7c81cd58dc8a94d9af0792dedb6acd53de6ddf60d9a52195f8d4498cd6ca75c",
-      "last_modified": "2026-09-17T09:10:26.084Z",
+      "last_modified": "2026-09-18T11:30:38.298Z",
       "size_bytes": 7292
     },
     {
@@ -6386,8 +6426,8 @@
         "../types/api"
       ],
       "hash": "e56f74ae3b3099f6124eb20157c3aac5acbcde56ac9ff6bd6a59f0a9b707e388",
-      "last_modified": "2026-07-26T11:17:05.471Z",
-      "size_bytes": 3580
+      "last_modified": "2026-09-18T11:30:38.298Z",
+      "size_bytes": 3680
     },
     {
       "path": "src/utils/detrainingModel.ts",
@@ -6549,6 +6589,63 @@
       "hash": "28367f5a2b350e3d5f1b515f67100e3f0338da26e4c13977606aab01d019705e",
       "last_modified": "2026-07-26T11:00:48.279Z",
       "size_bytes": 29833
+    },
+    {
+      "path": "src/utils/taperForecast.test.ts",
+      "kind": "frontend-utility",
+      "purpose": "Shared utility module exporting taperForecast.test.",
+      "touch_when": [
+        "ai",
+        "training",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "../data/mezzaOttobrePlan",
+        "../types/api",
+        "./taperForecast",
+        "vitest"
+      ],
+      "hash": "9053eac45b8999fa201743fa082849652b941b35b80b65f36d5143007d50d145",
+      "last_modified": "2026-09-18T13:19:57.661Z",
+      "size_bytes": 4671
+    },
+    {
+      "path": "src/utils/taperForecast.ts",
+      "kind": "frontend-utility",
+      "purpose": "Shared utility module exporting actualDaily, addDays, ALPHA_ATL, ALPHA_CTL.",
+      "touch_when": [
+        "ai",
+        "dashboard",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "actualDaily",
+        "addDays",
+        "ALPHA_ATL",
+        "ALPHA_CTL",
+        "formOf",
+        "LoadPoint",
+        "PLAN_ANCHOR",
+        "plannedCurve",
+        "plannedTrimp",
+        "RACE_EVE_ISO",
+        "RACE_ISO",
+        "TAPER_START_ISO",
+        "TaperPhase",
+        "taperReport",
+        "TaperReport"
+      ],
+      "routes": [],
+      "imports": [
+        "../data/mezzaOttobrePlan",
+        "../types/api"
+      ],
+      "hash": "73adef9e63d4031a738be56fc8da64f449f39626046fa1c28a4aece8ec44c96c",
+      "last_modified": "2026-09-18T13:22:29.385Z",
+      "size_bytes": 11722
     },
     {
       "path": "src/utils/telemetry.ts",

@@ -12,11 +12,11 @@ import {
 } from "../data/mezzaOttobrePlan";
 import {
   AfterPanel, ChangesPanel, NextSession, PlanBibs, PlanDayBody, PlanLegend, PlanWeeks,
-  RacePanel, TestPanel, ZonesPanel,
+  RacePanel, RulesPanel, StrengthPanel, ZonesPanel,
 } from "./TrainingPlanPanels";
 
 /**
- * TRAINING — il piano "test 5 km il 10 ottobre, mezza il 18".
+ * TRAINING — il piano della mezza del 18 ottobre, con la forza a casa.
  *
  * Il piano è scritto a mano e ha date fisse, quindi la pagina non ha più leve:
  * niente finestra da scegliere, niente obiettivo da digitare, niente motore che
@@ -381,11 +381,13 @@ export function TrainingGrid() {
       </div>
 
       <div className="flex-1 overflow-auto p-4 sm:p-6">
-        {/* In testa: le due targhe e la seduta che viene */}
-        {/* larga quanto il piano originale: le targhe restano in proporzione */}
+        {/* In testa: la targa e, accanto, la seduta che viene */}
+        {/* larga quanto il piano originale: la targa resta in proporzione */}
         <div className="max-w-3xl space-y-3 mb-10">
-          <PlanBibs />
-          <NextSession todayIso={todayIso} onOpen={openIso} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <PlanBibs />
+            <NextSession todayIso={todayIso} onOpen={openIso} />
+          </div>
           <p className="text-[11px] text-gray-500 px-1">{PLAN_META.version}</p>
           <ChangesPanel />
         </div>
@@ -400,13 +402,12 @@ export function TrainingGrid() {
 
         <div className="mt-6 pt-4 border-t border-[#2A2A2A]"><PlanLegend /></div>
 
-        {/* Il resto del piano: zone, test, gara, dopo */}
+        {/* Il resto del piano: regole, forza, zone, gara, dopo */}
         <div className="mt-10 space-y-10">
+          <RulesPanel />
+          <StrengthPanel />
           <ZonesPanel />
-          <div className="grid gap-10 xl:grid-cols-2 items-start">
-            <TestPanel />
-            <RacePanel />
-          </div>
+          <RacePanel />
           <AfterPanel />
         </div>
       </div>

@@ -101,7 +101,7 @@ export function BibObject() {
     <span className="hb-bib" data-custom="PETTORALE">
       <span className="hb-bib-pins" />
       <span className="hb-bib-top">{HERO_BIB.top}</span>
-      <span className="hb-bib-number">{HERO_BIB.number}</span>
+      <span className="hb-bib-number" style={{ ["--chars" as string]: HERO_BIB.number.length }}>{HERO_BIB.number}</span>
     </span>
   );
 }

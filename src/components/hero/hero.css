@@ -254,9 +254,10 @@
     var(--pin) right bottom / 0.5cqw 0.5cqw no-repeat;
 }
 .hb-bib-top { font: 600 max(8px, 0.72cqw) / 1 var(--f-mono); letter-spacing: 0.14em; text-transform: uppercase; }
+/* sized for two characters ("5K"); longer numbers ("21K") shrink to fit */
 .hb-bib-number {
   margin-top: 0.35cqw;
-  font: 900 5cqw / 0.8 var(--f-display); font-stretch: 125%;
+  font: 900 calc(10cqw / max(2, var(--chars, 2))) / 0.8 var(--f-display); font-stretch: 125%;
   letter-spacing: -0.03em; -webkit-text-stroke: 0;
 }
 
@@ -608,7 +609,7 @@
   .hw-bib-anchor { right: auto; top: auto; left: -16cqw; bottom: 8cqw; width: 22cqw; }
   .hb-bib { padding: 1.4cqw 1.6cqw; border-radius: 1cqw; rotate: 8deg; }
   .hb-bib-top { font-size: 7px; }
-  .hb-bib-number { font-size: 10.5cqw; margin-top: 0.8cqw; }
+  .hb-bib-number { font-size: calc(21cqw / max(2, var(--chars, 2))); margin-top: 0.8cqw; }
   .hb-bib-pins { inset: 1.2cqw; --pin: radial-gradient(circle, var(--h-ink) 0 0.45cqw, transparent 0.5cqw); background-size: 1.1cqw 1.1cqw; }
 
   .hw-cell-3 { grid-column: 1 / -1; grid-row: 8; margin-top: 5cqw; }
