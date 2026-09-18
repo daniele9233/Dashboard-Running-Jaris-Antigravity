@@ -14,7 +14,6 @@ import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal'
 import type { GarminCsvLinkResult, ProAnalyticsChart } from '../../types/api';
 import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from './chartTheme';
 import { FastBiomechanics } from './FastBiomechanics';
-import { BRAND, INK_DIM } from "../../theme/tokens";
 
 // ─── Constants — alias sul tema condiviso (chartTheme.ts) ───────────────────
 const NEON   = CHART_SERIES.primary;
@@ -30,7 +29,8 @@ const NEON_ORANGE = CHART_SERIES.load;   // era #ff5b00
 
 const GLASS = "backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50";
 
-const cardStyle = (_accent = NEON): React.CSSProperties => ({
+const cardStyle = (accent = NEON): React.CSSProperties => ({
+  borderLeft: `3px solid ${accent}`,
 });
 
 // ─── Mock data ───────────────────────────────────────────────────────────────
@@ -243,7 +243,7 @@ function SpatialForceMap() {
             width: 60,
             height: 60,
             transform: 'translate(-50%, -50%)',
-            background: `radial-gradient(circle, ${BRAND} 0%, rgba(192,255,0,0.85) 40%, rgba(192,255,0,0.3) 70%, transparent 100%)`,
+            background: 'radial-gradient(circle, #C0FF00 0%, rgba(192,255,0,0.85) 40%, rgba(192,255,0,0.3) 70%, transparent 100%)',
             borderRadius: 14,
             filter: 'blur(2px)',
             boxShadow: `0 0 30px ${NEON}, 0 0 60px rgba(192,255,0,0.3)`,
@@ -317,7 +317,7 @@ function SpatialForceMap() {
         {/* Pronation Deviation */}
         <div className="px-6 py-4 border-r" style={{ borderColor: BORDER }}>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-black tracking-widest" style={{ color: MUTED }}>PRONATION DEVIATION</span>
+            <span className="text-[9px] font-black tracking-widest" style={{ color: MUTED }}>PRONATION DEVIATION</span>
             <span className="text-sm font-black" style={{ color: NEON }}>+1.2%</span>
           </div>
           <div className="w-full rounded-full overflow-hidden" style={{ height: 3, background: '#1A1A1A' }}>
@@ -327,7 +327,7 @@ function SpatialForceMap() {
         {/* Peak Impact Force */}
         <div className="px-6 py-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-black tracking-widest" style={{ color: MUTED }}>PEAK IMPACT FORCE</span>
+            <span className="text-[9px] font-black tracking-widest" style={{ color: MUTED }}>PEAK IMPACT FORCE</span>
             <span className="text-sm font-black" style={{ color: ORANGE }}>3.48 G</span>
           </div>
           <div className="w-full rounded-full overflow-hidden" style={{ height: 3, background: '#1A1A1A' }}>
@@ -358,7 +358,7 @@ function DarkTooltip({ active, payload, label }: { active?: boolean; payload?: {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 function stabilityVerdict(score: number, hasData: boolean) {
-  if (!hasData) return { label: 'Dati insufficienti', color: INK_DIM, text: 'Importa e collega CSV Garmin con GCT per calcolare la stabilita.' };
+  if (!hasData) return { label: 'Dati insufficienti', color: '#64748b', text: 'Importa e collega CSV Garmin con GCT per calcolare la stabilita.' };
   if (score >= 85) return { label: 'Ottimo', color: NEON_GREEN, text: 'Appoggio stabile: GCT, cadenza e rapporto verticale sono ben allineati.' };
   if (score >= 70) return { label: 'Buono', color: '#22c55e', text: 'Buona base: resta da ridurre piccole oscillazioni o variabilita tra uscite.' };
   if (score >= 55) return { label: 'Da monitorare', color: '#facc15', text: 'Stabilita discreta ma migliorabile: controlla reattivita e regolarita degli appoggi.' };
@@ -366,7 +366,7 @@ function stabilityVerdict(score: number, hasData: boolean) {
 }
 
 function metricVerdict(kind: 'gct' | 'cadence' | 'ratio' | 'score', value: number, hasData: boolean) {
-  if (!hasData || !Number.isFinite(value) || value <= 0) return { label: 'Non disponibile', color: INK_DIM };
+  if (!hasData || !Number.isFinite(value) || value <= 0) return { label: 'Non disponibile', color: '#64748b' };
   if (kind === 'gct') {
     if (value <= 235) return { label: 'Molto reattivo', color: NEON_GREEN };
     if (value <= 265) return { label: 'Buono', color: '#22c55e' };
@@ -405,7 +405,7 @@ function TelemetryMetricCard({
   accent: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
+    <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
       <div className="flex items-start justify-between gap-3">
         <span className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">{label}</span>
         <span className="h-2 w-2 rounded-full shadow-[0_0_12px_currentColor]" style={{ color: accent, backgroundColor: accent }} />
@@ -474,7 +474,7 @@ function GroundContactStability({
   };
 
   return (
-    <main className="relative w-full rounded-3xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 flex flex-col overflow-hidden">
+    <main className="relative w-full rounded-[2rem] backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 flex flex-col overflow-hidden">
       <div className="absolute left-0 top-16 bottom-16 w-1 bg-[#ccff00] rounded-r-full shadow-[0_0_15px_#ccff00]" />
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 sm:p-8 border-b border-gray-800/60 ml-2">
@@ -514,7 +514,7 @@ function GroundContactStability({
             </button>
           </div>
 
-          <div className="relative w-full overflow-hidden rounded-3xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
+          <div className="relative w-full overflow-hidden rounded-3xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
             <div className="pointer-events-none absolute inset-0 opacity-25" style={{
               backgroundImage: 'linear-gradient(rgba(204,255,0,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(204,255,0,0.05) 1px, transparent 1px)',
               backgroundSize: '28px 28px',
@@ -550,7 +550,7 @@ function GroundContactStability({
               />
             </div>
 
-            <div className="relative mt-5 rounded-2xl border border-[#ccff00]/20 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+            <div className="relative mt-5 rounded-2xl backdrop-blur-2xl border border-[#ccff00]/20 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
               <div className="mb-2 flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
                 <span>Stability confidence</span>
                 <span className="text-[#ccff00]">{latestRuns + latestSegments || sampleSize} campioni</span>
@@ -566,7 +566,7 @@ function GroundContactStability({
             </div>
           </div>
 
-          <div className="mt-5 rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-xs leading-5 text-gray-500">
+          <div className="mt-5 rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-xs leading-5 text-gray-500">
             <span className="font-black uppercase tracking-wider text-gray-300">Come leggerlo: </span>
             Si leggono solo le corse sotto i 4:45/km e i giri delle ripetute: al lento l'appoggio è per forza più lungo e la cadenza più bassa, e la media di tutte le uscite descriveva quello. GCT più basso e stabile è positivo.
             I dati L/R Load e Peak Force non arrivano dai CSV Garmin/API attuali, quindi non vengono mostrati come numeri principali.
@@ -680,7 +680,7 @@ function GroundContactStability({
 
 function MetricBox({ title, value, unit }: { title: string; value: string; unit: string }) {
   return (
-    <div className="flex-1 rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 sm:p-6 hover:border-white/[0.2] transition-colors cursor-default group">
+    <div className="flex-1 rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 sm:p-6 hover:border-white/[0.2] transition-colors cursor-default group">
       <span className="text-[10px] sm:text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 block">{title}</span>
       <div className="flex items-baseline gap-1">
         <span className="text-3xl sm:text-4xl font-black text-white tracking-tighter group-hover:text-gray-100 transition-colors">{value}</span>
@@ -707,7 +707,7 @@ function EvolutionBar({ scaleY, color, label }: { key?: string | number; scaleY:
         <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/40" />
       </motion.div>
-      <span className="text-[11px] text-gray-600 font-black tracking-wider group-hover:text-gray-400 transition-colors">{label}</span>
+      <span className="text-[10px] text-gray-600 font-black tracking-wider group-hover:text-gray-400 transition-colors">{label}</span>
     </div>
   );
 }
@@ -751,7 +751,7 @@ export function AnalyticsV3({
   const noData = <div className="h-full min-h-[180px] flex items-center justify-center text-gray-600 text-xs font-black uppercase tracking-widest">Dati reali insufficienti</div>;
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
       {/* ══════════════════════════════════════════════════
           IL GESTO A RITMO GARA — corse veloci e ripetute
@@ -780,7 +780,7 @@ export function AnalyticsV3({
                 <h3 className="text-sm font-black tracking-widest uppercase italic" style={{ color: '#fff' }}>
                   Athletic Profile
                 </h3>
-                <p className="text-[11px] font-black tracking-widest mt-0.5" style={{ color: DIM }}>
+                <p className="text-[9px] font-black tracking-widest mt-0.5" style={{ color: DIM }}>
                   MULTI-AXIS BIOMECH SCORE
                 </p>
               </div>
@@ -791,7 +791,7 @@ export function AnalyticsV3({
           <div className="mt-4 grid grid-cols-5 gap-2">
             {radarAxesReal.map((a) => (
               <div key={a.label} className="text-center">
-                <p className="text-[10px] font-black tracking-widest uppercase" style={{ color: MUTED }}>{a.label}</p>
+                <p className="text-[8px] font-black tracking-widest uppercase" style={{ color: MUTED }}>{a.label}</p>
                 <p className="text-xs font-black mt-0.5" style={{ color: NEON }}>{a.value}</p>
               </div>
             ))}
@@ -810,16 +810,16 @@ export function AnalyticsV3({
                 <h3 className="text-sm font-black tracking-widest uppercase italic" style={{ color: '#fff' }}>
                   Efficiency Correlation
                 </h3>
-                <p className="text-[11px] font-black tracking-widest mt-0.5" style={{ color: DIM }}>
+                <p className="text-[9px] font-black tracking-widest mt-0.5" style={{ color: DIM }}>
                   BOUT RATIO: SPEED OUTPUT VS CARDIAC STRESS
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1.5 text-[11px] font-black" style={{ color: MUTED }}>
+              <span className="flex items-center gap-1.5 text-[9px] font-black" style={{ color: MUTED }}>
                 <span className="w-4 border-t-2 border-dashed inline-block" style={{ borderColor: NEON }} /> SPEED OUTPUT
               </span>
-              <span className="flex items-center gap-1.5 text-[11px] font-black" style={{ color: MUTED }}>
+              <span className="flex items-center gap-1.5 text-[9px] font-black" style={{ color: MUTED }}>
                 <span className="w-4 border-t-2 border-dashed inline-block" style={{ borderColor: ORANGE }} /> CARDIAC STRESS
               </span>
               <ChartExpandButton onClick={() => { onRequestChartDetail?.('efficiency_correlation'); setEfficiencyExpanded(true); }} />
@@ -831,18 +831,18 @@ export function AnalyticsV3({
               <CartesianGrid strokeDasharray="3 3" stroke={GRID} vertical={false} />
               <XAxis
                 dataKey="t"
-                tick={{ fill: MUTED, fontSize: 10, fontWeight: 900 }}
+                tick={{ fill: MUTED, fontSize: 9, fontWeight: 900 }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fill: MUTED, fontSize: 10, fontWeight: 700 }}
+                tick={{ fill: MUTED, fontSize: 9, fontWeight: 700 }}
                 axisLine={false}
                 tickLine={false}
               />
               <Tooltip content={<DarkTooltip />} />
               {/* Optimal range band */}
-              <ReferenceLine y={0.80} stroke={NEON} strokeDasharray="6 3" strokeWidth={1} opacity={0.4} label={{ value: 'OPTIMAL RANGE', position: 'right', fill: NEON, fontSize: 10, fontWeight: 900 }} />
+              <ReferenceLine y={0.80} stroke={NEON} strokeDasharray="6 3" strokeWidth={1} opacity={0.4} label={{ value: 'OPTIMAL RANGE', position: 'right', fill: NEON, fontSize: 8, fontWeight: 900 }} />
               <Line
                 type="monotone"
                 dataKey="speed"
@@ -872,13 +872,13 @@ export function AnalyticsV3({
             style={{ borderColor: BORDER }}
           >
             <div>
-              <p className="text-[11px] font-black tracking-widest" style={{ color: DIM }}>PEAK SPEED RATIO</p>
+              <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>PEAK SPEED RATIO</p>
               <p className="text-2xl font-black mt-1" style={{ color: '#fff' }}>
                 1.42 <span className="text-xs font-bold" style={{ color: MUTED }}>m/s</span>
               </p>
             </div>
             <div>
-              <p className="text-[11px] font-black tracking-widest" style={{ color: DIM }}>AVG EFFICIENCY</p>
+              <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>AVG EFFICIENCY</p>
               <p className="text-2xl font-black mt-1" style={{ color: '#fff' }}>
                 0.82 <span className="text-xs font-bold" style={{ color: MUTED }}>km/l</span>
               </p>
@@ -901,17 +901,17 @@ export function AnalyticsV3({
               <h3 className="text-sm font-black tracking-widest uppercase italic" style={{ color: '#fff' }}>
                 Long-Term Training Adaptation
               </h3>
-              <p className="text-[11px] font-black tracking-widest mt-0.5" style={{ color: DIM }}>
+              <p className="text-[9px] font-black tracking-widest mt-0.5" style={{ color: DIM }}>
                 SUPERCOMPENSATION CYCLE — STRESS VS ADAPTATION CURVE
               </p>
             </div>
           </div>
           <div className="flex items-center gap-5">
-            <span className="flex items-center gap-1.5 text-[11px] font-black" style={{ color: MUTED }}>
+            <span className="flex items-center gap-1.5 text-[9px] font-black" style={{ color: MUTED }}>
               <span className="w-3 h-3 rounded-full inline-block" style={{ background: `${NEON}80` }} />
               ADAPTATION
             </span>
-            <span className="flex items-center gap-1.5 text-[11px] font-black" style={{ color: MUTED }}>
+            <span className="flex items-center gap-1.5 text-[9px] font-black" style={{ color: MUTED }}>
               <span className="w-3 h-3 rounded-full inline-block" style={{ background: `${ORANGE}80` }} />
               RACE DATA
             </span>
@@ -934,12 +934,12 @@ export function AnalyticsV3({
             <CartesianGrid strokeDasharray="3 3" stroke={GRID} vertical={false} />
             <XAxis
               dataKey="month"
-              tick={{ fill: MUTED, fontSize: 10, fontWeight: 900 }}
+              tick={{ fill: MUTED, fontSize: 9, fontWeight: 900 }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
-              tick={{ fill: MUTED, fontSize: 10, fontWeight: 700 }}
+              tick={{ fill: MUTED, fontSize: 9, fontWeight: 700 }}
               axisLine={false}
               tickLine={false}
             />
@@ -950,7 +950,7 @@ export function AnalyticsV3({
               stroke={ORANGE}
               strokeDasharray="6 3"
               strokeWidth={1.5}
-              label={{ value: 'RACE DATE', position: 'top', fill: ORANGE, fontSize: 10, fontWeight: 900 }}
+              label={{ value: 'RACE DATE', position: 'top', fill: ORANGE, fontSize: 9, fontWeight: 900 }}
             />
             <Area
               type="monotone"
@@ -978,16 +978,16 @@ export function AnalyticsV3({
           className="mt-5 flex items-center justify-between pt-5 border-t"
           style={{ borderColor: BORDER }}
         >
-          <p className="text-[11px] font-black tracking-widest" style={{ color: DIM }}>
+          <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>
             BANISTER-COGGAN SUPERCOMPENSATION MODEL
           </p>
           <div className="flex items-center gap-6">
             <div>
-              <p className="text-[11px] font-black tracking-widest" style={{ color: DIM }}>PEAK ADAPTATION</p>
+              <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>PEAK ADAPTATION</p>
               <p className="text-sm font-black" style={{ color: NEON }}>JUNE — JULY WINDOW</p>
             </div>
             <div>
-              <p className="text-[11px] font-black tracking-widest" style={{ color: DIM }}>READINESS INDEX</p>
+              <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>READINESS INDEX</p>
               <p className="text-sm font-black" style={{ color: '#fff' }}>87.4 / 100</p>
             </div>
           </div>
@@ -1003,8 +1003,8 @@ export function AnalyticsV3({
         details={
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             {radarAxesReal.map((a) => (
-              <div key={a.label} className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
-                <p className="text-[10px] font-black tracking-widest uppercase" style={{ color: MUTED }}>{a.label}</p>
+              <div key={a.label} className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
+                <p className="text-[9px] font-black tracking-widest uppercase" style={{ color: MUTED }}>{a.label}</p>
                 <p className="mt-1 text-xl font-black" style={{ color: NEON }}>{a.value}</p>
               </div>
             ))}
@@ -1026,12 +1026,12 @@ export function AnalyticsV3({
         accent={ORANGE}
         details={
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
-              <p className="text-[11px] font-black tracking-widest" style={{ color: DIM }}>PEAK SPEED RATIO</p>
+            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+              <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>PEAK SPEED RATIO</p>
               <p className="mt-1 text-xl font-black text-white">1.42 <span className="text-xs font-bold" style={{ color: MUTED }}>m/s</span></p>
             </div>
-            <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
-              <p className="text-[11px] font-black tracking-widest" style={{ color: DIM }}>AVG EFFICIENCY</p>
+            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+              <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>AVG EFFICIENCY</p>
               <p className="mt-1 text-xl font-black text-white">0.82 <span className="text-xs font-bold" style={{ color: MUTED }}>km/l</span></p>
             </div>
           </div>
@@ -1043,7 +1043,7 @@ export function AnalyticsV3({
             <XAxis dataKey="t" tick={{ fill: MUTED, fontSize: 10, fontWeight: 900 }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fill: MUTED, fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
             <Tooltip content={<DarkTooltip />} />
-            <ReferenceLine y={0.80} stroke={NEON} strokeDasharray="6 3" strokeWidth={1} opacity={0.4} label={{ value: 'OPTIMAL RANGE', position: 'right', fill: NEON, fontSize: 10, fontWeight: 900 }} />
+            <ReferenceLine y={0.80} stroke={NEON} strokeDasharray="6 3" strokeWidth={1} opacity={0.4} label={{ value: 'OPTIMAL RANGE', position: 'right', fill: NEON, fontSize: 9, fontWeight: 900 }} />
             <Line type="monotone" dataKey="speed" name="Speed Output" stroke={NEON} strokeWidth={3} strokeDasharray="6 3" dot={{ r: 4, fill: NEON, stroke: BG, strokeWidth: 2 }} activeDot={{ r: 6 }} />
             <Line type="monotone" dataKey="cardiac" name="Cardiac Stress" stroke={ORANGE} strokeWidth={3} strokeDasharray="4 2" dot={{ r: 4, fill: ORANGE, stroke: BG, strokeWidth: 2 }} activeDot={{ r: 6 }} />
           </LineChart>
@@ -1058,16 +1058,16 @@ export function AnalyticsV3({
         accent={NEON}
         details={
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[11px] font-black tracking-widest" style={{ color: DIM }}>
+            <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>
               BANISTER-COGGAN SUPERCOMPENSATION MODEL
             </p>
             <div className="grid grid-cols-2 gap-3 sm:w-[420px]">
-              <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
-                <p className="text-[11px] font-black tracking-widest" style={{ color: DIM }}>PEAK ADAPTATION</p>
+              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+                <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>PEAK ADAPTATION</p>
                 <p className="mt-1 text-sm font-black" style={{ color: NEON }}>JUNE - JULY WINDOW</p>
               </div>
-              <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
-                <p className="text-[11px] font-black tracking-widest" style={{ color: DIM }}>READINESS INDEX</p>
+              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+                <p className="text-[9px] font-black tracking-widest" style={{ color: DIM }}>READINESS INDEX</p>
                 <p className="mt-1 text-sm font-black text-white">87.4 / 100</p>
               </div>
             </div>
@@ -1090,7 +1090,7 @@ export function AnalyticsV3({
             <XAxis dataKey="month" tick={{ fill: MUTED, fontSize: 10, fontWeight: 900 }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fill: MUTED, fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
             <Tooltip content={<DarkTooltip />} />
-            <ReferenceLine x="Jul" stroke={ORANGE} strokeDasharray="6 3" strokeWidth={1.5} label={{ value: 'RACE DATE', position: 'top', fill: ORANGE, fontSize: 10, fontWeight: 900 }} />
+            <ReferenceLine x="Jul" stroke={ORANGE} strokeDasharray="6 3" strokeWidth={1.5} label={{ value: 'RACE DATE', position: 'top', fill: ORANGE, fontSize: 9, fontWeight: 900 }} />
             <Area type="monotone" dataKey="stress" name="Stress" stroke={ORANGE} strokeWidth={2.5} fill="url(#stressGradModal)" dot={false} />
             <Area type="monotone" dataKey="adaptation" name="Adaptation" stroke={NEON} strokeWidth={3} fill="url(#adaptGradModal)" dot={false} />
           </AreaChart>

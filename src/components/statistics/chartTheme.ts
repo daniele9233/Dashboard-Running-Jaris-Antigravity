@@ -1,4 +1,3 @@
-import { BRAND } from "../../theme/tokens";
 /**
  * chartTheme — fonte di verità unica per TUTTI i grafici della sezione Statistiche.
  *
@@ -35,7 +34,7 @@ export const CHART_TEXT: Record<'primary' | 'muted' | 'axis' | 'faint', string> 
   primary: '#FFFFFF',
   muted: '#A0A0A0',
   axis: '#8A8A8A',
-  faint: '#7C7C7C', // 4,6:1 — era #666 (3,4:1): usato anche per testo di servizio, deve reggere AA
+  faint: '#666666', // solo decorativo / non informativo
 };
 
 // ─── Serie dati: il colore indica il RUOLO, non il capriccio del file ───────
@@ -44,7 +43,7 @@ export const CHART_SERIES: Record<
   string
 > = {
   /** Metrica primaria, valore attuale, selezione. L'identità del prodotto. */
-  primary: BRAND,
+  primary: '#C0FF00',
   /** Confronto / seconda serie sullo stesso asse. */
   compare: '#22D3EE',
   /** Terza serie categorica. */
@@ -126,4 +125,4 @@ export const chartCursorBar = { fill: 'rgba(255,255,255,0.04)' } as const;
  * Niente nested card: la card È il contenitore del grafico.
  */
 export const chartCardClass =
-  'rounded-2xl border border-[#1E1E1E] bg-[#0E0E0E] p-5';
+  'rounded-[20px] border border-[#1E1E1E] bg-[#0E0E0E] p-5';

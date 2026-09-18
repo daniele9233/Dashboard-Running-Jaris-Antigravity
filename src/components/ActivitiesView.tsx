@@ -28,7 +28,6 @@ import { computeDrift, driftLabel } from '../utils/cardiacDrift';
 import { Map, Marker, NavigationControl } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { MapRef } from 'react-map-gl/mapbox';
-import { BRAND } from "../theme/tokens";
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
 
@@ -113,7 +112,7 @@ function ViewModeButton({ active, icon, label, onClick }: ViewModeButtonProps) {
       className={cn(
         'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all duration-200',
         active
-          ? 'bg-brand/15 border-brand/40 text-brand shadow-[0_0_12px_rgba(192,255,0,0.15)]'
+          ? 'bg-[#C0FF00]/15 border-[#C0FF00]/40 text-[#C0FF00] shadow-[0_0_12px_rgba(192,255,0,0.15)]'
           : 'bg-white/5 border-white/8 text-gray-500 hover:text-gray-300 hover:border-white/20'
       )}
     >
@@ -134,15 +133,6 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
   const { data, loading, error } = useApi<RunsResponse>(getRuns, { cacheKey: API_CACHE.RUNS });
   const [hoveredRunId, setHoveredRunId] = useState<string | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-  /*
-   * Quante righe montare. Prima la lista montava l'intero storico: 587 card,
-   * 589 superfici con backdrop-filter e quasi ventimila nodi DOM, su una pagina
-   * dove se ne vedono otto. Ora si parte da una pagina e si allunga man mano
-   * che la sentinella in fondo entra in vista.
-   */
-  const PAGE = 40;
-  const [shown, setShown] = useState(PAGE);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
   const [mapViewMode, setMapViewMode] = useState<MapViewMode>('all-zoomed');
   const [mapReady, setMapReady] = useState(false);
   const [showGarminImport, setShowGarminImport] = useState(false);
@@ -159,27 +149,6 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
 
   const runs: Run[] = data?.runs ?? [];
   const allRuns: Run[] = runs;
-
-  // L'osservatore si ricrea a ogni crescita: IntersectionObserver notifica solo
-  // i CAMBI di stato, e se dopo aver aggiunto righe la sentinella è ancora in
-  // vista non arriverebbe più nessun evento. Alla creazione, invece, la prima
-  // notifica riporta sempre lo stato attuale.
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver((entries) => {
-      if (entries.some((e) => e.isIntersecting)) setShown((n) => Math.min(n + PAGE, allRuns.length));
-    }, { rootMargin: "600px 0px" });
-    io.observe(el);
-    return () => io.disconnect();
-  }, [allRuns.length, shown]);
-
-  // una corsa selezionata sulla mappa oltre la finestra: la finestra si allarga
-  useEffect(() => {
-    if (!selectedRunId) return;
-    const idx = allRuns.findIndex((r) => r.id === selectedRunId);
-    if (idx >= 0) setShown((n) => Math.max(n, idx + 10));
-  }, [selectedRunId, allRuns]);
   const runsWithCoords = allRuns.filter(r => r.start_latlng && r.start_latlng.length === 2);
 
   // Pre-compute cardiac drift for all runs (only steady-pace runs qualify)
@@ -223,7 +192,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
   // ── Map load – enable ALL labels + dusk ────────────────────────────────────
   const handleMapLoad = useCallback((e: any) => {
     const map = e.target;
-    map.setConfigProperty('basemap', 'lightPreset', 'night');
+    map.setConfigProperty('basemap', 'lightPreset', 'dusk');
     map.setConfigProperty('basemap', 'showPointOfInterestLabels', true);
     map.setConfigProperty('basemap', 'showPlaceLabels', true);
     map.setConfigProperty('basemap', 'showRoadLabels', true);
@@ -475,7 +444,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
   }
 
   return (
-    <main className="flex-1 flex overflow-hidden bg-[#050505]" style={{ height: '100%' }}>
+    <div className="flex-1 flex overflow-hidden bg-[#050505]" style={{ height: '100%' }}>
 
       {/* ── LEFT: List ───────────────────────────────────────────────────── */}
       <div className="w-full md:w-1/2 flex flex-col overflow-hidden md:border-r border-white/5">
@@ -511,7 +480,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
           {/* Counts + Garmin Import */}
           <div className="flex flex-wrap items-center gap-2 mt-3">
             <div className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2">
-              <Calendar className="w-3.5 h-3.5 text-brand" />
+              <Calendar className="w-3.5 h-3.5 text-[#C0FF00]" />
               <span className="text-xs font-bold text-gray-400">
                 {loading ? '...' : `${allRuns.length} corse`}
               </span>
@@ -548,7 +517,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
             </div>
           )}
 
-          {!loading && allRuns.slice(0, shown).map((run) => {
+          {!loading && allRuns.map((run, index) => {
             // ── Regular run card ────────────────────────────────────────────
             const typeLabel = getRunTypeLabel(run.run_type);
             const { bg, text, icon } = getTypeStyle(typeLabel);
@@ -565,16 +534,19 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
             const driftCfg = drift ? driftLabel(drift.drift) : null;
 
             return (
-              <div
+              <motion.div
                 key={run.id}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: Math.min(index * 0.03, 0.32) }}
                 onMouseEnter={() => setHoveredRunId(run.id)}
                 onMouseLeave={() => setHoveredRunId(null)}
                 onClick={() => hasCoords && handleRunClick(run)}
                 className={cn(
-                  'w-full rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 sm:p-4 flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 transition-colors group relative [content-visibility:auto] [contain-intrinsic-size:auto_76px]',
+                  'w-full rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 sm:p-4 flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 transition-all group relative',
                   hasCoords ? 'cursor-pointer' : 'cursor-default',
                   isSelected
-                    ? '!border-brand/50 !bg-brand/[0.04] shadow-[0_0_24px_rgba(192,255,0,0.07)]'
+                    ? '!border-[#C0FF00]/50 !bg-[#C0FF00]/[0.04] shadow-[0_0_24px_rgba(192,255,0,0.07)]'
                     : isHovered
                     ? '!border-white/20'
                     : ''
@@ -582,7 +554,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
               >
                 {/* selected pulse ring */}
                 {isSelected && (
-                  <div className="absolute inset-0 rounded-2xl pointer-events-none border border-brand/20 animate-pulse" />
+                  <div className="absolute inset-0 rounded-2xl pointer-events-none border border-[#C0FF00]/20 animate-pulse" />
                 )}
 
                 {/* Type icon */}
@@ -599,26 +571,26 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                   <div className="flex items-center gap-2 mb-0.5">
                     <h3 className={cn(
                       'text-sm font-black italic tracking-tight truncate transition-colors',
-                      isSelected ? 'text-brand' : 'text-white/90',
+                      isSelected ? 'text-[#C0FF00]' : 'text-white/90',
                     )}>
                       {runTitle}
                     </h3>
-                    <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-widest flex-shrink-0', bg, text)}>
+                    <span className={cn('px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest flex-shrink-0', bg, text)}>
                       {typeLabel}
                     </span>
                     {run.is_treadmill && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-widest flex-shrink-0 bg-slate-700/60 text-gray-400" title="Tapis roulant — escluso dalle statistiche">
+                      <span className="px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest flex-shrink-0 bg-slate-700/60 text-slate-400" title="Tapis roulant — escluso dalle statistiche">
                         🏃 tapis
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-3 text-gray-500 text-[10px] font-bold uppercase tracking-wider">
                     <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />{formatDate(run.date)}
+                      <Calendar className="w-2.5 h-2.5" />{formatDate(run.date)}
                     </span>
                     {run.location && (
                       <span className="flex items-center gap-1 truncate">
-                        <MapPin className="w-3 h-3 flex-shrink-0" />
+                        <MapPin className="w-2.5 h-2.5 flex-shrink-0" />
                         <span className="truncate">{run.location}</span>
                       </span>
                     )}
@@ -628,15 +600,15 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                 {/* Stats */}
                 <div className="flex flex-wrap gap-2 sm:gap-4 md:border-x border-white/5 sm:px-4 flex-shrink-0">
                   <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-0.5">km</span>
+                    <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">km</span>
                     <span className="text-sm font-black italic text-white">{run.distance_km.toFixed(1)}</span>
                   </div>
                   <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-0.5">pace</span>
+                    <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">pace</span>
                     <span className="text-sm font-black italic text-emerald-400">{run.avg_pace}</span>
                   </div>
                   <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-0.5">hr</span>
+                    <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">hr</span>
                     <span className="text-sm font-black italic text-rose-400">{run.avg_hr ?? '—'}</span>
                   </div>
 
@@ -645,14 +617,14 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                     <>
                       <div className="w-px h-8 self-center bg-white/5" />
                       <div className="flex flex-col items-center" title={`Deriva cardiaca: Prima metà ${drift.hr1} bpm → Seconda metà ${drift.hr2} bpm`}>
-                        <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-0.5">drift</span>
+                        <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">drift</span>
                         <span className="text-sm font-black italic" style={{ color: driftCfg.color }}>
                           {drift.drift >= 0 ? "+" : ""}{drift.drift.toFixed(1)}%
                         </span>
                       </div>
                       <div className="flex flex-col items-center">
-                        <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-0.5">1ª→2ª</span>
-                        <span className="text-[11px] font-bold text-gray-400 whitespace-nowrap">
+                        <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">1ª→2ª</span>
+                        <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap">
                           {drift.hr1}<span className="text-gray-600">→</span><span style={{ color: driftCfg.color }}>{drift.hr2}</span>
                         </span>
                       </div>
@@ -667,21 +639,16 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                   className={cn(
                     'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all',
                     isSelected
-                      ? 'bg-brand text-black'
-                      : 'bg-white/5 text-gray-500 hover:bg-brand hover:text-black',
+                      ? 'bg-[#C0FF00] text-black'
+                      : 'bg-white/5 text-gray-500 hover:bg-[#C0FF00] hover:text-black',
                   )}
                   title="Vedi dettaglio corsa"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
-              </div>
+              </motion.div>
             );
           })}
-          {!loading && shown < allRuns.length && (
-            <div ref={sentinelRef} className="py-4 text-center text-[11px] text-gray-600" aria-hidden>
-              {allRuns.length - shown} corse ancora…
-            </div>
-          )}
         </div>
       </div>
 
@@ -733,7 +700,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                       className="absolute rounded-full animate-ping"
                       style={{
                         inset: '-4px',
-                        backgroundColor: isSelected ? BRAND : markerColor,
+                        backgroundColor: isSelected ? '#C0FF00' : markerColor,
                         opacity: 0.25,
                       }}
                     />
@@ -742,22 +709,22 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                   <div
                     className="w-3.5 h-3.5 rounded-full border-2 border-white shadow-xl relative z-10"
                     style={{
-                      backgroundColor: isSelected ? BRAND : markerColor,
-                      boxShadow: `0 0 ${isSelected ? '18px' : '6px'} ${isSelected ? BRAND : markerColor}99`,
+                      backgroundColor: isSelected ? '#C0FF00' : markerColor,
+                      boxShadow: `0 0 ${isSelected ? '18px' : '6px'} ${isSelected ? '#C0FF00' : markerColor}99`,
                     }}
                   />
                   {/* Distance bubble on selected */}
                   {isSelected && (
                     <div
-                      className="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-lg text-[11px] font-black text-black whitespace-nowrap shadow-xl z-20"
-                      style={{ backgroundColor: BRAND }}
+                      className="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-lg text-[9px] font-black text-black whitespace-nowrap shadow-xl z-20"
+                      style={{ backgroundColor: '#C0FF00' }}
                     >
                       {run.distance_km.toFixed(1)} km
                     </div>
                   )}
                   {/* "LAST" badge in last-run mode */}
                   {mapViewMode === 'last-run' && isLastRun && !isSelected && (
-                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-lg text-[11px] font-black text-black whitespace-nowrap z-20" style={{ backgroundColor: markerColor }}>
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-lg text-[8px] font-black text-black whitespace-nowrap z-20" style={{ backgroundColor: markerColor }}>
                       LAST
                     </div>
                   )}
@@ -769,10 +736,10 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
 
         {/* ── View mode badge overlay (top-left) ───────────────────────── */}
         <div className="absolute top-4 left-4 pointer-events-none">
-          <div className="bg-black/50 border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2">
-            {mapViewMode === 'world'      && <><Globe className="w-3 h-3 text-brand" /><span className="text-[10px] font-black uppercase tracking-widest text-gray-300">Vista Mondiale</span></>}
-            {mapViewMode === 'last-run'   && <><Navigation className="w-3 h-3 text-brand" /><span className="text-[10px] font-black uppercase tracking-widest text-gray-300">Ultima Corsa</span></>}
-            {mapViewMode === 'all-zoomed' && <><Layers className="w-3 h-3 text-brand" /><span className="text-[10px] font-black uppercase tracking-widest text-gray-300">Tutte le Corse</span></>}
+          <div className="bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2">
+            {mapViewMode === 'world'      && <><Globe className="w-3 h-3 text-[#C0FF00]" /><span className="text-[9px] font-black uppercase tracking-widest text-gray-300">Vista Mondiale</span></>}
+            {mapViewMode === 'last-run'   && <><Navigation className="w-3 h-3 text-[#C0FF00]" /><span className="text-[9px] font-black uppercase tracking-widest text-gray-300">Ultima Corsa</span></>}
+            {mapViewMode === 'all-zoomed' && <><Layers className="w-3 h-3 text-[#C0FF00]" /><span className="text-[9px] font-black uppercase tracking-widest text-gray-300">Tutte le Corse</span></>}
           </div>
         </div>
 
@@ -789,26 +756,26 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
               animate={{ opacity: 1, y: 0 }}
               className="absolute bottom-5 left-4 right-4 pointer-events-none"
             >
-              <div className="bg-[#080D18]/90 border border-white/10 rounded-2xl px-5 py-3 flex items-center justify-between shadow-2xl">
+              <div className="bg-[#080D18]/90 backdrop-blur-2xl border border-white/10 rounded-2xl px-5 py-3 flex items-center justify-between shadow-2xl">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className={cn('text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded', bg, text)}>{typeLabel}</span>
+                    <span className={cn('text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded', bg, text)}>{typeLabel}</span>
                     <span className="text-xs font-black italic text-white truncate max-w-[180px]">
                       {run.notes
                         ? run.notes.replace('Importata da Strava: ', '').replace(/(\s*\[Strava:[^\]]*\])+/g, '').trim() || `${typeLabel} Run`
                         : `${typeLabel} Run`}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 text-[11px] font-bold text-gray-500">
+                  <div className="flex items-center gap-3 text-[10px] font-bold text-gray-500">
                     <span>{run.distance_km.toFixed(2)} km</span>
                     <span>{run.avg_pace}/km</span>
                     <span>{formatDuration(run.duration_minutes)}</span>
-                    {run.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{run.location}</span>}
+                    {run.location && <span className="flex items-center gap-1"><MapPin className="w-2.5 h-2.5" />{run.location}</span>}
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0 ml-4">
-                  <div className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Rotazione</div>
-                  <div className="text-[10px] font-black text-brand/70 uppercase tracking-widest">Attiva</div>
+                  <div className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Rotazione</div>
+                  <div className="text-[8px] font-black text-[#C0FF00]/70 uppercase tracking-widest">Attiva</div>
                 </div>
               </div>
             </motion.div>
@@ -822,9 +789,9 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.5 }}
-              className="bg-black/55 border border-white/8 px-4 py-2 rounded-full"
+              className="bg-black/55 backdrop-blur-md border border-white/8 px-4 py-2 rounded-full"
             >
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 whitespace-nowrap">
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 whitespace-nowrap">
                 ↑ Clicca una corsa per volare sulla mappa
               </p>
             </motion.div>
@@ -890,8 +857,8 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                     <>
                       <Upload className="w-8 h-8 text-gray-500 mb-3" />
                       <span className="text-sm font-bold text-gray-300">Trascina il file CSV qui</span>
-                      <span className="text-[11px] text-gray-500 mt-1">oppure clicca per selezionare</span>
-                      <span className="text-[11px] text-gray-600 mt-2">File Garmin Connect export (.csv)</span>
+                      <span className="text-[10px] text-gray-500 mt-1">oppure clicca per selezionare</span>
+                      <span className="text-[9px] text-gray-600 mt-2">File Garmin Connect export (.csv)</span>
                     </>
                   )}
                   <input
@@ -917,7 +884,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-white truncate">{csvFile.name}</p>
-                    <p className="text-[11px] text-gray-500">{(csvFile.size / 1024).toFixed(1)} KB</p>
+                    <p className="text-[10px] text-gray-500">{(csvFile.size / 1024).toFixed(1)} KB</p>
                   </div>
                   <button
                     onClick={() => { setCsvFile(null); setParsedRuns([]); setCsvResult(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
@@ -969,7 +936,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
 
             {/* Footer */}
             <div className="px-6 py-3 border-t border-white/5 flex items-center justify-between">
-              <p className="text-[10px] text-gray-600 font-medium uppercase tracking-wider">
+              <p className="text-[9px] text-gray-600 font-medium uppercase tracking-wider">
                 Collezione: garmin_csv_data · Nessuna modifica alle corse Strava
               </p>
               <button
@@ -982,6 +949,6 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
           </motion.div>
         </div>
       )}
-    </main>
+    </div>
   );
 }

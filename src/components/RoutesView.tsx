@@ -20,7 +20,6 @@ import { getRun, getRunSplits, getRunIntervals } from '../api';
 import type { RunIntervals, IntervalSegment } from '../api';
 import type { Run, Split } from '../types/api';
 import { cadenceSpmFromRun } from '../utils/cadence';
-import { BRAND } from "../theme/tokens";
 
 // ── Polyline decoder (Google algorithm) ──────────────────────────────────────
 function decodePolyline(encoded: string): [number, number][] {
@@ -79,18 +78,18 @@ function fmtPaceSec(sec: number): string {
 
 const GlassPanel = ({ children, className, title, icon: Icon }: any) => (
   <div className={cn(
-    "bg-[#0F172A]/80 border border-white/10 rounded-3xl overflow-hidden shadow-2xl",
+    "bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl",
     className
   )}>
     {title && (
       <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-white/5">
         <div className="flex items-center gap-3">
-          {Icon && <Icon className="w-4 h-4 text-brand" />}
+          {Icon && <Icon className="w-4 h-4 text-[#C0FF00]" />}
           <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{title}</h3>
         </div>
         <div className="flex gap-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-brand/50" />
-          <div className="w-1.5 h-1.5 rounded-full bg-brand/20" />
+          <div className="w-1.5 h-1.5 rounded-full bg-[#C0FF00]/50" />
+          <div className="w-1.5 h-1.5 rounded-full bg-[#C0FF00]/20" />
         </div>
       </div>
     )}
@@ -333,7 +332,7 @@ export function RoutesView({ runId }: { runId?: string | null }) {
 
       {/* ── MAP VIEW TOGGLE ────────────────────────────────────────────── */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
-        <div className="bg-[#0F172A]/90 border border-white/10 rounded-2xl p-1 flex shadow-2xl">
+        <div className="bg-[#0F172A]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-1 flex shadow-2xl">
           <button
             onClick={() => setMapView('standard')}
             className={cn(
@@ -351,7 +350,7 @@ export function RoutesView({ runId }: { runId?: string | null }) {
             className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
               mapView === '3d-telemetry'
-                ? "bg-brand/20 text-brand shadow-lg"
+                ? "bg-[#C0FF00]/20 text-[#C0FF00] shadow-lg"
                 : "text-gray-500 hover:text-gray-300"
             )}
           >
@@ -426,7 +425,7 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                       "flex flex-col items-center transition-all duration-500",
                       activeSplit === split.km ? "scale-125" : "scale-100 opacity-60"
                     )}>
-                      <div className="bg-white/10 border border-white/20 px-2 py-1 rounded-md text-[11px] font-black text-white mb-1 shadow-xl">
+                      <div className="bg-white/10 backdrop-blur-md border border-white/20 px-2 py-1 rounded-md text-[8px] font-black text-white mb-1 shadow-xl">
                         {split.km} KM
                       </div>
                       <div className="w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" />
@@ -460,8 +459,8 @@ export function RoutesView({ runId }: { runId?: string | null }) {
               {hoveredPoint && (
                 <Marker longitude={hoveredPoint.lng} latitude={hoveredPoint.lat}>
                   <div className="relative">
-                    <div className="absolute -inset-4 animate-pulse bg-brand/20 rounded-full" />
-                    <div className="w-4 h-4 bg-brand rounded-full border-2 border-white shadow-[0_0_20px_rgba(192,255,0,0.6)]" />
+                    <div className="absolute -inset-4 animate-pulse bg-[#C0FF00]/20 rounded-full" />
+                    <div className="w-4 h-4 bg-[#C0FF00] rounded-full border-2 border-white shadow-[0_0_20px_rgba(192,255,0,0.6)]" />
                   </div>
                 </Marker>
               )}
@@ -504,48 +503,48 @@ export function RoutesView({ runId }: { runId?: string | null }) {
               {/* Summary Stats */}
               <div className="grid grid-cols-3 gap-3 mb-6">
                 <div className="bg-white/5 rounded-xl p-3 text-center">
-                  <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Distance</div>
+                  <div className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Distance</div>
                   <div className="text-lg font-black italic text-white">{run.distance_km?.toFixed(2)}</div>
-                  <div className="text-[11px] font-black text-gray-600">KM</div>
+                  <div className="text-[8px] font-black text-gray-600">KM</div>
                 </div>
                 <div className="bg-white/5 rounded-xl p-3 text-center">
-                  <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Time</div>
+                  <div className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Time</div>
                   <div className="text-lg font-black italic text-white">{formatDuration(run.duration_minutes)}</div>
                 </div>
                 <div className="bg-white/5 rounded-xl p-3 text-center">
-                  <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Avg Pace</div>
+                  <div className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Avg Pace</div>
                   <div className="text-lg font-black italic text-emerald-400">{run.avg_pace}</div>
-                  <div className="text-[11px] font-black text-gray-600">/KM</div>
+                  <div className="text-[8px] font-black text-gray-600">/KM</div>
                 </div>
               </div>
 
               {/* Extra stats row */}
               <div className="grid grid-cols-3 gap-3 mb-6">
                 <div className="bg-white/5 rounded-xl p-3 text-center">
-                  <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Avg HR</div>
+                  <div className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Avg HR</div>
                   <div className="text-lg font-black italic text-rose-500">{run.avg_hr ?? '—'}</div>
-                  <div className="text-[11px] font-black text-gray-600">BPM</div>
+                  <div className="text-[8px] font-black text-gray-600">BPM</div>
                 </div>
                 <div className="bg-white/5 rounded-xl p-3 text-center">
-                  <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Max HR</div>
+                  <div className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Max HR</div>
                   <div className="text-lg font-black italic text-rose-400">{run.max_hr ?? '—'}</div>
-                  <div className="text-[11px] font-black text-gray-600">BPM</div>
+                  <div className="text-[8px] font-black text-gray-600">BPM</div>
                 </div>
                 <div className="bg-white/5 rounded-xl p-3 text-center">
-                  <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Elevation</div>
+                  <div className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Elevation</div>
                   <div className="text-lg font-black italic text-amber-400">{run.elevation_gain?.toFixed(0) ?? '—'}</div>
-                  <div className="text-[11px] font-black text-gray-600">M</div>
+                  <div className="text-[8px] font-black text-gray-600">M</div>
                 </div>
               </div>
 
               {/* Parziali: giri dell'orologio se presenti, altrimenti split per km */}
               <div className="flex-1 flex flex-col min-h-0">
                 <div className="flex items-baseline justify-between mb-3 px-2">
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">
                     {showLaps ? 'Parziali' : 'Split per km'}
                   </span>
                   {segments.length > 0 && (
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-gray-600">
                       {segments.length} · {SOURCE_LABEL[intervalSource]}
                     </span>
                   )}
@@ -554,23 +553,23 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                 {/* Riepilogo seduta: "6 × 600 m @ 3:58/km · rec 2:10" con tenuta
                     e deriva cardiaca, i due numeri che dicono com'è andata. */}
                 {intervalSummary && (
-                  <div className="mb-3 mx-2 rounded-xl border border-brand/20 bg-brand/[0.06] px-3 py-2.5">
-                    <div className="text-[12px] font-black text-brand leading-tight">
+                  <div className="mb-3 mx-2 rounded-xl border border-[#C0FF00]/20 bg-[#C0FF00]/[0.06] px-3 py-2.5">
+                    <div className="text-[12px] font-black text-[#C0FF00] leading-tight">
                       {intervalSummary.label}
                     </div>
                     <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
                       {intervalSummary.avg_work_gap_sec != null &&
                         Math.abs(intervalSummary.avg_work_gap_sec - intervalSummary.avg_work_pace_sec) >= 2 && (
-                          <span className="text-[11px] font-bold text-amber-400/90">
+                          <span className="text-[9px] font-bold text-amber-400/90">
                             PBP {fmtPaceSec(intervalSummary.avg_work_gap_sec)}/km
                           </span>
                         )}
-                      <span className="text-[11px] font-bold text-gray-400">
+                      <span className="text-[9px] font-bold text-gray-400">
                         lavoro {(intervalSummary.total_work_distance_m / 1000).toFixed(1)} km
                       </span>
                       <span
                         className={cn(
-                          "text-[11px] font-bold",
+                          "text-[9px] font-bold",
                           intervalSummary.fade_sec > 4 ? "text-rose-400" : "text-emerald-400",
                         )}
                         title="Differenza fra l'ultima ripetuta e la prima: positivo = hai rallentato"
@@ -579,7 +578,7 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                       </span>
                       {intervalSummary.hr_drift_bpm != null && (
                         <span
-                          className="text-[11px] font-bold text-rose-400/90"
+                          className="text-[9px] font-bold text-rose-400/90"
                           title="Deriva cardiaca fra la prima e l'ultima ripetuta"
                         >
                           FC {intervalSummary.hr_drift_bpm > 0 ? '+' : ''}{intervalSummary.hr_drift_bpm} bpm
@@ -591,7 +590,7 @@ export function RoutesView({ runId }: { runId?: string | null }) {
 
                 {showLaps ? (
                   <>
-                    <div className="grid grid-cols-[1.6rem_1fr_1fr_1.5fr_2.2rem] gap-1 text-[10px] font-black uppercase tracking-[0.15em] text-gray-600 mb-2 px-3">
+                    <div className="grid grid-cols-[1.6rem_1fr_1fr_1.5fr_2.2rem] gap-1 text-[8px] font-black uppercase tracking-[0.15em] text-gray-600 mb-2 px-3">
                       <span>#</span>
                       <span>Dist</span>
                       <span>Tempo</span>
@@ -617,22 +616,22 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                             className={cn(
                               "w-full grid grid-cols-[1.6rem_1fr_1fr_1.5fr_2.2rem] gap-1 items-center px-3 py-2.5 rounded-xl border transition-all",
                               activeSplit === seg.index
-                                ? "bg-brand/10 border-brand/30"
+                                ? "bg-[#C0FF00]/10 border-[#C0FF00]/30"
                                 : isWork
-                                ? "bg-brand/[0.07] border-l-2 border-l-brand/40 border-y-transparent border-r-transparent hover:border-white/10"
+                                ? "bg-[#C0FF00]/[0.07] border-l-2 border-l-[#C0FF00]/40 border-y-transparent border-r-transparent hover:border-white/10"
                                 : isRecovery
                                 ? "bg-white/[0.015] border-transparent hover:border-white/10 opacity-60"
                                 : "bg-white/[0.04] border-transparent hover:border-white/10"
                             )}
                           >
-                            <span className={cn("text-[11px] font-black tabular-nums", isWork ? "text-brand" : "text-gray-600")}>
+                            <span className={cn("text-[10px] font-black tabular-nums", isWork ? "text-[#C0FF00]" : "text-gray-600")}>
                               {isRecovery ? '·' : (seg.displayIndex ?? seg.index)}
                             </span>
                             <span className="text-[11px] font-bold tabular-nums text-gray-300">
                               {seg.distance_m >= 1000
                                 ? `${(seg.distance_m / 1000).toFixed(2)}`
                                 : `${Math.round(seg.distance_m)}`}
-                              <span className="text-[11px] text-gray-600 ml-0.5">
+                              <span className="text-[8px] text-gray-600 ml-0.5">
                                 {seg.distance_m >= 1000 ? 'km' : 'm'}
                               </span>
                             </span>
@@ -659,7 +658,7 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                         );
                       })}
                     </div>
-                    <p className="text-[11px] text-gray-600 mt-2 px-3 leading-relaxed">
+                    <p className="text-[8px] text-gray-600 mt-2 px-3 leading-relaxed">
                       {hasWorkSegments && 'In evidenza le ripetute, in trasparenza i recuperi. '}
                       {segments.some((s) => s.gap_pace_sec != null) && 'In ambra il PBP, il passo corretto per la pendenza; il passo grezzo è nel tooltip. '}
                       {intervalSource === 'streams' &&
@@ -668,7 +667,7 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                   </>
                 ) : (
                   <>
-                    <div className="grid grid-cols-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-600 mb-4 px-2">
+                    <div className="grid grid-cols-4 text-[8px] font-black uppercase tracking-[0.2em] text-gray-600 mb-4 px-2">
                       <span>KM</span>
                       <span>PACE</span>
                       <span>HR</span>
@@ -683,11 +682,11 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                           className={cn(
                             "w-full grid grid-cols-4 items-center p-3 rounded-xl border transition-all group relative overflow-hidden",
                             activeSplit === split.km
-                              ? "bg-brand/10 border-brand/30"
+                              ? "bg-[#C0FF00]/10 border-[#C0FF00]/30"
                               : "bg-white/5 border-transparent hover:border-white/10"
                           )}
                         >
-                          <span className="text-[11px] font-black text-gray-500">{String(split.km).padStart(2, '0')}</span>
+                          <span className="text-[10px] font-black text-gray-500">{String(split.km).padStart(2, '0')}</span>
                           <span className="text-xs font-black italic text-white">{split.pace}</span>
                           <span className="text-xs font-black italic text-rose-400">{split.hr != null ? Math.round(split.hr) : '—'}</span>
                           <span className="text-xs font-black italic text-amber-400 text-right">
@@ -709,25 +708,25 @@ export function RoutesView({ runId }: { runId?: string | null }) {
           <div className="md:hidden absolute bottom-4 left-4 right-4 pointer-events-auto bg-[#0A0F1A]/90 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-2xl p-4">
             <div className="mb-3">
               <h2 className="text-base font-black italic tracking-tighter text-white uppercase truncate">{runTitle}</h2>
-              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+              <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
                 {run.date ? formatDate(run.date) : '—'}{run.location ? ` · ${run.location}` : ''}
               </div>
             </div>
             <div className="grid grid-cols-4 gap-2">
               <div className="bg-white/5 rounded-lg p-2 text-center">
-                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-0.5">KM</div>
+                <div className="text-[7px] font-black text-gray-500 uppercase tracking-widest mb-0.5">KM</div>
                 <div className="text-sm font-black italic text-white tabular-nums">{run.distance_km?.toFixed(1)}</div>
               </div>
               <div className="bg-white/5 rounded-lg p-2 text-center">
-                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-0.5">Time</div>
+                <div className="text-[7px] font-black text-gray-500 uppercase tracking-widest mb-0.5">Time</div>
                 <div className="text-sm font-black italic text-white tabular-nums">{formatDuration(run.duration_minutes)}</div>
               </div>
               <div className="bg-white/5 rounded-lg p-2 text-center">
-                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-0.5">Pace</div>
+                <div className="text-[7px] font-black text-gray-500 uppercase tracking-widest mb-0.5">Pace</div>
                 <div className="text-sm font-black italic text-emerald-400 tabular-nums">{run.avg_pace}</div>
               </div>
               <div className="bg-white/5 rounded-lg p-2 text-center">
-                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-0.5">HR</div>
+                <div className="text-[7px] font-black text-gray-500 uppercase tracking-widest mb-0.5">HR</div>
                 <div className="text-sm font-black italic text-rose-400 tabular-nums">{run.avg_hr ?? '—'}</div>
               </div>
             </div>
@@ -755,26 +754,26 @@ export function RoutesView({ runId }: { runId?: string | null }) {
             </GlassPanel>
 
             {/* Run info card */}
-            <div className="bg-[#0F172A]/90 border border-white/10 p-5 rounded-3xl flex flex-col gap-3 shadow-2xl pointer-events-auto">
+            <div className="bg-[#0F172A]/90 backdrop-blur-2xl border border-white/10 p-5 rounded-3xl flex flex-col gap-3 shadow-2xl pointer-events-auto">
               <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Run Info</span>
-                <Activity className="w-3 h-3 text-brand" />
+                <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">Run Info</span>
+                <Activity className="w-3 h-3 text-[#C0FF00]" />
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-bold text-gray-500 uppercase">Type</span>
-                  <span className="text-[10px] font-black text-brand uppercase">{run.run_type}</span>
+                  <span className="text-[8px] font-bold text-gray-500 uppercase">Type</span>
+                  <span className="text-[10px] font-black text-[#C0FF00] uppercase">{run.run_type}</span>
                 </div>
                 {cadenceSpmFromRun(run) != null && (
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-gray-500 uppercase">Cadence</span>
-                    <span className="text-[11px] font-black text-amber-400">{cadenceSpmFromRun(run)} spm</span>
+                    <span className="text-[8px] font-bold text-gray-500 uppercase">Cadence</span>
+                    <span className="text-[10px] font-black text-amber-400">{cadenceSpmFromRun(run)} spm</span>
                   </div>
                 )}
                 {run.avg_hr_pct && (
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-gray-500 uppercase">Avg HR %</span>
-                    <span className="text-[11px] font-black text-rose-400">{run.avg_hr_pct}%</span>
+                    <span className="text-[8px] font-bold text-gray-500 uppercase">Avg HR %</span>
+                    <span className="text-[10px] font-black text-rose-400">{run.avg_hr_pct}%</span>
                   </div>
                 )}
               </div>
@@ -783,32 +782,32 @@ export function RoutesView({ runId }: { runId?: string | null }) {
               {(run.avg_vertical_oscillation || run.avg_vertical_ratio || run.avg_ground_contact_time || run.avg_stride_length) && (
                 <>
                   <div className="flex justify-between items-center border-b border-white/5 pb-2 mt-3">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Running Dynamics</span>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">Running Dynamics</span>
                     <Zap className="w-3 h-3 text-[#3B82F6]" />
                   </div>
                   <div className="space-y-2">
                     {run.avg_vertical_oscillation != null && (
                       <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-gray-500 uppercase">Osc. Verticale</span>
-                        <span className="text-[11px] font-black text-[#3B82F6]">{run.avg_vertical_oscillation} cm</span>
+                        <span className="text-[8px] font-bold text-gray-500 uppercase">Osc. Verticale</span>
+                        <span className="text-[10px] font-black text-[#3B82F6]">{run.avg_vertical_oscillation} cm</span>
                       </div>
                     )}
                     {run.avg_vertical_ratio != null && (
                       <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-gray-500 uppercase">Rapporto Vert.</span>
-                        <span className="text-[11px] font-black text-[#3B82F6]">{run.avg_vertical_ratio}%</span>
+                        <span className="text-[8px] font-bold text-gray-500 uppercase">Rapporto Vert.</span>
+                        <span className="text-[10px] font-black text-[#3B82F6]">{run.avg_vertical_ratio}%</span>
                       </div>
                     )}
                     {run.avg_ground_contact_time != null && (
                       <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-gray-500 uppercase">GCT</span>
-                        <span className="text-[11px] font-black text-[#3B82F6]">{run.avg_ground_contact_time} ms</span>
+                        <span className="text-[8px] font-bold text-gray-500 uppercase">GCT</span>
+                        <span className="text-[10px] font-black text-[#3B82F6]">{run.avg_ground_contact_time} ms</span>
                       </div>
                     )}
                     {run.avg_stride_length != null && (
                       <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-gray-500 uppercase">Lunghezza Falcata</span>
-                        <span className="text-[11px] font-black text-[#3B82F6]">{run.avg_stride_length} m</span>
+                        <span className="text-[8px] font-bold text-gray-500 uppercase">Lunghezza Falcata</span>
+                        <span className="text-[10px] font-black text-[#3B82F6]">{run.avg_stride_length} m</span>
                       </div>
                     )}
                   </div>
@@ -820,13 +819,13 @@ export function RoutesView({ runId }: { runId?: string | null }) {
           {/* OVERLAY: BOTTOM — Detailed chart with cursor sync to map */}
           {chartData.length > 0 && (
             <div className="hidden md:block absolute bottom-6 left-[380px] right-8 pointer-events-none">
-              <div className="bg-[#0A0F1A]/90 border border-white/[0.06] rounded-2xl shadow-2xl pointer-events-auto">
+              <div className="bg-[#0A0F1A]/90 backdrop-blur-2xl border border-white/[0.06] rounded-2xl shadow-2xl pointer-events-auto">
                 {/* Chart header */}
                 <div className="px-6 pt-5 pb-3 flex items-center justify-between">
                   {/* Metric selector pills */}
                   <div className="flex items-center gap-2">
                     {([
-                      { key: 'pace', label: 'Pace', color: BRAND, value: run.avg_pace + '/km' },
+                      { key: 'pace', label: 'Pace', color: '#C0FF00', value: run.avg_pace + '/km' },
                       { key: 'hr', label: 'Heart Rate', color: '#F43F5E', value: run.avg_hr ? `${Math.round(run.avg_hr)} bpm` : '—' },
                       { key: 'cadence', label: 'Cadence', color: '#8B5CF6', value: cadenceSpmFromRun(run) ? `${cadenceSpmFromRun(run)} spm` : '—' },
                     ] as const).map(({ key, label, color, value }) => (
@@ -845,8 +844,8 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                           style={{ backgroundColor: color, boxShadow: chartMetrics.has(key) ? `0 0 8px ${color}50` : 'none' }}
                         />
                         <div className="flex flex-col items-start">
-                          <span className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-500">{label}</span>
-                          <span className="text-xs font-black italic" style={{ color: chartMetrics.has(key) ? color : '#878787' }}>{value}</span>
+                          <span className="text-[8px] font-black uppercase tracking-[0.15em] text-gray-500">{label}</span>
+                          <span className="text-xs font-black italic" style={{ color: chartMetrics.has(key) ? color : '#6B7280' }}>{value}</span>
                         </div>
                       </button>
                     ))}
@@ -857,26 +856,26 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                     <div className="flex gap-5 items-center">
                       {chartMetrics.has('pace') && chartData[hoveredStreamIdx].pace && (
                         <div className="text-right">
-                          <div className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Pace</div>
-                          <div className="text-sm font-black italic text-brand">
+                          <div className="text-[7px] font-black text-gray-600 uppercase tracking-widest">Pace</div>
+                          <div className="text-sm font-black italic text-[#C0FF00]">
                             {Math.floor(Math.round(chartData[hoveredStreamIdx].pace) / 60)}:{String(Math.round(chartData[hoveredStreamIdx].pace) % 60).padStart(2, '0')}/km
                           </div>
                         </div>
                       )}
                       {chartMetrics.has('hr') && chartData[hoveredStreamIdx].hr && (
                         <div className="text-right">
-                          <div className="text-[10px] font-black text-gray-600 uppercase tracking-widest">HR</div>
+                          <div className="text-[7px] font-black text-gray-600 uppercase tracking-widest">HR</div>
                           <div className="text-sm font-black italic text-[#F43F5E]">{Math.round(chartData[hoveredStreamIdx].hr)} bpm</div>
                         </div>
                       )}
                       {chartMetrics.has('cadence') && chartData[hoveredStreamIdx].cadence && (
                         <div className="text-right">
-                          <div className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Cadence</div>
+                          <div className="text-[7px] font-black text-gray-600 uppercase tracking-widest">Cadence</div>
                           <div className="text-sm font-black italic text-[#8B5CF6]">{Math.round(chartData[hoveredStreamIdx].cadence)} spm</div>
                         </div>
                       )}
                       <div className="text-right">
-                        <div className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Dist</div>
+                        <div className="text-[7px] font-black text-gray-600 uppercase tracking-widest">Dist</div>
                         <div className="text-sm font-black italic text-white">{chartData[hoveredStreamIdx].dist} km</div>
                       </div>
                     </div>
@@ -901,8 +900,8 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                     >
                       <defs>
                         <linearGradient id="paceGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor={BRAND} stopOpacity={0.2} />
-                          <stop offset="100%" stopColor={BRAND} stopOpacity={0.01} />
+                          <stop offset="0%" stopColor="#C0FF00" stopOpacity={0.2} />
+                          <stop offset="100%" stopColor="#C0FF00" stopOpacity={0.01} />
                         </linearGradient>
                         <linearGradient id="hrGrad" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="#F43F5E" stopOpacity={0.12} />
@@ -916,7 +915,7 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                       <CartesianGrid strokeDasharray="none" stroke="rgba(255,255,255,0.03)" vertical={false} />
                       <XAxis
                         dataKey="dist"
-                        tick={{ fontSize: 10, fill: '#374151', fontWeight: 800 }}
+                        tick={{ fontSize: 9, fill: '#374151', fontWeight: 800 }}
                         axisLine={{ stroke: 'rgba(255,255,255,0.06)' }}
                         tickLine={false}
                         interval={streams.length > 0 ? Math.floor(chartData.length / 12) : 0}
@@ -928,7 +927,7 @@ export function RoutesView({ runId }: { runId?: string | null }) {
                       <Tooltip content={() => null} cursor={{ stroke: 'rgba(192,255,0,0.25)', strokeWidth: 1 }} />
 
                       {chartMetrics.has('pace') && (
-                        <Area yAxisId="pace" type="monotone" dataKey="pace" stroke={BRAND} strokeWidth={1.5} fill="url(#paceGrad)" dot={false} isAnimationActive={false} />
+                        <Area yAxisId="pace" type="monotone" dataKey="pace" stroke="#C0FF00" strokeWidth={1.5} fill="url(#paceGrad)" dot={false} isAnimationActive={false} />
                       )}
                       {chartMetrics.has('hr') && (
                         <Area yAxisId="hr" type="monotone" dataKey="hr" stroke="#F43F5E" strokeWidth={1.5} fill="url(#hrGrad)" dot={false} isAnimationActive={false} connectNulls />

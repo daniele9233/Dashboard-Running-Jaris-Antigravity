@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { Timer, Zap } from "lucide-react";
 import type { Run } from "../../../types/api";
-import { BRAND } from "../../../theme/tokens";
 
 /**
  * NextOptimalSessionWidget — semi-circular gauge "ore al recupero" + raccomandazione.
@@ -105,20 +104,20 @@ export function NextOptimalSessionWidget({
     ? 'HARD SESSION' : recommendation === 'moderate'
     ? 'MODERATE SESSION' : 'EASY / RECOVERY';
   const recColor = recommendation === 'hard'
-    ? BRAND : recommendation === 'moderate'
+    ? '#C0FF00' : recommendation === 'moderate'
     ? '#F59E0B' : '#60A5FA';
 
-  const ringColor = isReady ? BRAND : arcColor;
+  const ringColor = isReady ? "#C0FF00" : arcColor;
 
   // Semicircular arc path length
   const arcLen = Math.PI * 85;
 
   return (
-    <div className="rounded-3xl p-6 h-full flex flex-col overflow-hidden border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+    <div className="rounded-[24px] p-6 h-full flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
       {/* Header */}
       <div className="flex items-center gap-2 mb-3">
-        <Timer className="text-brand" size={14} />
-        <span className="text-[#A0A0A0] text-[11px] font-black tracking-widest">NEXT OPTIMAL SESSION</span>
+        <Timer className="text-[#C0FF00]" size={14} />
+        <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest">NEXT OPTIMAL SESSION</span>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center">
@@ -156,13 +155,13 @@ export function NextOptimalSessionWidget({
           <div className="absolute inset-x-0 bottom-0 flex flex-col items-center">
             {isReady ? (
               <>
-                <Zap size={30} className="text-brand mb-1" />
-                <span className="text-brand text-[11px] font-black tracking-widest">READY NOW</span>
+                <Zap size={30} className="text-[#C0FF00] mb-1" />
+                <span className="text-[#C0FF00] text-[10px] font-black tracking-widest">READY NOW</span>
               </>
             ) : (
               <>
                 <span className="text-white font-black font-mono text-[40px] leading-none">{h}</span>
-                <span className="text-gray-600 text-[11px] font-black tracking-widest mt-1">ORE AL RECUPERO</span>
+                <span className="text-[#666] text-[9px] font-black tracking-widest mt-1">ORE AL RECUPERO</span>
               </>
             )}
           </div>
@@ -170,7 +169,7 @@ export function NextOptimalSessionWidget({
 
         {/* Recommendation + date */}
         <div
-          className="flex flex-col items-center gap-1 px-4 py-2.5 rounded-2xl mt-5 w-full"
+          className="flex flex-col items-center gap-1 px-4 py-2.5 rounded-[16px] mt-5 w-full"
           style={{ background: `${recColor}14`, border: `1px solid ${recColor}44` }}
         >
           <div className="flex items-center gap-2">
@@ -180,7 +179,7 @@ export function NextOptimalSessionWidget({
             </span>
           </div>
           {readyAtLabel && (
-            <div className="text-[11px] tracking-wider font-black" style={{ color: `${recColor}BB` }}>
+            <div className="text-[10px] tracking-wider font-black" style={{ color: `${recColor}BB` }}>
               {readyAtLabel}
             </div>
           )}

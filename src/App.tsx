@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useRef, useState, Suspense, lazy } from "react";
+import { useEffect, Suspense, lazy } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { JarvisProvider, useJarvisContext } from "./context/JarvisContext";
@@ -11,7 +11,6 @@ import { LayoutProvider } from "./context/LayoutContext";
 import { Sidebar } from "./components/Sidebar";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SettingsControls } from "./components/SettingsControls";
-import { useNavItems, isNavActive, centerInStrip } from "./navigation";
 
 // Route-level code splitting: ogni view è un chunk separato (Suspense gestisce loading).
 // I componenti usano named export → wrap con .then per estrarre il named come default.
@@ -75,7 +74,18 @@ function AppContent() {
 
   const { evaluateAfterSync } = useBadges();
 
-  const NAV_ITEMS = useNavItems();
+  const NAV_ITEMS = [
+    { path: "/",            label: t("nav.dashboard")  },
+    { path: "/training",    label: t("nav.training")   },
+    { path: "/activities",  label: t("nav.activities") },
+    { path: "/statistics",  label: t("nav.statistics") },
+    { path: "/runner-dna",  label: t("nav.runnerDna")  },
+    { path: "/ranking",     label: t("nav.ranking")    },
+    { path: "/badges",      label: t("nav.badges")     },
+    { path: "/gamification-v1", label: "GAMI V1" },
+    { path: "/race-lab",    label: "BANCO DI PROVA" },
+    { path: "/profile",     label: t("nav.profile")    },
+  ];
 
   // Handle Strava OAuth callback: exchange code and sync
   useEffect(() => {
@@ -103,29 +113,13 @@ function AppContent() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /*
-   * La voce attiva deve essere sempre in vista. Sulla striscia orizzontale di
-   * telefono e tablet stare su /ranking e vedere solo DASHBOARD · TRAINING ·
-   * ATTIVITÀ vuol dire non sapere dove si è.
-   */
-  const navStripRef = useRef<HTMLElement | null>(null);
-  const activeNavRef = useRef<HTMLButtonElement | null>(null);
-  useEffect(() => {
-    centerInStrip(navStripRef.current, activeNavRef.current);
-  }, [location.pathname]);
+  // Deriva la view attiva dal primo segmento del path
+  const activeSegment = location.pathname.split("/")[1] || "dashboard";
 
-  // la sfumatura sul bordo compare solo se la striscia trabocca davvero:
-  // su uno schermo largo abbastanza non deve sbiadire l'ultima voce
-  const [navOverflows, setNavOverflows] = useState(false);
-  useEffect(() => {
-    const el = navStripRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const check = () => setNavOverflows(el.scrollWidth > el.clientWidth + 2);
-    const ro = new ResizeObserver(check);
-    ro.observe(el);
-    check();
-    return () => ro.disconnect();
-  }, []);
+  const isNavActive = (path: string) => {
+    const segment = path === "/" ? "dashboard" : path.slice(1);
+    return activeSegment === segment;
+  };
 
   return (
     <>
@@ -145,23 +139,18 @@ function AppContent() {
             backgroundColor: "var(--app-bg-alt)",
           }}
         >
-          <div className="flex items-center gap-4 md:gap-8 min-w-0 flex-1 pl-12 lg:pl-0">
-            {/* il nome del prodotto sta già nella sidebar, accanto al logo: in
-                testata era un doppione da 110px che spingeva fuori la nav */}
-            <nav
-              ref={navStripRef}
-              className={`flex items-center gap-3 md:gap-4 overflow-x-auto whitespace-nowrap scrollbar-hide ${navOverflows ? "[mask-image:linear-gradient(to_right,#000_calc(100%-40px),transparent)] pr-8" : ""}`}
-              aria-label="Navigazione principale"
-            >
+          <div className="flex items-center gap-4 md:gap-8 min-w-0 flex-1 pl-12 md:pl-0">
+            <div className="hidden md:flex items-center gap-2 shrink-0">
+              <span className="text-xl font-black italic tracking-tighter" style={{ color: "var(--app-accent)" }}>METIC LAB</span>
+            </div>
+            <nav className="flex items-center gap-3 md:gap-5 overflow-x-auto whitespace-nowrap scrollbar-hide" aria-label="Navigazione principale">
               {NAV_ITEMS.map((item) => {
-                const active = isNavActive(location.pathname, item.path);
+                const active = isNavActive(item.path);
                 return (
                   <button
                     key={item.path}
-                    ref={active ? activeNavRef : undefined}
-                    aria-current={active ? "page" : undefined}
                     onClick={() => navigate(item.path)}
-                    className="text-[10px] font-black tracking-[0.16em] transition-colors py-3 px-1 min-h-[44px] flex items-center"
+                    className="text-[10px] font-black tracking-[0.2em] transition-colors py-3 px-1 min-h-[44px] flex items-center"
                     style={{ color: active ? "var(--app-accent)" : "var(--app-text-dim)" }}
                     onMouseEnter={(e) => { if (!active) e.currentTarget.style.color = "var(--app-text)"; }}
                     onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = "var(--app-text-dim)"; }}
@@ -179,11 +168,12 @@ function AppContent() {
 
             <div className="flex items-center gap-4">
               <div
-                className="w-8 h-8 rounded-full bg-surface-2 border border-line-strong flex items-center justify-center shrink-0"
+                className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 border flex items-center justify-center shrink-0"
+                style={{ borderColor: "var(--app-border-strong)" }}
                 title={profileName ?? "Metic Lab"}
                 aria-label={profileName ? `Profilo ${profileName}` : "Profilo utente"}
               >
-                <span className="text-[11px] font-black text-brand select-none">{initials}</span>
+                <span className="text-[10px] font-black text-white select-none">{initials}</span>
               </div>
             </div>
           </div>

@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, X, Target } from "lucide-react";
 import type { FieldTestDivergenceResponse } from "../../../types/api";
 import { getFieldTestDivergence } from "../../../api";
-import { BRAND } from "../../../theme/tokens";
-import { Button } from "../../ui/Button";
 
 /**
  * FieldTestRecalibrationBanner — top dashboard banner.
@@ -37,21 +35,21 @@ export function FieldTestRecalibrationBanner() {
   // Color/intensity per reason
   const palette =
     data.reason === "no_test"
-      ? { color: BRAND, bg: "rgba(192,255,0,0.08)", border: "rgba(192,255,0,0.3)" }
+      ? { color: "#C0FF00", bg: "rgba(192,255,0,0.08)", border: "rgba(192,255,0,0.3)" }
       : data.reason === "stale"
       ? { color: "#F59E0B", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.3)" }
       : { color: "#60A5FA", bg: "rgba(96,165,250,0.08)", border: "rgba(96,165,250,0.3)" };
 
   return (
     <div
-      className="rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] p-4 mb-4 flex items-start gap-3"
+      className="rounded-[16px] backdrop-blur-2xl shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] p-4 mb-4 flex items-start gap-3"
       style={{
         background: `linear-gradient(to right, ${palette.bg}, rgba(0,0,0,0.4))`,
         border: `1px solid ${palette.border}`,
       }}
     >
       <div
-        className="rounded-xl p-2 shrink-0"
+        className="rounded-[12px] p-2 shrink-0"
         style={{ background: `${palette.color}22` }}
       >
         {data.reason === "no_test" ? (
@@ -78,7 +76,7 @@ export function FieldTestRecalibrationBanner() {
             {data.evidence.slice(0, 3).map((ev, i) => (
               <div
                 key={i}
-                className="text-[11px] font-mono px-2 py-1 rounded-lg bg-white/[0.05] border border-white/[0.08] text-[#A0A0A0]"
+                className="text-[10px] font-mono px-2 py-1 rounded-[8px] bg-white/[0.05] border border-white/[0.08] text-[#A0A0A0]"
               >
                 {new Date(ev.date).toLocaleDateString("it", { day: "2-digit", month: "short" })}
                 {" · "}
@@ -95,13 +93,13 @@ export function FieldTestRecalibrationBanner() {
                     {ev.expected_t_pace && (
                       <>
                         {" vs T "}
-                        <span className="text-gray-600">{ev.expected_t_pace}</span>
+                        <span className="text-[#666]">{ev.expected_t_pace}</span>
                       </>
                     )}
                     {ev.expected_i_pace && !ev.interval_detail && (
                       <>
                         {" vs I "}
-                        <span className="text-gray-600">{ev.expected_i_pace}</span>
+                        <span className="text-[#666]">{ev.expected_i_pace}</span>
                       </>
                     )}
                   </>
@@ -113,12 +111,16 @@ export function FieldTestRecalibrationBanner() {
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
-        <Button variant="primary" size="sm" onClick={scrollToFieldTest}>
+        <button
+          onClick={scrollToFieldTest}
+          className="px-3 py-2 rounded-[12px] text-[10px] font-black tracking-widest text-black transition-all hover:opacity-90"
+          style={{ backgroundColor: palette.color }}
+        >
           REGISTRA TEST
-        </Button>
+        </button>
         <button
           onClick={() => setDismissed(true)}
-          className="text-gray-600 hover:text-white transition-colors p-1"
+          className="text-[#666] hover:text-white transition-colors p-1"
           title="Nascondi"
         >
           <X size={14} />

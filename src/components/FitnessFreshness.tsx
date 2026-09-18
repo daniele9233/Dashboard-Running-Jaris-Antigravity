@@ -16,7 +16,6 @@ import {
 import type { FitnessFreshnessPoint, CurrentFF } from "../types/api";
 import { recalculateFitnessFreshness } from "../api";
 import { ChartExpandButton, ChartFullscreenModal } from "./statistics/ChartFullscreenModal";
-import { BRAND } from "../theme/tokens";
 
 interface FitnessFreshnessProps {
   fitnessFreshness: FitnessFreshnessPoint[];
@@ -29,7 +28,7 @@ const CLR_ATL  = "#F43F5E"; // red    â€” Affaticamento (same as PMC)
 const CLR_TSB  = "#D4FF00"; // lime   â€” Forma (same as PMC NEON)
 
 function tsbStatusColor(tsb: number): string {
-  if (tsb > 10)  return BRAND;  // lime  â€” Fresco
+  if (tsb > 10)  return "#C0FF00";  // lime  â€” Fresco
   if (tsb > -5)  return "#14B8A6";  // teal  â€” Neutro
   if (tsb > -20) return "#F59E0B";  // amber â€” Affaticato
   return "#F43F5E";                  // red   â€” Sovrallenamento
@@ -98,17 +97,17 @@ function InfoTooltip({ title, lines }: { title: string; lines: string[] }) {
         onMouseLeave={() => setOpen(false)}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
-        className="text-gray-600 hover:text-[#A0A0A0] transition-colors focus:outline-none"
+        className="text-[#555] hover:text-[#A0A0A0] transition-colors focus:outline-none"
       >
         <Info size={13} />
       </button>
       {open && (
         <div className="absolute z-50 bottom-full right-0 mb-2 w-64 bg-[#111] border border-white/10 rounded-2xl p-4 shadow-2xl pointer-events-none">
-          <div className="text-brand text-[11px] font-black tracking-widest mb-2">{title}</div>
+          <div className="text-[#C0FF00] text-[10px] font-black tracking-widest mb-2">{title}</div>
           <ul className="space-y-1.5">
             {lines.map((l, i) => (
-              <li key={i} className="text-[#A0A0A0] text-[11px] leading-relaxed flex gap-1.5">
-                <span className="text-gray-600 shrink-0">-</span>
+              <li key={i} className="text-[#A0A0A0] text-[10px] leading-relaxed flex gap-1.5">
+                <span className="text-[#555] shrink-0">-</span>
                 {l}
               </li>
             ))}
@@ -191,7 +190,7 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
       </div>
       <div className="flex items-center gap-1.5">
         <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-        <span className="text-[10px] font-bold uppercase tracking-widest leading-tight" style={{ color }}>
+        <span className="text-[9px] font-bold uppercase tracking-widest leading-tight" style={{ color }}>
           {label}
         </span>
       </div>
@@ -206,7 +205,7 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
       {/* Status badge per TSB */}
       {showSign && (
         <div
-          className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md self-start"
+          className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md self-start"
           style={{ color, backgroundColor: color + "18" }}
         >
           {statusLabel}
@@ -239,7 +238,7 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
             dataKey="date"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "#878787", fontSize: isExpanded ? 12 : 9 }}
+            tick={{ fill: "#475569", fontSize: isExpanded ? 12 : 9 }}
             dy={6}
             ticks={monthTicks}
             tickFormatter={tickFormatter}
@@ -248,7 +247,7 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
           <YAxis
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "#878787", fontSize: isExpanded ? 12 : 9 }}
+            tick={{ fill: "#475569", fontSize: isExpanded ? 12 : 9 }}
             dx={-4}
             width={isExpanded ? 40 : 28}
             ticks={[0, 20, 40, 60, 80]}
@@ -299,7 +298,8 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 group"
+      className="relative overflow-hidden rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 group"
+      style={{ borderLeft: `3px solid ${CLR_TSB}` }}
     >
       {/* â”€â”€ Header â”€â”€ */}
       <div className="flex items-center justify-between mb-5">
@@ -316,7 +316,7 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
           <button
             onClick={handleRecalculate}
             disabled={recalcLoading}
-            className="flex items-center gap-1.5 text-[11px] font-bold text-text-muted hover:text-white border border-white/10 hover:border-white/30 rounded-lg px-3 py-1.5 transition-all disabled:opacity-50"
+            className="flex items-center gap-1.5 text-[10px] font-bold text-text-muted hover:text-white border border-white/10 hover:border-white/30 rounded-lg px-3 py-1.5 transition-all disabled:opacity-50"
           >
             <RefreshCw className={`w-3 h-3 ${recalcLoading ? "animate-spin" : ""}`} />
             Ricalcola
@@ -365,7 +365,7 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
           </div>
 
           {/* â”€â”€ Legenda â”€â”€ */}
-          <div className="flex gap-5 mt-3 mb-4 text-[11px] font-semibold tracking-wider">
+          <div className="flex gap-5 mt-3 mb-4 text-[9px] font-semibold tracking-wider">
             {[
               { label: "Condizione fisica", color: CLR_CTL, width: 2.5 },
               { label: "Affaticamento",     color: CLR_ATL, width: 1.5 },
@@ -390,7 +390,7 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
           <button
             onClick={handleRecalculate}
             disabled={recalcLoading}
-            className="text-xs font-bold text-brand border border-brand/30 hover:border-brand rounded-lg px-4 py-2 transition-all"
+            className="text-xs font-bold text-[#C0FF00] border border-[#C0FF00]/30 hover:border-[#C0FF00] rounded-lg px-4 py-2 transition-all"
           >
             {recalcLoading ? "Calcolo in corso..." : "Ricalcola ora"}
           </button>
@@ -405,21 +405,21 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
         details={
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-4 items-center">
             <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
-                <div className="text-[10px] text-gray-600 uppercase tracking-widest font-black">Condizione</div>
+              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+                <div className="text-[9px] text-[#555] uppercase tracking-widest font-black">Condizione</div>
                 <div className="text-xl font-black" style={{ color: CLR_CTL }}>{ctl.toFixed(1)}</div>
               </div>
-              <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
-                <div className="text-[10px] text-gray-600 uppercase tracking-widest font-black">Affaticamento</div>
+              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+                <div className="text-[9px] text-[#555] uppercase tracking-widest font-black">Affaticamento</div>
                 <div className="text-xl font-black" style={{ color: CLR_ATL }}>{atl.toFixed(1)}</div>
               </div>
-              <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
-                <div className="text-[10px] text-gray-600 uppercase tracking-widest font-black">Forma</div>
+              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+                <div className="text-[9px] text-[#555] uppercase tracking-widest font-black">Forma</div>
                 <div className="text-xl font-black" style={{ color: statusColor }}>{tsb >= 0 ? '+' : ''}{tsb.toFixed(1)}</div>
               </div>
             </div>
             <div className="text-xs text-[#94A3B8] flex flex-col gap-2">
-              <div className="flex flex-wrap gap-5 text-[11px] font-semibold tracking-wider">
+              <div className="flex flex-wrap gap-5 text-[9px] font-semibold tracking-wider">
                 <span className="flex items-center gap-1.5" style={{ color: CLR_CTL }}><span className="w-5 h-0.5 rounded-full" style={{ backgroundColor: CLR_CTL }} />Condizione fisica</span>
                 <span className="flex items-center gap-1.5" style={{ color: CLR_ATL }}><span className="w-5 h-0.5 rounded-full" style={{ backgroundColor: CLR_ATL }} />Affaticamento</span>
                 <span className="flex items-center gap-1.5" style={{ color: '#F59E0B' }}><span className="w-5 h-0.5 rounded-full bg-[#F59E0B]" />Forma fisica</span>

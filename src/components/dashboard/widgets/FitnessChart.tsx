@@ -99,7 +99,7 @@ export function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }
   const hov = hoverIdx !== null ? data[hoverIdx] : null;
 
   return (
-    <div className="h-full rounded-3xl p-6 flex flex-col overflow-hidden border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+    <div className="h-full rounded-[24px] p-6 flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
       {/* Header */}
       <div className="flex items-start justify-between mb-4 flex-wrap gap-4">
         <div>
@@ -112,7 +112,7 @@ export function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }
               key={k}
               onClick={() => { setRange(k); setHoverIdx(null); }}
               className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase transition-colors ${
-                range === k ? "bg-brand text-brand-ink" : "text-[#A0A0A0] hover:text-white"
+                range === k ? "bg-[#F97316] text-white" : "text-[#A0A0A0] hover:text-white"
               }`}
             >
               {FF_TAB_LABELS[k]}
@@ -132,13 +132,13 @@ export function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }
             </span>
           )}
         </div>
-        <p className="text-gray-600 text-[11px] tracking-wider">{rangeLabel}</p>
+        <p className="text-[#666] text-[10px] tracking-wider">{rangeLabel}</p>
       </div>
 
       {/* Chart */}
       <div className="relative flex-1 min-h-[260px]">
         {data.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-xs font-black tracking-widest uppercase">
+          <div className="absolute inset-0 flex items-center justify-center text-[#666] text-xs font-black tracking-widest uppercase">
             nessun dato in questo periodo
           </div>
         ) : (
@@ -243,7 +243,7 @@ export function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }
 
         {/* Hover date overlay (HTML, not scaled) */}
         {hov && (
-          <div className="absolute top-0 right-0 bg-[#111] border border-white/[0.08] rounded-xl px-3 py-1.5 pointer-events-none">
+          <div className="absolute top-0 right-0 bg-[#111] border border-white/[0.08] rounded-[12px] px-3 py-1.5 pointer-events-none">
             <div className="text-[10px] tracking-widest uppercase text-[#A0A0A0] font-black">
               {new Date(hov.date).toLocaleDateString("it", { day: "numeric", month: "short", year: "numeric" })}
             </div>

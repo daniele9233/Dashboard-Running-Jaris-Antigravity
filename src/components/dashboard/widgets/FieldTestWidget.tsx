@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Target, Trash2, ChevronDown, Plus } from "lucide-react";
 import type { FieldTest } from "../../../types/api";
 import { postFieldTest, getFieldTestLatest, deleteFieldTest } from "../../../api";
-import { Button } from "../../ui/Button";
 
 /**
  * FieldTestWidget — Test sul campo pace-only per benchmark VDOT.
@@ -98,17 +97,17 @@ export function FieldTestWidget() {
   };
 
   return (
-    <div className="h-full rounded-3xl p-6 flex flex-col border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+    <div className="h-full rounded-[24px] p-6 flex flex-col backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Target className="text-brand" size={14} />
-          <span className="text-[#A0A0A0] text-[11px] font-black tracking-widest">FIELD TEST</span>
+          <Target className="text-[#C0FF00]" size={14} />
+          <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest">FIELD TEST</span>
         </div>
         {latest && !showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="text-gray-600 hover:text-brand text-[11px] font-black tracking-wider transition-colors flex items-center gap-1"
+            className="text-[#666] hover:text-[#C0FF00] text-[10px] font-black tracking-wider transition-colors flex items-center gap-1"
           >
             <Plus size={11} />
             NUOVO
@@ -119,20 +118,24 @@ export function FieldTestWidget() {
       {/* Latest test display */}
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-gray-600 text-[11px] font-black tracking-widest">Caricamento...</div>
+          <div className="text-[#666] text-[10px] font-black tracking-widest">Caricamento...</div>
         </div>
       ) : !latest && !showForm ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3">
           <p className="text-[#A0A0A0] text-xs text-center leading-snug">
             Nessun field test registrato.
             <br />
-            <span className="text-gray-600 text-[11px]">
+            <span className="text-[#555] text-[10px]">
               Corri 3/5/6 km a massima intensità per benchmark VDOT pace-only.
             </span>
           </p>
-          <Button variant="primary" size="sm" icon={Plus} onClick={() => setShowForm(true)}>
+          <button
+            onClick={() => setShowForm(true)}
+            className="text-xs font-black text-[#C0FF00] border border-[#C0FF00]/30 hover:border-[#C0FF00] rounded-[12px] px-4 py-2 transition-all"
+          >
+            <Plus size={12} className="inline mr-1" />
             REGISTRA TEST
-          </Button>
+          </button>
         </div>
       ) : !showForm && latest ? (
         <>
@@ -144,30 +147,30 @@ export function FieldTestWidget() {
               </span>
               <span className="text-[#A0A0A0] text-sm font-semibold">VDOT</span>
             </div>
-            <div className="text-gray-600 text-[10px] font-bold uppercase tracking-widest mb-4">
+            <div className="text-[#666] text-[10px] font-bold uppercase tracking-widest mb-4">
               Benchmark attivo (pace-only)
             </div>
 
             <div className="grid grid-cols-3 gap-2 mb-3">
-              <div className="rounded-xl bg-white/[0.025] border border-white/[0.06] p-3">
-                <div className="text-[10px] font-black tracking-widest uppercase text-gray-500">Distanza</div>
+              <div className="rounded-[12px] bg-white/[0.025] border border-white/[0.06] p-3">
+                <div className="text-[9px] font-black tracking-widest uppercase text-gray-500">Distanza</div>
                 <div className="text-white text-lg font-black mt-1">{latest.distance_km}K</div>
               </div>
-              <div className="rounded-xl bg-white/[0.025] border border-white/[0.06] p-3">
-                <div className="text-[10px] font-black tracking-widest uppercase text-gray-500">Tempo</div>
+              <div className="rounded-[12px] bg-white/[0.025] border border-white/[0.06] p-3">
+                <div className="text-[9px] font-black tracking-widest uppercase text-gray-500">Tempo</div>
                 <div className="text-white text-lg font-black font-mono mt-1">{fmtTime(latest.time_seconds)}</div>
               </div>
-              <div className="rounded-xl bg-white/[0.025] border border-white/[0.06] p-3">
-                <div className="text-[10px] font-black tracking-widest uppercase text-gray-500">Pace</div>
-                <div className="text-brand text-lg font-black font-mono mt-1">{fmtPace(latest.pace_sec_per_km)}</div>
+              <div className="rounded-[12px] bg-white/[0.025] border border-white/[0.06] p-3">
+                <div className="text-[9px] font-black tracking-widest uppercase text-gray-500">Pace</div>
+                <div className="text-[#C0FF00] text-lg font-black font-mono mt-1">{fmtPace(latest.pace_sec_per_km)}</div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between mt-auto text-gray-600 text-[11px] tracking-wider">
+            <div className="flex items-center justify-between mt-auto text-[#555] text-[9px] tracking-wider">
               <span>{daysAgo(latest.date)} giorni fa</span>
               <button
                 onClick={remove}
-                className="text-gray-600 hover:text-[#F43F5E] transition-colors flex items-center gap-1"
+                className="text-[#555] hover:text-[#F43F5E] transition-colors flex items-center gap-1"
               >
                 <Trash2 size={10} />
                 ELIMINA
@@ -189,9 +192,9 @@ export function FieldTestWidget() {
                   key={d}
                   type="button"
                   onClick={() => setDistance(d)}
-                  className={`py-2 rounded-xl text-sm font-black tracking-wider transition-all ${
+                  className={`py-2 rounded-[12px] text-sm font-black tracking-wider transition-all ${
                     distance === d
-                      ? "bg-brand text-black"
+                      ? "bg-[#C0FF00] text-black"
                       : "bg-white/[0.05] text-[#A0A0A0] border border-white/[0.08] hover:border-white/[0.2]"
                   }`}
                 >
@@ -214,7 +217,7 @@ export function FieldTestWidget() {
                 value={timeMin}
                 onChange={(e) => setTimeMin(e.target.value)}
                 placeholder="20"
-                className="w-20 bg-white/[0.05] border border-white/[0.1] rounded-xl px-3 py-2 text-white text-center text-sm font-mono focus:outline-none focus:border-brand/50"
+                className="w-20 bg-white/[0.05] border border-white/[0.1] rounded-[12px] px-3 py-2 text-white text-center text-sm font-mono focus:outline-none focus:border-[#C0FF00]/50"
               />
               <span className="text-white font-bold">:</span>
               <input
@@ -224,13 +227,13 @@ export function FieldTestWidget() {
                 value={timeSec}
                 onChange={(e) => setTimeSec(e.target.value)}
                 placeholder="50"
-                className="w-20 bg-white/[0.05] border border-white/[0.1] rounded-xl px-3 py-2 text-white text-center text-sm font-mono focus:outline-none focus:border-brand/50"
+                className="w-20 bg-white/[0.05] border border-white/[0.1] rounded-[12px] px-3 py-2 text-white text-center text-sm font-mono focus:outline-none focus:border-[#C0FF00]/50"
               />
             </div>
           </div>
 
           {error && (
-            <div className="text-[#F43F5E] text-[11px] font-bold">{error}</div>
+            <div className="text-[#F43F5E] text-[10px] font-bold">{error}</div>
           )}
 
           <div className="flex gap-2 mt-auto">
@@ -239,14 +242,14 @@ export function FieldTestWidget() {
                 setShowForm(false);
                 setError(null);
               }}
-              className="flex-1 py-2 rounded-xl text-xs font-black text-[#A0A0A0] border border-white/[0.1] hover:border-white/[0.3] transition-all"
+              className="flex-1 py-2 rounded-[12px] text-xs font-black text-[#A0A0A0] border border-white/[0.1] hover:border-white/[0.3] transition-all"
             >
               ANNULLA
             </button>
             <button
               onClick={submit}
               disabled={saving}
-              className="flex-1 py-2 rounded-xl text-xs font-black text-black bg-brand hover:bg-[#D0FF40] disabled:opacity-50 transition-all"
+              className="flex-1 py-2 rounded-[12px] text-xs font-black text-black bg-[#C0FF00] hover:bg-[#D0FF40] disabled:opacity-50 transition-all"
             >
               {saving ? "SALVO..." : "SALVA"}
             </button>

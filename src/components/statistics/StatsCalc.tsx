@@ -18,7 +18,7 @@ export function StatsCalc() {
         {/* Left Column (Charts & Portfolio) */}
         <div className="xl:col-span-2 space-y-6">
           {/* GRAFICO DEL FUTURO */}
-          <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
             <div className="flex items-center gap-2 mb-1">
               <TrendingUp className="w-5 h-5 text-[#3B82F6]" />
               <span className="text-lg font-bold text-white">Grafico del Futuro</span>
@@ -28,12 +28,12 @@ export function StatsCalc() {
             <div className="h-80 w-full relative">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={futureData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
-                  <XAxis dataKey="date" stroke="#878787" fontSize={10} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="date" stroke="#64748B" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis hide domain={[0, 25]} />
                   <Tooltip contentStyle={{ backgroundColor: '#121212', borderColor: '#2A2A2A', color: '#E2E8F0', borderRadius: '12px' }} />
                   <ReferenceLine x="Oggi" stroke="#10B981" strokeDasharray="3 3" />
                   <Line type="monotone" dataKey="condizione" stroke="#EAB308" strokeWidth={3} dot={false} />
-                  <Line type="monotone" dataKey="affaticamento" stroke="#878787" strokeWidth={3} dot={false} />
+                  <Line type="monotone" dataKey="affaticamento" stroke="#64748B" strokeWidth={3} dot={false} />
                   <Line type="monotone" dataKey="forma" stroke="#10B981" strokeWidth={3} dot={(props: any) => {
                     if (props.payload.date === '1/4') {
                       return <circle key={props.key} cx={props.cx} cy={props.cy} r={6} fill="#121212" stroke="#10B981" strokeWidth={3} />;
@@ -42,7 +42,7 @@ export function StatsCalc() {
                   }} />
                 </LineChart>
               </ResponsiveContainer>
-              <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 bg-[#EAB308]/20 text-[#EAB308] px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1">
+              <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 bg-[#EAB308]/20 text-[#EAB308] px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1">
                 <Star className="w-3 h-3" /> PICCO 1 Apr
               </div>
             </div>
@@ -53,7 +53,7 @@ export function StatsCalc() {
               <span className="flex items-center gap-2 text-gray-400"><div className="w-3 h-1 bg-[#10B981] rounded-full"></div> Forma</span>
             </div>
 
-            <div className="mt-6 rounded-2xl p-4 border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+            <div className="mt-6 rounded-2xl p-4 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
               <div className="flex items-center gap-2 mb-2">
                 <Zap className="w-4 h-4 text-[#F43F5E]" />
                 <span className="font-bold text-white">Il tuo corpo sta caricando energia!</span>
@@ -65,7 +65,7 @@ export function StatsCalc() {
           </div>
 
           {/* PORTAFOGLIO BIOLOGICO */}
-          <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
             <div className="flex items-center gap-2 mb-6">
               <Briefcase className="w-5 h-5 text-[#8B5CF6]" />
               <div>
@@ -118,7 +118,7 @@ export function StatsCalc() {
               </div>
             </div>
 
-            <div className="mt-6 rounded-2xl p-4 border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 flex gap-3">
+            <div className="mt-6 rounded-2xl p-4 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 flex gap-3">
               <BarChart2 className="w-5 h-5 text-[#3B82F6] shrink-0" />
               <p className="text-sm text-gray-400">
                 8 allenamenti investiti. Il tuo portafoglio è sbilanciato verso il settore metabolico. Stai lavorando bene sulla soglia e l'efficienza!
@@ -130,7 +130,7 @@ export function StatsCalc() {
         {/* Right Column (Explanation & Cash Out) */}
         <div className="space-y-6">
           {/* INVEST & CASH OUT */}
-          <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
             <div className="flex items-center gap-2 mb-1">
               <Star className="w-5 h-5 text-[#EAB308]" />
               <div>
@@ -162,7 +162,7 @@ export function StatsCalc() {
           </div>
 
           {/* SUPERCOMPENSAZIONE EXPLANATION */}
-          <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 rounded-full bg-[#10B981]/20 flex items-center justify-center">
                 <FlaskConical className="w-4 h-4 text-[#10B981]" />
@@ -178,7 +178,7 @@ export function StatsCalc() {
 
             {/* Types of stress */}
             <div className="space-y-3">
-              <div className="rounded-2xl p-4 border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 flex gap-4">
+              <div className="rounded-2xl p-4 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 flex gap-4">
                 <Zap className="w-6 h-6 text-[#EAB308] shrink-0" />
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -188,7 +188,7 @@ export function StatsCalc() {
                   <p className="text-xs text-gray-400">Sprint, salite, velocità. Il sistema nervoso si adatta rapidamente.</p>
                 </div>
               </div>
-              <div className="rounded-2xl p-4 border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 flex gap-4">
+              <div className="rounded-2xl p-4 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 flex gap-4">
                 <Flame className="w-6 h-6 text-[#F43F5E] shrink-0" />
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -198,7 +198,7 @@ export function StatsCalc() {
                   <p className="text-xs text-gray-400">Soglia, ripetute, fartlek. Enzimi e mitocondri diventano più efficienti.</p>
                 </div>
               </div>
-              <div className="rounded-2xl p-4 border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 flex gap-4">
+              <div className="rounded-2xl p-4 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 flex gap-4">
                 <Dna className="w-6 h-6 text-[#8B5CF6] shrink-0" />
                 <div>
                   <div className="flex items-center gap-2 mb-1">

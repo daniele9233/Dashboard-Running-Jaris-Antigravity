@@ -45,7 +45,7 @@ export function StatsProgress() {
         {/* Left Column */}
         <div className="flex flex-col gap-6">
           {/* VO2 MAX */}
-          <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex-1 flex flex-col justify-center">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex-1 flex flex-col justify-center">
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">VO2 Max Stimato</span>
           </div>
@@ -72,7 +72,7 @@ export function StatsProgress() {
         </div>
 
         {/* OBIETTIVO */}
-        <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex-1 flex flex-col justify-center">
+        <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex-1 flex flex-col justify-center">
           <div className="flex items-center gap-2 mb-6">
             <Target className="w-4 h-4 text-[#10B981]" />
             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Obiettivo Mezza Maratona</span>
@@ -101,7 +101,7 @@ export function StatsProgress() {
         </div>
 
       {/* SOGLIA ANAEROBICA */}
-      <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 xl:col-span-2 flex flex-col">
+      <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 xl:col-span-2 flex flex-col">
         <div className="flex items-center gap-2 mb-6">
           <Activity className="w-4 h-4 text-[#10B981]" />
           <span className="text-sm font-bold text-white uppercase tracking-wider">Soglia Anaerobica</span>
@@ -116,13 +116,13 @@ export function StatsProgress() {
               <Heart className="w-6 h-6 text-[#F43F5E] mx-auto mb-2" />
               <div className="text-2xl font-bold text-white">{currentThreshold.bpm}</div>
               <div className="text-xs text-gray-500">bpm</div>
-              <div className="text-[11px] text-[#F43F5E] mt-1">Frequenza cardiaca</div>
+              <div className="text-[10px] text-[#F43F5E] mt-1">Frequenza cardiaca</div>
             </div>
             <div className="text-center">
               <Activity className="w-6 h-6 text-[#3B82F6] mx-auto mb-2" />
               <div className="text-2xl font-bold text-white">{currentThreshold.pace}</div>
               <div className="text-xs text-gray-500">/km</div>
-              <div className="text-[11px] text-[#3B82F6] mt-1">Passo</div>
+              <div className="text-[10px] text-[#3B82F6] mt-1">Passo</div>
             </div>
           </div>
         </div>
@@ -151,8 +151,8 @@ export function StatsProgress() {
           {sogliaData.map((d, i) => (
             <div key={i} className="text-center">
               <div className="text-xs font-bold text-white">{d.label}</div>
-              <div className="text-[11px] text-gray-500">{d.bpm} bpm</div>
-              <div className="text-[11px] text-gray-400 mt-1">{d.date}</div>
+              <div className="text-[10px] text-gray-500">{d.bpm} bpm</div>
+              <div className="text-[10px] text-gray-400 mt-1">{d.date}</div>
               <div className={`text-xs mt-1 ${d.trend === 'up' ? 'text-[#10B981]' : 'text-[#EAB308]'}`}>
                 {d.trend === 'up' ? '↑' : '↓'}
               </div>
@@ -169,7 +169,7 @@ export function StatsProgress() {
       {/* Bottom Section */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
       {/* ANDAMENTO VO2MAX */}
-      <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex flex-col">
+      <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex flex-col">
         <div className="flex items-center gap-2 mb-2">
           <div className="w-3 h-3 rounded-full bg-[#F43F5E]"></div>
           <span className="text-sm font-bold text-white uppercase tracking-wider">Andamento VO2Max</span>
@@ -188,7 +188,7 @@ export function StatsProgress() {
       </div>
 
       {/* ANDAMENTO PACES */}
-      <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex flex-col">
+      <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex flex-col">
         <div className="flex items-center gap-2 mb-1">
           <TrendingUp className="w-4 h-4 text-[#3B82F6]" />
           <span className="text-sm font-bold text-white uppercase tracking-wider">Andamento Paces</span>
@@ -215,7 +215,7 @@ export function StatsProgress() {
       </div>
 
       {/* CADENZA */}
-      <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex flex-col">
+      <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex flex-col">
         <div className="flex items-center gap-2 mb-1">
           <div className="flex gap-0.5">
             <div className="w-1.5 h-3 bg-[#3B82F6] rounded-full"></div>

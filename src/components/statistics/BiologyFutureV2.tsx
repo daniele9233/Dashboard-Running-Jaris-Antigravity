@@ -278,7 +278,7 @@ function Panel({
 }) {
   return (
     <section
-      className={`rounded-lg border p-5 sm:p-6 ${className}`}
+      className={`rounded-[8px] border p-5 sm:p-6 ${className}`}
       style={{
         background: PANEL,
         borderColor: BORDER,
@@ -327,7 +327,7 @@ function SmallStat({
   color?: string;
 }) {
   return (
-    <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
       <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">{label}</div>
       <div className="mt-3 break-words text-xl font-black leading-tight text-white sm:text-2xl" style={{ color }}>
         {value}
@@ -340,7 +340,7 @@ function SmallStat({
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-white/10 bg-[#101010] p-3 shadow-2xl">
+    <div className="rounded-[8px] border border-white/10 bg-[#101010] p-3 shadow-2xl">
       <div className="mb-2 text-[10px] font-black uppercase tracking-widest" style={{ color: ACCENT }}>
         {label}
       </div>
@@ -378,7 +378,7 @@ export function BiologyFutureV2({
   vdot: number | null;
 }) {
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <DetrainingPredictor profile={profile} runs={allRuns} vdot={vdot} />
     </div>
   );
@@ -506,18 +506,18 @@ function TimelineEvent({
           transform: active ? 'scale(1.4)' : 'scale(1)',
         }}
       />
-      <div className={`text-[11px] font-black tracking-widest ${active ? 'text-white' : 'text-gray-600'}`}>D{day}</div>
-      <div className={`text-[11px] mt-0.5 ${active ? 'text-gray-400' : 'text-gray-600'}`}>{label}</div>
+      <div className={`text-[10px] font-black tracking-widest ${active ? 'text-white' : 'text-gray-600'}`}>D{day}</div>
+      <div className={`text-[9px] mt-0.5 ${active ? 'text-gray-400' : 'text-gray-700'}`}>{label}</div>
     </button>
   );
 }
 
 function SnapshotStat({ label, value, color, hint }: { label: string; value: string; color: string; hint?: string }) {
   return (
-    <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
       <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">{label}</div>
       <div className="mt-2 text-2xl font-black leading-none" style={{ color }}>{value}</div>
-      {hint && <div className="mt-2 text-[11px] font-semibold leading-relaxed text-gray-600">{hint}</div>}
+      {hint && <div className="mt-2 text-[10px] font-semibold leading-relaxed text-gray-600">{hint}</div>}
     </div>
   );
 }
@@ -601,7 +601,7 @@ function DetrainingPredictor({
       <Panel accent={ACCENT}>
         <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-brand/25 bg-brand/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: ACCENT }}>
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#C0FF00]/25 bg-[#C0FF00]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: ACCENT }}>
               <Dna className="w-3.5 h-3.5" />
               PREDITTORE DETRAINING — Coyle / Mujika / Bosquet
             </div>
@@ -645,7 +645,7 @@ function DetrainingPredictor({
               max={60}
               value={day}
               onChange={(e) => setDay(Number(e.target.value))}
-              className="w-full accent-brand"
+              className="w-full accent-[#C0FF00]"
             />
             <div className="flex justify-between gap-2 mt-3">
               {TIMELINE_EVENTS.map((ev) => (
@@ -720,7 +720,7 @@ function DetrainingPredictor({
             </div>
           </div>
         </div>
-        <div className="mt-4 rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+        <div className="mt-4 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Differenziale (fermo − taper)</div>
           <div className="mt-2 text-sm font-semibold text-gray-300 leading-relaxed">
             VO2 <span className="font-black text-white">{((point.vo2Pct - pointFull.vo2Pct) * 100).toFixed(1)} pp</span> in piu con il fermo.
@@ -794,18 +794,18 @@ function DetrainingPredictor({
           {whatIfRows.map((r, i) => {
             const fullProj = projectRaceTime(base10kSec, summaryFull.curve, r.day);
             return (
-              <div key={r.day} className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center">
+              <div key={r.day} className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center">
                 <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Stop {r.day} gg</div>
                 <div className="mt-2 text-xl font-black text-white">{r.label}</div>
                 <div
-                  className="mt-0.5 text-[11px] font-bold"
+                  className="mt-0.5 text-[10px] font-bold"
                   style={{ color: r.deltaSec < -2 ? PRED_GREEN : r.deltaSec > 60 ? PRED_RED : r.deltaSec > 30 ? ORANGE : '#666' }}
                 >
                   taper {r.deltaSec < -2 ? '↓' : '+'}{Math.abs(Math.round(r.deltaSec))}s
                 </div>
                 <div className="mt-2 pt-2 border-t border-white/10">
                   <div className="text-base font-black" style={{ color: '#FCA5A5' }}>{fullProj.label}</div>
-                  <div className="text-[11px] font-bold" style={{ color: PRED_RED }}>fermo +{Math.round(fullProj.deltaSec)}s</div>
+                  <div className="text-[10px] font-bold" style={{ color: PRED_RED }}>fermo +{Math.round(fullProj.deltaSec)}s</div>
                 </div>
               </div>
             );
@@ -838,7 +838,7 @@ function DetrainingPredictor({
                   <td key={r.day} className="py-2 px-3">
                     <div className="text-lg font-black text-white">{r.paceLabel}</div>
                     <div
-                      className="text-[11px] font-bold"
+                      className="text-[10px] font-bold"
                       style={{ color: r.deltaPct < -0.05 ? PRED_GREEN : r.deltaPct > 5 ? PRED_RED : '#666' }}
                     >
                       {r.deltaPct < -0.05 ? '↓' : r.deltaPct > 0 ? '+' : ''}{Math.abs(r.deltaPct).toFixed(1)}%
@@ -862,7 +862,7 @@ function DetrainingPredictor({
           restano dormienti nelle fibre. Quando riprendi, accelerano la sintesi proteica.
           Murach 2020 e Seaborne 2018 (memoria epigenetica) confermano: chi ha corso anni recupera in modo non-lineare e piu rapido.
         </p>
-        <div className="mt-5 rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+        <div className="mt-5 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Bonus muscle memory</div>
           <div className="mt-2 text-3xl font-black" style={{ color: PURPLE }}>+{memoryBonusCapped}%</div>
           <p className="mt-1 text-[11px] font-semibold text-gray-600 leading-relaxed">

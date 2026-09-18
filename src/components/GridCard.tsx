@@ -37,7 +37,7 @@ export function GridCard({
           role="button"
           tabIndex={0}
           aria-label="Trascina per spostare widget"
-          className="drag-handle absolute top-2 left-2 z-30 p-2 rounded-xl opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-white/10 focus-visible:opacity-100 focus-visible:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 transition-opacity cursor-move"
+          className="drag-handle absolute top-2 left-2 z-30 p-2 rounded-xl opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-white/10 focus-visible:opacity-100 focus-visible:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C0FF00]/60 transition-opacity cursor-move"
           title="Trascina per spostare"
         >
           <GripVertical size={14} className="text-white" />

@@ -15,11 +15,4 @@ export const prefersReducedMotion = (): boolean =>
   typeof window !== "undefined" &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/*
- * Le entrate GSAP delle pagine (es. `.rl-rise` del Banco di prova) non passano
- * dal CSS, quindi la regola globale di index.css non le ferma. Qui sì: con la
- * preferenza attiva ogni tween arriva subito allo stato finale.
- */
-if (prefersReducedMotion()) gsap.globalTimeline.timeScale(1000);
-
 export { gsap, useGSAP, SplitText };

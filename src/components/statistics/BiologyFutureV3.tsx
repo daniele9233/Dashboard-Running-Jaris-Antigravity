@@ -58,7 +58,7 @@ function Panel({ icon: Icon, title, hint, children }: {
       <div className="flex items-baseline gap-2 px-5 pt-4 pb-3">
         <Icon className="w-4 h-4 self-center" style={{ color: LIME }} />
         <h3 className="text-[11px] font-black tracking-[0.2em] uppercase text-white">{title}</h3>
-        {hint && <span className="ml-auto text-[11px] truncate" style={{ color: CHART_TEXT.faint }}>{hint}</span>}
+        {hint && <span className="ml-auto text-[10px] truncate" style={{ color: CHART_TEXT.faint }}>{hint}</span>}
       </div>
       <div className="px-5 pb-5">{children}</div>
     </section>
@@ -276,7 +276,7 @@ export function BiologyFutureV3({ runs, profile }: { runs: Run[]; profile: Profi
             </div>
             <div className="mt-2">
               <div className="flex items-baseline justify-between mb-1">
-                <span className="text-[11px]" style={{ color: CHART_TEXT.muted }}>Settimane di stop</span>
+                <span className="text-[10.5px]" style={{ color: CHART_TEXT.muted }}>Settimane di stop</span>
                 <span className="text-[13px] font-black tabular-nums" style={{ fontFamily: MONO, color: LIME }}>
                   {stopWeeks}
                 </span>
@@ -284,21 +284,21 @@ export function BiologyFutureV3({ runs, profile }: { runs: Run[]; profile: Profi
               <input
                 type="range" min={1} max={12} step={1} value={stopWeeks}
                 onChange={(e) => setStopWeeks(+e.target.value)}
-                className="w-full accent-brand cursor-pointer"
+                className="w-full accent-[#C0FF00] cursor-pointer"
               />
             </div>
           </div>
 
           <div className="space-y-2.5">
             <div className="rounded-xl border p-3.5" style={{ borderColor: `${CHART_SERIES.risk}44`, background: `${CHART_SERIES.risk}0d` }}>
-              <div className="text-[10px] font-black tracking-[0.2em] uppercase mb-1" style={{ color: CHART_SERIES.risk }}>
+              <div className="text-[9px] font-black tracking-[0.2em] uppercase mb-1" style={{ color: CHART_SERIES.risk }}>
                 Dopo {stopWeeks} {stopWeeks === 1 ? "settimana" : "settimane"}
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-[26px] font-black tabular-nums leading-none" style={{ fontFamily: MONO, color: CHART_SERIES.risk }}>
                   −{decayVdotLoss.toFixed(1)}
                 </span>
-                <span className="text-[11px]" style={{ color: CHART_TEXT.muted }}>punti VDOT</span>
+                <span className="text-[10px]" style={{ color: CHART_TEXT.muted }}>punti VDOT</span>
               </div>
               <div className="mt-1.5 text-[11px]" style={{ color: CHART_TEXT.muted }}>
                 Il 5 km passerebbe da{" "}
@@ -318,13 +318,13 @@ export function BiologyFutureV3({ runs, profile }: { runs: Run[]; profile: Profi
                   <div className="w-20 h-[4px] rounded-full overflow-hidden shrink-0" style={{ background: "#1A1A1A" }}>
                     <div className="h-full rounded-full" style={{ width: `${lost}%`, background: SYSTEMS[id].color }} />
                   </div>
-                  <span className="text-[11px] tabular-nums w-12 text-right shrink-0" style={{ fontFamily: MONO, color: CHART_TEXT.muted }}>
+                  <span className="text-[10px] tabular-nums w-12 text-right shrink-0" style={{ fontFamily: MONO, color: CHART_TEXT.muted }}>
                     −{lost}%
                   </span>
                 </div>
               );
             })}
-            <p className="text-[11px] leading-relaxed pt-1" style={{ color: CHART_TEXT.faint }}>
+            <p className="text-[10.5px] leading-relaxed pt-1" style={{ color: CHART_TEXT.faint }}>
               Le ripetute svaniscono in tre settimane (τ {SYSTEMS.vo2.tau} giorni), il motore aerobico regge
               mesi (τ {SYSTEMS.mito.tau}). È per questo che dopo una pausa torna prima il fondo e poi la
               velocità — e perché non si recupera una stagione in dieci giorni.
@@ -386,16 +386,16 @@ export function BiologyFutureV3({ runs, profile }: { runs: Run[]; profile: Profi
                   </span>
                 </div>
                 <div className="mt-1 flex items-baseline justify-between gap-2">
-                  <span className="text-[11px]" style={{ color: CHART_TEXT.muted }}>{r.what}</span>
+                  <span className="text-[10px]" style={{ color: CHART_TEXT.muted }}>{r.what}</span>
                   {r.sec5k > 0 && (
-                    <span className="text-[11px] tabular-nums shrink-0" style={{ fontFamily: MONO, color: CHART_SERIES.positive }}>
+                    <span className="text-[10px] tabular-nums shrink-0" style={{ fontFamily: MONO, color: CHART_SERIES.positive }}>
                       −{fmtClock(r.sec5k)} sui 5 km
                     </span>
                   )}
                 </div>
               </div>
             ))}
-            <p className="text-[11px] leading-relaxed pt-1" style={{ color: CHART_TEXT.faint }}>
+            <p className="text-[10.5px] leading-relaxed pt-1" style={{ color: CHART_TEXT.faint }}>
               I punti sono pochi perché tre mesi sono pochi: la differenza fra la prima e l'ultima ricetta è
               quella fra allenare il sistema che ti frena e allenarne uno già pieno.
             </p>
@@ -445,22 +445,22 @@ export function BiologyFutureV3({ runs, profile }: { runs: Run[]; profile: Profi
             <div className="rounded-xl border p-3" style={{ borderColor: BORDER, background: "#0A0A0A" }}>
               <div className="flex items-center gap-1.5 mb-1">
                 <Snowflake className="w-3.5 h-3.5" style={{ color: CYAN }} />
-                <span className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: CHART_TEXT.axis }}>Mese migliore</span>
+                <span className="text-[9px] font-black tracking-[0.2em] uppercase" style={{ color: CHART_TEXT.axis }}>Mese migliore</span>
               </div>
               <div className="text-[18px] font-black uppercase" style={{ color: CYAN }}>{bestMonth.month}</div>
-              <div className="text-[11px]" style={{ color: CHART_TEXT.muted }}>
+              <div className="text-[10.5px]" style={{ color: CHART_TEXT.muted }}>
                 {fmtClock(bestMonth.sec)} sui 5 km, a forma costante.
               </div>
             </div>
             <div className="rounded-xl border p-3" style={{ borderColor: BORDER, background: "#0A0A0A" }}>
               <div className="flex items-center gap-1.5 mb-1">
                 <Sun className="w-3.5 h-3.5" style={{ color: CHART_SERIES.load }} />
-                <span className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: CHART_TEXT.axis }}>Il caldo oggi</span>
+                <span className="text-[9px] font-black tracking-[0.2em] uppercase" style={{ color: CHART_TEXT.axis }}>Il caldo oggi</span>
               </div>
               <div className="text-[18px] font-black tabular-nums" style={{ fontFamily: MONO, color: CHART_SERIES.load }}>
                 +{Math.round(physio.heatCost5kNow)}s
               </div>
-              <div className="text-[11px]" style={{ color: CHART_TEXT.muted }}>
+              <div className="text-[10.5px]" style={{ color: CHART_TEXT.muted }}>
                 Quando rinfresca l'adattamento te ne restituisce {Math.round(physio.heatCreditCool)}.
               </div>
             </div>
@@ -505,25 +505,25 @@ export function BiologyFutureV3({ runs, profile }: { runs: Run[]; profile: Profi
             <div className="rounded-xl border p-3" style={{ borderColor: BORDER, background: "#0A0A0A" }}>
               <div className="flex items-center gap-1.5 mb-1">
                 <Timer className="w-3.5 h-3.5" style={{ color: CHART_SERIES.risk }} />
-                <span className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: CHART_TEXT.axis }}>L'età si prende</span>
+                <span className="text-[9px] font-black tracking-[0.2em] uppercase" style={{ color: CHART_TEXT.axis }}>L'età si prende</span>
               </div>
               <div className="text-[18px] font-black tabular-nums" style={{ fontFamily: MONO, color: CHART_SERIES.risk }}>
                 −{lossPerDecade.toFixed(1)}
               </div>
-              <div className="text-[11px]" style={{ color: CHART_TEXT.muted }}>punti VDOT nei prossimi dieci anni</div>
+              <div className="text-[10.5px]" style={{ color: CHART_TEXT.muted }}>punti VDOT nei prossimi dieci anni</div>
             </div>
             <div className="rounded-xl border p-3" style={{ borderColor: `${LIME}44`, background: `${LIME}0d` }}>
               <div className="flex items-center gap-1.5 mb-1">
                 <Microscope className="w-3.5 h-3.5" style={{ color: LIME }} />
-                <span className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: CHART_TEXT.axis }}>L'allenamento ti dà</span>
+                <span className="text-[9px] font-black tracking-[0.2em] uppercase" style={{ color: CHART_TEXT.axis }}>L'allenamento ti dà</span>
               </div>
               <div className="text-[18px] font-black tabular-nums" style={{ fontFamily: MONO, color: LIME }}>
                 +{headroom.toFixed(1)}
               </div>
-              <div className="text-[11px]" style={{ color: CHART_TEXT.muted }}>punti ancora liberi con questo carico</div>
+              <div className="text-[10.5px]" style={{ color: CHART_TEXT.muted }}>punti ancora liberi con questo carico</div>
             </div>
           </div>
-          <p className="mt-2 text-[11px] leading-relaxed" style={{ color: CHART_TEXT.faint }}>
+          <p className="mt-2 text-[10.5px] leading-relaxed" style={{ color: CHART_TEXT.faint }}>
             La curva è un modello: mezzo punto percentuale di VO2max all'anno fino ai cinquanta, poi circa uno
             (Tanaka & Seals). Il confronto che conta è fra i due numeri qui sopra — finché l'allenamento dà più
             di quanto l'età toglie, i tuoi primati sono ancora davanti.

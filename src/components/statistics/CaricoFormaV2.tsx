@@ -2,7 +2,6 @@ import React, { useState, useMemo, useRef } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ScatterChart, Scatter, ZAxis, ReferenceLine } from "recharts";
 import type { FitnessFreshnessPoint, Run, ProAnalyticsChart } from "../../types/api";
 import { CHART_SERIES } from "./chartTheme";
-import { BRAND } from "../../theme/tokens";
 // WeeklyKmChart non più usato qui — sostituito da CaricoKmChart inline
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
@@ -152,13 +151,13 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
 
   return (
     <div
-      className="rounded-3xl p-6 flex flex-col gap-4 border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+      className="rounded-3xl p-6 flex flex-col gap-4 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
     >
       {/* Header row */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h3 className="text-white text-lg font-black tracking-tight">Condizione · Affaticamento · Forma</h3>
-          <p className="text-gray-600 text-[11px] tracking-wide mt-0.5">
+          <p className="text-[#555] text-[11px] tracking-wide mt-0.5">
             {shown
               ? <>La fascia fra le due curve è la tua forma · <span style={{ color: zone?.color }}>{zone?.label}</span></>
               : "Andamento nel tempo"}
@@ -169,7 +168,7 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
             <button
               key={k}
               onClick={() => { setRange(k); setHoverIdx(null); }}
-              className={`px-3 py-1 rounded-md text-[10px] font-black tracking-widest uppercase transition-colors ${range === k ? "bg-brand text-black" : "text-gray-600 hover:text-white"}`}
+              className={`px-3 py-1 rounded-md text-[10px] font-black tracking-widest uppercase transition-colors ${range === k ? "bg-[#C0FF00] text-black" : "text-[#666] hover:text-white"}`}
             >
               {k}
             </button>
@@ -179,15 +178,11 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
 
       {/* KPI strip */}
       {kpi && (
-        /* su telefono le tre card si impilano: in colonna da 100px le etichette
-           maiuscole finivano l'una dentro l'altra ("AFFATICAMENTOFORMA") */
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {kpi.map(k => (
-            <button
-              type="button"
+            <div
               key={k.key}
-              aria-pressed={focus === k.key}
-              className="rounded-2xl px-4 py-3 flex flex-col gap-0.5 text-left min-w-0 transition-colors"
+              className="rounded-2xl px-4 py-3 flex flex-col gap-0.5 cursor-pointer transition-all"
               style={{
                 background: (focus === "all" || focus === k.key) ? `${k.color}10` : "rgba(255,255,255,0.03)",
                 border: `1px solid ${(focus === "all" || focus === k.key) ? `${k.color}25` : "rgba(255,255,255,0.05)"}`,
@@ -199,16 +194,16 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
                   {k.key === "tsb" && k.current > 0 ? "+" : ""}{k.current.toFixed(1)}
                 </span>
                 <span
-                  className="text-[11px] font-black tabular-nums"
+                  className="text-[10px] font-black tabular-nums"
                   style={{ color: k.delta >= 0 ? "#34D399" : "#F43F5E" }}
                 >
                   {k.delta >= 0 ? "+" : ""}{k.delta.toFixed(1)}
                 </span>
               </div>
-              <span className="text-[10px] font-black tracking-[0.12em] uppercase break-words" style={{ color: k.color }}>
+              <span className="text-[10px] font-black tracking-widest uppercase" style={{ color: `${k.color}99` }}>
                 {k.label}
               </span>
-            </button>
+            </div>
           ))}
         </div>
       )}
@@ -216,7 +211,7 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
       {/* SVG Chart */}
       <div className="relative min-h-[260px]">
         {!data.length ? (
-          <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-xs font-black tracking-widest uppercase">
+          <div className="absolute inset-0 flex items-center justify-center text-[#444] text-xs font-black tracking-widest uppercase">
             Nessun dato nel periodo selezionato
           </div>
         ) : (
@@ -250,7 +245,7 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
             ))}
             <line x1={padL} x2={W - padR} y1={bot} y2={bot} stroke="#2A2A2A" strokeWidth={1} />
 
-            <g key={range} className="animate-in fade-in duration-300">
+            <g key={range} className="animate-in fade-in duration-700">
               {/* velo sotto la condizione: dà corpo al fiume senza sporcare */}
               <path d={clipUnder} fill="url(#v2Spine)" />
 
@@ -324,7 +319,7 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
               <span className="text-[10px] text-[#A0A0A0] font-black tracking-widest uppercase">
                 {new Date(hov.date).toLocaleDateString("it", { day: "numeric", month: "short", year: "numeric" })}
               </span>
-              <span className="text-[10px] font-black tracking-widest uppercase" style={{ color: zone?.color }}>
+              <span className="text-[9px] font-black tracking-widest uppercase" style={{ color: zone?.color }}>
                 {zone?.label}
               </span>
             </div>
@@ -344,7 +339,7 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
       </div>
 
       {/* Come si legge: senza questa riga il verde e il rosso restano decorazione */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px] text-[#7A7A7A]">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[10px] text-[#7A7A7A]">
         <span className="flex items-center gap-1.5">
           <span className="w-4 h-2 rounded-sm" style={{ background: CHART_SERIES.positive, opacity: 0.55 }} />
           affaticamento sotto la condizione — stai assorbendo
@@ -357,7 +352,7 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
           <span className="w-4 h-[3px] rounded-full" style={{ background: CHART_SERIES.load }} />
           condizione fisica
         </span>
-        <span className="ml-auto text-gray-600">Scorri sul grafico per leggere un giorno</span>
+        <span className="ml-auto text-[#5A5A5A]">Scorri sul grafico per leggere un giorno</span>
       </div>
     </div>
   );
@@ -370,7 +365,7 @@ type ZoneRange = "7d" | "30d" | "90d" | "all";
 const ZONE_BINS = [
   { zone: "Z1", name: "Recupero",  minSec: 390, color: CHART_SERIES.compare },
   { zone: "Z2", name: "Easy",      minSec: 360, color: "#34D399" },
-  { zone: "Z3", name: "Steady",    minSec: 330, color: BRAND },
+  { zone: "Z3", name: "Steady",    minSec: 330, color: "#C0FF00" },
   { zone: "Z4", name: "Threshold", minSec: 300, color: CHART_SERIES.load },
   { zone: "Z5", name: "Fast",      minSec:   0, color: "#F43F5E" },
 ] as const;
@@ -412,7 +407,7 @@ function PaceZonesCard({ runs }: { runs: Run[] }) {
 
   return (
     <div
-      className="rounded-3xl p-6 border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+      className="rounded-3xl p-6 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
     >
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -422,15 +417,15 @@ function PaceZonesCard({ runs }: { runs: Run[] }) {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[#A0A0A0] text-sm font-black">{totalKm} <span className="text-[11px] font-bold">km</span></span>
+          <span className="text-[#A0A0A0] text-sm font-black">{totalKm} <span className="text-[10px] font-bold">km</span></span>
           <div className="flex bg-white/5 rounded-lg p-1">
             {(["7d", "30d", "90d", "all"] as ZoneRange[]).map(r => (
               <button
                 key={r}
                 type="button"
                 onClick={() => setRange(r)}
-                className={`px-3 py-1 rounded-md text-[11px] font-black tracking-wider transition-all ${
-                  range === r ? "bg-brand text-black" : "text-gray-500 hover:text-white"
+                className={`px-3 py-1 rounded-md text-[10px] font-black tracking-wider transition-all ${
+                  range === r ? "bg-[#C0FF00] text-black" : "text-gray-500 hover:text-white"
                 }`}
               >
                 {RANGE_LABELS[r]}
@@ -441,15 +436,15 @@ function PaceZonesCard({ runs }: { runs: Run[] }) {
       </div>
       {!totalKm ? (
         <div className="flex items-center justify-center min-h-[120px]">
-          <span className="text-gray-600 text-xs font-black tracking-widest uppercase">Dati insufficienti</span>
+          <span className="text-[#444] text-xs font-black tracking-widest uppercase">Dati insufficienti</span>
         </div>
       ) : (
         <div className="space-y-4">
           {zones.map(z => (
             <div key={z.zone} className="flex items-center gap-3">
               <div className="w-16 shrink-0">
-                <div className="text-[11px] font-black tracking-widest" style={{ color: z.color }}>{z.zone}</div>
-                <div className="text-[11px] text-gray-600 truncate">{z.name}</div>
+                <div className="text-[10px] font-black tracking-widest" style={{ color: z.color }}>{z.zone}</div>
+                <div className="text-[9px] text-[#555] truncate">{z.name}</div>
               </div>
               <div className="flex-1 h-2.5 bg-[#111] rounded-full overflow-hidden">
                 <div
@@ -463,10 +458,10 @@ function PaceZonesCard({ runs }: { runs: Run[] }) {
               </div>
               <div className="w-14 text-right shrink-0">
                 <span className="text-white text-sm font-black tabular-nums" style={{ fontFamily: "JetBrains Mono, monospace" }}>
-                  {z.pct.toFixed(1)}<span className="text-gray-600 text-[11px]">%</span>
+                  {z.pct.toFixed(1)}<span className="text-[#555] text-[10px]">%</span>
                 </span>
               </div>
-              <div className="w-14 text-right text-gray-600 text-[11px] shrink-0">{z.km} km</div>
+              <div className="w-14 text-right text-[#555] text-[10px] shrink-0">{z.km} km</div>
             </div>
           ))}
         </div>
@@ -480,7 +475,7 @@ function PaceZonesCard({ runs }: { runs: Run[] }) {
 function StatCell({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-gray-600 text-[10px] font-black tracking-widest uppercase">{label}</span>
+      <span className="text-[#555] text-[9px] font-black tracking-widest uppercase">{label}</span>
       <span
         className="text-lg font-black tabular-nums leading-none"
         style={{ fontFamily: "JetBrains Mono, monospace", color: accent ?? "#fff" }}
@@ -504,22 +499,22 @@ function PaceDistributionCard({ chart }: { chart?: ProAnalyticsChart }) {
 
   return (
     <div
-      className="rounded-3xl p-8 flex flex-col gap-6 border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+      className="rounded-3xl p-8 flex flex-col gap-6 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
     >
       <div className="flex items-start justify-between">
         <div>
           <h3 className="text-white text-base font-black tracking-tight">Distribuzione del Passo</h3>
           <p className="text-[#A0A0A0] text-[10px] tracking-widest uppercase mt-1">Corse per zona · storico</p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-brand/10 border border-brand/20">
-          <div className="w-1.5 h-1.5 rounded-full bg-brand" />
-          <span className="text-brand text-[10px] font-black tracking-widest uppercase">{totalRuns} run</span>
+        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#C0FF00]/10 border border-[#C0FF00]/20">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#C0FF00]" />
+          <span className="text-[#C0FF00] text-[10px] font-black tracking-widest uppercase">{totalRuns} run</span>
         </div>
       </div>
 
       <div className="h-[220px] -mx-2">
         {data.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-gray-600 text-xs font-black tracking-widest uppercase">
+          <div className="h-full flex items-center justify-center text-[#444] text-xs font-black tracking-widest uppercase">
             Dati insufficienti
           </div>
         ) : (
@@ -527,8 +522,8 @@ function PaceDistributionCard({ chart }: { chart?: ProAnalyticsChart }) {
             <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="20%">
               <defs>
                 <linearGradient id="paceBarGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={BRAND} stopOpacity={1} />
-                  <stop offset="100%" stopColor={BRAND} stopOpacity={0.25} />
+                  <stop offset="0%" stopColor="#C0FF00" stopOpacity={1} />
+                  <stop offset="100%" stopColor="#C0FF00" stopOpacity={0.25} />
                 </linearGradient>
                 <linearGradient id="paceBarGradDim" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#3A3A3A" stopOpacity={1} />
@@ -538,13 +533,13 @@ function PaceDistributionCard({ chart }: { chart?: ProAnalyticsChart }) {
               <CartesianGrid strokeDasharray="2 4" stroke="#252528" vertical={false} />
               <XAxis
                 dataKey="pace"
-                tick={{ fill: "#878787", fontSize: 10, fontFamily: "JetBrains Mono, monospace", fontWeight: 700 }}
+                tick={{ fill: "#666", fontSize: 9, fontFamily: "JetBrains Mono, monospace", fontWeight: 700 }}
                 axisLine={false}
                 tickLine={false}
                 interval="preserveStartEnd"
               />
               <YAxis
-                tick={{ fill: "#878787", fontSize: 10, fontFamily: "JetBrains Mono, monospace", fontWeight: 700 }}
+                tick={{ fill: "#666", fontSize: 9, fontFamily: "JetBrains Mono, monospace", fontWeight: 700 }}
                 axisLine={false}
                 tickLine={false}
                 width={28}
@@ -558,7 +553,7 @@ function PaceDistributionCard({ chart }: { chart?: ProAnalyticsChart }) {
                   fontFamily: "JetBrains Mono, monospace",
                 }}
                 labelStyle={{ color: "#A0A0A0", fontSize: 10, fontWeight: 700 }}
-                itemStyle={{ color: BRAND, fontSize: 11, fontWeight: 900 }}
+                itemStyle={{ color: "#C0FF00", fontSize: 11, fontWeight: 900 }}
                 formatter={(v: any) => [`${v} corse`, "Frequenza"]}
                 labelFormatter={(l: string) => `Passo ${l} /km`}
               />
@@ -581,7 +576,7 @@ function PaceDistributionCard({ chart }: { chart?: ProAnalyticsChart }) {
       </div>
 
       <div className="grid grid-cols-3 gap-4 pt-5 border-t border-white/[0.06]">
-        <StatCell label="Passo Modale" value={modal?.pace ?? "—"} accent={BRAND} />
+        <StatCell label="Passo Modale" value={modal?.pace ?? "—"} accent="#C0FF00" />
         <StatCell label="Più Veloce" value={fastestPace} />
         <StatCell label="Più Lento" value={slowestPace} />
       </div>
@@ -627,7 +622,7 @@ function EffortMatrixCard({ chart }: { chart?: ProAnalyticsChart }) {
 
   return (
     <div
-      className="rounded-3xl p-8 flex flex-col gap-6 border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+      className="rounded-3xl p-8 flex flex-col gap-6 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
     >
       <div className="flex items-start justify-between">
         <div>
@@ -636,15 +631,15 @@ function EffortMatrixCard({ chart }: { chart?: ProAnalyticsChart }) {
             Distanza × Passo · bolla = FC
           </p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-brand/10 border border-brand/20">
-          <div className="w-1.5 h-1.5 rounded-full bg-brand" />
-          <span className="text-brand text-[10px] font-black tracking-widest uppercase">{stats.count} run</span>
+        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#C0FF00]/10 border border-[#C0FF00]/20">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#C0FF00]" />
+          <span className="text-[#C0FF00] text-[10px] font-black tracking-widest uppercase">{stats.count} run</span>
         </div>
       </div>
 
       <div className="h-[220px] -mx-2">
         {data.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-gray-600 text-xs font-black tracking-widest uppercase">
+          <div className="h-full flex items-center justify-center text-[#444] text-xs font-black tracking-widest uppercase">
             Dati insufficienti
           </div>
         ) : (
@@ -652,9 +647,9 @@ function EffortMatrixCard({ chart }: { chart?: ProAnalyticsChart }) {
             <ScatterChart margin={{ top: 8, right: 12, bottom: 4, left: -4 }}>
               <defs>
                 <radialGradient id="effortDot">
-                  <stop offset="0%" stopColor={BRAND} stopOpacity={0.9} />
-                  <stop offset="80%" stopColor={BRAND} stopOpacity={0.35} />
-                  <stop offset="100%" stopColor={BRAND} stopOpacity={0} />
+                  <stop offset="0%" stopColor="#C0FF00" stopOpacity={0.9} />
+                  <stop offset="80%" stopColor="#C0FF00" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#C0FF00" stopOpacity={0} />
                 </radialGradient>
               </defs>
               <CartesianGrid strokeDasharray="2 4" stroke="#252528" />
@@ -662,17 +657,17 @@ function EffortMatrixCard({ chart }: { chart?: ProAnalyticsChart }) {
                 type="number"
                 dataKey="dist"
                 domain={[0, xMax]}
-                tick={{ fill: "#878787", fontSize: 10, fontFamily: "JetBrains Mono, monospace", fontWeight: 700 }}
+                tick={{ fill: "#666", fontSize: 9, fontFamily: "JetBrains Mono, monospace", fontWeight: 700 }}
                 axisLine={false}
                 tickLine={false}
-                label={{ value: "KM", position: "insideBottomRight", fill: "#878787", fontSize: 10, fontWeight: 900, offset: -2 }}
+                label={{ value: "KM", position: "insideBottomRight", fill: "#444", fontSize: 9, fontWeight: 900, offset: -2 }}
               />
               <YAxis
                 type="number"
                 dataKey="pace"
                 domain={[3.5, 6.8]}
                 reversed={false}
-                tick={{ fill: "#878787", fontSize: 10, fontFamily: "JetBrains Mono, monospace", fontWeight: 700 }}
+                tick={{ fill: "#666", fontSize: 9, fontFamily: "JetBrains Mono, monospace", fontWeight: 700 }}
                 axisLine={false}
                 tickLine={false}
                 width={32}
@@ -681,10 +676,10 @@ function EffortMatrixCard({ chart }: { chart?: ProAnalyticsChart }) {
               <ZAxis type="number" dataKey="hr" range={[40, 240]} />
               <ReferenceLine
                 y={stats.avgPace || 4.8}
-                stroke={BRAND}
+                stroke="#C0FF00"
                 strokeDasharray="4 4"
                 strokeOpacity={0.4}
-                label={{ value: "MEDIA", position: "right", fill: BRAND, fontSize: 10, fontWeight: 900 }}
+                label={{ value: "MEDIA", position: "right", fill: "#C0FF00", fontSize: 8, fontWeight: 900 }}
               />
               <Tooltip
                 cursor={{ stroke: "rgba(192,255,0,0.3)", strokeWidth: 1 }}
@@ -699,10 +694,10 @@ function EffortMatrixCard({ chart }: { chart?: ProAnalyticsChart }) {
                   const d = payload[0].payload;
                   return (
                     <div className="bg-[#111] border border-white/[0.08] rounded-xl px-3 py-2" style={{ fontFamily: "JetBrains Mono, monospace" }}>
-                      <div className="text-brand text-[11px] font-black">{d.dist.toFixed(1)} km</div>
-                      <div className="text-white text-[11px] font-bold mt-0.5">{fmtPace(d.pace)} /km</div>
+                      <div className="text-[#C0FF00] text-[11px] font-black">{d.dist.toFixed(1)} km</div>
+                      <div className="text-white text-[10px] font-bold mt-0.5">{fmtPace(d.pace)} /km</div>
                       {Number.isFinite(d.hr) && d.hr > 0 && (
-                        <div className="text-[#A0A0A0] text-[11px] font-bold mt-0.5">{Math.round(d.hr)} bpm</div>
+                        <div className="text-[#A0A0A0] text-[10px] font-bold mt-0.5">{Math.round(d.hr)} bpm</div>
                       )}
                     </div>
                   );
@@ -715,7 +710,7 @@ function EffortMatrixCard({ chart }: { chart?: ProAnalyticsChart }) {
       </div>
 
       <div className="grid grid-cols-3 gap-4 pt-5 border-t border-white/[0.06]">
-        <StatCell label="Distanza Media" value={stats.count ? `${stats.avgDist.toFixed(1)} km` : "—"} accent={BRAND} />
+        <StatCell label="Distanza Media" value={stats.count ? `${stats.avgDist.toFixed(1)} km` : "—"} accent="#C0FF00" />
         <StatCell label="Passo Medio" value={stats.count ? `${fmtPace(stats.avgPace)}` : "—"} />
         <StatCell label="FC Media" value={stats.avgHr ? `${Math.round(stats.avgHr)} bpm` : "—"} />
       </div>
@@ -738,7 +733,7 @@ const CAT_DEFS = [
   { key: "easy",      label: "Easy Run",  color: "#34D399" },
   { key: "tempo",     label: "Tempo",     color: CHART_SERIES.compare },
   { key: "intervals", label: "Intervals", color: CHART_SERIES.load },
-  { key: "long",      label: "Long Run",  color: BRAND },
+  { key: "long",      label: "Long Run",  color: "#C0FF00" },
   { key: "race",      label: "Race",      color: "#F43F5E" },
 ] as const;
 
@@ -876,15 +871,15 @@ function CaricoKmChart({ runs }: { runs: Run[] }) {
 
   return (
     <div
-      className="h-full rounded-3xl p-6 flex flex-col border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+      className="h-full rounded-3xl p-6 flex flex-col backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
     >
       <div className="flex justify-between items-start mb-4">
         <div>
           <div className="text-xl font-bold text-white">
             {stats.totalKm.toLocaleString("it", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km
-            <span className="text-sm text-gray-600 font-normal ml-2">{periodLabel}</span>
+            <span className="text-sm text-[#666] font-normal ml-2">{periodLabel}</span>
           </div>
-          <div className="flex gap-3 mt-1 text-[11px] text-gray-600 font-semibold tracking-wider">
+          <div className="flex gap-3 mt-1 text-[10px] text-[#555] font-semibold tracking-wider">
             <span className="text-[#888]">{stats.count} uscite</span>
             <span>·</span>
             <span>avg {stats.avgKmPerWeek.toFixed(1)} km/sett.</span>
@@ -898,8 +893,8 @@ function CaricoKmChart({ runs }: { runs: Run[] }) {
               key={p}
               type="button"
               onClick={() => setPeriod(p)}
-              className={`text-[11px] font-bold px-2.5 py-1.5 rounded-md transition-all ${
-                period === p ? "bg-brand text-black" : "text-gray-600 hover:text-white hover:bg-white/5"
+              className={`text-[10px] font-bold px-2.5 py-1.5 rounded-md transition-all ${
+                period === p ? "bg-[#C0FF00] text-black" : "text-[#666] hover:text-white hover:bg-white/5"
               }`}
             >
               {KM_RANGE_LABELS[p]}
@@ -919,16 +914,16 @@ function CaricoKmChart({ runs }: { runs: Run[] }) {
                 </linearGradient>
               ))}
             </defs>
-            <XAxis dataKey="day" stroke="#333" fontSize={10} tickLine={false} axisLine={false} tick={{ fill: "#878787", fontWeight: 700 }} />
-            <YAxis stroke="#333" fontSize={10} tickLine={false} axisLine={false} tick={{ fill: "#878787" }} width={32} />
+            <XAxis dataKey="day" stroke="#333" fontSize={10} tickLine={false} axisLine={false} tick={{ fill: "#555", fontWeight: 700 }} />
+            <YAxis stroke="#333" fontSize={10} tickLine={false} axisLine={false} tick={{ fill: "#444" }} width={32} />
             {stats.avgKmBar > 0 && (
               <ReferenceLine
                 y={stats.avgKmBar}
-                stroke={BRAND}
+                stroke="#C0FF00"
                 strokeOpacity={0.3}
                 strokeDasharray="4 4"
                 strokeWidth={1}
-                label={{ value: `AVG ${stats.avgKmBar.toFixed(1)} km`, position: "insideTopLeft", fontSize: 9, fontWeight: 700, fill: BRAND, opacity: 0.55 }}
+                label={{ value: `AVG ${stats.avgKmBar.toFixed(1)} km`, position: "insideTopLeft", fontSize: 9, fontWeight: 700, fill: "#C0FF00", opacity: 0.55 }}
               />
             )}
             <Tooltip
@@ -951,7 +946,7 @@ function CaricoKmChart({ runs }: { runs: Run[] }) {
         {CAT_DEFS.map(cat => (
           <div key={cat.key} className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: cat.color }} />
-            <span className="text-[11px] font-black tracking-widest" style={{ color: cat.color }}>{cat.label.toUpperCase()}</span>
+            <span className="text-[9px] font-black tracking-widest" style={{ color: cat.color }}>{cat.label.toUpperCase()}</span>
           </div>
         ))}
       </div>

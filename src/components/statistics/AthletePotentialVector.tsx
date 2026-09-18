@@ -137,13 +137,13 @@ const CustomTooltip = ({ active, payload }: any) => {
   const d = payload[0].payload;
   return (
     <div className="bg-[#0E0E0E] border border-white/[0.08] rounded-xl px-4 py-3 shadow-2xl min-w-[150px]">
-      <p className="text-[#888] font-mono text-[11px] mb-2 font-bold tracking-wider">{d.displayDate}</p>
+      <p className="text-[#888] font-mono text-[10px] mb-2 font-bold tracking-wider">{d.displayDate}</p>
       <div className="flex justify-between items-center mb-1.5 gap-4">
-        <span className="text-gray-600 text-[10px] font-black tracking-wider uppercase">Tempo</span>
-        <span className="text-brand font-mono font-black text-sm tabular-nums">{d.tempo}</span>
+        <span className="text-[#666] text-[10px] font-black tracking-wider uppercase">Tempo</span>
+        <span className="text-[#C0FF00] font-mono font-black text-sm tabular-nums">{d.tempo}</span>
       </div>
       <div className="flex justify-between items-center gap-4">
-        <span className="text-gray-600 text-[10px] font-black tracking-wider uppercase">Passo</span>
+        <span className="text-[#666] text-[10px] font-black tracking-wider uppercase">Passo</span>
         <span className="text-white font-mono font-black text-sm tabular-nums">{d.pace}</span>
       </div>
     </div>
@@ -152,9 +152,9 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 // ─── TREND ARROW ─────────────────────────────────────────────────────────────
 function TrendIndicator({ trend }: { trend: "up" | "down" | "stable" }) {
-  if (trend === "up") return <span className="font-mono text-xs mt-1 text-brand">↗ In crescita</span>;
+  if (trend === "up") return <span className="font-mono text-xs mt-1 text-[#C0FF00]">↗ In crescita</span>;
   if (trend === "down") return <span className="font-mono text-xs mt-1 text-[#F59E0B]">↘ In calo</span>;
-  return <span className="font-mono text-xs mt-1 text-gray-600">→ Stabile</span>;
+  return <span className="font-mono text-xs mt-1 text-[#666]">→ Stabile</span>;
 }
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
@@ -453,18 +453,18 @@ export function AthletePotentialVector({
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="rounded-3xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-6 lg:p-12 overflow-hidden">
+    <div className="rounded-3xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 md:p-6 lg:p-12 overflow-hidden">
       <div className="grid lg:grid-cols-12 gap-6 md:gap-10 lg:gap-16">
 
         {/* ─── LEFT COLUMN: TITLE + NAV ─────────────────────────────── */}
         <div className="lg:col-span-4 flex flex-col">
           <div className="mb-10">
-            <div className="text-[10px] text-brand font-mono tracking-[0.3em] uppercase mb-3">
+            <div className="text-[10px] text-[#C0FF00] font-mono tracking-[0.3em] uppercase mb-3">
               Vettore Potenziale
             </div>
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-light tracking-tight text-gray-100 leading-[1.05]">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-light tracking-tight text-zinc-100 leading-[1.05]">
               Cosa puoi <br className="hidden lg:block" />
-              correre <span className="text-brand">oggi</span>
+              correre <span className="text-[#C0FF00]">oggi</span>
             </h1>
           </div>
 
@@ -476,13 +476,13 @@ export function AthletePotentialVector({
                 key={d.id}
                 onClick={() => setActiveDistance(d.id)}
                 className={`relative flex items-center justify-between py-3.5 pl-6 pr-3 text-left transition-all duration-300 ${
-                  activeDistance === d.id ? "text-gray-100" : "text-gray-500 hover:text-gray-300"
+                  activeDistance === d.id ? "text-zinc-100" : "text-zinc-500 hover:text-zinc-300"
                 }`}
               >
                 {activeDistance === d.id && (
                   <motion.div
                     layoutId="apv-active-indicator"
-                    className="absolute left-[-1px] top-0 bottom-0 w-[2px] bg-brand"
+                    className="absolute left-[-1px] top-0 bottom-0 w-[2px] bg-[#C0FF00]"
                     style={{ boxShadow: `0 0 12px ${NEON}88` }}
                   />
                 )}
@@ -503,7 +503,7 @@ export function AthletePotentialVector({
 
             {/* VDOT hero */}
             <div className="flex flex-col gap-2">
-              <div className="text-[10px] font-mono tracking-[0.3em] uppercase text-gray-600">
+              <div className="text-[9px] font-mono tracking-[0.3em] uppercase text-[#555]">
                 Indice VDOT
               </div>
               <div className="flex items-baseline gap-3">
@@ -526,21 +526,21 @@ export function AthletePotentialVector({
             {athleteSnapshot.tsb !== null && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
-                  <span className="font-mono text-[10px] text-gray-600 tracking-[0.2em] uppercase">Forma</span>
+                  <span className="font-mono text-[9px] text-[#555] tracking-[0.2em] uppercase">Forma</span>
                   <span className="text-xl font-light tabular-nums" style={{ color: athleteSnapshot.formColor }}>
                     {athleteSnapshot.formLabel}
                   </span>
-                  <span className="font-mono text-[11px] text-gray-600 tabular-nums">
+                  <span className="font-mono text-[10px] text-[#666] tabular-nums">
                     TSB {athleteSnapshot.tsb > 0 ? "+" : ""}{athleteSnapshot.tsb}
                   </span>
                 </div>
                 {athleteSnapshot.ctl !== null && (
                   <div className="flex flex-col gap-1">
-                    <span className="font-mono text-[10px] text-gray-600 tracking-[0.2em] uppercase">Condizione</span>
-                    <span className="text-xl font-light text-gray-100 tabular-nums">
+                    <span className="font-mono text-[9px] text-[#555] tracking-[0.2em] uppercase">Condizione</span>
+                    <span className="text-xl font-light text-zinc-100 tabular-nums">
                       {athleteSnapshot.ctl}
                     </span>
-                    <span className="font-mono text-[10px] text-gray-600 tracking-wider uppercase">CTL fitness</span>
+                    <span className="font-mono text-[10px] text-[#666] tracking-wider uppercase">CTL fitness</span>
                   </div>
                 )}
               </div>
@@ -548,32 +548,32 @@ export function AthletePotentialVector({
 
             {/* Volume tiles */}
             <div>
-              <div className="font-mono text-[10px] text-gray-600 tracking-[0.3em] uppercase mb-3">
+              <div className="font-mono text-[9px] text-[#555] tracking-[0.3em] uppercase mb-3">
                 Volume Recente
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 flex flex-col gap-0.5">
-                  <span className="font-mono text-[10px] text-gray-600 tracking-[0.2em] uppercase">7 giorni</span>
-                  <span className="text-xl font-light text-gray-100 tabular-nums">
-                    {athleteSnapshot.km7}<span className="text-[11px] text-gray-600 font-mono ml-1">km</span>
+                <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 flex flex-col gap-0.5">
+                  <span className="font-mono text-[9px] text-[#555] tracking-[0.2em] uppercase">7 giorni</span>
+                  <span className="text-xl font-light text-zinc-100 tabular-nums">
+                    {athleteSnapshot.km7}<span className="text-[10px] text-[#666] font-mono ml-1">km</span>
                   </span>
                 </div>
-                <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 flex flex-col gap-0.5">
-                  <span className="font-mono text-[10px] text-gray-600 tracking-[0.2em] uppercase">30 giorni</span>
-                  <span className="text-xl font-light text-gray-100 tabular-nums">
-                    {athleteSnapshot.km30}<span className="text-[11px] text-gray-600 font-mono ml-1">km</span>
+                <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 flex flex-col gap-0.5">
+                  <span className="font-mono text-[9px] text-[#555] tracking-[0.2em] uppercase">30 giorni</span>
+                  <span className="text-xl font-light text-zinc-100 tabular-nums">
+                    {athleteSnapshot.km30}<span className="text-[10px] text-[#666] font-mono ml-1">km</span>
                   </span>
                 </div>
-                <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 flex flex-col gap-0.5">
-                  <span className="font-mono text-[10px] text-gray-600 tracking-[0.2em] uppercase">Uscite 30g</span>
-                  <span className="text-xl font-light text-gray-100 tabular-nums">
+                <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 flex flex-col gap-0.5">
+                  <span className="font-mono text-[9px] text-[#555] tracking-[0.2em] uppercase">Uscite 30g</span>
+                  <span className="text-xl font-light text-zinc-100 tabular-nums">
                     {athleteSnapshot.runs30}
                   </span>
                 </div>
-                <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 flex flex-col gap-0.5">
-                  <span className="font-mono text-[10px] text-gray-600 tracking-[0.2em] uppercase">Ore 90g</span>
-                  <span className="text-xl font-light text-gray-100 tabular-nums">
-                    {athleteSnapshot.hours90}<span className="text-[11px] text-gray-600 font-mono ml-1">h</span>
+                <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 flex flex-col gap-0.5">
+                  <span className="font-mono text-[9px] text-[#555] tracking-[0.2em] uppercase">Ore 90g</span>
+                  <span className="text-xl font-light text-zinc-100 tabular-nums">
+                    {athleteSnapshot.hours90}<span className="text-[10px] text-[#666] font-mono ml-1">h</span>
                   </span>
                 </div>
               </div>
@@ -582,14 +582,14 @@ export function AthletePotentialVector({
             {/* Soglia anaerobica */}
             {thresholdPace && (
               <div>
-                <div className="font-mono text-[10px] text-gray-600 tracking-[0.3em] uppercase mb-2">
+                <div className="font-mono text-[9px] text-[#555] tracking-[0.3em] uppercase mb-2">
                   Passo di Soglia
                 </div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-light tabular-nums text-brand">{thresholdPace}</span>
-                  <span className="font-mono text-[11px] text-gray-600 tracking-wider">/km</span>
+                  <span className="text-3xl font-light tabular-nums text-[#C0FF00]">{thresholdPace}</span>
+                  <span className="font-mono text-[10px] text-[#666] tracking-wider">/km</span>
                 </div>
-                <div className="font-mono text-[11px] text-gray-600 tracking-wider mt-1">
+                <div className="font-mono text-[10px] text-[#555] tracking-wider mt-1">
                   HR soglia ~163 bpm
                 </div>
               </div>
@@ -597,10 +597,10 @@ export function AthletePotentialVector({
 
             {/* Signature */}
             <div className="pt-6 border-t border-white/[0.04] hidden lg:block">
-              <div className="text-[10px] font-mono tracking-[0.25em] uppercase text-gray-600">
+              <div className="text-[9px] font-mono tracking-[0.25em] uppercase text-[#444]">
                 Powered by
               </div>
-              <div className="text-[10px] font-mono tracking-[0.2em] uppercase text-gray-500 mt-1">
+              <div className="text-[10px] font-mono tracking-[0.2em] uppercase text-[#777] mt-1">
                 VDOT · CTL/ATL/TSB · Pace history
               </div>
             </div>
@@ -620,18 +620,18 @@ export function AthletePotentialVector({
             >
               {/* Header: title + projected time */}
               <div className="mb-6">
-                <div className="text-[10px] font-mono tracking-[0.3em] text-gray-600 mb-3 uppercase">
+                <div className="text-[10px] font-mono tracking-[0.3em] text-[#555] mb-3 uppercase">
                   {activeDistMeta.title}
                 </div>
                 <div className="flex flex-wrap items-baseline gap-3 md:gap-6">
-                  <span className="text-5xl sm:text-6xl md:text-7xl lg:text-[120px] font-light tracking-tighter leading-none text-gray-50 tabular-nums break-all">
+                  <span className="text-5xl sm:text-6xl md:text-7xl lg:text-[120px] font-light tracking-tighter leading-none text-zinc-50 tabular-nums break-all">
                     {predictionData.time}
                   </span>
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-mono text-base lg:text-lg font-bold text-brand tabular-nums">
+                    <span className="font-mono text-base lg:text-lg font-bold text-[#C0FF00] tabular-nums">
                       {predictionData.pace}
                     </span>
-                    <span className="font-mono text-[10px] text-gray-600 uppercase tracking-widest">
+                    <span className="font-mono text-[10px] text-[#555] uppercase tracking-widest">
                       Passo target
                     </span>
                   </div>
@@ -640,7 +640,7 @@ export function AthletePotentialVector({
 
               {/* Narrative */}
               <div className="max-w-2xl mb-8 md:mb-14">
-                <p className="text-base md:text-lg text-gray-400 leading-relaxed font-light">
+                <p className="text-base md:text-lg text-zinc-400 leading-relaxed font-light">
                   {narrative}
                 </p>
                 {predictionData.delta !== null && (
@@ -665,7 +665,7 @@ export function AthletePotentialVector({
               {/* Capacity Evolution chart */}
               <div className="relative h-52 md:h-64 lg:h-80 w-full mb-10 md:mb-14 border-b border-white/[0.06]">
                 <div className="absolute top-0 left-0 right-0 flex items-center justify-between z-10 pointer-events-none">
-                  <div className="font-mono text-[10px] text-gray-600 tracking-[0.3em] uppercase">
+                  <div className="font-mono text-[9px] text-[#555] tracking-[0.3em] uppercase">
                     Indice di Capacità
                   </div>
                   <div className="flex items-center bg-[#0E0E0E] border border-white/[0.06] rounded-full p-1 pointer-events-auto shadow-xl">
@@ -673,10 +673,10 @@ export function AthletePotentialVector({
                       <button
                         key={r.id}
                         onClick={() => setTimeRange(r.id)}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-mono font-bold tracking-wider transition-colors ${
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider transition-colors ${
                           timeRange === r.id
-                            ? "bg-[#1a1a1a] text-brand"
-                            : "text-gray-600 hover:text-gray-300"
+                            ? "bg-[#1a1a1a] text-[#C0FF00]"
+                            : "text-[#555] hover:text-zinc-300"
                         }`}
                       >
                         {r.label}
@@ -698,7 +698,7 @@ export function AthletePotentialVector({
                         dataKey="date"
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: "#878787", fontSize: 10, fontFamily: "monospace" }}
+                        tick={{ fill: "#555", fontSize: 10, fontFamily: "monospace" }}
                         dy={10}
                         ticks={xTicks}
                         tickFormatter={(val) => {
@@ -728,10 +728,10 @@ export function AthletePotentialVector({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-5 sm:gap-8 md:gap-10 mb-10 md:mb-14">
                 {factors.map((f, i) => (
                   <div key={i} className="flex flex-col">
-                    <span className="font-mono text-[10px] text-gray-600 tracking-[0.2em] mb-2 uppercase break-words">
+                    <span className="font-mono text-[9px] text-[#555] tracking-[0.2em] mb-2 uppercase break-words">
                       {f.label}
                     </span>
-                    <span className="text-xl font-light text-gray-100 tracking-tight tabular-nums">
+                    <span className="text-xl font-light text-zinc-100 tracking-tight tabular-nums">
                       {f.value}
                     </span>
                     <TrendIndicator trend={f.trend} />
@@ -745,7 +745,7 @@ export function AthletePotentialVector({
                   <h3 className="font-mono text-[10px] text-[#888] tracking-[0.3em] uppercase">
                     Distanze Scalate
                   </h3>
-                  <span className="text-[11px] text-brand font-mono tracking-widest bg-brand/10 border border-brand/20 px-2 py-1 rounded font-bold">
+                  <span className="text-[9px] text-[#C0FF00] font-mono tracking-widest bg-[#C0FF00]/10 border border-[#C0FF00]/20 px-2 py-1 rounded font-bold">
                     BASATO SU FORMA ATTUALE
                   </span>
                 </div>
@@ -755,21 +755,21 @@ export function AthletePotentialVector({
                     return (
                       <div
                         key={i}
-                        className={`rounded-2xl border shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex flex-col justify-between transition-colors group cursor-pointer ${
-                          isActive ? "border-brand/50" : "border-white/[0.05] hover:border-brand/25"
+                        className={`rounded-2xl backdrop-blur-2xl border shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex flex-col justify-between transition-colors group cursor-pointer ${
+                          isActive ? "border-[#C0FF00]/50" : "border-white/[0.05] hover:border-[#C0FF00]/25"
                         }`}
                         onClick={() => setActiveDistance(DISTANCES[i].id)}
                       >
                         <span className={`font-mono text-[10px] tracking-widest mb-4 uppercase font-bold transition-colors ${
-                          isActive ? "text-brand" : "text-gray-600 group-hover:text-brand"
+                          isActive ? "text-[#C0FF00]" : "text-[#666] group-hover:text-[#C0FF00]"
                         }`}>
                           {eq.distance}
                         </span>
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-xl md:text-2xl font-light text-gray-100 tracking-tight tabular-nums">
+                          <span className="text-xl md:text-2xl font-light text-zinc-100 tracking-tight tabular-nums">
                             {eq.time}
                           </span>
-                          <span className="font-mono text-[11px] font-bold text-brand tracking-wider tabular-nums">
+                          <span className="font-mono text-[10px] font-bold text-[#C0FF00] tracking-wider tabular-nums">
                             {eq.pace}
                           </span>
                         </div>

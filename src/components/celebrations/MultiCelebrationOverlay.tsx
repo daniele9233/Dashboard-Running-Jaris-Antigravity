@@ -125,13 +125,11 @@ export function MultiCelebrationOverlay({
               key={d.id}
               className={i === index ? "sq-dot-active" : ""}
               style={{
-                width: 22,
+                width: i === index ? 22 : 8,
                 height: 8,
                 borderRadius: 99,
-                transformOrigin: "center",
-                transform: `scaleX(${i === index ? 1 : 8 / 22})`,
                 background: i <= index ? d.accent : "#3F3F46",
-                transition: "transform .3s cubic-bezier(0.22,1,0.36,1), background .3s ease",
+                transition: "width .3s ease, background .3s ease",
               }}
             />
           ))}

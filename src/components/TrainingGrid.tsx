@@ -168,15 +168,12 @@ export function TrainingGrid() {
                 onClick={() => openDay(new Date(year, month, day))}>
                 <span className={`text-sm font-medium mb-2 w-7 h-7 flex items-center justify-center rounded-full ${isToday ? "bg-[#3B82F6] text-white" : "text-gray-400"}`}>{day}</span>
                 {pd && (
-                  <div className={`flex-1 rounded-md p-2 border flex flex-col gap-1 ${done ? "opacity-60" : ""}`}
-                    style={{
-                      borderColor: `${failed ? "#EF4444" : PLAN_KINDS[pd.kind].color}55`,
-                      backgroundColor: `${failed ? "#EF4444" : PLAN_KINDS[pd.kind].color}12`,
-                    }}>
+                  <div className={`flex-1 rounded-md p-2 border-l-4 bg-[#121212] flex flex-col gap-1 ${done ? "opacity-60" : ""}`}
+                    style={{ borderLeftColor: failed ? "#EF4444" : PLAN_KINDS[pd.kind].color }}>
                     <span className="text-xs font-bold text-gray-200 line-clamp-2">{pd.title}</span>
-                    {pd.km ? <span className="text-[11px] text-gray-400">{pd.km.toLocaleString("it-IT")} km</span> : null}
-                    {done && <span className="text-[11px] text-[#10B981]">✓ Effettuata</span>}
-                    {failed && <span className="text-[11px] text-[#EF4444]">✗ Saltata</span>}
+                    {pd.km ? <span className="text-[10px] text-gray-400">{pd.km.toLocaleString("it-IT")} km</span> : null}
+                    {done && <span className="text-[10px] text-[#10B981]">✓ Effettuata</span>}
+                    {failed && <span className="text-[10px] text-[#EF4444]">✗ Saltata</span>}
                   </div>
                 )}
               </div>
@@ -204,18 +201,15 @@ export function TrainingGrid() {
             const isToday = isoOf(date) === todayIso;
             return (
               <div key={date.toISOString()}
-                className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 flex flex-col cursor-pointer hover:border-white/[0.2] transition-colors"
+                className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 flex flex-col cursor-pointer hover:border-white/[0.2] transition-colors"
                 onClick={() => openDay(date)}>
                 <div className="text-center mb-6 pb-4 border-b border-[#2A2A2A]">
                   <div className="text-xs font-semibold text-gray-500 tracking-wider mb-2">{dayNames[date.getDay()]}</div>
                   <div className={`text-2xl font-bold mx-auto w-10 h-10 flex items-center justify-center rounded-full ${isToday ? "bg-[#3B82F6] text-white" : "text-gray-200"}`}>{date.getDate()}</div>
                 </div>
                 {pd ? (
-                  <div className={`flex-1 rounded-lg p-4 border flex flex-col gap-3 ${done ? "opacity-60" : ""}`}
-                    style={{
-                      borderColor: `${failed ? "#EF4444" : PLAN_KINDS[pd.kind].color}55`,
-                      backgroundColor: `${failed ? "#EF4444" : PLAN_KINDS[pd.kind].color}12`,
-                    }}>
+                  <div className={`flex-1 rounded-lg p-4 border-t-4 bg-[#121212] flex flex-col gap-3 ${done ? "opacity-60" : ""}`}
+                    style={{ borderTopColor: failed ? "#EF4444" : PLAN_KINDS[pd.kind].color }}>
                     <span className="text-sm font-bold text-gray-200">{pd.title}</span>
                     {pd.km ? <span className="text-xs text-gray-400 bg-[#1E1E1E] px-2 py-1.5 rounded">{pd.km.toLocaleString("it-IT")} km</span> : null}
                     {done && <span className="text-xs text-[#10B981] mt-auto">✓ Effettuata</span>}
@@ -254,8 +248,8 @@ export function TrainingGrid() {
         </h2>
 
         {pd ? (
-          <div className={`rounded-2xl border bg-surface p-6 sm:p-8 ${done ? "opacity-90" : ""}`}
-            style={{ borderColor: `${failed ? "#EF4444" : col}55` }}>
+          <div className={`rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.6)] bg-[#1A1A1A] p-6 sm:p-8 border-l-4 ${done ? "opacity-90" : ""}`}
+            style={{ borderLeftColor: failed ? "#EF4444" : col }}>
             <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-6 border-b border-[#2A2A2A]">
               <h3 className="text-2xl font-bold text-gray-100">{pd.title}</h3>
               <span className={`px-4 py-1.5 rounded-full text-sm font-medium border ${
@@ -324,7 +318,7 @@ export function TrainingGrid() {
           for (let i = 1; i <= daysInMonth; i++) days.push(i);
           return (
             <div key={month}
-              className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 cursor-pointer hover:border-white/[0.2] transition-colors"
+              className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 cursor-pointer hover:border-white/[0.2] transition-colors"
               onClick={() => { const d = new Date(currentDate); d.setMonth(month); setCurrentDate(d); setView("Month"); }}>
               <h3 className="text-sm font-bold text-gray-200 mb-4 uppercase tracking-wider">{monthNames[month]} {year}</h3>
               <div className="grid grid-cols-7 gap-1.5">

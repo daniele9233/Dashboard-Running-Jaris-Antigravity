@@ -1,6 +1,5 @@
 import type { Run, Profile } from "../../types/api";
 import { gradeFactor } from "./gamiCore";
-import { BRAND } from "../../theme/tokens";
 
 /**
  * ATHLETE EVOLUTION — SISTEMA A LIVELLI
@@ -26,12 +25,12 @@ export const levelFromXp = (xp: number) => clamp(Math.floor(Math.pow(Math.max(0,
 // ── 10 gradi × 10 livelli ─────────────────────────────────────────────────────
 interface TierDef { name: string; color: string; icon: string; perk: string }
 const TIER_DEFS: TierDef[] = [
-  { name: "Esordiente",  color: "#B8B8B8", icon: "Footprints", perk: "I primi passi nel mondo della corsa" },
+  { name: "Esordiente",  color: "#94A3B8", icon: "Footprints", perk: "I primi passi nel mondo della corsa" },
   { name: "Principiante",color: "#22D3EE", icon: "Sparkles",   perk: "La costanza prende forma" },
   { name: "Amatore",     color: "#2DD4BF", icon: "Flame",      perk: "Il motore aerobico si accende" },
   { name: "Intermedio",  color: "#34D399", icon: "Zap",        perk: "Ritmo da runner vero" },
   { name: "Avanzato",    color: "#A3E635", icon: "Medal",      perk: "Nettamente sopra la media" },
-  { name: "Competitivo", color: BRAND, icon: "Award",      perk: "Pronto a misurarti in gara" },
+  { name: "Competitivo", color: "#C0FF00", icon: "Award",      perk: "Pronto a misurarti in gara" },
   { name: "Agonista",    color: "#FBBF24", icon: "Target",     perk: "Mentalità da agonista" },
   { name: "Elite",       color: "#FB923C", icon: "Trophy",     perk: "Prestazioni d'élite" },
   { name: "Maestro",     color: "#F472B6", icon: "Gem",        perk: "Padronanza totale del gesto" },
@@ -804,7 +803,7 @@ function recentSessions(ledger: XpLedger, limit = 8): RecentRun[] {
       const z = XP_ZONES[i];
       lines.push({ label: z.name, detail: `${Math.round(zoneMinutes[i])}′ × ${String(z.perMin).replace(".", ",")}`, xp: zoneMinutes[i] * z.perMin, color: z.color });
     }
-    lines.push({ label: "Distanza", detail: `${(Math.round(km * 10) / 10).toLocaleString("it-IT")} km × 3`, xp: km * 3, color: "#B8B8B8" });
+    lines.push({ label: "Distanza", detail: `${(Math.round(km * 10) / 10).toLocaleString("it-IT")} km × 3`, xp: km * 3, color: "#94A3B8" });
     for (let i = XP_ZONES.length - 1; i >= 0; i--) {
       if (quality[i] > 0) lines.push({ label: `Bonus ${XP_ZONES[i].name.toLowerCase()}`, detail: `oltre ${QUALITY_BONUS_MIN}′ di qualità`, xp: quality[i], color: XP_ZONES[i].color });
     }

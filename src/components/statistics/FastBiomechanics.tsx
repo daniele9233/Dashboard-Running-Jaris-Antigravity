@@ -55,7 +55,8 @@ export function FastBiomechanics({ chart }: { chart?: ProAnalyticsChart }) {
 
   return (
     <section
-      className="rounded-3xl p-6 sm:p-8 border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+      className="rounded-3xl p-6 sm:p-8 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+      style={{ borderLeft: `3px solid ${LIME}` }}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3 min-w-0">
@@ -88,7 +89,7 @@ export function FastBiomechanics({ chart }: { chart?: ProAnalyticsChart }) {
           <div className="mt-6 grid gap-x-8 gap-y-5 lg:grid-cols-2">
             {metrics.map((m) => <Dumbbell key={m.label} m={m} />)}
           </div>
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-500">
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-gray-500">
             <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-gray-500" />al lento (oltre 5:30/km)</span>
             <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: LIME }} />a ritmo (sotto 4:45/km)</span>
             <span className="inline-flex items-center gap-1.5"><span className="w-0.5 h-3 bg-white/80" />il tuo migliore</span>
@@ -100,7 +101,7 @@ export function FastBiomechanics({ chart }: { chart?: ProAnalyticsChart }) {
               <div className="overflow-x-auto rounded-2xl border border-white/10">
                 <table className="w-full text-[12px]" style={{ fontFamily: MONO }}>
                   <thead>
-                    <tr className="text-left text-[10px] uppercase tracking-wider text-gray-500 border-b border-white/10">
+                    <tr className="text-left text-[9px] uppercase tracking-wider text-gray-500 border-b border-white/10">
                       <th className="px-4 py-2.5 font-black">Seduta</th>
                       <th className="px-3 py-2.5 font-black text-right">Lavoro</th>
                       <th className="px-3 py-2.5 font-black text-right">Passo</th>
@@ -119,7 +120,7 @@ export function FastBiomechanics({ chart }: { chart?: ProAnalyticsChart }) {
                           <tr className="border-b border-white/[0.05] cursor-pointer hover:bg-white/[0.03]" onClick={() => setOpenSession(open ? null : i)}>
                             <td className="px-4 py-2.5 min-w-[180px]">
                               <div className="text-white font-bold truncate max-w-[260px]" style={{ fontFamily: 'inherit' }}>{String(s.name ?? 'Ripetute')}</div>
-                              <div className="text-[11px] text-gray-500">{dateShort(s.date)}</div>
+                              <div className="text-[10px] text-gray-500">{dateShort(s.date)}</div>
                             </td>
                             <td className="px-3 py-2.5 text-right text-gray-300 whitespace-nowrap">{s.n_work} × {it(Number(s.avg_rep_m ?? 0))} m</td>
                             <td className="px-3 py-2.5 text-right text-white font-black whitespace-nowrap">{pace(num(s.work_pace_sec))}</td>
@@ -133,7 +134,7 @@ export function FastBiomechanics({ chart }: { chart?: ProAnalyticsChart }) {
                               <td colSpan={7} className="px-4 py-3">
                                 <div className="flex flex-wrap gap-2">
                                   {reps.map((r, j) => (
-                                    <div key={j} className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 text-[11px] leading-tight">
+                                    <div key={j} className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 text-[10px] leading-tight">
                                       <div className="text-gray-500">#{j + 1} · {it(Number(r.distance_m ?? 0))} m</div>
                                       <div className="text-white font-black">{pace(num(r.pace_sec))}<span className="text-gray-500 font-normal">/km</span></div>
                                       <div className="text-gray-300">{num(r.cadence) ?? '—'} spm · {num(r.stride_m) != null ? `${it(r.stride_m, 2)} m` : '—'}</div>
@@ -159,10 +160,10 @@ export function FastBiomechanics({ chart }: { chart?: ProAnalyticsChart }) {
                 {bestRuns.map((r, i) => (
                   <div key={i} className="rounded-xl border border-white/10 bg-black/25 px-3.5 py-2.5" style={{ fontFamily: MONO }}>
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-[11px] text-gray-500">{dateShort(r.date)} · {it(Number(r.distance_km ?? 0), 1)} km</span>
-                      <span className="text-[13px] font-black text-white">{pace(num(r.pace_sec))}<span className="text-[11px] text-gray-500 font-normal">/km</span></span>
+                      <span className="text-[10px] text-gray-500">{dateShort(r.date)} · {it(Number(r.distance_km ?? 0), 1)} km</span>
+                      <span className="text-[13px] font-black text-white">{pace(num(r.pace_sec))}<span className="text-[10px] text-gray-500 font-normal">/km</span></span>
                     </div>
-                    <div className="mt-1 grid grid-cols-4 gap-1 text-[11px]">
+                    <div className="mt-1 grid grid-cols-4 gap-1 text-[10px]">
                       <Mini label="GCT" value={num(r.gct) != null ? `${r.gct}` : '—'} />
                       <Mini label="SPM" value={num(r.cadence) != null ? `${r.cadence}` : '—'} />
                       <Mini label="VR%" value={num(r.vertical_ratio) != null ? it(r.vertical_ratio, 1) : '—'} />
@@ -182,7 +183,7 @@ export function FastBiomechanics({ chart }: { chart?: ProAnalyticsChart }) {
 function Count({ value, label }: { value: number | null; label: string }) {
   if (value == null) return null;
   return (
-    <span className="inline-flex items-baseline gap-1 rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-gray-400">
+    <span className="inline-flex items-baseline gap-1 rounded-full border border-white/10 px-2.5 py-1 text-[10px] text-gray-400">
       <b className="text-white" style={{ fontFamily: MONO }}>{value}</b>{label}
     </span>
   );
@@ -191,7 +192,7 @@ function Count({ value, label }: { value: number | null; label: string }) {
 function Mini({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-wider text-gray-600">{label}</div>
+      <div className="text-[8px] uppercase tracking-wider text-gray-600">{label}</div>
       <div className="text-white font-black">{value}</div>
     </div>
   );
@@ -227,7 +228,7 @@ function Dumbbell({ m }: { m: MetricDef }) {
     <div>
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">{m.label}</span>
-        <span className="text-[11px] text-gray-500 truncate">{m.hint}</span>
+        <span className="text-[10px] text-gray-500 truncate">{m.hint}</span>
       </div>
       <div className="mt-2 flex items-baseline gap-2" style={{ fontFamily: MONO }}>
         <span className="text-3xl font-black text-white">{fmt(m.fast)}</span>
@@ -242,7 +243,7 @@ function Dumbbell({ m }: { m: MetricDef }) {
         <div className="absolute left-0 right-0 top-1/2 h-px bg-white/10" />
         {m.easy != null && (
           <div className="absolute top-1/2 h-[3px] -translate-y-1/2 rounded-full"
-            style={{ left: `min(${x(m.easy)}, ${x(m.fast)})`, width: `calc(${Math.abs(parseFloat(x(m.fast)) - parseFloat(x(m.easy)))}%)`, background: `linear-gradient(90deg, ${parseFloat(x(m.easy)) < parseFloat(x(m.fast)) ? '#878787' : LIME}, ${parseFloat(x(m.easy)) < parseFloat(x(m.fast)) ? LIME : '#878787'})`, opacity: 0.7 }} />
+            style={{ left: `min(${x(m.easy)}, ${x(m.fast)})`, width: `calc(${Math.abs(parseFloat(x(m.fast)) - parseFloat(x(m.easy)))}%)`, background: `linear-gradient(90deg, ${parseFloat(x(m.easy)) < parseFloat(x(m.fast)) ? '#6B7280' : LIME}, ${parseFloat(x(m.easy)) < parseFloat(x(m.fast)) ? LIME : '#6B7280'})`, opacity: 0.7 }} />
         )}
         {m.best != null && (
           <div className="absolute top-0 bottom-0 w-0.5 -translate-x-1/2 bg-white/80" style={{ left: x(m.best) }} />
@@ -252,7 +253,7 @@ function Dumbbell({ m }: { m: MetricDef }) {
         )}
         <div className="absolute top-1/2 w-3.5 h-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-[#0a0a0a]" style={{ left: x(m.fast), background: LIME, boxShadow: `0 0 12px ${LIME}88` }} />
       </div>
-      <div className="mt-1 flex justify-between text-[11px] text-gray-500" style={{ fontFamily: MONO }}>
+      <div className="mt-1 flex justify-between text-[10px] text-gray-500" style={{ fontFamily: MONO }}>
         <span>{m.easy != null ? `lento ${fmt(m.easy)}` : ''}</span>
         <span>{m.best != null ? `migliore ${fmt(m.best)}` : ''}</span>
       </div>

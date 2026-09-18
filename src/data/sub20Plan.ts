@@ -205,7 +205,7 @@ export function sub20RaceDate(startDate?: string | null): string {
 export const SUB20_LEGEND: { color: string; label: string; opacity?: number }[] = [
   { color: "#EF4444", label: "Qualità · VO2 / ritmo gara" },
   { color: "#F97316", label: "Soglia" },
-  { color: "#878787", label: "Facile · aerobico" },
+  { color: "#6B7280", label: "Facile · aerobico" },
   { color: "#10B981", label: "Lungo" },
   { color: "#2A2A2A", label: "Riposo", opacity: 0.3 },
 ];

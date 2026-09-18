@@ -14,11 +14,9 @@ import {
 } from "./raceLabEngine";
 import { DEFAULT_SHOE_ID, SHOES, TAPERS, shoeById, type TaperKind } from "./shoeLab";
 import { GoalTrajectory } from "./GoalTrajectory";
-import { BRAND } from "../../theme/tokens";
-import { Button } from "../ui/Button";
 
 const MONO = "'JetBrains Mono', monospace";
-const LIT = BRAND;
+const LIT = "#C0FF00";
 
 /**
  * IL BANCO DI PROVA
@@ -42,7 +40,7 @@ function Head({ icon: Icon, title, hint }: { icon: typeof Target; title: string;
     <div className="flex items-baseline gap-2 px-5 pt-4 pb-3">
       <Icon className="w-4 h-4 self-center text-white/70" />
       <h2 className="text-[11px] font-black tracking-[0.2em] uppercase text-white/90">{title}</h2>
-      {hint && <span className="ml-auto text-[11px] text-gray-500 truncate">{hint}</span>}
+      {hint && <span className="ml-auto text-[10px] text-gray-500 truncate">{hint}</span>}
     </div>
   );
 }
@@ -50,7 +48,7 @@ function Head({ icon: Icon, title, hint }: { icon: typeof Target; title: string;
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block min-w-0">
-      <span className="block text-[11px] font-semibold text-gray-400 mb-1.5">{label}</span>
+      <span className="block text-[9px] font-black tracking-[0.22em] uppercase text-gray-500 mb-1.5">{label}</span>
       {children}
     </label>
   );
@@ -58,7 +56,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const inputCls =
   "w-full rounded-lg border border-white/10 bg-black/40 px-2.5 py-2 text-[13px] text-white outline-none " +
-  "focus:border-brand/50 transition-colors";
+  "focus:border-[#C0FF00]/50 transition-colors";
 
 function Select({ value, onChange, children }: { value: string; onChange: (v: string) => void; children: React.ReactNode }) {
   return (
@@ -76,11 +74,11 @@ function Slider({ label, value, min, max, step, onChange, unit }: {
       <div className="flex items-baseline justify-between mb-1">
         <span className="text-[11px] text-gray-400">{label}</span>
         <span className="text-[13px] font-black tabular-nums text-white" style={{ fontFamily: MONO }}>
-          {value}{unit && <span className="text-[11px] text-gray-500 ml-0.5">{unit}</span>}
+          {value}{unit && <span className="text-[10px] text-gray-500 ml-0.5">{unit}</span>}
         </span>
       </div>
       <input type="range" min={min} max={max} step={step} value={value}
-        onChange={(e) => onChange(+e.target.value)} className="w-full accent-brand cursor-pointer" />
+        onChange={(e) => onChange(+e.target.value)} className="w-full accent-[#C0FF00] cursor-pointer" />
     </div>
   );
 }
@@ -106,13 +104,13 @@ function FactorRow({ f }: { f: Factor }) {
       <span className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: pos ? "#22C55E" : "#F43F5E" }} />
       <div className="min-w-0 flex-1">
         <div className="text-[12px] font-bold text-white/90">{f.label}</div>
-        <div className="text-[11px] text-gray-500 leading-snug">{f.detail}</div>
+        <div className="text-[10px] text-gray-500 leading-snug">{f.detail}</div>
       </div>
       <div className="text-right shrink-0">
-        <div className="text-[12px] font-black tabular-nums" style={{ fontFamily: MONO, color: pos ? "#22C55E" : "#F43F5E" }}>
+        <div className="text-[12.5px] font-black tabular-nums" style={{ fontFamily: MONO, color: pos ? "#22C55E" : "#F43F5E" }}>
           {pos ? "−" : "+"}{Math.abs(f.secPerKm).toFixed(1)}
         </div>
-        <div className="text-[11px] text-gray-600">s/km</div>
+        <div className="text-[9px] text-gray-600">s/km</div>
       </div>
     </div>
   );
@@ -161,7 +159,7 @@ function SetupControls({ setup, onChange }: { setup: RaceSetup; onChange: (s: Ra
         <div className="flex items-baseline justify-between mb-1">
           <span className="text-[11px] text-gray-400">Temperatura della gara</span>
           <button type="button" onClick={() => onChange({ ...setup, tempC: useClimate ? 10 : null })}
-            className="text-[11px] font-bold transition-colors"
+            className="text-[10px] font-bold transition-colors"
             style={{ color: useClimate ? "#9CA3AF" : LIT }}>
             {useClimate ? "clima tipico del mese · scegli tu" : "torna al clima del mese"}
           </button>
@@ -254,7 +252,7 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
           <>
             <div className="mt-5 grid gap-3 lg:grid-cols-[1.4fr_1fr]">
               <div className="rounded-xl border border-white/8 bg-black/30 p-4">
-                <div className="text-[13px] font-semibold text-gray-200 mb-2">Verdetto</div>
+                <div className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-500 mb-2">Verdetto</div>
 
                 {/* il controllo di realtà: forse il tempo ce l'hai già, e ti manca
                     solo la giornata giusta per tirarlo fuori */}
@@ -272,7 +270,7 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
                       possibile il <b className="text-white">{fmtDate(result.etaPlan.iso)}</b> —{" "}
                       {humanDays(result.etaPlan.days)}.
                     </p>
-                    <p className="mt-2 text-[12px] text-gray-400 leading-relaxed">
+                    <p className="mt-2 text-[12.5px] text-gray-400 leading-relaxed">
                       {result.etaSafe ? (
                         <>Quella è la data in cui la previsione tocca il tempo: ci vai sopra una volta su due.
                           Perché diventi probabile (4 volte su 5) serve arrivare al{" "}
@@ -287,7 +285,7 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
                   <p className="text-[15px] font-black leading-snug text-gray-200">{result.blocker}</p>
                 )}
 
-                <div className="mt-3 pt-3 border-t border-white/10 grid gap-1.5 text-[11px] text-gray-400 leading-relaxed">
+                <div className="mt-3 pt-3 border-t border-white/10 grid gap-1.5 text-[11.5px] text-gray-400 leading-relaxed">
                   <div>
                     <b className="text-white">Oggi, in queste condizioni:</b>{" "}
                     <b className="tabular-nums" style={{ fontFamily: MONO, color: LIT }}>{fmtClock(result.todaySec)}</b>
@@ -302,7 +300,7 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
               </div>
 
               <div className="rounded-xl border border-white/8 bg-black/30 p-4 flex flex-col justify-center">
-                <div className="text-[13px] font-semibold text-gray-200 mb-2">
+                <div className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-500 mb-2">
                   Probabilità {deadlineDays ? "il giorno della gara" : `al ${fmtDate(result.horizon.iso)}`}
                 </div>
                 <div className="flex items-baseline gap-2">
@@ -323,7 +321,7 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
                   <div className="absolute top-0 bottom-0 w-[2px] bg-white/70"
                     style={{ left: `calc(${pctNow}% - 1px)` }} title="col carico di adesso" />
                 </div>
-                <p className="mt-2 text-[11px] text-gray-500 leading-relaxed">
+                <p className="mt-2 text-[10.5px] text-gray-500 leading-relaxed">
                   Col carico che tieni adesso sarebbe{" "}
                   <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>{pctNow}%</b>.{" "}
                   {result.gapSec == null || Math.abs(result.gapSec) < 3
@@ -342,9 +340,9 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
             {/* le condizioni con cui la corri */}
             <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
               <div className="rounded-xl border border-white/8 bg-black/20 p-4">
-                <div className="text-[13px] font-semibold text-gray-200 mb-3">Con cosa la corri</div>
+                <div className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-500 mb-3">Con cosa la corri</div>
                 <SetupControls setup={setup} onChange={setSetup} />
-                <p className="mt-3 text-[11px] text-gray-500 leading-relaxed">
+                <p className="mt-3 text-[10.5px] text-gray-500 leading-relaxed">
                   Tutto è misurato rispetto alle tue <b className="text-gray-400">{shoeById(setup.baselineShoeId)?.name}</b>{" "}
                   senza taper, perché è così che hai corso le prove da cui viene la stima. Cambiare scarpa qui
                   aggiunge solo la differenza, non il vantaggio pieno: altrimenti si conterebbe due volte.
@@ -352,9 +350,9 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
               </div>
 
               <div className="rounded-xl border border-white/8 bg-black/20 p-4">
-                <div className="text-[13px] font-semibold text-gray-200 mb-1">Cosa cambiano quelle scelte</div>
+                <div className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-500 mb-1">Cosa cambiano quelle scelte</div>
                 {result.factors.length === 0 ? (
-                  <p className="mt-2 text-[11px] text-gray-500 leading-relaxed">
+                  <p className="mt-2 text-[11.5px] text-gray-500 leading-relaxed">
                     Nessuna: stai chiedendo il tempo alle condizioni di sempre — le tue scarpe abituali, senza
                     taper, con il clima tipico del mese. Cambia qualcosa a sinistra e qui compare quanto vale.
                   </p>
@@ -369,7 +367,7 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
             {/* il piano */}
             <div className="mt-4 grid gap-4 lg:grid-cols-2">
               <div className="rounded-xl border border-white/8 bg-black/20 p-4">
-                <div className="text-[13px] font-semibold text-gray-200 mb-3">Il piano che stai simulando</div>
+                <div className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-500 mb-3">Il piano che stai simulando</div>
                 <div className="grid gap-3">
                   <Slider label="Chilometri a settimana" value={km} min={20} max={140} step={5} onChange={setKm} unit="km" />
                   <Slider label="Sedute di qualità a settimana" value={quality} min={0} max={4} step={1} onChange={setQuality} unit="" />
@@ -378,16 +376,16 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
                 {/* il numero che traduce i tre cursori in una sola grandezza */}
                 <div className="mt-3 pt-3 border-t border-white/10">
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-[13px] font-semibold text-gray-200">
+                    <span className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-500">
                       Tetto di adattamento
                     </span>
                     <span className="text-[15px] font-black tabular-nums shrink-0" style={{ fontFamily: MONO, color: LIT }}>
                       {result.ceilingPerMonth.toFixed(2).replace(".", ",")}
-                      <span className="text-[11px] text-gray-500 font-normal ml-1">punti VDOT / mese</span>
+                      <span className="text-[9.5px] text-gray-500 font-normal ml-1">punti VDOT / mese</span>
                     </span>
                   </div>
                 </div>
-                <p className="mt-1.5 text-[11px] text-gray-600 leading-relaxed">
+                <p className="mt-1.5 text-[10px] text-gray-600 leading-relaxed">
                   È il tetto di adattamento: il corpo non migliora più in fretta di così, per quanto tu lo
                   carichi. Alzare i chilometri alza il tetto — con rendimenti decrescenti — e sposta anche il
                   punto in cui la curva si appiattisce.
@@ -395,7 +393,7 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
               </div>
 
               <div className="rounded-xl border border-white/8 bg-black/20 p-4">
-                <div className="text-[13px] font-semibold text-gray-200 mb-3">Il minimo che basta</div>
+                <div className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-500 mb-3">Il minimo che basta</div>
                 {result.suggested ? (
                   <>
                     <p className="text-[13px] text-gray-200 leading-relaxed">
@@ -408,16 +406,17 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
                       È il carico più leggero che porta all'obiettivo con almeno l'80% di probabilità
                       {deadlineDays ? " entro la data scelta" : ""}, in quelle condizioni di gara.
                     </p>
-                    <Button variant="primary" size="sm" className="mt-3" onClick={() => {
+                    <button type="button" onClick={() => {
                       setKm(result.suggested!.km);
                       setQuality(result.suggested!.qualitySessions);
                       setLongRun(result.suggested!.longRunMinutes);
-                    }}>
+                    }} className="mt-3 text-[11px] font-black uppercase tracking-wide px-3 py-1.5 rounded-lg text-black transition-transform hover:scale-105"
+                      style={{ background: LIT }}>
                       Usa questo piano
-                    </Button>
+                    </button>
                   </>
                 ) : (
-                  <p className="text-[12px] text-gray-400 leading-relaxed">
+                  <p className="text-[12.5px] text-gray-400 leading-relaxed">
                     Nessun carico ragionevole ci arriva{deadlineDays ? " entro quella data" : ""}. Serve più tempo,
                     una giornata migliore, o un obiettivo intermedio.
                   </p>
@@ -428,10 +427,10 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
             {/* ── LA TRAIETTORIA: la stessa risposta, ma vista ── */}
             <div className="mt-4 rounded-xl border border-white/8 bg-black/25 p-4">
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
-                <div className="text-[13px] font-semibold text-gray-200">
+                <div className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-500">
                   Come ci arrivi
                 </div>
-                <div className="text-[11px] text-gray-500">
+                <div className="text-[10.5px] text-gray-500">
                   {dist.label} · {km} km a settimana · {quality} di qualità · lungo {longRun}′
                   {setup.tempC != null ? ` · ${Math.round(setup.tempC)}°` : " · clima del mese"}
                 </div>
@@ -452,10 +451,10 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
             {/* ── LE LEVE: forma contro giornata ── */}
             {result.levers.length > 0 && (
               <div className="mt-4 rounded-xl border border-white/8 bg-black/20 p-4">
-                <div className="text-[13px] font-semibold text-gray-200 mb-1">
+                <div className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-500 mb-1">
                   Cosa sposta la data
                 </div>
-                <p className="text-[11px] text-gray-600 mb-3">
+                <p className="text-[10px] text-gray-600 mb-3">
                   Una leva alla volta, tutto il resto fermo. A sinistra quello che si costruisce in mesi,
                   a destra quello che si sceglie la mattina della gara.
                 </p>
@@ -466,7 +465,7 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
                     const maxGain = Math.max(...result.levers.map((l) => Math.abs(l.gainSec)), 1);
                     return (
                       <div key={kind}>
-                        <div className="text-[10px] font-black tracking-[0.2em] uppercase mb-2"
+                        <div className="text-[9px] font-black tracking-[0.2em] uppercase mb-2"
                           style={{ color: kind === "forma" ? LIT : "#22D3EE" }}>
                           {kind === "forma" ? "Forma · mesi" : "Giornata · una scelta"}
                         </div>
@@ -475,17 +474,17 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
                             <div key={l.id} className="py-2">
                               <div className="flex items-baseline gap-2">
                                 <span className="text-[12px] font-bold text-white/90 flex-1 min-w-0 truncate">{l.label}</span>
-                                <span className="text-[12px] font-black tabular-nums shrink-0"
+                                <span className="text-[12.5px] font-black tabular-nums shrink-0"
                                   style={{
                                     fontFamily: MONO,
-                                    color: Math.abs(l.gainSec) < 1 ? "#878787" : l.gainSec > 0 ? "#22C55E" : "#F43F5E",
+                                    color: Math.abs(l.gainSec) < 1 ? "#6B7280" : l.gainSec > 0 ? "#22C55E" : "#F43F5E",
                                   }}>
                                   {Math.abs(l.gainSec) < 1
                                     ? "—"
                                     : `${l.gainSec > 0 ? "−" : "+"}${fmtClock(Math.abs(l.gainSec))}`}
                                 </span>
                                 {l.probPoints !== 0 && Math.abs(l.gainSec) >= 1 && (
-                                  <span className="text-[11px] font-black tabular-nums shrink-0 w-10 text-right"
+                                  <span className="text-[10px] font-black tabular-nums shrink-0 w-10 text-right"
                                     style={{ fontFamily: MONO, color: l.probPoints > 0 ? "#22C55E" : "#F43F5E" }}>
                                     {l.probPoints > 0 ? "+" : "−"}{Math.abs(l.probPoints)}%
                                   </span>
@@ -499,7 +498,7 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
                                   }} />
                               </div>
                               <div className="mt-1 flex items-baseline justify-between gap-2">
-                                <span className="text-[11px] text-gray-600 leading-snug">
+                                <span className="text-[10px] text-gray-600 leading-snug">
                                   {l.detail}
                                   {/* la leva lenta che a questa data non paga ancora: dirlo, non tacerlo */}
                                   {Math.abs(l.gainSec) < 2 && l.gainSecLate >= 2 && (
@@ -511,7 +510,7 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
                                   )}
                                 </span>
                                 {l.daysEarlier != null && l.daysEarlier !== 0 && (
-                                  <span className="text-[11px] shrink-0 tabular-nums" style={{ fontFamily: MONO, color: "#9CA3AF" }}>
+                                  <span className="text-[10px] shrink-0 tabular-nums" style={{ fontFamily: MONO, color: "#9CA3AF" }}>
                                     {l.daysEarlier > 0 ? `${l.daysEarlier} gg prima` : `${-l.daysEarlier} gg dopo`}
                                   </span>
                                 )}
@@ -525,33 +524,6 @@ function GoalSection({ physio }: { physio: ReturnType<typeof usePhysio> }) {
                 </div>
               </div>
             )}
-
-            {/* ── LA CHIUSURA: il verdetto tradotto in due azioni ── */}
-            {result.levers.length > 0 && (() => {
-              const forma = result.levers.find((l) => l.kind === "forma" && (l.gainSec >= 1 || l.gainSecLate >= 1));
-              const giornata = result.levers.find((l) => l.kind === "giornata" && l.gainSec >= 1);
-              if (!forma && !giornata) return null;
-              return (
-                <div className="mt-4 rounded-xl border border-brand/25 bg-brand/[0.05] p-4">
-                  <div className="text-[13px] font-semibold text-gray-200 mb-2">Da dove partire</div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {forma && (
-                      <p className="text-[12px] text-gray-300 leading-relaxed">
-                        <b className="text-brand">Da domani:</b> {forma.label.toLowerCase()}. È la leva di forma che
-                        rende di più qui{forma.daysEarlier ? `, e anticipa l'obiettivo di ${forma.daysEarlier} giorni` : ""}.
-                      </p>
-                    )}
-                    {giornata && (
-                      <p className="text-[12px] text-gray-300 leading-relaxed">
-                        <b className="text-[#22D3EE]">La mattina della gara:</b> {giornata.label.toLowerCase()} —{" "}
-                        <span className="tabular-nums" style={{ fontFamily: MONO }}>{fmtClock(giornata.gainSec)}</span>{" "}
-                        che non costano un solo allenamento.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
           </>
         )}
       </div>
@@ -578,9 +550,9 @@ export function RaceLabView() {
       <div className="mx-auto max-w-[1500px] px-4 md:px-6 py-8 text-white">
 
         <div className="rl-rise mb-5 flex flex-wrap items-baseline gap-3">
-          <FlaskConical className="w-6 h-6 text-brand self-center" />
+          <FlaskConical className="w-6 h-6 text-[#C0FF00] self-center" />
           <h1 className="text-xl md:text-2xl font-black tracking-tight uppercase italic">
-            Banco di <span className="text-brand">prova</span>
+            Banco di <span className="text-[#C0FF00]">prova</span>
           </h1>
           <p className="text-[12px] text-gray-500 max-w-2xl">
             Quanto della tua prestazione è forma, e quanto è la giornata che hai avuto. Le due cose si

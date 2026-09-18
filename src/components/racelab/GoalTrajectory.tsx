@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fmtClock } from "../gamification/gamiCore";
 import type { GoalCurvePoint } from "./raceLabEngine";
-import { BRAND } from "../../theme/tokens";
 
 /**
  * LA TRAIETTORIA
@@ -27,7 +26,7 @@ import { BRAND } from "../../theme/tokens";
  * generica sarebbero stati quattro compromessi.
  */
 
-const LIME = BRAND;
+const LIME = "#C0FF00";
 const CYAN = "#22D3EE";
 const MONO = "'JetBrains Mono', monospace";
 
@@ -66,7 +65,7 @@ const fmtMonth = (iso: string) => {
 function tempColor(t: number): string {
   if (t <= 5) return "#3B82F6";
   if (t <= 12) return "#22D3EE";
-  if (t <= 18) return BRAND;
+  if (t <= 18) return "#C0FF00";
   if (t <= 24) return "#FBBF24";
   if (t <= 29) return "#FB923C";
   return "#F43F5E";
@@ -223,7 +222,7 @@ export function GoalTrajectory({
           <g key={v}>
             <line x1={M.left} x2={W - M.right} y1={Y(v)} y2={Y(v)} stroke="#ffffff0d" strokeWidth={1} />
             <text x={M.left - 8} y={Y(v)} textAnchor="end" dominantBaseline="central"
-              fill="#878787" style={{ fontFamily: MONO, fontSize: fs.axis }}>
+              fill="#6B7280" style={{ fontFamily: MONO, fontSize: fs.axis }}>
               {fmtClock(v)}
             </text>
           </g>
@@ -251,7 +250,7 @@ export function GoalTrajectory({
 
         {/* ── banda d'incertezza e curve ── */}
         <path d={band} fill="url(#gt-band)" />
-        <path d={line("nowSec")} fill="none" stroke="#878787" strokeWidth={1.8} strokeDasharray="5 4" />
+        <path d={line("nowSec")} fill="none" stroke="#6B7280" strokeWidth={1.8} strokeDasharray="5 4" />
         <path d={line("planSec")} fill="none" stroke={LIME} strokeWidth={2.6} strokeLinecap="round" />
 
         {/* ── la data della gara, se c'è ── */}
@@ -279,9 +278,9 @@ export function GoalTrajectory({
         <path d={probArea} fill="url(#gt-prob)" />
         <path d={curve.map((p, i) => `${i === 0 ? "M" : "L"}${X(p.day).toFixed(1)},${YP(p.planProb).toFixed(1)}`).join(" ")}
           fill="none" stroke={CYAN} strokeWidth={2} />
-        <path d={probNowLine} fill="none" stroke="#878787" strokeWidth={1.4} strokeDasharray="4 4" />
+        <path d={probNowLine} fill="none" stroke="#6B7280" strokeWidth={1.4} strokeDasharray="4 4" />
         <text x={M.left - 8} y={YP(0.8)} textAnchor="end" dominantBaseline="central"
-          fill="#878787" style={{ fontFamily: MONO, fontSize: fs.month }}>80%</text>
+          fill="#6B7280" style={{ fontFamily: MONO, fontSize: fs.month }}>80%</text>
         <text x={M.left - 8} y={YP(0)} textAnchor="end" dominantBaseline="central"
           fill="#4B5563" style={{ fontFamily: MONO, fontSize: fs.month }}>0%</text>
 
@@ -302,7 +301,7 @@ export function GoalTrajectory({
             <line x1={X(hp.day)} x2={X(hp.day)} y1={M.top} y2={H + HP + HT - 4}
               stroke="#ffffff33" strokeWidth={1} />
             <circle cx={X(hp.day)} cy={Y(hp.planSec)} r={4} fill={LIME} stroke="#0A0A0A" strokeWidth={1.5} />
-            <circle cx={X(hp.day)} cy={Y(hp.nowSec)} r={3} fill="#878787" stroke="#0A0A0A" strokeWidth={1.5} />
+            <circle cx={X(hp.day)} cy={Y(hp.nowSec)} r={3} fill="#6B7280" stroke="#0A0A0A" strokeWidth={1.5} />
             {(() => {
               const bw = narrow ? 128 : 168, bh = narrow ? 68 : 82;
               const bx = Math.min(Math.max(X(hp.day) - bw / 2, M.left), W - M.right - bw);
@@ -330,7 +329,7 @@ export function GoalTrajectory({
       </svg>
 
       {/* ── legenda ── */}
-      <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px] text-gray-500">
+      <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[10px] text-gray-500">
         <span className="flex items-center gap-1.5">
           <span className="w-4 h-[2.5px] rounded-full" style={{ background: LIME }} />
           piano simulato

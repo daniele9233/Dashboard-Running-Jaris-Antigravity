@@ -1,80 +1,26 @@
-/*
- * Outfit non è più caricato: era importato e mai usato. Barlow resta solo per
- * le targhe del piano (TrainingPlanPanels), che sono una scelta voluta.
- */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap');
 @import "tailwindcss";
 @import 'react-grid-layout/css/styles.css';
 @import 'react-resizable/css/styles.css';
 
-/*
- * IL SISTEMA, IN UN POSTO SOLO
- * ════════════════════════════════════════════════════════════════════════════
- * Prima convivevano quattro palette: questo blocco dichiarava un sistema teal
- * (#2DD4BF) usato in venti punti, :root ne dichiarava uno lime, chartTheme un
- * terzo, l'hero un quarto — e il lime vero stava scritto a mano 473 volte nei
- * componenti. Adesso i colori vivono qui e diventano utility Tailwind
- * (`text-brand`, `bg-brand/10`, `border-line`…); il lato JS li legge da
- * `src/theme/tokens.ts`, che rispecchia questi valori.
- *
- * La rampa dei grigi è ridefinita di proposito. Quella di default di Tailwind
- * è fredda (tinta slate, 264°) e sul nero di quest'app gray-500 e gray-600
- * restano sotto il 4,5:1 del WCAG: 550 etichette illeggibili per costruzione.
- * Questa è neutra e tarata sul fondo: 400/500/600 superano tutti AA.
- */
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
-  /* ── marchio e superfici ─────────────────────────────────────────────── */
-  --color-brand: #C0FF00;        /* azione primaria, selezione, stato: mai decorazione */
-  --color-brand-ink: #0A0A0A;    /* testo sopra il lime */
-  --color-canvas: #050505;       /* fondo dell'app */
-  --color-surface: #0E0E0E;      /* pannelli e card (= chartTheme.panel) */
-  --color-surface-2: #141414;    /* input, righe, pannelli dentro pannelli */
-  --color-line: rgb(255 255 255 / 0.08);
-  --color-line-strong: rgb(255 255 255 / 0.14);
+  --color-bg-app: #0A0D0C;
+  --color-bg-card: #0F1413;
+  --color-bg-hover: #151E1C;
+  --color-text-primary: #E2E8F0;
+  --color-text-secondary: #64748B;
+  --color-text-muted: #475569;
+  --color-accent: #2DD4BF;
+  --color-accent-dark: #115E59;
 
-  /* ── rampa neutra, contrasto misurato su #0A0A0A ─────────────────────── */
-  --color-gray-50: #FAFAFA;
-  --color-gray-100: #F2F2F2;
-  --color-gray-200: #E4E4E4;
-  --color-gray-300: #CFCFCF;     /* 14:1 */
-  --color-gray-400: #B8B8B8;     /* 10:1 */
-  --color-gray-500: #9E9E9E;     /*  7:1 · testo secondario */
-  --color-gray-600: #878787;     /*  5,4:1 · testo di servizio, il minimo */
-  --color-gray-700: #4A4A4A;     /* solo bordi e fondi: non è un colore da testo */
-  --color-gray-800: #2A2A2A;
-  --color-gray-900: #171717;
-  --color-gray-950: #0C0C0C;
-
-  /* alias storici: stessi nomi, valori del sistema lime */
-  --color-bg-app: #050505;
-  --color-bg-card: #0E0E0E;
-  --color-bg-hover: #141414;
-  --color-text-primary: #FFFFFF;
-  --color-text-secondary: #9E9E9E;
-  --color-text-muted: #878787;
-  --color-accent: var(--color-brand);
-  --color-accent-dark: #4A6300;
-
-  --color-chart-purple: #A78BFA;
-  --color-chart-blue: #22D3EE;
-  --color-chart-teal: #22C55E;
+  --color-chart-purple: #8B5CF6;
+  --color-chart-blue: #3B82F6;
+  --color-chart-teal: #14B8A6;
   --color-chart-yellow: #F59E0B;
   --color-chart-red: #F43F5E;
-
-  /*
-   * Raggi: 4 · 8 · 12 · 16 · 24 + pill. Tailwind ne offriva otto e il codice
-   * ne aggiungeva altri tredici a mano: `md` (6px) collassa su 8, `4xl` su 24.
-   */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
-  --radius-2xl: 16px;
-  --radius-3xl: 24px;
-  --radius-4xl: 24px;
 }
 
 /* ─── Theme tokens — switched via [data-theme] on <html> ───────────────── */
@@ -90,8 +36,7 @@ html[data-theme="dark"] {
    * tendina e la scrollbar di sistema.
    */
   color-scheme: dark;
-  /* le --app-* restano per i componenti che le usano: puntano al sistema sopra */
-  --app-bg: var(--color-canvas);
+  --app-bg: #050505;
   --app-bg-alt: #0A0A0A;
   --app-card: #1a1a1a;
   --app-card-alt: #111;
@@ -100,63 +45,26 @@ html[data-theme="dark"] {
   --app-border-strong: rgba(255,255,255,0.10);
   --app-text: #FFFFFF;
   --app-text-muted: #A0A0A0;
-  --app-text-dim: var(--color-gray-600);    /* era #666: 3,45:1, sotto AA */
-  --app-text-faint: #7A7A7A;                /* era #444: 2,1:1 */
-  --app-accent: var(--color-brand);
+  --app-text-dim: #666;
+  --app-text-faint: #444;
+  --app-accent: #C0FF00;
   --app-accent-soft: rgba(192,255,0,0.1);
   --app-divider: rgba(255,255,255,0.04);
   --app-input-bg: rgba(255,255,255,0.05);
-  /* ultimi residui slate (#1E293B, #0F172A): ora neutri come il resto */
-  --app-scrollbar-thumb: #2A2A2A;
-  --app-scrollbar-thumb-hover: #3A3A3A;
-  --app-tooltip-bg: #111111;
-  --app-tooltip-border: #2A2A2A;
-  --app-grid-line: #1E1E1E;
+  --app-scrollbar-thumb: #1E293B;
+  --app-scrollbar-thumb-hover: #334155;
+  --app-tooltip-bg: #0F172A;
+  --app-tooltip-border: #1E293B;
+  --app-grid-line: #1E293B;
 }
 
 body {
   background-color: var(--app-bg);
   min-height: 100vh;
-  font-family: var(--font-sans);
+  font-family: var(--font-mono);
   color: var(--app-text);
   margin: 0;
   transition: background-color 0.25s ease, color 0.25s ease;
-}
-
-/*
- * FOCUS DA TASTIERA
- * Prima nessun controllo principale mostrava dove fosse il focus: 0 su 24
- * misurati. Una regola sola, qui, invece di 143 bottoni che se lo ricordano.
- * La specificità (elemento + pseudo-classe) batte gli `outline-none` sparsi.
- */
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
-summary:focus-visible,
-[role="button"]:focus-visible,
-[role="tab"]:focus-visible,
-[tabindex]:not([tabindex="-1"]):focus-visible {
-  outline: 2px solid var(--color-brand);
-  outline-offset: 2px;
-}
-
-/*
- * MOVIMENTO RIDOTTO, OVUNQUE
- * Prima coperto solo per quattro classi di celebrazione. Le entrate
- * `animate-in`, le transizioni e i keyframe del resto dell'app ignoravano la
- * preferenza del sistema. GSAP legge la stessa preferenza in gsapSetup.
- */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
 }
 
 #root {
@@ -252,6 +160,21 @@ summary:focus-visible,
   }
 }
 
+/* ─── Theme-aware helper classes ───────────────────────────────────────── */
+.themed-bg { background-color: var(--app-bg); }
+.themed-bg-alt { background-color: var(--app-bg-alt); }
+.themed-card { background-color: var(--app-card); }
+.themed-card-alt { background-color: var(--app-card-alt); }
+.themed-border { border-color: var(--app-border); }
+.themed-border-strong { border-color: var(--app-border-strong); }
+.themed-text { color: var(--app-text); }
+.themed-text-muted { color: var(--app-text-muted); }
+.themed-text-dim { color: var(--app-text-dim); }
+.themed-text-faint { color: var(--app-text-faint); }
+.themed-accent { color: var(--app-accent); }
+.themed-accent-bg { background-color: var(--app-accent); }
+.themed-divider { border-color: var(--app-divider); }
+
 /* Prevent transition flicker on SVG elements */
 html[data-theme="dark"] svg * {
   transition-property: none !important;
@@ -260,7 +183,7 @@ html[data-theme="dark"] svg * {
 /* ─── react-grid-layout dark theme override ─────────────────────────────── */
 .react-grid-item.react-grid-placeholder {
   background: rgba(192, 255, 0, 0.12) !important;
-  border: 2px dashed var(--color-brand) !important;
+  border: 2px dashed #C0FF00 !important;
   border-radius: 24px !important;
   opacity: 0.8;
   transition-duration: 100ms;
@@ -277,7 +200,7 @@ html[data-theme="dark"] svg * {
 }
 .react-grid-item > .react-resizable-handle:hover {
   opacity: 1;
-  filter: drop-shadow(0 0 6px var(--color-brand));
+  filter: drop-shadow(0 0 6px #C0FF00);
 }
 .react-grid-item > .react-resizable-handle::after {
   content: '';
@@ -291,8 +214,8 @@ html[data-theme="dark"] svg * {
   transition: border-color 0.15s ease;
 }
 .react-grid-item > .react-resizable-handle:hover::after {
-  border-right-color: var(--color-brand);
-  border-bottom-color: var(--color-brand);
+  border-right-color: #C0FF00;
+  border-bottom-color: #C0FF00;
 }
 
 .react-grid-item.react-draggable-dragging {

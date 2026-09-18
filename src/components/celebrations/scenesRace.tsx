@@ -173,7 +173,7 @@ export function BibPinScene({ accent, accent2 }: SceneProps) {
             <line x1="8" y1="9" x2="8" y2="16" stroke="#52525B" strokeWidth="2.5" strokeLinecap="round" />
           </svg>
         ))}
-        <div className="bp-race text-[10px] font-black tracking-[0.3em] uppercase mb-1" style={{ color: "#52525B" }}>
+        <div className="bp-race text-[9px] font-black tracking-[0.3em] uppercase mb-1" style={{ color: "#52525B" }}>
           METIC RUN · 10K
         </div>
         <div className="bp-num" style={{ fontFamily: MONO, fontSize: 52, fontWeight: 800, color: "#0A0A0A", lineHeight: 1 }}>
@@ -289,7 +289,7 @@ export function LoadRingScene({ accent, accent2 }: SceneProps) {
           <span className="lr2-num text-white tabular-nums" style={{ fontFamily: MONO, fontSize: 44, fontWeight: 800 }}>0</span>
           <span style={{ fontFamily: MONO, fontSize: 20, fontWeight: 800, color: accent }}>%</span>
         </div>
-        <div className="lr2-wava text-[10px] font-black tracking-[0.35em] uppercase text-gray-500">wava age-graded</div>
+        <div className="lr2-wava text-[9px] font-black tracking-[0.35em] uppercase text-gray-500">wava age-graded</div>
       </div>
     </div>
   );

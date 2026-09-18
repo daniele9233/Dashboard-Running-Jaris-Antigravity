@@ -22,8 +22,6 @@ import {
 import { useJarvisContext } from "../context/JarvisContext";
 import { useBadges } from "./celebrations/BadgeProvider";
 import type { Profile, BestEffort, Run } from "../types/api";
-import { BRAND } from "../theme/tokens";
-import { Button } from "./ui/Button";
 
 // ─── POLYLINE DECODER ────────────────────────────────────────────────────────
 
@@ -173,7 +171,7 @@ function findPersonalRecordCelebration(efforts: BestEffort[], previous: Personal
 
 function PersonalRecordCelebrationOverlay({ celebration, onClose }: { celebration: PersonalRecordCelebration; onClose: () => void }) {
   const { effort, deltaSeconds, isNewDistance } = celebration;
-  const colors = [BRAND, "#3B82F6", "#F59E0B", "#10B981", "#F43F5E"];
+  const colors = ["#C0FF00", "#3B82F6", "#F59E0B", "#10B981", "#F43F5E"];
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 px-4 backdrop-blur-md">
@@ -186,7 +184,7 @@ function PersonalRecordCelebrationOverlay({ celebration, onClose }: { celebratio
         <X className="h-5 w-5" />
       </button>
 
-      <div className="pr-celebration-shell relative w-full max-w-xl overflow-hidden rounded-2xl border border-brand/35 bg-[#0B0F0D] p-8 text-center shadow-[0_30px_100px_rgba(0,0,0,0.7)]">
+      <div className="pr-celebration-shell relative w-full max-w-xl overflow-hidden rounded-2xl border border-[#C0FF00]/35 bg-[#0B0F0D] p-8 text-center shadow-[0_30px_100px_rgba(0,0,0,0.7)]">
         {Array.from({ length: 32 }).map((_, index) => (
           <span
             key={index}
@@ -201,14 +199,14 @@ function PersonalRecordCelebrationOverlay({ celebration, onClose }: { celebratio
           />
         ))}
 
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-brand/30 bg-brand/10 shadow-[0_0_40px_rgba(192,255,0,0.25)]">
-          <Award className="h-8 w-8 text-brand" />
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-[#C0FF00]/30 bg-[#C0FF00]/10 shadow-[0_0_40px_rgba(192,255,0,0.25)]">
+          <Award className="h-8 w-8 text-[#C0FF00]" />
         </div>
-        <div className="text-xs font-black uppercase tracking-[0.35em] text-brand">
+        <div className="text-xs font-black uppercase tracking-[0.35em] text-[#C0FF00]">
           {isNewDistance ? "Nuovo Personal Record" : "Record battuto"}
         </div>
         <div className="mt-3 text-4xl font-black text-white sm:text-5xl">{effort.distance}</div>
-        <div className="pr-record-ring mx-auto my-7 flex h-36 w-36 items-center justify-center rounded-full border border-brand/30 bg-[#121212]">
+        <div className="pr-record-ring mx-auto my-7 flex h-36 w-36 items-center justify-center rounded-full border border-[#C0FF00]/30 bg-[#121212]">
           <div>
             <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Tempo</div>
             <div className="mt-1 text-3xl font-black text-white">{effort.time}</div>
@@ -217,7 +215,7 @@ function PersonalRecordCelebrationOverlay({ celebration, onClose }: { celebratio
         <div className="grid grid-cols-2 gap-3 text-left">
           <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
             <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Miglioramento</div>
-            <div className="mt-1 text-sm font-bold text-brand">{formatRecordDelta(deltaSeconds)}</div>
+            <div className="mt-1 text-sm font-bold text-[#C0FF00]">{formatRecordDelta(deltaSeconds)}</div>
           </div>
           <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
             <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Passo</div>
@@ -227,7 +225,7 @@ function PersonalRecordCelebrationOverlay({ celebration, onClose }: { celebratio
         <button
           type="button"
           onClick={onClose}
-          className="mt-6 w-full rounded-xl bg-brand px-4 py-3 text-sm font-black uppercase tracking-wider text-black transition-transform hover:scale-[1.01]"
+          className="mt-6 w-full rounded-xl bg-[#C0FF00] px-4 py-3 text-sm font-black uppercase tracking-wider text-black transition-transform hover:scale-[1.01]"
         >
           Visto
         </button>
@@ -296,7 +294,6 @@ interface EditModalProps {
 }
 
 function EditModal({ profile, onClose, onSaved }: EditModalProps) {
-  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     name: profile.name ?? "",
@@ -355,7 +352,7 @@ function EditModal({ profile, onClose, onSaved }: EditModalProps) {
           value={form[key]}
           onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
           placeholder={placeholder}
-          className="flex-1 bg-[#121212] border border-[#3A3A3A] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand transition-colors"
+          className="flex-1 bg-[#121212] border border-[#3A3A3A] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-[#3B82F6] transition-colors"
         />
         {unit && <span className="text-sm text-gray-500 w-8">{unit}</span>}
       </div>
@@ -366,7 +363,7 @@ function EditModal({ profile, onClose, onSaved }: EditModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-[#181818] border border-[#2A2A2A] rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-white">{t("profile.editProfile")}</h2>
+          <h2 className="text-lg font-bold text-white">Edit Profile</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-lg bg-[#2A2A2A] flex items-center justify-center hover:bg-[#3A3A3A] transition-colors">
             <X className="w-4 h-4 text-gray-400" />
           </button>
@@ -410,8 +407,8 @@ function EditModal({ profile, onClose, onSaved }: EditModalProps) {
                   onClick={() => setForm(f => ({ ...f, sex: s }))}
                   className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-colors ${
                     form.sex === s
-                      ? "bg-brand text-brand-ink"
-                      : "bg-[#121212] border border-[#3A3A3A] text-gray-400 hover:border-brand"
+                      ? "bg-[#3B82F6] text-white"
+                      : "bg-[#121212] border border-[#3A3A3A] text-gray-400 hover:border-[#3B82F6]"
                   }`}
                 >
                   {s === "M" ? "Maschio" : "Femmina"}
@@ -430,10 +427,10 @@ function EditModal({ profile, onClose, onSaved }: EditModalProps) {
           <button onClick={onClose} className="flex-1 py-2.5 bg-[#2A2A2A] hover:bg-[#3A3A3A] rounded-xl text-sm font-medium text-gray-300 transition-colors">
             Annulla
           </button>
-          <Button variant="primary" size="md" className="flex-1" onClick={handleSave} loading={saving}>
+          <button onClick={handleSave} disabled={saving} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#3B82F6] hover:bg-[#2563EB] disabled:opacity-50 rounded-xl text-sm font-bold text-white transition-colors">
             {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
             {saving ? "Salvataggio..." : "Salva"}
-          </Button>
+          </button>
         </div>
       </div>
     </div>
@@ -477,8 +474,8 @@ function HeroMap({ lastRun }: { lastRun: Run | null }) {
     <div className="absolute inset-0">
       <Map initialViewState={{ bounds, fitBoundsOptions: { padding: 40 } }} style={{ width: "100%", height: "100%" }} mapStyle="https://tiles.openfreemap.org/styles/dark" interactive={false} attributionControl={false}>
         <Source id="hero-route" type="geojson" data={routeGeoJSON}>
-          <Layer id="hero-route-glow" type="line" paint={{ "line-color": BRAND, "line-width": 6, "line-opacity": 0.3, "line-blur": 8 }} />
-          <Layer id="hero-route-line" type="line" paint={{ "line-color": BRAND, "line-width": 3, "line-opacity": 0.8 }} />
+          <Layer id="hero-route-glow" type="line" paint={{ "line-color": "#3B82F6", "line-width": 6, "line-opacity": 0.3, "line-blur": 8 }} />
+          <Layer id="hero-route-line" type="line" paint={{ "line-color": "#3B82F6", "line-width": 3, "line-opacity": 0.8 }} />
         </Source>
       </Map>
       <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/40 to-transparent" />
@@ -863,7 +860,7 @@ export function ProfileView() {
   };
 
   return (
-    <main className="flex-1 overflow-y-auto bg-canvas text-white pb-12">
+    <div className="flex-1 overflow-y-auto bg-[#121212] text-white pb-12">
       {editOpen && activeProfile && (
         <EditModal profile={activeProfile} onClose={() => setEditOpen(false)} onSaved={updated => { setProfile(updated); setEditOpen(false); }} />
       )}
@@ -881,7 +878,7 @@ export function ProfileView() {
         <div className="absolute bottom-0 left-0 w-full px-4 md:px-8 translate-y-1/3 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div className="flex flex-col sm:flex-row sm:items-end gap-4 md:gap-6">
             <div className="relative">
-              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-canvas overflow-hidden bg-surface-2 shadow-2xl">
+              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-[#121212] overflow-hidden bg-[#1E1E1E] shadow-2xl">
                 {profilePic ? (
                   <img src={profilePic} alt={displayName} className="w-full h-full object-cover" />
                 ) : (
@@ -890,8 +887,8 @@ export function ProfileView() {
                   </div>
                 )}
               </div>
-              <div className="absolute bottom-1 right-1 w-7 h-7 md:w-8 md:h-8 bg-brand rounded-full border-4 border-canvas flex items-center justify-center">
-                <Award className="w-3.5 h-3.5 md:w-4 md:h-4 text-brand-ink" />
+              <div className="absolute bottom-1 right-1 w-7 h-7 md:w-8 md:h-8 bg-[#3B82F6] rounded-full border-4 border-[#121212] flex items-center justify-center">
+                <Award className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" />
               </div>
             </div>
             <div className="mb-2">
@@ -906,29 +903,29 @@ export function ProfileView() {
             </div>
           </div>
           <div className="flex gap-2 md:gap-3 mb-2">
-            <Button variant="secondary" size="md" icon={Share2} className="flex-1 md:flex-initial">
-              {t("profile.share")}
-            </Button>
-            <Button variant="primary" size="md" icon={Edit3} className="flex-1 md:flex-initial" onClick={() => setEditOpen(true)}>
-              <span>{t("profile.edit")}</span><span className="hidden md:inline">{t("profile.editProfileSuffix")}</span>
-            </Button>
+            <button className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-3 md:px-4 py-2 bg-[#1E1E1E] hover:bg-[#2A2A2A] border border-[#2A2A2A] rounded-lg text-xs md:text-sm font-medium transition-colors min-h-[44px]">
+              <Share2 className="w-4 h-4" /> Share
+            </button>
+            <button onClick={() => setEditOpen(true)} className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-3 md:px-4 py-2 bg-[#3B82F6] hover:bg-[#2563EB] rounded-lg text-xs md:text-sm font-medium transition-colors min-h-[44px]">
+              <Edit3 className="w-4 h-4" /> <span className="md:inline">Edit</span><span className="hidden md:inline"> Profile</span>
+            </button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="px-4 md:px-8 mt-32 md:mt-24 grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-8 max-w-[1500px] mx-auto w-full">
+      <div className="px-4 md:px-8 mt-32 md:mt-24 grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-8">
         {/* Left Column */}
         <div className="xl:col-span-2 space-y-8">
           {/* Quick Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: t("profile.totalKm"), value: totalKm > 0 ? totalKm.toFixed(0) : "—", unit: "km", icon: Activity, color: "text-brand" },
+              { label: t("profile.totalKm"), value: totalKm > 0 ? totalKm.toFixed(0) : "—", unit: "km", icon: Activity, color: "text-[#3B82F6]" },
               { label: t("profile.totalRuns"), value: String(allRuns.length || "—"), unit: "", icon: Zap, color: "text-[#EAB308]" },
               { label: t("profile.maxHr"), value: String(maxHr), unit: "bpm", icon: Heart, color: "text-[#F43F5E]" },
               { label: "Personal Best", value: String(efforts.length), unit: "distanze", icon: Award, color: "text-[#10B981]" },
             ].map((stat, i) => (
-              <div key={i} className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 transition-colors">
+              <div key={i} className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 transition-colors">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{stat.label}</span>
                   <stat.icon className={`w-5 h-5 ${stat.color}`} />
@@ -994,15 +991,15 @@ export function ProfileView() {
                       <Activity className="w-3.5 h-3.5 text-[#10B981]" />
                       <span className="text-xs font-bold text-[#10B981]">{activeDays} giorni</span>
                     </div>
-                    <div className="bg-brand/10 px-3 py-1.5 rounded-lg">
-                      <span className="text-xs font-bold text-brand">{pct}%</span>
+                    <div className="bg-[#3B82F6]/10 px-3 py-1.5 rounded-lg">
+                      <span className="text-xs font-bold text-[#3B82F6]">{pct}%</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Heatmap grid */}
                 <div className="flex gap-[5px] overflow-x-auto pb-2 relative">
-                  <div className="flex flex-col gap-[5px] justify-between text-[11px] text-gray-600 font-medium pr-2 pt-0.5 flex-shrink-0">
+                  <div className="flex flex-col gap-[5px] justify-between text-[10px] text-gray-600 font-medium pr-2 pt-0.5 flex-shrink-0">
                     <span>Dom</span><span>Mar</span><span>Gio</span><span>Sab</span>
                   </div>
                   <div className="flex gap-[5px] flex-1">
@@ -1021,7 +1018,7 @@ export function ProfileView() {
                 </div>
 
                 {/* Legend */}
-                <div className="flex items-center justify-end gap-2 mt-3 text-[11px] text-gray-500 font-medium">
+                <div className="flex items-center justify-end gap-2 mt-3 text-[10px] text-gray-500 font-medium">
                   <span>Meno</span>
                   <div className="flex gap-1">{[0, 3, 7, 12, 25].map((km, i) => <div key={i} className={`w-3 h-3 rounded-[3px] ${heatmapColor(km)} ${heatmapGlow(km)}`} />)}</div>
                   <span>Di più</span>
@@ -1029,25 +1026,25 @@ export function ProfileView() {
 
                 {/* Stats grid */}
                 <div className="grid grid-cols-4 gap-3 mt-5 pt-4 border-t border-[#242424] relative">
-                  <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
+                  <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
                     <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Streak</div>
                     <div className="text-xl font-black text-[#10B981]">{currentStreak}</div>
-                    <div className="text-[11px] text-gray-600">giorni</div>
+                    <div className="text-[10px] text-gray-600">giorni</div>
                   </div>
-                  <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
+                  <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
                     <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Best Streak</div>
                     <div className="text-xl font-black text-[#EAB308]">{bestStreak}</div>
-                    <div className="text-[11px] text-gray-600">giorni</div>
+                    <div className="text-[10px] text-gray-600">giorni</div>
                   </div>
-                  <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
+                  <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
                     <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Media/Run</div>
                     <div className="text-xl font-black text-white">{avgKmActive.toFixed(1)}</div>
-                    <div className="text-[11px] text-gray-600">km</div>
+                    <div className="text-[10px] text-gray-600">km</div>
                   </div>
-                  <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
+                  <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
                     <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Giorno Top</div>
-                    <div className="text-xl font-black text-brand">{favDay}</div>
-                    <div className="text-[11px] text-gray-600">{dayTotals[favDayIdx] > 0 ? `${dayTotals[favDayIdx]} corse` : ""}</div>
+                    <div className="text-xl font-black text-[#3B82F6]">{favDay}</div>
+                    <div className="text-[10px] text-gray-600">{dayTotals[favDayIdx] > 0 ? `${dayTotals[favDayIdx]} corse` : ""}</div>
                   </div>
                 </div>
 
@@ -1055,7 +1052,7 @@ export function ProfileView() {
                 <div className="mt-4 pt-3 border-t border-[#242424] relative">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Frequenza per giorno</span>
-                    <span className="text-[11px] text-gray-600">{activeWeeks} settimane attive su {heatmapGrid.length}</span>
+                    <span className="text-[10px] text-gray-600">{activeWeeks} settimane attive su {heatmapGrid.length}</span>
                   </div>
                   <div className="flex gap-2">
                     {dayNames.map((name, i) => {
@@ -1071,7 +1068,7 @@ export function ProfileView() {
                               style={{ height: `${Math.max(barPct, count > 0 ? 8 : 0)}%` }}
                             />
                           </div>
-                          <span className={`text-[11px] font-medium ${isFav ? "text-[#10B981]" : "text-gray-600"}`}>{name}</span>
+                          <span className={`text-[10px] font-medium ${isFav ? "text-[#10B981]" : "text-gray-600"}`}>{name}</span>
                         </div>
                       );
                     })}
@@ -1082,7 +1079,7 @@ export function ProfileView() {
           })()}
 
           {/* Training Zones */}
-          <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-lg font-bold text-white">Zone di Allenamento</h2>
@@ -1113,7 +1110,7 @@ export function ProfileView() {
                 { label: "Peso", value: activeProfile?.weight_kg ? `${activeProfile.weight_kg} kg` : "—" },
                 { label: "Altezza", value: activeProfile?.height_cm ? `${activeProfile.height_cm} cm` : "—" },
               ].map((s, i) => (
-                <div key={i} className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+                <div key={i} className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
                   <div className="text-xs text-gray-500 mb-1">{s.label}</div>
                   <div className="text-base font-bold text-white">{s.value}</div>
                 </div>
@@ -1122,7 +1119,7 @@ export function ProfileView() {
           </div>
 
           {/* 80/20 Rule */}
-          <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-lg font-bold text-white">Regola 80/20</h2>
@@ -1137,7 +1134,7 @@ export function ProfileView() {
                     type="button"
                     onClick={() => setRulePeriod(p)}
                     className={`px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${
-                      rulePeriod === p ? "bg-brand text-brand-ink" : "text-gray-500 hover:text-gray-300"
+                      rulePeriod === p ? "bg-[#3B82F6] text-white" : "text-gray-500 hover:text-gray-300"
                     }`}
                   >
                     {p}g
@@ -1153,10 +1150,10 @@ export function ProfileView() {
         <div className="space-y-8">
           {/* Jarvis AI Toggle */}
           <div className="bg-gradient-to-br from-[#181818] to-[#141414] border border-[#2A2A2A] rounded-2xl p-6 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#C0FF00]/5 rounded-full blur-3xl pointer-events-none" />
             <div className="flex items-center gap-3 mb-4 relative">
-              <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center">
-                <Bot className="w-5 h-5 text-brand" />
+              <div className="w-10 h-10 rounded-xl bg-[#C0FF00]/10 flex items-center justify-center">
+                <Bot className="w-5 h-5 text-[#C0FF00]" />
               </div>
               <div>
                 <h2 className="text-lg font-bold text-white">Jarvis AI</h2>
@@ -1167,22 +1164,22 @@ export function ProfileView() {
               onClick={() => setJarvisEnabled(!jarvisEnabled)}
               className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
                 jarvisEnabled
-                  ? "bg-brand/15 border border-brand/30 text-brand hover:bg-brand/25"
-                  : "bg-[#1E1E1E] border border-[#2A2A2A] text-gray-400 hover:text-white hover:border-brand/30"
+                  ? "bg-[#C0FF00]/15 border border-[#C0FF00]/30 text-[#C0FF00] hover:bg-[#C0FF00]/25"
+                  : "bg-[#1E1E1E] border border-[#2A2A2A] text-gray-400 hover:text-white hover:border-[#C0FF00]/30"
               }`}
             >
               <Bot className="w-4 h-4" />
               {jarvisEnabled ? "Jarvis Attivo ✓" : "Attiva Jarvis"}
             </button>
             {jarvisEnabled && (
-              <p className="text-[11px] text-gray-500 mt-3 text-center">
+              <p className="text-[10px] text-gray-500 mt-3 text-center">
                 Clicca di nuovo per disattivare. L'orb apparirà sulla dashboard.
               </p>
             )}
           </div>
 
           {/* Strava Integration */}
-          <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 rounded-xl bg-[#FC4C02]/20 flex items-center justify-center">
                 <svg viewBox="0 0 24 24" className="w-5 h-5 text-[#FC4C02]" fill="currentColor">
@@ -1261,7 +1258,7 @@ export function ProfileView() {
           </div>
 
           {/* Personal Records */}
-          <div className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
+          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6">
             <h2 className="text-lg font-bold text-white mb-6">Personal Records</h2>
             {efforts.length === 0 ? (
               <div className="text-center py-6 text-gray-500 text-sm">
@@ -1274,22 +1271,22 @@ export function ProfileView() {
                   <div
                     key={i}
                     onClick={() => pr.run_id && navigate(`/activities/${pr.run_id}`)}
-                    className={`flex items-center justify-between p-3.5 bg-[#121212] border rounded-xl hover:border-brand/50 transition-colors group cursor-pointer ${
+                    className={`flex items-center justify-between p-3.5 bg-[#121212] border rounded-xl hover:border-[#3B82F6]/50 transition-colors group cursor-pointer ${
                       recordCelebration?.effort.distance === pr.distance
-                        ? "pr-card-celebrate border-brand/70"
+                        ? "pr-card-celebrate border-[#C0FF00]/70"
                         : "border-[#2A2A2A]"
                     }`}
                   >
                     <div>
                       <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-0.5">{pr.distance}</div>
-                      <div className="text-lg font-bold text-white group-hover:text-brand transition-colors">{pr.time}</div>
+                      <div className="text-lg font-bold text-white group-hover:text-[#3B82F6] transition-colors">{pr.time}</div>
                     </div>
                     <div className="text-right flex items-center gap-3">
                       <div>
                         <div className="text-sm font-medium text-gray-300 mb-0.5">{pr.pace}</div>
                         <div className="text-xs text-gray-500">{pr.date}</div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-brand transition-colors" />
+                      <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-[#3B82F6] transition-colors" />
                     </div>
                   </div>
                 ))}
@@ -1298,6 +1295,6 @@ export function ProfileView() {
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

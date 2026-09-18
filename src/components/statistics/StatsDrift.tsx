@@ -49,7 +49,7 @@ function SingleRunDrift({
         <select
           value={selectedIdx}
           onChange={e => setSelectedIdx(Number(e.target.value))}
-          className="bg-[#10130D] border border-[#243018] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-brand cursor-pointer"
+          className="bg-[#10130D] border border-[#243018] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#C0FF00] cursor-pointer"
         >
           {results.map((r, i) => (
             <option key={r.runId} value={i}>
@@ -57,7 +57,7 @@ function SingleRunDrift({
             </option>
           ))}
         </select>
-        <span className="text-[11px] text-gray-600">Solo corse a passo costante (±12% dal mediano)</span>
+        <span className="text-[9px] text-gray-600">Solo corse a passo costante (±12% dal mediano)</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-5">
@@ -68,7 +68,7 @@ function SingleRunDrift({
             <div className="text-4xl font-black" style={{ color: cfg.color }}>
               {driftSign}{run.drift.toFixed(1)}%
             </div>
-            <div className="text-[11px] text-gray-500 mt-1">drift FC</div>
+            <div className="text-[10px] text-gray-500 mt-1">drift FC</div>
             <div className="text-xs font-bold mt-1.5 px-2 py-0.5 rounded-full inline-block" style={{ color: cfg.color, backgroundColor: cfg.color + "18" }}>
               {cfg.label}
             </div>
@@ -77,14 +77,14 @@ function SingleRunDrift({
           {/* Halves */}
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-[#10130D] border border-[#243018] rounded-xl p-3 text-center">
-              <div className="text-[10px] text-gray-500 uppercase mb-1">Prima metà</div>
+              <div className="text-[9px] text-gray-500 uppercase mb-1">Prima metà</div>
               <div className="text-lg font-black text-white">{run.hr1} <span className="text-xs text-gray-500">bpm</span></div>
-              <div className="text-[11px] text-gray-400">{run.kmFirst}</div>
+              <div className="text-[10px] text-gray-400">{run.kmFirst}</div>
             </div>
             <div className="bg-[#10130D] border border-[#243018] rounded-xl p-3 text-center">
-              <div className="text-[10px] text-gray-500 uppercase mb-1">Seconda metà</div>
+              <div className="text-[9px] text-gray-500 uppercase mb-1">Seconda metà</div>
               <div className="text-lg font-black" style={{ color: cfg.color }}>{run.hr2} <span className="text-xs text-gray-500">bpm</span></div>
-              <div className="text-[11px] text-gray-400">{run.kmSecond}</div>
+              <div className="text-[10px] text-gray-400">{run.kmSecond}</div>
             </div>
           </div>
 
@@ -103,9 +103,9 @@ function SingleRunDrift({
                 (item.range === "> 7.5%"  && run.drift >= 7.5)
               );
               return (
-                <div key={item.range} className={`flex items-center gap-2 text-[11px] px-2 py-0.5 rounded ${active ? "bg-white/5" : ""}`}
-                  style={{ color: active ? item.color : "#878787" }}>
-                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? item.color : "#878787" }} />
+                <div key={item.range} className={`flex items-center gap-2 text-[10px] px-2 py-0.5 rounded ${active ? "bg-white/5" : ""}`}
+                  style={{ color: active ? item.color : "#475569" }}>
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? item.color : "#475569" }} />
                   <span className="font-mono">{item.range}</span>
                   <span>{item.label}</span>
                 </div>
@@ -122,8 +122,8 @@ function SingleRunDrift({
           <ResponsiveContainer width="100%" height={fullscreen ? 340 : 200}>
             <BarChart data={run.splits} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
               <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="rgba(192,255,0,0.08)" />
-              <XAxis dataKey="km" tick={{ fontSize: 10, fill: "#878787" }} axisLine={false} tickLine={false} label={{ value: "km", position: "insideBottomRight", offset: -4, fill: "#878787", fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10, fill: "#878787" }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
+              <XAxis dataKey="km" tick={{ fontSize: 9, fill: "#475569" }} axisLine={false} tickLine={false} label={{ value: "km", position: "insideBottomRight", offset: -4, fill: "#475569", fontSize: 9 }} />
+              <YAxis tick={{ fontSize: 9, fill: "#475569" }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
               <Tooltip
                 contentStyle={{ background: "#0B0B0B", border: "1px solid #243018", borderRadius: 8, fontSize: 11 }}
                 formatter={(v: number, _: string, props: any) => [
@@ -143,8 +143,8 @@ function SingleRunDrift({
             </BarChart>
           </ResponsiveContainer>
           <div className="flex gap-4 mt-1">
-            <span className="flex items-center gap-1 text-[11px]" style={{ color: DRIFT_CYAN }}><span className="w-2 h-2 rounded-sm" style={{ background: DRIFT_CYAN }} /> Prima metà</span>
-            <span className="flex items-center gap-1 text-[11px]" style={{ color: cfg.color }}><span className="w-2 h-2 rounded-sm" style={{ background: cfg.color }} /> Seconda metà</span>
+            <span className="flex items-center gap-1 text-[9px]" style={{ color: DRIFT_CYAN }}><span className="w-2 h-2 rounded-sm" style={{ background: DRIFT_CYAN }} /> Prima metà</span>
+            <span className="flex items-center gap-1 text-[9px]" style={{ color: cfg.color }}><span className="w-2 h-2 rounded-sm" style={{ background: cfg.color }} /> Seconda metà</span>
           </div>
         </div>
       </div>
@@ -187,9 +187,9 @@ function HistoricalDrift({ results, fullscreen = false }: { results: DriftResult
           { label: "Peggiore",      value: `${maxDrift >= 0 ? "+" : ""}${maxDrift.toFixed(1)}%`, color: "#F43F5E", sub: "max drift" },
         ].map(k => (
           <div key={k.label} className="bg-[#10130D] border border-[#243018] rounded-xl p-3 text-center">
-            <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">{k.label}</div>
+            <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">{k.label}</div>
             <div className="text-xl font-black" style={{ color: k.color }}>{k.value}</div>
-            <div className="text-[11px] text-gray-600 mt-0.5">{k.sub}</div>
+            <div className="text-[9px] text-gray-600 mt-0.5">{k.sub}</div>
           </div>
         ))}
       </div>
@@ -199,7 +199,7 @@ function HistoricalDrift({ results, fullscreen = false }: { results: DriftResult
         <div className="flex items-center justify-between mb-2">
           <span className="text-[10px] text-gray-500 uppercase tracking-wider">Deriva FC — storico corse a passo costante</span>
           {data.length >= 2 && (
-            <span className={`text-[11px] font-bold ${improving ? "text-emerald-400" : "text-rose-400"}`}>
+            <span className={`text-[10px] font-bold ${improving ? "text-emerald-400" : "text-rose-400"}`}>
               {improving ? "▼ in miglioramento" : "▲ in peggioramento"}
             </span>
           )}
@@ -207,9 +207,9 @@ function HistoricalDrift({ results, fullscreen = false }: { results: DriftResult
         <ResponsiveContainer width="100%" height={fullscreen ? 340 : 200}>
           <LineChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
             <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="rgba(192,255,0,0.08)" />
-            <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#878787" }} axisLine={false} tickLine={false}
+            <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#475569" }} axisLine={false} tickLine={false}
               interval={Math.max(0, Math.floor(data.length / 8) - 1)} />
-            <YAxis tick={{ fontSize: 10, fill: "#878787" }} axisLine={false} tickLine={false}
+            <YAxis tick={{ fontSize: 9, fill: "#475569" }} axisLine={false} tickLine={false}
               tickFormatter={v => `${v}%`} domain={["auto", "auto"]} />
             <Tooltip
               contentStyle={{ background: "#0B0B0B", border: "1px solid #243018", borderRadius: 8, fontSize: 11 }}
@@ -254,7 +254,7 @@ function HistoricalDrift({ results, fullscreen = false }: { results: DriftResult
             { color: DRIFT_AMBER, label: "5–7.5% Da migliorare" },
             { color: DRIFT_PINK, label: "> 7.5% Insufficiente" },
           ].map(z => (
-            <span key={z.label} className="flex items-center gap-1.5 text-[11px]" style={{ color: z.color }}>
+            <span key={z.label} className="flex items-center gap-1.5 text-[9px]" style={{ color: z.color }}>
               <span className="w-6 border-t-2 border-dashed inline-block" style={{ borderColor: z.color }} />
               {z.label}
             </span>
@@ -282,24 +282,25 @@ export function StatsDrift({ runs }: { runs: Run[] }) {
 
   return (
     <div
-      className="rounded-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 group"
+      className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 group"
+      style={{ borderLeft: `3px solid ${DRIFT_NEON}` }}
     >
       {/* Section header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-[#1B2A0B] flex items-center justify-center">
-            <svg className="w-4 h-4 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="w-4 h-4 text-[#C0FF00]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
             </svg>
           </div>
           <div>
             <h2 className="text-sm font-black text-white uppercase tracking-widest">Deriva Cardiaca</h2>
-            <p className="text-[11px] text-gray-500 font-medium">Pa:Hr ratio — Metodo Friel · solo corse a passo costante</p>
+            <p className="text-[10px] text-gray-500 font-medium">Pa:Hr ratio — Metodo Friel · solo corse a passo costante</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           {results.length > 0 && (
-            <span className="text-[11px] text-gray-600">{results.length} corse qualificate</span>
+            <span className="text-[10px] text-gray-600">{results.length} corse qualificate</span>
           )}
           {results.length > 0 && <ChartExpandButton onClick={() => setExpanded(true)} />}
         </div>
@@ -329,7 +330,7 @@ export function StatsDrift({ runs }: { runs: Run[] }) {
       {results.length === 0 ? (
         <div className="py-12 text-center">
           <p className="text-sm text-gray-600">Nessuna corsa a passo costante con dati HR e split trovata.</p>
-          <p className="text-[11px] text-gray-600 mt-1">Richiede: GPS + frequenza cardiaca + ≥4 km + pace costante (±12%)</p>
+          <p className="text-[10px] text-gray-700 mt-1">Richiede: GPS + frequenza cardiaca + ≥4 km + pace costante (±12%)</p>
         </div>
       ) : (
         <>

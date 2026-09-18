@@ -51,7 +51,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 this.setState({ hasError: false, error: null });
                 window.location.href = '/';
               }}
-              className="px-6 py-2 bg-brand text-black font-bold rounded-xl text-sm hover:bg-[#A0D000] transition-colors"
+              className="px-6 py-2 bg-[#C0FF00] text-black font-bold rounded-xl text-sm hover:bg-[#A0D000] transition-colors"
             >
               {i18n.t('errors.backToDashboard')}
             </button>
@@ -113,10 +113,10 @@ class _WidgetBoundaryImpl extends React.Component<
         <div className="h-full flex items-center justify-center bg-[#0a0a0a] border border-rose-500/30 rounded-xl p-4">
           <div className="text-center">
             <p className="text-xs font-bold text-rose-400 mb-1">{this.props.label ?? 'Errore widget'}</p>
-            <p className="text-[11px] text-gray-500 mb-3 line-clamp-2">{this.state.error?.message ?? '—'}</p>
+            <p className="text-[10px] text-gray-500 mb-3 line-clamp-2">{this.state.error?.message ?? '—'}</p>
             <button
               onClick={() => this.setState({ hasError: false, error: null })}
-              className="text-[11px] px-3 py-1 bg-[#1E1E1E] hover:bg-[#2A2A2A] text-white rounded-md font-bold transition-colors"
+              className="text-[10px] px-3 py-1 bg-[#1E1E1E] hover:bg-[#2A2A2A] text-white rounded-md font-bold transition-colors"
             >
               Riprova
             </button>

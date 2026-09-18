@@ -71,7 +71,7 @@ function Panel({
   children,
   className = '',
   style = {},
-  accent: _accent = N,
+  accent = N,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -84,6 +84,7 @@ function Panel({
       style={{
         background: S1,
         border: `1px solid ${MT}`,
+        borderLeft: `3px solid ${accent}`,
         ...style,
       }}
     >
@@ -274,11 +275,11 @@ function LactateCurve() {
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="2 4" stroke={MT} vertical={false} />
-          <XAxis dataKey="pace" tick={{ fill: DM, fontSize: 10, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} label={{ value: 'PACE MIN/KM', position: 'insideBottom', fill: DM, fontSize: 10, fontWeight: 900, offset: -2 }} />
-          <YAxis tick={{ fill: DM, fontSize: 10, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} />
+          <XAxis dataKey="pace" tick={{ fill: DM, fontSize: 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} label={{ value: 'PACE MIN/KM', position: 'insideBottom', fill: DM, fontSize: 8, fontWeight: 900, offset: -2 }} />
+          <YAxis tick={{ fill: DM, fontSize: 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} />
           <Tooltip content={<TT />} />
-          <ReferenceLine x={4.4} stroke={OR} strokeDasharray="5 3" strokeWidth={1.5} label={{ value: 'LT2', fill: OR, fontSize: 10, fontWeight: 900 }} />
-          <ReferenceLine y={4} stroke={N} strokeDasharray="5 3" strokeWidth={1} label={{ value: '4 mmol/L', fill: N, fontSize: 10, fontWeight: 900, position: 'right' }} />
+          <ReferenceLine x={4.4} stroke={OR} strokeDasharray="5 3" strokeWidth={1.5} label={{ value: 'LT2', fill: OR, fontSize: 9, fontWeight: 900 }} />
+          <ReferenceLine y={4} stroke={N} strokeDasharray="5 3" strokeWidth={1} label={{ value: '4 mmol/L', fill: N, fontSize: 8, fontWeight: 900, position: 'right' }} />
           <Area type="monotone" dataKey="la" name="Lactate (mmol/L)" stroke={OR} strokeWidth={2.5} fill="url(#laGrad)" dot={{ r: 3, fill: OR, stroke: BG, strokeWidth: 1.5 }} />
         </AreaChart>
       </ResponsiveContainer>
@@ -311,13 +312,13 @@ export function AnalyticsV4CadenceSpeedMatrix({ chart, onRequestDetail }: { char
   const renderChart = (isExpanded = false) => {
     const points = isExpanded ? detailPoints : cardPoints;
     if (!points.length) {
-      return <div className="h-full flex items-center justify-center text-gray-600 text-xs font-black tracking-widest uppercase">Dati reali insufficienti</div>;
+      return <div className="h-full flex items-center justify-center text-[#555] text-xs font-black tracking-widest uppercase">Dati reali insufficienti</div>;
     }
     return (
     <ResponsiveContainer width="100%" height="100%">
       <ScatterChart margin={{ top: isExpanded ? 20 : 4, right: isExpanded ? 20 : 12, bottom: isExpanded ? 24 : 0, left: isExpanded ? -4 : -16 }}>
         <CartesianGrid strokeDasharray="2 4" stroke={MT} />
-        <XAxis type="number" dataKey="speed" name="Speed" domain={[7,17]} tick={{ fill: DM, fontSize: isExpanded ? 12 : 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} label={{ value: 'SPEED KM/H', position: 'insideBottom', fill: DM, fontSize: 10, fontWeight: 900, offset: -2 }} />
+        <XAxis type="number" dataKey="speed" name="Speed" domain={[7,17]} tick={{ fill: DM, fontSize: isExpanded ? 12 : 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} label={{ value: 'SPEED KM/H', position: 'insideBottom', fill: DM, fontSize: 8, fontWeight: 900, offset: -2 }} />
         <YAxis type="number" dataKey="cadence" name="Cadence" domain={[150,190]} tick={{ fill: DM, fontSize: isExpanded ? 12 : 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} />
         <ZAxis type="number" dataKey="r" range={isExpanded ? [45,180] : [20,100]} />
         <Tooltip cursor={{ stroke: MT }} content={({ active, payload }) => {
@@ -355,7 +356,7 @@ export function AnalyticsV4CadenceSpeedMatrix({ chart, onRequestDetail }: { char
             <ChartExpandButton onClick={() => { onRequestDetail?.(); setExpanded(true); }} />
           </div>
         </div>
-        <div className="flex items-center gap-4 mb-3 text-[10px] font-black uppercase tracking-widest" style={{ color: DM }}>
+        <div className="flex items-center gap-4 mb-3 text-[9px] font-black uppercase tracking-widest" style={{ color: DM }}>
           <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: CY }} />corse</span>
           <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: N }} />ripetute e km sotto 4:45</span>
         </div>
@@ -374,9 +375,9 @@ export function AnalyticsV4CadenceSpeedMatrix({ chart, onRequestDetail }: { char
         accent={CY}
         details={
           <div className="grid grid-cols-3 gap-4">
-            <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>AVG CADENCE</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>{avgCadence || '—'} spm</p></div>
-            <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>OPT. WINDOW</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: N, fontFamily: 'monospace' }}>170-180</p></div>
-            <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>OVER-STRIDE</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: OR, fontFamily: 'monospace' }}>{overStride}%</p></div>
+            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>AVG CADENCE</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>{avgCadence || '—'} spm</p></div>
+            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>OPT. WINDOW</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: N, fontFamily: 'monospace' }}>170-180</p></div>
+            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>OVER-STRIDE</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: OR, fontFamily: 'monospace' }}>{overStride}%</p></div>
           </div>
         }
       >
@@ -441,10 +442,10 @@ function WeeklyVolume() {
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="2 4" stroke={MT} vertical={false} />
-          <XAxis dataKey="w" tick={{ fill: DM, fontSize: 10, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} interval={3} />
-          <YAxis tick={{ fill: DM, fontSize: 10, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} domain={[0, 90]} />
+          <XAxis dataKey="w" tick={{ fill: DM, fontSize: 8, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} interval={3} />
+          <YAxis tick={{ fill: DM, fontSize: 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} domain={[0, 90]} />
           <Tooltip content={<TT />} />
-          <ReferenceLine y={60} stroke={DM} strokeDasharray="6 4" strokeWidth={1} label={{ value: 'TARGET', fill: DM, fontSize: 10, fontWeight: 900, position: 'right' }} />
+          <ReferenceLine y={60} stroke={DM} strokeDasharray="6 4" strokeWidth={1} label={{ value: 'TARGET', fill: DM, fontSize: 8, fontWeight: 900, position: 'right' }} />
           <Area type="monotone" dataKey="km" name="KM" stroke={N} strokeWidth={2} fill="url(#volGrad)" dot={false} />
           <Line type="monotone" dataKey="avg" name="4W Avg" stroke={OR} strokeWidth={2} dot={false} strokeDasharray="0" />
         </ComposedChart>
@@ -465,7 +466,7 @@ export function AnalyticsV4PaceZoneDistribution({ chart, onRequestDetail }: { ch
   const highPct = Math.round(zones.filter((z) => ['Z4', 'Z5'].includes(z.zone)).reduce((s, z) => s + z.pct, 0));
   const renderZones = (isExpanded = false) => {
     if (!zones.length) {
-      return <div className="h-[180px] flex items-center justify-center text-gray-600 text-xs font-black tracking-widest uppercase">Dati reali insufficienti</div>;
+      return <div className="h-[180px] flex items-center justify-center text-[#555] text-xs font-black tracking-widest uppercase">Dati reali insufficienti</div>;
     }
     return (
     <div className={`${isExpanded ? 'h-full flex flex-col justify-center gap-5' : 'mt-5 space-y-3'}`}>
@@ -482,11 +483,9 @@ export function AnalyticsV4PaceZoneDistribution({ chart, onRequestDetail }: { ch
             <div
               style={{
                 height: '100%',
-                width: '100%',
-                transformOrigin: 'left',
-                transform: `scaleX(${Math.min(100, z.pct) / 100})`,
+                width: `${Math.min(100, z.pct)}%`,
                 background: z.color,
-                transition: 'transform 0.5s cubic-bezier(0.22,1,0.36,1)',
+                transition: 'width 0.8s ease',
               }}
             />
           </div>
@@ -525,8 +524,8 @@ export function AnalyticsV4PaceZoneDistribution({ chart, onRequestDetail }: { ch
         accent={N}
         details={
           <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>RAPPORTO 80/20</Lbl><p style={{ fontSize: 22, fontWeight: 900, color: N, fontFamily: 'monospace' }}>{easyPct} / {highPct}</p></div>
-            <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>CORSE VALIDATE</Lbl><p style={{ fontSize: 22, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>{chart?.quality?.sample_size ?? 0}</p></div>
+            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>RAPPORTO 80/20</Lbl><p style={{ fontSize: 22, fontWeight: 900, color: N, fontFamily: 'monospace' }}>{easyPct} / {highPct}</p></div>
+            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>CORSE VALIDATE</Lbl><p style={{ fontSize: 22, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>{chart?.quality?.sample_size ?? 0}</p></div>
           </div>
         }
       >
@@ -548,7 +547,7 @@ function ShoeWearRadar() {
       <ResponsiveContainer width="100%" height={220}>
         <RadarChart data={shoeRadar} outerRadius={80}>
           <PolarGrid stroke={MT} strokeDasharray="2 4" />
-          <PolarAngleAxis dataKey="axis" tick={{ fill: DM, fontSize: 10, fontFamily: 'monospace', fontWeight: 900 }} />
+          <PolarAngleAxis dataKey="axis" tick={{ fill: DM, fontSize: 9, fontFamily: 'monospace', fontWeight: 900 }} />
           <PolarRadiusAxis tick={false} axisLine={false} domain={[0, 100]} />
           <Tooltip content={<TT />} />
           <Radar name="Left" dataKey="A" stroke={N} fill={N} fillOpacity={0.18} strokeWidth={2} />
@@ -574,8 +573,8 @@ function ElevationHR() {
       <ResponsiveContainer width="100%" height={200}>
         <ComposedChart data={elvHr} margin={{ top: 4, right: 12, bottom: 0, left: -16 }}>
           <CartesianGrid strokeDasharray="2 4" stroke={MT} vertical={false} />
-          <XAxis dataKey="elev" tick={{ fill: DM, fontSize: 10, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} label={{ value: 'ELEV (m)', position: 'insideBottom', fill: DM, fontSize: 10, fontWeight: 900, offset: -2 }} />
-          <YAxis yAxisId="hr" tick={{ fill: DM, fontSize: 10, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} domain={[130, 185]} />
+          <XAxis dataKey="elev" tick={{ fill: DM, fontSize: 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} label={{ value: 'ELEV (m)', position: 'insideBottom', fill: DM, fontSize: 8, fontWeight: 900, offset: -2 }} />
+          <YAxis yAxisId="hr" tick={{ fill: DM, fontSize: 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} domain={[130, 185]} />
           <Tooltip content={<TT />} />
           <Area yAxisId="hr" type="monotone" dataKey="hr" name="HR (bpm)" stroke={PU} strokeWidth={2} fill={`${PU}18`} dot={false} />
           <Line yAxisId="hr" type="monotone" dataKey="pace" name="Pace" stroke={RD} strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
@@ -595,7 +594,7 @@ function ElevationHR() {
 export function AnalyticsV4() {
   return (
     <div
-      className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300"
+      className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-700"
       style={{ fontFamily: 'monospace' }}
     >
       {/* â”€â”€ Header terminal strip â”€â”€ */}

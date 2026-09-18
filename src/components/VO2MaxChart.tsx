@@ -9,7 +9,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { Run } from "../types/api";
-import { BRAND } from "../theme/tokens";
 
 interface VO2MaxChartProps {
   runs: Run[];
@@ -32,10 +31,10 @@ function estimateVdot(distanceKm: number, durationMin: number): number | null {
 
 // ─── Color by VDOT level ──────────────────────────────────────────────────────
 function vdotColor(v: number): string {
-  if (v > 55) return BRAND;
+  if (v > 55) return "#C0FF00";
   if (v > 45) return "#14B8A6";
   if (v > 35) return "#3B82F6";
-  return "#B8B8B8";
+  return "#94A3B8";
 }
 
 function vdotLabel(v: number): string {
@@ -146,7 +145,7 @@ function VdotGauge({ value, color }: { value: number; color: string }) {
       <text x={cx} y={cy - 8} textAnchor="middle" fill="white" fontSize={26} fontWeight={900} fontFamily="sans-serif">
         {value}
       </text>
-      <text x={cx} y={cy + 8} textAnchor="middle" fill="#878787" fontSize={9} fontFamily="sans-serif" fontWeight={600} letterSpacing={1}>
+      <text x={cx} y={cy + 8} textAnchor="middle" fill="#64748B" fontSize={9} fontFamily="sans-serif" fontWeight={600} letterSpacing={1}>
         VO2MAX
       </text>
     </svg>
@@ -161,12 +160,12 @@ const ChartTooltip = ({ active, payload, label }: any) => {
   const pace = calcTPace(v);
   return (
     <div className="bg-[#1E293B] border border-[#334155] px-3 py-2 rounded-xl shadow-xl text-xs min-w-[150px]">
-      <p className="text-brand font-bold mb-1">{label}</p>
+      <p className="text-[#C0FF00] font-bold mb-1">{label}</p>
       <p className="text-white font-black text-base">VDOT {v}</p>
-      <p className="text-text-muted text-[11px]">{vdotLabel(v)}</p>
+      <p className="text-text-muted text-[10px]">{vdotLabel(v)}</p>
       <div className="border-t border-[#334155] mt-1.5 pt-1.5 flex justify-between gap-3">
         <span className="text-text-muted">T-Pace</span>
-        <span className="text-brand font-black">{pace}/km</span>
+        <span className="text-[#C0FF00] font-black">{pace}/km</span>
       </div>
     </div>
   );
@@ -198,7 +197,7 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
   }, [filledHistory, vdot]);
 
   const displayVdot = vdot ?? filledWithCurrent[filledWithCurrent.length - 1]?.vdot ?? null;
-  const color = displayVdot ? vdotColor(displayVdot) : "#B8B8B8";
+  const color = displayVdot ? vdotColor(displayVdot) : "#94A3B8";
   const label = displayVdot ? vdotLabel(displayVdot) : "—";
   const tPace = displayVdot ? calcTPace(displayVdot) : null;
 
@@ -209,8 +208,8 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
 
   return (
     <div
-      className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex flex-col"
-      style={{ minHeight: 220 }}
+      className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex flex-col"
+      style={{ minHeight: 220, borderLeft: "3px solid #3B82F6" }}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
@@ -218,7 +217,7 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
           VO2 Max / VDOT
         </h3>
         {trend !== null && (
-          <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${trend >= 0 ? "text-[#14B8A6] bg-[#14B8A6]/10" : "text-[#F43F5E] bg-[#F43F5E]/10"}`}>
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${trend >= 0 ? "text-[#14B8A6] bg-[#14B8A6]/10" : "text-[#F43F5E] bg-[#F43F5E]/10"}`}>
             {trend >= 0 ? "+" : ""}{trend} (3M)
           </span>
         )}
@@ -232,10 +231,10 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
             <>
               <VdotGauge value={displayVdot} color={color} />
               <div className="text-sm font-black uppercase tracking-widest" style={{ color }}>{label}</div>
-              <div className="text-[11px] text-text-muted">ml/kg/min · Jack Daniels</div>
+              <div className="text-[9px] text-text-muted">ml/kg/min · Jack Daniels</div>
               {tPace && (
                 <div className="flex flex-col items-center mt-1">
-                  <div className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">Pace Soglia (T)</div>
+                  <div className="text-[9px] text-text-muted uppercase tracking-wider mb-0.5">Pace Soglia (T)</div>
                   <div className="flex items-baseline gap-1">
                     <span className="text-4xl font-black text-white">{tPace}</span>
                     <span className="text-base text-text-muted">/km</span>
@@ -247,11 +246,11 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
             <div className="text-center py-4 px-3">
               <div className="text-3xl mb-2">🏃</div>
               <div className="text-sm font-black text-white mb-1">VDOT non disponibile</div>
-              <div className="text-[11px] text-text-muted leading-relaxed">
+              <div className="text-[10px] text-text-muted leading-relaxed">
                 Servono almeno {runs.length === 0 ? "5 corse" : `${5 - runs.length} corse in più`} di ≥5 km
                 {runs.length > 0 ? " a sforzo costante (HR ≥ 80%)" : ""}.
                 <br />
-                <span className="text-brand/80">Sincronizza più attività per attivare il calcolo.</span>
+                <span className="text-[#C0FF00]/80">Sincronizza più attività per attivare il calcolo.</span>
               </div>
             </div>
           )}
@@ -259,7 +258,7 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
 
         {/* Right — history chart */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="text-[10px] text-text-muted font-semibold tracking-wider uppercase mb-2">
+          <div className="text-[9px] text-text-muted font-semibold tracking-wider uppercase mb-2">
             Storico 12 mesi
           </div>
           <div className="flex-1" style={{ minHeight: 140 }}>
@@ -276,7 +275,7 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
                   dataKey="name"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "#878787", fontSize: 10 }}
+                  tick={{ fill: "#475569", fontSize: 9 }}
                   dy={4}
                   interval={0}
                 />

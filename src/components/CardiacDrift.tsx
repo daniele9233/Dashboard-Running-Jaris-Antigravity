@@ -50,7 +50,7 @@ export function CardiacDrift({ runs }: { runs: Run[] }) {
 
   if (!latest) {
     return (
-      <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex items-center justify-center">
+      <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex items-center justify-center">
         <p className="text-xs text-text-muted">
           Sincronizza corse con dati GPS e frequenza cardiaca per vedere la deriva cardiaca.
         </p>
@@ -66,7 +66,7 @@ export function CardiacDrift({ runs }: { runs: Run[] }) {
   const improving = results.length >= 2 && results[0].drift < results[1].drift;
 
   return (
-    <div className="rounded-xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
+    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -76,10 +76,10 @@ export function CardiacDrift({ runs }: { runs: Run[] }) {
           <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
             Efficienza Aerobica
           </span>
-          <span className="text-[11px] text-gray-600 font-medium">Pa:Hr — Friel</span>
+          <span className="text-[9px] text-gray-600 font-medium">Pa:Hr — Friel</span>
         </div>
         <span
-          className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${cfg.bg} border ${cfg.border}`}
+          className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${cfg.bg} border ${cfg.border}`}
           style={{ color: cfg.color }}
         >
           {cfg.label}
@@ -101,22 +101,22 @@ export function CardiacDrift({ runs }: { runs: Run[] }) {
           {/* First half / Second half */}
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-white/5 border border-white/8 rounded-xl p-3 text-center">
-              <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">Prima metà</div>
+              <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1.5">Prima metà</div>
               <div className="text-xl font-black text-white">{latest.hr1} <span className="text-xs font-normal text-gray-500">bpm</span></div>
               <div className="text-xs text-gray-400 mt-0.5">{fmtPace(latest.pace1)}/km</div>
-              <div className="text-[11px] text-gray-600 mt-0.5">{latest.kmFirst}</div>
+              <div className="text-[9px] text-gray-600 mt-0.5">{latest.kmFirst}</div>
             </div>
             <div className="bg-white/5 border border-white/8 rounded-xl p-3 text-center">
-              <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">Seconda metà</div>
+              <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1.5">Seconda metà</div>
               <div className="text-xl font-black" style={{ color: driftColor }}>{latest.hr2} <span className="text-xs font-normal text-gray-500">bpm</span></div>
               <div className="text-xs text-gray-400 mt-0.5">{fmtPace(latest.pace2)}/km</div>
-              <div className="text-[11px] text-gray-600 mt-0.5">{latest.kmSecond}</div>
+              <div className="text-[9px] text-gray-600 mt-0.5">{latest.kmSecond}</div>
             </div>
           </div>
 
           {/* CV passo */}
           {Math.abs(latest.pace2 - latest.pace1) / latest.pace1 < 0.15 && (
-            <div className="text-[11px] text-gray-600 text-center">
+            <div className="text-[10px] text-gray-600 text-center">
               CV passo: {(Math.abs(latest.pace2 - latest.pace1) / latest.pace1 * 100).toFixed(1)}% (costante)
             </div>
           )}
@@ -133,14 +133,14 @@ export function CardiacDrift({ runs }: { runs: Run[] }) {
             <div
               key={label}
               className={`text-[11px] flex items-center gap-2 px-2 py-1 rounded-lg transition-colors ${active ? "bg-white/5" : ""}`}
-              style={{ color: active ? color : "#878787" }}
+              style={{ color: active ? color : "#475569" }}
             >
-              <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: active ? color : "#878787" }} />
+              <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: active ? color : "#475569" }} />
               {label}
             </div>
           ))}
 
-          <div className="mt-2 text-[11px] text-gray-600 leading-relaxed">
+          <div className="mt-2 text-[10px] text-gray-600 leading-relaxed">
             Metodo Friel: a passo costante, la FC non dovrebbe aumentare significativamente.
             Drift alto → allenamento aerobico a bassa intensità insufficiente.
           </div>
@@ -151,7 +151,7 @@ export function CardiacDrift({ runs }: { runs: Run[] }) {
           <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-2 flex items-center gap-2">
             Tendenza ultime {results.length} corse
             {results.length >= 2 && (
-              <span className={`text-[11px] font-bold ${improving ? "text-emerald-400" : "text-rose-400"}`}>
+              <span className={`text-[9px] font-bold ${improving ? "text-emerald-400" : "text-rose-400"}`}>
                 {improving ? "▼ in miglioramento" : "▲ in peggioramento"}
               </span>
             )}
@@ -163,12 +163,12 @@ export function CardiacDrift({ runs }: { runs: Run[] }) {
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 10, fill: "#878787" }}
+                  tick={{ fontSize: 9, fill: "#475569" }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 10, fill: "#878787" }}
+                  tick={{ fontSize: 9, fill: "#475569" }}
                   axisLine={false}
                   tickLine={false}
                   domain={["auto", "auto"]}
@@ -196,7 +196,7 @@ export function CardiacDrift({ runs }: { runs: Run[] }) {
           </div>
 
           {/* Last run info */}
-          <div className="text-[11px] text-gray-600 text-right mt-1">
+          <div className="text-[10px] text-gray-600 text-right mt-1">
             Ultima analisi: {latest.date} · {latest.distKm.toFixed(1)} km
           </div>
         </div>
