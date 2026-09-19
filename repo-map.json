@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-09-18T16:05:54.989Z",
+  "generated_at": "2026-09-19T10:54:58.582Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,9 +14,9 @@
     ]
   },
   "counts": {
-    "files": 241,
+    "files": 252,
     "backend_routes": 68,
-    "frontend_routes": 18,
+    "frontend_routes": 19,
     "api_clients": 77
   },
   "files": [
@@ -1964,6 +1964,7 @@
         "/gamification-v1",
         "/gamification-v3",
         "/insights",
+        "/pace-lab",
         "/profile",
         "/race-lab",
         "/ranking",
@@ -1989,9 +1990,9 @@
         "react-i18next",
         "react-router-dom"
       ],
-      "hash": "38b74f987ae49107bbb3a523b2b851d4a83b7d3c868152b53128675ee6aab566",
-      "last_modified": "2026-09-18T11:30:38.279Z",
-      "size_bytes": 11283
+      "hash": "5c305ab5c6c16d47f2e7581abe94ff269c853003247675be3efbccee163fbda8",
+      "last_modified": "2026-09-19T10:36:22.803Z",
+      "size_bytes": 11530
     },
     {
       "path": "src/components/ActivitiesView.tsx",
@@ -4329,6 +4330,339 @@
       "size_bytes": 1756
     },
     {
+      "path": "src/components/pacelab/chartKit.ts",
+      "kind": "frontend-component",
+      "purpose": "React component chartKit.",
+      "touch_when": [
+        "ai",
+        "layout",
+        "statistics"
+      ],
+      "exports": [
+        "niceTicks",
+        "PACE_BINS",
+        "paceColor",
+        "pathOf",
+        "useWidth"
+      ],
+      "routes": [],
+      "imports": [
+        "react"
+      ],
+      "hash": "5c7c41f65332f8b23641ecbe9bedd069673ba605b2964668666404ee548fb141",
+      "last_modified": "2026-09-19T10:51:39.686Z",
+      "size_bytes": 1821
+    },
+    {
+      "path": "src/components/pacelab/DistancesSection.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component DistancesSection.",
+      "touch_when": [
+        "ai",
+        "layout",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "DistancesSection"
+      ],
+      "routes": [],
+      "imports": [
+        "../gamification/gamiCore",
+        "./paceEngine",
+        "./PaceLabView",
+        "./ui",
+        "react"
+      ],
+      "hash": "aac2ba64f4839988af2eb1c2403fc3798622016e111f685f63e06413f304c531",
+      "last_modified": "2026-09-19T10:43:36.296Z",
+      "size_bytes": 10437
+    },
+    {
+      "path": "src/components/pacelab/FastStartSection.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component FastStartSection.",
+      "touch_when": [
+        "ai",
+        "garmin",
+        "layout",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "FastStartSection"
+      ],
+      "routes": [],
+      "imports": [
+        "../gamification/gamiCore",
+        "./chartKit",
+        "./paceEngine",
+        "./PaceLabView",
+        "./ui",
+        "react"
+      ],
+      "hash": "c3d51bee7e3ce43c4168ed4e94004ffc31ed338c15a741fd538e2b2d39ea8e4c",
+      "last_modified": "2026-09-19T10:53:22.595Z",
+      "size_bytes": 26776
+    },
+    {
+      "path": "src/components/pacelab/ListinoSection.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component ListinoSection.",
+      "touch_when": [
+        "ai",
+        "layout",
+        "statistics",
+        "types"
+      ],
+      "exports": [
+        "ListinoSection"
+      ],
+      "routes": [],
+      "imports": [
+        "../gamification/gamiCore",
+        "./chartKit",
+        "./paceEngine",
+        "./PaceLabView",
+        "./ui",
+        "react"
+      ],
+      "hash": "b84bc4dc2e0e767f1170b5209a0c46cb969f0a182c9fdb5ea5d3f5090dbd29d3",
+      "last_modified": "2026-09-19T10:53:08.477Z",
+      "size_bytes": 18484
+    },
+    {
+      "path": "src/components/pacelab/paceEngine.test.ts",
+      "kind": "frontend-component",
+      "purpose": "React component paceEngine.test.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "profile",
+        "training"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "../gamification/gamiCore",
+        "./paceEngine",
+        "vitest"
+      ],
+      "hash": "120b6f9ff5c103d8211a26092f3660299beb8fb6fd931ce5dcbbe31bf9627a6b",
+      "last_modified": "2026-09-19T10:24:49.003Z",
+      "size_bytes": 10424
+    },
+    {
+      "path": "src/components/pacelab/paceEngine.ts",
+      "kind": "frontend-component",
+      "purpose": "React component paceEngine.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "profile",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "badDayVdot",
+        "bestTime",
+        "buildPlan",
+        "correctAt",
+        "correctedAtHalf",
+        "Correction",
+        "Course",
+        "courseClimb",
+        "distanceById",
+        "DistanceDef",
+        "DistanceId",
+        "distanceMatrix",
+        "DISTANCES",
+        "equivalentFlatKm",
+        "equivalentOf",
+        "fastStart",
+        "FastStartInput",
+        "FastStartResult",
+        "fastStartTrace",
+        "fitProfile",
+        "flatCourse",
+        "fmtDelta",
+        "fmtKm",
+        "fmtPct",
+        "halfwayPrice",
+        "kmCost",
+        "LadderRow",
+        "levelForCourse",
+        "levelFromEven",
+        "limitPace",
+        "makeCourse",
+        "MatrixCell",
+        "MatrixRow",
+        "paceForKmCost",
+        "paceLadder",
+        "parseGpx",
+        "Plan",
+        "PlanSeg",
+        "profileFromSplits",
+        "ProfilePoint",
+        "ratePerMin",
+        "RobustResult",
+        "robustStart",
+        "ROME_HM_PROFILE",
+        "SEG_KM",
+        "Split",
+        "splitIndexOf",
+        "SplitLocks",
+        "splitsOf",
+        "START_FRACTION",
+        "StrategyId",
+        "StrategyInput",
+        "sustainablePct",
+        "tankPerSecond",
+        "tankTrace",
+        "tlimMin",
+        "TracePoint",
+        "wallUnder"
+      ],
+      "routes": [],
+      "imports": [
+        "../gamification/gamiCore"
+      ],
+      "hash": "bfb1c48eac6d14eb4f58dffeed8aa47469783d71c79ab02186ef2352b3063412",
+      "last_modified": "2026-09-19T10:34:18.299Z",
+      "size_bytes": 37645
+    },
+    {
+      "path": "src/components/pacelab/PaceLabView.tsx",
+      "kind": "frontend-view",
+      "purpose": "Page/view component for PaceLab.",
+      "touch_when": [
+        "ai",
+        "layout",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "PaceCtx",
+        "PaceLabView"
+      ],
+      "routes": [],
+      "imports": [
+        "../celebrations/gsapSetup",
+        "../gamification/gamiCore",
+        "../gamification/useAthleteVdot",
+        "./DistancesSection",
+        "./FastStartSection",
+        "./ListinoSection",
+        "./paceEngine",
+        "./PaceProSection",
+        "./ui",
+        "lucide-react",
+        "react"
+      ],
+      "hash": "1c45d947bc1131b12b6ae40ec97bd4b14c909d23950202b14e7b14b0c9294376",
+      "last_modified": "2026-09-19T10:53:34.604Z",
+      "size_bytes": 18289
+    },
+    {
+      "path": "src/components/pacelab/PaceProChart.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component PaceProChart.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "garmin",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "PaceProChart"
+      ],
+      "routes": [],
+      "imports": [
+        "../gamification/gamiCore",
+        "./chartKit",
+        "./paceEngine",
+        "./ui",
+        "react"
+      ],
+      "hash": "2589a57379a4684f43b8207491746880f8243d6b1f39342b6612a4ef5565fa66",
+      "last_modified": "2026-09-19T10:53:08.502Z",
+      "size_bytes": 10546
+    },
+    {
+      "path": "src/components/pacelab/PaceProSection.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component PaceProSection.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "garmin",
+        "layout",
+        "profile",
+        "statistics",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "PaceProSection"
+      ],
+      "routes": [],
+      "imports": [
+        "../../api",
+        "../../hooks/apiCacheKeys",
+        "../../hooks/useApi",
+        "../../types/api",
+        "../gamification/gamiCore",
+        "./chartKit",
+        "./paceEngine",
+        "./PaceLabView",
+        "./PaceProChart",
+        "./ui",
+        "lucide-react",
+        "react"
+      ],
+      "hash": "43594c71815922de9258f4c260d7e7db469868b25956e628d0a1532a071be0a2",
+      "last_modified": "2026-09-19T10:54:58.583Z",
+      "size_bytes": 42139
+    },
+    {
+      "path": "src/components/pacelab/ui.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component ui.",
+      "touch_when": [
+        "ai",
+        "types"
+      ],
+      "exports": [
+        "Card",
+        "CYAN",
+        "GOOD",
+        "Label",
+        "LineKey",
+        "LIT",
+        "LOAD",
+        "MONO",
+        "MUTED",
+        "REF",
+        "RISK",
+        "SectionHead",
+        "Segmented",
+        "Stat",
+        "Stepper",
+        "SURFACE"
+      ],
+      "routes": [],
+      "imports": [
+        "lucide-react",
+        "react"
+      ],
+      "hash": "3a55e4fb40368c9aed8228238c152e0b37bbdb9d73e38bee56f6590060dfc234",
+      "last_modified": "2026-09-19T10:51:39.685Z",
+      "size_bytes": 5570
+    },
+    {
       "path": "src/components/ProfileView.tsx",
       "kind": "frontend-view",
       "purpose": "Page/view component for Profile.",
@@ -4741,6 +5075,27 @@
       "hash": "3f1380cacc44943d1110dcdb24832a4c41249178d7fc86a75a4987d90bcad1f0",
       "last_modified": "2026-09-18T11:30:38.284Z",
       "size_bytes": 28966
+    },
+    {
+      "path": "src/components/ScrollRow.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component ScrollRow.",
+      "touch_when": [
+        "ai",
+        "garmin",
+        "types"
+      ],
+      "exports": [
+        "ScrollRow"
+      ],
+      "routes": [],
+      "imports": [
+        "lucide-react",
+        "react"
+      ],
+      "hash": "bec7b84d4d14378963d0da77d051e154763547b8fd8bc5b79f822f4cbde003a2",
+      "last_modified": "2026-09-18T16:19:58.839Z",
+      "size_bytes": 5218
     },
     {
       "path": "src/components/SettingsControls.tsx",
@@ -5338,6 +5693,7 @@
         "../FitnessFreshness",
         "../GridCard",
         "../MainChart",
+        "../ScrollRow",
         "./AnalyticsV2",
         "./AnalyticsV3",
         "./AnalyticsV4",
@@ -5358,9 +5714,9 @@
         "react-i18next",
         "recharts"
       ],
-      "hash": "08b446c96abb99ea2969fa5c9d622c59013e4e7e27dfb73dd29fda7856934fa6",
-      "last_modified": "2026-09-18T11:30:38.296Z",
-      "size_bytes": 126918
+      "hash": "2e5ca61d41a76b7d0976c7c83cd2e092cb190cb0ecd581fd31fb7012b43b0c1e",
+      "last_modified": "2026-09-18T16:20:13.146Z",
+      "size_bytes": 127287
     },
     {
       "path": "src/components/statistics/StatsCalc.tsx",
@@ -7292,109 +7648,115 @@
       "path": "*",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 208
+      "line": 211
     },
     {
       "path": "/",
       "element": "DashboardView",
       "file": "src/App.tsx",
-      "line": 191
+      "line": 193
     },
     {
       "path": "/activities",
       "element": "ActivitiesView",
       "file": "src/App.tsx",
-      "line": 192
+      "line": 194
     },
     {
       "path": "/activities/:runId",
       "element": "RoutesViewWrapper",
       "file": "src/App.tsx",
-      "line": 193
+      "line": 195
     },
     {
       "path": "/badges",
       "element": "BadgesView",
       "file": "src/App.tsx",
-      "line": 199
+      "line": 201
     },
     {
       "path": "/biometrics",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 206
+      "line": 209
     },
     {
       "path": "/gamification-v1",
       "element": "GamificationV1",
       "file": "src/App.tsx",
-      "line": 200
+      "line": 202
     },
     {
       "path": "/gamification-v3",
       "element": "Navigate",
       "file": "src/App.tsx",
-      "line": 201
+      "line": 203
     },
     {
       "path": "/insights",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 207
+      "line": 210
+    },
+    {
+      "path": "/pace-lab",
+      "element": "PaceLabView",
+      "file": "src/App.tsx",
+      "line": 205
     },
     {
       "path": "/profile",
       "element": "ProfileView",
       "file": "src/App.tsx",
-      "line": 204
+      "line": 207
     },
     {
       "path": "/race-lab",
       "element": "RaceLabView",
       "file": "src/App.tsx",
-      "line": 202
+      "line": 204
     },
     {
       "path": "/ranking",
       "element": "RankingView",
       "file": "src/App.tsx",
-      "line": 198
+      "line": 200
     },
     {
       "path": "/recovery",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 205
+      "line": 208
     },
     {
       "path": "/runner-dna",
       "element": "RunnerDnaView",
       "file": "src/App.tsx",
-      "line": 195
+      "line": 197
     },
     {
       "path": "/runner-dna-v1",
       "element": "Navigate",
       "file": "src/App.tsx",
-      "line": 196
+      "line": 198
     },
     {
       "path": "/runner-dna-v2",
       "element": "Navigate",
       "file": "src/App.tsx",
-      "line": 197
+      "line": 199
     },
     {
       "path": "/statistics",
       "element": "StatisticsView",
       "file": "src/App.tsx",
-      "line": 203
+      "line": 206
     },
     {
       "path": "/training",
       "element": "TrainingView",
       "file": "src/App.tsx",
-      "line": 194
+      "line": 196
     }
   ],
   "api_clients": [
