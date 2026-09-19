@@ -6,6 +6,7 @@ import { MainChart } from '../MainChart';
 import { AnaerobicThreshold } from '../AnaerobicThreshold';
 import { FitnessFreshness } from '../FitnessFreshness';
 import { GridCard } from '../GridCard';
+import { ScrollRow } from '../ScrollRow';
 import { AnalyticsV2 } from './AnalyticsV2';
 import { AnalyticsV3 } from './AnalyticsV3';
 import { BiologyFutureV2 } from './BiologyFutureV2';
@@ -1071,10 +1072,19 @@ export function StatisticsView() {
             </p>
           </div>
 
-          <div className="flex items-center bg-[#0D0D0D] p-1.5 rounded-2xl border border-[#1E1E1E] shadow-2xl overflow-x-auto whitespace-nowrap scrollbar-hide -mx-4 md:mx-0 px-1.5">
+          {/* nove sezioni non stanno in una riga: le frecce ai lati la fanno scorrere */}
+          <ScrollRow
+            className="bg-[#0D0D0D] rounded-2xl border border-[#1E1E1E] shadow-2xl -mx-4 md:mx-0"
+            innerClassName="flex items-center whitespace-nowrap p-1.5"
+            fade="#0D0D0D"
+            activeKey={activeTab}
+            label="Sezioni delle statistiche"
+          >
             {tabs.map((tab) => (
               <button
                 key={tab.id}
+                data-scroll-key={tab.id}
+                aria-pressed={activeTab === tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 md:px-6 py-3 rounded-xl text-[10px] font-black transition-all tracking-widest shrink-0 min-h-[44px] ${
                   activeTab === tab.id
@@ -1088,7 +1098,7 @@ export function StatisticsView() {
                 {tab.label.toUpperCase()}
               </button>
             ))}
-          </div>
+          </ScrollRow>
         </div>
 
         {proError && ['analytics', 'analyticsv2', 'analyticsv3'].includes(activeTab) && (

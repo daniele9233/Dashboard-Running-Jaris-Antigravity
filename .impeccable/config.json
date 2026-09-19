@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-09-18T10:22:32.796Z",
+        "reason": "Claude decided: app UI in product register; Impeccable reference/product.md 'Product permissions' explicitly allows Inter for product UIs; brand voice carried by JetBrains Mono numbers + lime, not the body face"
+      }
+    ]
+  }
+}

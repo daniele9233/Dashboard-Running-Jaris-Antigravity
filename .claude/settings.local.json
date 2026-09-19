@@ -41,5 +41,33 @@
       "Bash(node -e \"const fs=require\\('fs'\\);const s=fs.readFileSync\\('src/components/DashboardView.tsx','utf8'\\);const opens=\\(s.match\\(/hiddenKeys\\\\.includes\\\\\\(/g\\)||[]\\).length;const closes=\\(s.match\\(/\\\\n          \\\\\\)\\\\}/g\\)||[]\\).length;console.log\\('opens',opens,'closes',closes\\);\")",
       "Bash(xargs grep *)"
     ]
-  }
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ ! -f \"${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/impeccable\" ] || \"${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/impeccable\" hook",
+            "timeout": 5,
+            "statusMessage": "Checking UI changes"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ ! -f \"${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/impeccable\" ] || \"${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/impeccable\" hook",
+            "timeout": 30,
+            "statusMessage": "Design deep pass"
+          }
+        ]
+      }
+    ]
+  },
+  "description": "Impeccable design detector: immediate-tier checks after Edit/Write on UI files, full-rule deep pass on Stop."
 }
