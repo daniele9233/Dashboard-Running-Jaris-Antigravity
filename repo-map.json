@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-09-19T10:54:58.582Z",
+  "generated_at": "2026-09-20T12:25:39.439Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -5932,9 +5932,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "5e36c43c02c10e4e70eb65eaf515e80feb580c349751e13ff300981353ea6b7e",
-      "last_modified": "2026-09-18T13:13:02.542Z",
-      "size_bytes": 20482
+      "hash": "2b6a3d142f0d6b47ec3ec933af52e8c4b22d2cc5f08e8a67ab50fcd3dd9db2ac",
+      "last_modified": "2026-09-20T12:02:35.819Z",
+      "size_bytes": 20472
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -6381,9 +6381,9 @@
       "imports": [
         "../types/api"
       ],
-      "hash": "549822c0739306e4ea7069ea712f824e150bcf6e9adef7d4592626ceed7949e0",
-      "last_modified": "2026-09-18T13:13:02.541Z",
-      "size_bytes": 25222
+      "hash": "1eb302c8e670ee41aea252028ffdd8e013811f753a69ef41fc6c6ae0803f5736",
+      "last_modified": "2026-09-20T12:25:39.440Z",
+      "size_bytes": 29139
     },
     {
       "path": "src/data/sub20Plan.ts",

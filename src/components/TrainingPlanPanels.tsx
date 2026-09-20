@@ -216,7 +216,7 @@ function ZoneTable({ head, rows }: { head: [string, string, string]; rows: ZoneR
 export function ZonesPanel() {
   return (
     <section id="piano-zone">
-      <SectionTitle icon={HeartPulse} hint="soglia intorno a 155">Zone di frequenza cardiaca</SectionTitle>
+      <SectionTitle icon={HeartPulse} hint="soglia fra 160 e 163">Zone di frequenza cardiaca</SectionTitle>
       <p className="text-[12.5px] text-gray-400 leading-relaxed mb-3">{ZONE_NOTES.intro}</p>
       <div className="grid gap-3 lg:grid-cols-2">
         <ZoneTable head={["Corsa", "Passo", "FC"]} rows={RUN_ZONES} />
@@ -360,7 +360,7 @@ export function ChangesPanel() {
       <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}
         className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-white/[0.02]">
         <Sparkles className="w-4 h-4 shrink-0" style={{ color: "var(--app-accent)" }} />
-        <span className="text-[10px] font-black tracking-[0.2em] uppercase text-gray-300">Cosa cambia rispetto al 16 settembre</span>
+        <span className="text-[10px] font-black tracking-[0.2em] uppercase text-gray-300">Cosa è cambiato nel piano</span>
         <ChevronDown className={`ml-auto w-4 h-4 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && <div className="px-4 pb-4"><Bullets items={PLAN_CHANGES} /></div>}
