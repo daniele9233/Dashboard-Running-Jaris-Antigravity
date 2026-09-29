@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\repo-map.json": {
-    "mtime": 1789816970.8663988,
-    "ast_hash": "4cd825ed83f1ddbc18d5f8bb82f6503a",
+    "mtime": 1790659084.4997096,
+    "ast_hash": "24e3ff2c4c280662421bc76e83148231",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\skills-lock.json": {
@@ -120,8 +120,8 @@
     "semantic_hash": "8babc22265720a25952f91418724a381"
   },
   "D:\\webapp-antiG\\backend\\server.py": {
-    "mtime": 1789671699.3878856,
-    "ast_hash": "32178f0c44b2498e7eba124e87adb75b",
+    "mtime": 1790657354.2558944,
+    "ast_hash": "5b72919fe6f5ed620e53de74be93b7cc",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\backend\\test_models.py": {
@@ -130,9 +130,9 @@
     "semantic_hash": "2b4945b639562728ff471eaf057b258e"
   },
   "D:\\webapp-antiG\\backend\\test_smoke.py": {
-    "mtime": 1777979828.4245372,
-    "ast_hash": "bbcbee8b55ebf87dbb48d888bc6babb2",
-    "semantic_hash": "bbcbee8b55ebf87dbb48d888bc6babb2"
+    "mtime": 1790657367.2644234,
+    "ast_hash": "6e375c79f467274fb14686cadc95683e",
+    "semantic_hash": ""
   },
   "D:\\webapp-antiG\\backend\\test_vdot_model.py": {
     "mtime": 1777800243.6458423,
@@ -235,8 +235,8 @@
     "semantic_hash": "1f1f3cf830479bfb17a37df7579300b7"
   },
   "D:\\webapp-antiG\\src\\App.tsx": {
-    "mtime": 1789814182.8028889,
-    "ast_hash": "4bff64699664f6d60dfbb09f0eab6727",
+    "mtime": 1790657440.8910434,
+    "ast_hash": "85c2fba4c7c104b2220eba426e5f62cb",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\main.tsx": {
@@ -250,8 +250,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\api\\index.ts": {
-    "mtime": 1789671703.4796722,
-    "ast_hash": "6b5e8546a1f59fd6e2284a35fd7f7aa3",
+    "mtime": 1790657432.9724188,
+    "ast_hash": "12c6192d9ae88e65b1d6ec0a0cfac280",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\ActivitiesView.tsx": {
@@ -275,13 +275,13 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\DashboardView.tsx": {
-    "mtime": 1789737557.5860386,
-    "ast_hash": "fb250d67dc08a5b8b475004bcf207337",
+    "mtime": 1790657788.7028692,
+    "ast_hash": "9d23f95b96849411d16ffcf4d0d07ef0",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\DetrainingWidget.tsx": {
-    "mtime": 1789731038.2813435,
-    "ast_hash": "e25d4abea052de72ae8d8e44322b12c2",
+    "mtime": 1790658320.6389754,
+    "ast_hash": "2b8b32a31dfe7152f0e0070a5e1e2dcb",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\ErrorBoundary.tsx": {
@@ -335,8 +335,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\ProfileView.tsx": {
-    "mtime": 1789731038.2833433,
-    "ast_hash": "105bdf5bd85fe4853f8f71d9203dfd68",
+    "mtime": 1790657439.3052447,
+    "ast_hash": "534a3722aa45419fa78feb1fb8d9b216",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\RacePredictions.tsx": {
@@ -545,9 +545,9 @@
     "semantic_hash": "42290ce0124ecfd98461bfa5124056e5"
   },
   "D:\\webapp-antiG\\src\\hooks\\apiCacheKeys.ts": {
-    "mtime": 1777352498.3163342,
-    "ast_hash": "4aacb5d4b6bab54b67adf12e80e654b3",
-    "semantic_hash": "4aacb5d4b6bab54b67adf12e80e654b3"
+    "mtime": 1790657434.0922759,
+    "ast_hash": "7413d4b1aaa38640a76205ee5d80c709",
+    "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\hooks\\useApi.ts": {
     "mtime": 1777459106.1401029,
@@ -565,9 +565,9 @@
     "semantic_hash": "1177f0aefd70ef596256fe50205f9517"
   },
   "D:\\webapp-antiG\\src\\hooks\\useServerEvents.ts": {
-    "mtime": 1777460562.108667,
-    "ast_hash": "abfdaa3932c280f3940531c6585a3d8d",
-    "semantic_hash": "abfdaa3932c280f3940531c6585a3d8d"
+    "mtime": 1790657437.3057446,
+    "ast_hash": "418666a9ea7a60a95f6d0557b7285de8",
+    "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\i18n\\index.ts": {
     "mtime": 1776365483.2174466,
@@ -585,8 +585,8 @@
     "semantic_hash": "e3f848f1b39f863e6164cf58b5a8e752"
   },
   "D:\\webapp-antiG\\src\\types\\api.ts": {
-    "mtime": 1786906250.9619336,
-    "ast_hash": "518a88bd0336b5be2340111de766975d",
+    "mtime": 1790657430.1773615,
+    "ast_hash": "3eba2db3cf87fb9cfed5d9f90388ffb1",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\types\\jarvis.ts": {
@@ -605,9 +605,9 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\utils\\detrainingModel.ts": {
-    "mtime": 1777284305.860497,
-    "ast_hash": "52a9ad9137630318a56051bb4f9b6aa6",
-    "semantic_hash": "52a9ad9137630318a56051bb4f9b6aa6"
+    "mtime": 1790657639.046772,
+    "ast_hash": "f16f72333eb3bea2d68d6579ca98d394",
+    "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\utils\\paceFormat.test.ts": {
     "mtime": 1785063554.0837796,
@@ -700,8 +700,8 @@
     "semantic_hash": "9b8439940dffb3411a018fbe81d62be9"
   },
   "D:\\webapp-antiG\\repo-map.md": {
-    "mtime": 1789816970.8674,
-    "ast_hash": "85a5a823c0ebe780cd7d0d38eb3c6608",
+    "mtime": 1790659084.4997096,
+    "ast_hash": "db815fee778fbde288cced46cd6ed802",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\REPORT-TECNICO.md": {
@@ -2555,18 +2555,18 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\TrainingPlanPanels.tsx": {
-    "mtime": 1789737182.541588,
-    "ast_hash": "812246fc8e439557420a703a63d3bfb3",
+    "mtime": 1789905755.818664,
+    "ast_hash": "d715ed74337d7868ebc8cd9e6949441d",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\data\\mezzaOttobrePlan.test.ts": {
-    "mtime": 1789737110.272938,
-    "ast_hash": "903e3949b32358fbd540f8441cae2dee",
+    "mtime": 1790239367.873,
+    "ast_hash": "4152d847107812ce5cf54b6af514a3ce",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\data\\mezzaOttobrePlan.ts": {
-    "mtime": 1789737182.540586,
-    "ast_hash": "4b17c4a2e713ce0c0f7a4b24fdebfc5b",
+    "mtime": 1790239324.0648994,
+    "ast_hash": "e40b6123437f832ef3ea592456f4a26d",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\celebrations\\badgeProgress.ts": {
@@ -2625,8 +2625,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\.impeccable\\hook.cache.json": {
-    "mtime": 1789815400.9413862,
-    "ast_hash": "bcdbb45ce09d6b619f037e8d645ff90b",
+    "mtime": 1790658386.3670385,
+    "ast_hash": "9e528dd6841df9ea5c0f6fe2ad7d8e41",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\.agents\\skills\\impeccable\\agents\\openai.yaml": {
@@ -2787,6 +2787,16 @@
   "D:\\webapp-antiG\\src\\components\\pacelab\\ui.tsx": {
     "mtime": 1789815099.685038,
     "ast_hash": "3f79b6d52222d2ecdcceb30cb3d69e86",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\backend\\routers\\bike.py": {
+    "mtime": 1790657349.6079252,
+    "ast_hash": "cda703f691175d1b12a9c322c2381d2c",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\src\\utils\\detrainingModel.test.ts": {
+    "mtime": 1790657662.231882,
+    "ast_hash": "c386586665dc866e69d93eee1d43c85e",
     "semantic_hash": ""
   }
 }
