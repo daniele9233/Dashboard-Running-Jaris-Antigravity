@@ -64,20 +64,33 @@ export function DetrainingWidget({ profile, runs, bikes = NO_BIKES, vdot, base5k
   const tVo2Loss = (1 - tPoint.vo2Pct) * 100;
   const fVo2Loss = (1 - fPoint.vo2Pct) * 100;
 
-  // Bici dall'ultima corsa: scenario reale fra fermo totale e taper.
+  // Bici dall'ultima corsa: il fermo totale rigiocato giorno per giorno con la dose che conta.
   const bike = React.useMemo(
     () => computeBikeCoverage(profile, runs, bikes, vdot, days),
     [profile, runs, bikes, vdot, days],
   );
-  const bPoint = bike ? bikeScenarioPoint(tPoint, fPoint, bike.protection) : null;
+  const bPoint = bike ? bikeScenarioPoint(fullStop, bike.daily, days) : null;
+  const rode = (bike?.sessions.length ?? 0) > 0;
   const needed = bike ? `~${formatDuration(Math.round(bike.maintenanceMinPerWeek / 5) * 5)} a settimana` : '';
-  const bikeVerdict = !bike || bike.sessions === 0
+  const bikeVerdict = !bike || !rode
     ? { color: '#666', line: `Per tenere il VO2max: ${needed}` }
-    : bike.coverage >= 1
-      ? { color: GREEN, line: 'Aerobico tenuto: il VO2max regge' }
-      : bike.coverage >= 0.5
-        ? { color: ACCENT, line: `Calo rallentato: servono ${needed}` }
-        : { color: ORANGE, line: `Non basta: servono ${needed}` };
+    : bike.counted === 0
+      ? { color: ORANGE, line: 'Troppo corte o troppo piano: non contano' }
+      : bike.coverage >= 1
+        ? { color: GREEN, line: 'Dose piena: da qui perdi poco o nulla' }
+        : bike.coverage >= 0.5
+          ? { color: ACCENT, line: `Rallenta il calo: servono ${needed}` }
+          : { color: ORANGE, line: `Non basta a lungo: servono ${needed}` };
+  const bikeDetail = bike
+    ? [
+        "Dall'ultima corsa:",
+        ...bike.sessions.map((s) =>
+          `${s.date.slice(8, 10)}/${s.date.slice(5, 7)} · ${Math.round(s.minutes)}' · ${Math.round(s.x * 100)}% della riserva `
+          + `(${s.source === 'hr' ? 'FC' : s.source === 'power' ? 'potenza' : 'stimata'}) · conta ${Math.round(s.efficacy * 100)}%`),
+        `Carico utile: bici ${Math.round(bike.bikeWeeklyTrimp)} TRIMP negli ultimi 7 giorni, corsa prima dello stop ${Math.round(bike.runWeeklyTrimp)} a settimana.`,
+        "Conta dai 10' e dal 30% della riserva, per intero dal 45%.",
+      ].join('\n')
+    : '';
 
   // State classification.
   let state: { label: string; color: string; sub: string; icon: LucideIcon };
@@ -184,13 +197,13 @@ export function DetrainingWidget({ profile, runs, bikes = NO_BIKES, vdot, base5k
             <span className="flex items-center gap-1.5" style={{ color: bikeVerdict.color }}>
               <Bike className="w-3 h-3" /> CON LA BICI
             </span>
-            {bPoint && bike.sessions > 0 && (
+            {bPoint && rode && (
               <span className="text-white font-mono">
                 VO2 {lossLabel(bPoint.vo2Pct)}% · perf {perfLabel(bPoint.performancePct)}%
               </span>
             )}
           </div>
-          {bike.sessions > 0 && (
+          {rode && (
             <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
@@ -201,17 +214,13 @@ export function DetrainingWidget({ profile, runs, bikes = NO_BIKES, vdot, base5k
               />
             </div>
           )}
-          <div
-            className="flex items-center justify-between gap-2 text-[10px] mt-1.5"
-            title={`Dall'ultima corsa. Intensità: ${bike.sources.hr} da FC · ${bike.sources.power} da potenza · ${bike.sources.estimate} stimate. `
-              + `Carico: bici ${Math.round(bike.bikeWeeklyTrimp)} TRIMP/sett., corsa prima dello stop ${Math.round(bike.runWeeklyTrimp)}.`}
-          >
+          <div className="flex items-center justify-between gap-2 text-[10px] mt-1.5" title={bikeDetail}>
             <span className="text-[#A0A0A0] font-bold">
-              {bike.sessions > 0
-                ? `${bike.sessions} ${bike.sessions === 1 ? 'uscita' : 'uscite'} · ${formatDuration(bike.minutes)}`
+              {rode
+                ? `${bike.sessions.length} ${bike.sessions.length === 1 ? 'uscita' : 'uscite'} · ${formatDuration(bike.minutes)}`
                 : "nessuna uscita dall'ultima corsa"}
             </span>
-            {bike.sessions > 0 && (
+            {rode && (
               <span className="font-black uppercase tracking-widest" style={{ color: bikeVerdict.color }}>
                 copertura {Math.round(bike.coverage * 100)}%
               </span>
@@ -219,7 +228,7 @@ export function DetrainingWidget({ profile, runs, bikes = NO_BIKES, vdot, base5k
           </div>
           <div
             className="text-[#666] text-[10px] font-bold mt-1"
-            title="Minuti di bici a settimana, all'intensità media delle tue uscite, per arrivare a un terzo del carico di corsa di prima: lì il VO2max regge (Hickson). Più forte, ne bastano meno."
+            title="Minuti di bici a settimana, all'intensità delle tue uscite (almeno il 45% della riserva), per arrivare a un terzo del carico di corsa di prima: lì il VO2max regge (Hickson). Più forte, ne bastano meno."
           >
             {bikeVerdict.line}
           </div>

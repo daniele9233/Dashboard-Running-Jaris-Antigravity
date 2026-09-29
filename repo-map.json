@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-09-29T05:05:20.638Z",
+  "generated_at": "2026-09-29T06:03:43.186Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -3128,9 +3128,9 @@
         "motion/react",
         "react"
       ],
-      "hash": "8ddab58352e3af8553bcde9a2c0f76b9d4867719dc7977678f18881bd699ac5a",
-      "last_modified": "2026-09-29T05:05:20.639Z",
-      "size_bytes": 11915
+      "hash": "2cc0d0b5eb91b6a064a160b262d033e21b6634e0ee9aa4a8054b006ebe2f0ec7",
+      "last_modified": "2026-09-29T06:03:14.403Z",
+      "size_bytes": 12426
     },
     {
       "path": "src/components/ErrorBoundary.tsx",
@@ -6846,14 +6846,14 @@
         "./detrainingModel",
         "vitest"
       ],
-      "hash": "138a137720483fd4e35f2b6f37b5d0f6fdd0d3ac63cb5052d163955c7d070b76",
-      "last_modified": "2026-09-29T04:54:22.232Z",
-      "size_bytes": 4776
+      "hash": "c1edede4e9f483fbdd3c5490b5d0cb344b1303768d5c2b0e0a16da2441a51148",
+      "last_modified": "2026-09-29T06:03:43.187Z",
+      "size_bytes": 8826
     },
     {
       "path": "src/utils/detrainingModel.ts",
       "kind": "frontend-utility",
-      "purpose": "Shared utility module exporting BackToFitEntry, BikeAthlete, BikeCoverage, bikeIntensity.",
+      "purpose": "Shared utility module exporting BackToFitEntry, BikeAthlete, BikeCoverage, bikeEfficacy.",
       "touch_when": [
         "activities",
         "ai",
@@ -6865,9 +6865,12 @@
         "BackToFitEntry",
         "BikeAthlete",
         "BikeCoverage",
+        "bikeEfficacy",
         "bikeIntensity",
         "BikeIntensitySource",
+        "BikeProtection",
         "bikeScenarioPoint",
+        "BikeSessionCredit",
         "buildDetrainingInputs",
         "computeBikeCoverage",
         "computeDetrainingCurve",
@@ -6887,9 +6890,9 @@
       "imports": [
         "../types/api"
       ],
-      "hash": "dc715368d31b3c8defa9d28b31dc4f697a06c314d8dc8c4299f5200f9d8f734a",
-      "last_modified": "2026-09-29T04:53:59.047Z",
-      "size_bytes": 22457
+      "hash": "6dd7aca3716398026042e0d88a76edf4a29cc4f689c0e4f8d98295e827be4e1e",
+      "last_modified": "2026-09-29T06:03:08.764Z",
+      "size_bytes": 26308
     },
     {
       "path": "src/utils/paceFormat.test.ts",
