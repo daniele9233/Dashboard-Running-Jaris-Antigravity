@@ -117,13 +117,15 @@ export const PLAN_WEEKS: PlanWeek[] = [
         detail: "20' di cyclette facile come riscaldamento, poi la seduta B. È quella che indolenzisce meno: mercoledì c'è la qualità." },
       { date: "2026-09-22", kind: "easy", title: "Lento 8 km", detail: "FC fino a 138.", km: 8,
         adherence: { title: "Lento 8 km" } },
-      { date: "2026-09-23", kind: "quality", title: "Cruise intervals: 3×3000 a 4:18–4:20", km: 15, big: true,
-        detail: "3 km di riscaldamento, 3×3000 con 3' di corsa molto lenta (5:30) fra una e l'altra, 2 km di defaticamento. È l'allenamento re della mezza: blocchi lunghi per accumulare lavoro a soglia senza saturare i muscoli. In alternativa 4×2000 a 4:15–4:18 con 2'30\" di corsa lenta. Con la fascia H10.",
-        verify: "Stop: se nel terzo 3000 la FC supera 168 o la fatica passa 8, chiudi a 2×3000. Finora il tuo blocco più lungo a soglia è di 6 km: il lavoro utile l'hai già fatto. Il tetto era 162, alzato dopo il lungo del 20 settembre: con la H10 questa è la seduta che fissa davvero la soglia. Sono 73 minuti: borraccia a bordo pista, bevi nei recuperi.",
+      { date: "2026-09-23", kind: "rest", title: "Riposo",
+        detail: "Il 3×3000 è slittato a giovedì 24." },
+      { date: "2026-09-24", kind: "quality", title: "Cruise intervals: 3×3000 a 4:18–4:20", km: 15, big: true, done: true,
+        moved: "Spostato da mercoledì.",
+        detail: "Fatto, e fatto bene: 4:15,1 · 4:16,6 · 4:14,3, con 2 km di riscaldamento e 2 km di defaticamento a parte (13,88 km in tutto, 68'). FC media per ripetuta 146 · 154 · 157, picco 164. Recuperi 2:32 e 2:29 a 5:44 e 6:00, con la FC che cala di 24 e 20 battiti. A 16,5 °C, con la Polar H10.",
+        verify: "La terza è stata la più veloce, e il suo ultimo km — 4:08,8 a FC 160 — è il più rapido della serie: il passo prescritto era tarato lento, non sei andato in debito. Soglia confermata fra 158 e 162, adesso su dato da fascia: il 155 di partenza era sbagliato di un intervallo intero. Il tetto a 168 ha salvato la seduta — a 162 avresti chiuso a 2×3000 buttando via la ripetuta migliore.",
         adherence: { title: "3×3000 m", description: "3×3000 m @ 4:19/km, recupero 3′" } },
-      { date: "2026-09-24", kind: "strength", title: "Cyclette leggera 20' + Forza A", routine: "A",
-        detail: "20' di cyclette facile come riscaldamento, poi la seduta A. Il giorno dopo la qualità e tre giorni prima del lungo: il tempo per smaltire l'indolenzimento c'è." },
-      { date: "2026-09-25", kind: "rest", title: "Riposo" },
+      { date: "2026-09-25", kind: "strength", title: "Cyclette leggera 20' + Forza A", routine: "A",
+        detail: "20' di cyclette facile come riscaldamento, poi la seduta A. Spostata dal giovedì perché lì è finita la qualità: qui restano due giorni pieni prima del lungo, e sabato c'è solo il lento." },
       { date: "2026-09-26", kind: "easy", title: "Lento 6 km + 6 allunghi", detail: "FC fino a 138.", km: 6,
         adherence: { title: "Lento 6 km" } },
       { date: "2026-09-27", kind: "long", title: "Lungo 18 km, ultimi 5 a 4:47", km: 18, big: true,
@@ -207,6 +209,8 @@ export const PLAN_CHANGES = [
   "Dopo il lungo del 20 settembre: sulla base dei lunghi comanda la FC, tetto 145, e il passo la segue. Corso a 5:08 invece di 5:20, la FC è arrivata a 155.",
   "Dopo il lungo del 20 settembre: le zone di FC salgono di 5 battiti (soglia 160–163, non 155) e il tetto della stop-rule del 3×3000 passa da 162 a 168. Da riconfermare con la H10 il 23 settembre.",
   "Il lungo del 4 ottobre diventa anche la misura pulita del drift: stesso passo per 16 km, senza caldo, km 1–8 contro km 9–16.",
+  "Il 3×3000 è slittato da mercoledì 23 a giovedì 24, e la Forza A dal giovedì al venerdì 25: due giorni pieni prima del lungo, e il sabato resta solo il lento.",
+  "Soglia misurata con la Polar H10 il 24 settembre: 158–162, passo di soglia 4:15–4:20. Non è più una stima.",
 ];
 
 /** Le regole che valgono per tutte le settimane. */
@@ -325,7 +329,7 @@ export const BIKE_ZONES: ZoneRow[] = [
   { kind: "bike", name: "B5", pace: "VO2max", hr: "da 150" },
 ];
 export const ZONE_NOTES = {
-  intro: "La soglia era stimata intorno a 155 sui lavori di giugno–agosto. Il lungo del 20 settembre dice di più: 18 minuti a 4:30 con FC 162–169 a fine lungo, e un plateau a 170–171 nell'ultimo km, cioè il tetto di giornata. La soglia sta fra 160 e 163, non a 155, e tutte le zone di qui sopra sono state alzate di 5 battiti. È un dato da polso, quindi provvisorio: lo fissa la fascia H10 nel 3×3000 del 23 settembre.",
+  intro: "La soglia era stimata intorno a 155 sui lavori di giugno–agosto: sbagliata di un intervallo intero. Il 3×3000 del 24 settembre l'ha misurata con la Polar H10 — 9 km a 4:15 con la FC che si assesta fra 157 e 162 e il passo che migliora ripetuta dopo ripetuta. La soglia è fra 158 e 162, il passo di soglia fra 4:15 e 4:20, e tutte le zone di qui sopra valgono cinque battiti più in alto di come erano scritte. Il lungo del 20 settembre, da polso, diceva la stessa cosa: due misure indipendenti, stessa risposta.",
   bike: "Le zone bici sono stime: in bici i battiti stanno 5–10 sotto la corsa. Pedala a 90–95 rpm; prima della forza basta la B1.",
   heat: "Fino al 30 settembre, se T+DP supera 130, rallenta del 2–3% i ritmi di qualità. In ottobre la correzione è quasi nulla.",
 };
@@ -348,7 +352,7 @@ export const RACE_HM = {
     "Il tempo si fa sui 12 km piatti lungo il Tevere: lì il 4:45 deve sembrarti controllato.",
     "Negli ultimi 3,5 km sampietrini nelle piazze e due salite, l'ultima fino al Colosseo: il passo cala anche a sforzo uguale. Lì non inseguire il 4:47, spingi sullo sforzo.",
     "Il GPS in città misura di più: a fine gara segnerà 21,3–21,4 km. Prendi il giro a mano ai cartelli dei km, oppure punta a 4:44 sul Garmin.",
-    "Se al km 10 sei stabilmente sopra 160, passa a 4:52 e chiudi intorno a 1:42. La soglia era stimata a 155 e i tetti erano cinque battiti più bassi: alzati dopo il lungo del 20 settembre, da riconfermare con la H10.",
+    "Se al km 10 sei stabilmente sopra 160, passa a 4:52 e chiudi intorno a 1:42. I tetti erano cinque battiti più bassi, tarati su una soglia da 155: alzati dopo il lungo del 20 settembre e confermati con la H10 nel 3×3000 del 24.",
     "Bevi a ogni ristoro, anche i primi, anche se non hai sete: sono cento minuti e il drift del 20 settembre ti ha mostrato cosa costa non farlo. Due sorsi e via, non una borraccia intera.",
     "Arrivo previsto intorno a 1:40:55, se le verifiche del 27 e del 30 settembre sono andate bene.",
     "Se riesci, prima della gara corri piano il finale del percorso, da Piazza del Popolo al Colosseo: vedi dove sono sampietrini e salite.",

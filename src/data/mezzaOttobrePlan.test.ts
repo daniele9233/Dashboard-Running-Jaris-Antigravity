@@ -75,7 +75,7 @@ describe("le regole del piano", () => {
     expect(strength.at(-1)!.date).toBe("2026-09-28");
     // la B, che indolenzisce meno, prima della qualità; la A il giorno dopo
     expect(routineDays("B").map((d) => d.date)).toEqual(["2026-09-21"]);
-    expect(routineDays("A").map((d) => d.date)).toEqual(["2026-09-24"]);
+    expect(routineDays("A").map((d) => d.date)).toEqual(["2026-09-25"]);
     expect(PLAN_DAYS.filter((d) => d.date >= "2026-10-12" && d.routine)).toHaveLength(0);
   });
 
@@ -96,7 +96,7 @@ describe("la prossima seduta", () => {
   });
 
   it("altrimenti mostra quella di oggi", () => {
-    expect(nextPlanDay("2026-09-23")).toMatchObject({ isToday: true, day: { title: "Cruise intervals: 3×3000 a 4:18–4:20" } });
+    expect(nextPlanDay("2026-09-30")).toMatchObject({ isToday: true, day: { title: "Medio 8 km in progressione" } });
   });
 
   it("dopo la mezza non c'è niente da mostrare", () => {
@@ -116,7 +116,7 @@ describe("le sedute per l'esito automatico", () => {
 
   it("le ripetute si leggono con numero, distanza e passo", () => {
     expect(read("2026-09-16")).toMatchObject({ kind: "reps", reps: 5, repDistM: 1000, targetPaceSec: 238 });
-    expect(read("2026-09-23")).toMatchObject({ kind: "reps", reps: 3, repDistM: 3000, targetPaceSec: 259 });
+    expect(read("2026-09-24")).toMatchObject({ kind: "reps", reps: 3, repDistM: 3000, targetPaceSec: 259 });
     expect(read("2026-10-07")).toMatchObject({ kind: "reps", reps: 3, repDistM: 2000, targetPaceSec: 257 });
   });
 
