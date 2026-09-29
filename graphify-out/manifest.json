@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\repo-map.json": {
-    "mtime": 1790659084.4997096,
-    "ast_hash": "24e3ff2c4c280662421bc76e83148231",
+    "mtime": 1790662002.7645242,
+    "ast_hash": "59137c890ead4d3bbeb0f1e9ff91e0b3",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\skills-lock.json": {
@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\DetrainingWidget.tsx": {
-    "mtime": 1790658320.6389754,
-    "ast_hash": "2b8b32a31dfe7152f0e0070a5e1e2dcb",
+    "mtime": 1790661794.4033332,
+    "ast_hash": "4c9a154442f78e5c6b85d98b5f0b6235",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\ErrorBoundary.tsx": {
@@ -605,8 +605,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\utils\\detrainingModel.ts": {
-    "mtime": 1790657639.046772,
-    "ast_hash": "f16f72333eb3bea2d68d6579ca98d394",
+    "mtime": 1790661788.7636127,
+    "ast_hash": "9873e4a20650e6cdcae00b18697ca37d",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\utils\\paceFormat.test.ts": {
@@ -700,8 +700,8 @@
     "semantic_hash": "9b8439940dffb3411a018fbe81d62be9"
   },
   "D:\\webapp-antiG\\repo-map.md": {
-    "mtime": 1790659084.4997096,
-    "ast_hash": "db815fee778fbde288cced46cd6ed802",
+    "mtime": 1790662002.7655246,
+    "ast_hash": "1908ba2919a35ce9a6fde55d09537077",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\REPORT-TECNICO.md": {
@@ -2625,8 +2625,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\.impeccable\\hook.cache.json": {
-    "mtime": 1790658386.3670385,
-    "ast_hash": "9e528dd6841df9ea5c0f6fe2ad7d8e41",
+    "mtime": 1790661823.323464,
+    "ast_hash": "8e228e456d4471ea77d54e49f6ed66cd",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\.agents\\skills\\impeccable\\agents\\openai.yaml": {
@@ -2795,8 +2795,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\utils\\detrainingModel.test.ts": {
-    "mtime": 1790657662.231882,
-    "ast_hash": "c386586665dc866e69d93eee1d43c85e",
+    "mtime": 1790661823.18655,
+    "ast_hash": "d08d153286dcb7677ae9223be80ed0d3",
     "semantic_hash": ""
   }
 }
