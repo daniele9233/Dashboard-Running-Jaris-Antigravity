@@ -162,6 +162,49 @@ def test_strava_run_detection_accepts_sport_type_variants():
     assert _is_strava_run_activity({"type": "Ride", "sport_type": "Ride"}) is False
 
 
+def test_strava_bike_detection_keeps_cyclette_and_drops_ebike():
+    sys.path.insert(0, str(BACKEND_DIR))
+    from server import _is_strava_bike_activity  # type: ignore
+
+    # Kinomap sulla cyclette e il Forerunner in modalità bici indoor
+    assert _is_strava_bike_activity({"type": "VirtualRide", "sport_type": "VirtualRide", "trainer": True})
+    assert _is_strava_bike_activity({"type": "Ride", "sport_type": "Ride", "trainer": True})
+    assert _is_strava_bike_activity({"type": "Ride", "sport_type": "GravelRide"})
+    assert _is_strava_bike_activity({"type": "EBikeRide", "sport_type": "EBikeRide"}) is False
+    assert _is_strava_bike_activity({"type": "Ride", "sport_type": "EMountainBikeRide"}) is False
+    assert _is_strava_bike_activity({"type": "Run", "sport_type": "Run"}) is False
+    assert _is_strava_bike_activity({"type": "WeightTraining", "sport_type": "WeightTraining"}) is False
+
+
+def test_bike_session_from_strava_keeps_only_what_detraining_needs():
+    sys.path.insert(0, str(BACKEND_DIR))
+    from server import _bike_session_from_strava  # type: ignore
+
+    kinomap = {
+        "id": 1, "name": "Kinomap", "type": "VirtualRide", "sport_type": "VirtualRide",
+        "start_date": "2026-09-26T08:50:04Z", "start_date_local": "2026-09-26T10:50:04Z",
+        "moving_time": 2526, "distance": 19977.0, "trainer": True,
+        "has_heartrate": True, "average_heartrate": 61.0, "max_heartrate": 61.0,
+        "average_watts": 110.8, "device_watts": True,
+    }
+    doc = _bike_session_from_strava(kinomap, 42)
+    assert doc["athlete_id"] == 42 and doc["strava_id"] == 1
+    assert doc["date"] == "2026-09-26"
+    assert doc["duration_minutes"] == 42.1
+    assert doc["avg_hr"] == 61 and doc["max_hr"] == 61
+    assert doc["avg_watts"] == 111
+    # I km valgono solo per la corsa: la distanza della bici non si salva
+    assert not any("distance" in k or k.endswith("_km") for k in doc)
+
+    # Potenza stimata da Strava (niente misuratore) e FC assente → scartate
+    outdoor = {
+        "id": 2, "type": "Ride", "sport_type": "Ride", "start_date_local": "2026-09-27T08:00:00Z",
+        "moving_time": 3600, "has_heartrate": False, "average_watts": 150.0, "device_watts": False,
+    }
+    doc = _bike_session_from_strava(outdoor, 42)
+    assert doc["avg_hr"] is None and doc["max_hr"] is None and doc["avg_watts"] is None
+
+
 def test_render_frontend_url_never_points_to_localhost():
     sys.path.insert(0, str(BACKEND_DIR))
     from server import PUBLIC_BACKEND_URL, PUBLIC_FRONTEND_URL, _normalise_backend_url, _normalise_frontend_url  # type: ignore

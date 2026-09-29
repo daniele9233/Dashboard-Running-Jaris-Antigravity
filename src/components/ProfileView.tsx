@@ -686,6 +686,7 @@ export function ProfileView() {
   const invalidateAthleteScopedCaches = () => {
     invalidateCache(API_CACHE.PROFILE);
     invalidateCache(API_CACHE.RUNS);
+    invalidateCache(API_CACHE.BIKE_SESSIONS);
     invalidateCache(API_CACHE.DASHBOARD);
     invalidateCache(API_CACHE.ANALYTICS);
     invalidateCache(API_CACHE.BEST_EFFORTS);

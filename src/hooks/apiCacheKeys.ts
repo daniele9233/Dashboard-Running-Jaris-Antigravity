@@ -13,6 +13,7 @@ export const API_CACHE = {
   PROFILE: 'profile',
   DASHBOARD: 'dashboard',
   RUNS: 'runs',
+  BIKE_SESSIONS: 'bike-sessions',
   ANALYTICS: 'analytics',
   VDOT_PACES: 'vdot-paces',
   BEST_EFFORTS: 'best-efforts',

@@ -2,6 +2,7 @@ import { api } from './client';
 import type {
   Profile,
   RunsResponse,
+  BikeSessionsResponse,
   TrainingPlanResponse,
   FitnessFreshnessResponse,
   DashboardResponse,
@@ -38,6 +39,10 @@ export const getRuns = () => api.get<RunsResponse>('/api/runs');
 export const getRun = (id: string) => api.get<RunsResponse['runs'][0]>(`/api/runs/${id}`);
 
 export const getRunSplits = (id: string) => api.get<unknown>(`/api/runs/${id}/splits`);
+
+// ─── BICI ────────────────────────────────────────────────────────────────────
+/** Sedute in bici: le legge solo il widget DETRAINING. */
+export const getBikeSessions = () => api.get<BikeSessionsResponse>('/api/bike-sessions');
 
 /** Scarpa, taper e RPE di una prova — le annotazioni del banco di prova. */
 export const patchRaceLab = (

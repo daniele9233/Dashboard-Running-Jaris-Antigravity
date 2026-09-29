@@ -187,6 +187,8 @@ async def _ensure_indexes():
         await db.runs.create_index([("athlete_id", 1), ("date", -1)])
         await db.runs.create_index([("athlete_id", 1), ("is_treadmill", 1), ("has_gps", 1)])
         await db.runs.create_index("strava_id", unique=True, sparse=True)
+        await db.bike_sessions.create_index("strava_id", unique=True, sparse=True)
+        await db.bike_sessions.create_index([("athlete_id", 1), ("date", -1)])
         await db.garmin_csv_data.create_index([("athlete_id", 1), ("fingerprint", 1)], unique=True, sparse=True)
         await db.garmin_csv_data.create_index([("athlete_id", 1), ("date", -1)])
         await db.garmin_csv_data.create_index([("athlete_id", 1), ("matched_run_id", 1)])
@@ -514,14 +516,17 @@ try:
     from routers import health as _health_router  # CWD=backend/ (Render prod)
     from routers import profile as _profile_router
     from routers import runs as _runs_router
+    from routers import bike as _bike_router
 except ImportError:  # pragma: no cover
     from backend.routers import health as _health_router  # type: ignore
     from backend.routers import profile as _profile_router  # type: ignore
     from backend.routers import runs as _runs_router  # type: ignore
+    from backend.routers import bike as _bike_router  # type: ignore
 
 app.include_router(_health_router.router)
 app.include_router(_profile_router.router)
 app.include_router(_runs_router.router)
+app.include_router(_bike_router.router)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  STRAVA OAUTH
@@ -1164,6 +1169,43 @@ def _is_strava_run_activity(activity: dict) -> bool:
     return activity_type in {"Run", "VirtualRun"} or sport_type in {"Run", "TrailRun", "VirtualRun"}
 
 
+# Cyclette (Garmin "Ride" indoor, Kinomap/Zwift "VirtualRide") e uscite in bici.
+# Le e-bike restano fuori: con il motore lo sforzo non è confrontabile.
+_STRAVA_BIKE_TYPES = {"Ride", "VirtualRide", "MountainBikeRide", "GravelRide"}
+
+
+def _is_strava_bike_activity(activity: dict) -> bool:
+    return (activity.get("sport_type") or activity.get("type")) in _STRAVA_BIKE_TYPES
+
+
+def _bike_session_from_strava(act: dict, athlete_id) -> dict:
+    """Seduta in bici dal riepilogo della lista Strava: nessuna chiamata in più.
+
+    Serve solo al widget DETRAINING, per stimare quanto la bici tiene il motore
+    aerobico nei giorni senza corsa. Vive in `bike_sessions`, fuori da corse,
+    carico, VDOT e statistiche. La distanza non si salva apposta: i km valgono
+    solo per la corsa, e sulla cyclette sono comunque simulati.
+    La potenza si tiene solo se misurata (`device_watts`): quella stimata da
+    Strava per le uscite senza misuratore non è affidabile.
+    """
+    has_hr = bool(act.get("has_heartrate"))
+    avg_hr = act.get("average_heartrate") if has_hr else None
+    max_hr = act.get("max_heartrate") if has_hr else None
+    watts = act.get("average_watts") if act.get("device_watts") else None
+    return {
+        "athlete_id": athlete_id,
+        "strava_id": act["id"],
+        "name": act.get("name", ""),
+        "date": (act.get("start_date_local") or "")[:10],
+        "start_date": act.get("start_date"),
+        "sport_type": act.get("sport_type") or act.get("type"),
+        "duration_minutes": round((act.get("moving_time") or 0) / 60, 1),
+        "avg_hr": round(avg_hr) if avg_hr else None,
+        "max_hr": round(max_hr) if max_hr else None,
+        "avg_watts": round(watts) if watts else None,
+    }
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # MANUAL RUN OVERRIDES
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1278,6 +1320,7 @@ async def strava_sync():
     athlete_id = tokens.get("athlete_id")
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
     synced = 0
+    bike_synced = 0
     skipped_existing = 0
     scanned = 0
     existing_runs = await db.runs.count_documents(
@@ -1321,6 +1364,17 @@ async def strava_sync():
         # 2) Process each run
         for act in all_activities:
             scanned += 1
+            # Bici: basta il riepilogo della lista, e vanno nella loro collezione
+            # (solo per il widget DETRAINING). Riscritte a ogni sync: costa poco
+            # e tiene allineate le modifiche fatte su Strava.
+            if _is_strava_bike_activity(act):
+                bike = _bike_session_from_strava(act, athlete_id)
+                res = await db.bike_sessions.update_one(
+                    {"strava_id": bike["strava_id"]}, {"$set": bike}, upsert=True,
+                )
+                if res.upserted_id is not None:
+                    bike_synced += 1
+                continue
             if not _is_strava_run_activity(act):
                 continue
 
@@ -1581,6 +1635,7 @@ async def strava_sync():
         "ok": True,
         "synced": synced,
         "created": synced,
+        "bike_synced": bike_synced,
         "skipped_existing": skipped_existing,
         "scanned": scanned,
         "auto_adapt": adapt_result,

@@ -45,8 +45,8 @@ import { TaperWidget } from "./dashboard/widgets/TaperWidget";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Line, CartesianGrid, Area, ComposedChart } from "recharts";
 import { useApi } from "../hooks/useApi";
 import { API_CACHE } from "../hooks/apiCacheKeys";
-import { getDashboard, getRuns, getAnalytics, getBestEfforts, getVdotPaces, getDashboardInsight, getProfile } from "../api";
-import type { DashboardResponse, RunsResponse, AnalyticsResponse, Run, BestEffort, FitnessFreshnessPoint, VdotPacesResponse, Profile } from "../types/api";
+import { getDashboard, getRuns, getBikeSessions, getAnalytics, getBestEfforts, getVdotPaces, getDashboardInsight, getProfile } from "../api";
+import type { DashboardResponse, RunsResponse, BikeSessionsResponse, AnalyticsResponse, Run, BestEffort, FitnessFreshnessPoint, VdotPacesResponse, Profile } from "../types/api";
 import { DetrainingWidget } from "./DetrainingWidget";
 import { computeDrift as computeDriftCanonical } from "../utils/cardiacDrift";
 import { parsePaceToSecs, secsToPaceStr, hmsToSecs, formatDuration, fmtPbTime } from "../utils/paceFormat";
@@ -71,6 +71,8 @@ export function DashboardView() {
   const { data: dashData, loading: dashLoading, error: dashError, refetch: refetchDashboard } =
     useApi<DashboardResponse>(getDashboard, { cacheKey: API_CACHE.DASHBOARD });
   const { data: runsData, loading: runsLoading } = useApi<RunsResponse>(getRuns, { cacheKey: API_CACHE.RUNS });
+  // Bici: solo per il widget Detraining, non entrano in km, carico o statistiche.
+  const { data: bikeData } = useApi<BikeSessionsResponse>(getBikeSessions, { cacheKey: API_CACHE.BIKE_SESSIONS });
   const { data: analyticsData } = useApi<AnalyticsResponse>(getAnalytics, { cacheKey: API_CACHE.ANALYTICS });
   const { data: effortsData } = useApi<{ efforts: BestEffort[] }>(getBestEfforts, { cacheKey: API_CACHE.BEST_EFFORTS });
   const { data: vdotPacesData } = useApi<VdotPacesResponse>(getVdotPaces, { cacheKey: API_CACHE.VDOT_PACES });
@@ -705,6 +707,7 @@ export function DashboardView() {
             <DetrainingWidget
               profile={profileData ?? null}
               runs={runs}
+              bikes={bikeData?.sessions}
               vdot={vdot}
               base5kSec={racePredictions.find(p => p.short === '5K')?.secs ?? null}
             />

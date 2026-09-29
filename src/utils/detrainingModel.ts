@@ -31,7 +31,7 @@
 // long-trained athletes the satellite-cell / myonuclei reserve shortens this.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { Profile, Run } from '../types/api';
+import type { BikeSession, Profile, Run } from '../types/api';
 
 export interface DetrainingProfileInputs {
   age: number;
@@ -368,4 +368,186 @@ export function formatLossLine(point: DetrainingPoint): string {
   const lt = ((1 - point.ltPct) * 100).toFixed(1);
   const pv = ((1 - point.plasmaPct) * 100).toFixed(1);
   return `D${point.day}: VO2 -${vo2}% · LT -${lt}% · PV -${pv}%`;
+}
+
+// ─── BICI NEI GIORNI SENZA CORSA ─────────────────────────────────────────────
+//
+// Quanto la bici tiene il motore aerobico quando non corri.
+//
+// DOSE — TRIMP della bici dall'ultima corsa contro il TRIMP settimanale delle
+// corse nelle 6 settimane prima, con la formula del backend (minuti · x ·
+// 0.64·e^(1.92x), x = frazione della riserva). Hickson 1981/1982: a parità di
+// intensità il VO2max regge con un terzo del volume, mentre togliendone due
+// terzi cala già la resistenza lunga. Dose piena: 1/3 del carico di corsa per
+// la parte centrale, 2/3 per la periferica.
+//
+// TRASFERIMENTO — quanto di quella dose vale per la corsa (Tanaka 1994;
+// Millet 2009). La parte centrale (volume plasmatico, gittata, VO2max) la
+// allena qualsiasi lavoro aerobico: 0.8. Della periferica (mitocondri,
+// capillari, soglia) la bici ha in comune i quadricipiti, non polpacci e
+// femorali: 0.5.
+//
+// Lo scenario reale sta fra "fermo totale" e "taper": la protezione è la
+// frazione di strada che fa dal primo verso il secondo, sistema per sistema.
+//
+// INTENSITÀ di ogni seduta, dal dato più affidabile:
+//   - FC, se credibile: in bici la FC max è ~5% più bassa (Millet 2009); sotto
+//     un quarto della riserva su un'ora di pedalata è il sensore che non legge
+//     (Kinomap passa spesso 60–75 bpm);
+//   - potenza misurata: VO2 = 10.8·W/kg + 7 ml/kg/min (ACSM), in % della
+//     riserva di VO2 (≈ % riserva FC, Swain & Leutholtz 1997) sul VO2max in
+//     bici, ~8% sotto quello di corsa nei runner (Basset & Boulay 2000);
+//   - nessuno dei due: la mediana delle altre sedute, o 0.45 (cyclette facile).
+
+const BIKE_BASELINE_DAYS = 42;
+const BIKE_HRMAX_RATIO = 0.95;
+const BIKE_VO2MAX_RATIO = 0.92;
+const BIKE_MIN_HRR = 0.25;
+const BIKE_DEFAULT_HRR = 0.45;
+const TRANSFER_CENTRAL = 0.8;
+const TRANSFER_PERIPHERAL = 0.5;
+
+const trimp = (minutes: number, x: number) => minutes * x * 0.64 * Math.exp(1.92 * x);
+
+const isoDay = (date: string | null | undefined) => String(date ?? '').slice(0, 10);
+
+function shiftIso(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function median(sorted: number[]): number {
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+export interface BikeAthlete {
+  maxHr: number;
+  restingHr: number;
+  weightKg: number;
+  vo2max: number;
+}
+
+export type BikeIntensitySource = 'hr' | 'power' | 'estimate';
+
+/** Intensità di una seduta come frazione della riserva; null senza un dato credibile. */
+export function bikeIntensity(
+  s: BikeSession,
+  a: BikeAthlete,
+): { x: number; source: 'hr' | 'power' } | null {
+  const bikeMax = a.maxHr * BIKE_HRMAX_RATIO;
+  if (s.avg_hr && bikeMax > a.restingHr) {
+    const x = (s.avg_hr - a.restingHr) / (bikeMax - a.restingHr);
+    const flat = s.max_hr != null && s.max_hr <= s.avg_hr; // un solo campione
+    if (x >= BIKE_MIN_HRR && !flat) return { x: clamp(x), source: 'hr' };
+  }
+  if (s.avg_watts && a.weightKg > 0) {
+    const vo2 = (10.8 * s.avg_watts) / a.weightKg + 7;
+    return { x: clamp((vo2 - 3.5) / (a.vo2max * BIKE_VO2MAX_RATIO - 3.5)), source: 'power' };
+  }
+  return null;
+}
+
+export interface BikeCoverage {
+  /** Sedute dopo l'ultima corsa e loro minuti. */
+  sessions: number;
+  minutes: number;
+  /** Da dove viene l'intensità di quelle sedute. */
+  sources: Record<BikeIntensitySource, number>;
+  /** TRIMP settimanale: bici dall'ultima corsa, corsa nelle 6 settimane prima. */
+  bikeWeeklyTrimp: number;
+  runWeeklyTrimp: number;
+  /** 0–1: quanta della dose che tiene il VO2max (1/3 del carico di corsa). */
+  coverage: number;
+  /** 0–1: frazione di strada da "fermo totale" verso "taper". */
+  protection: { vo2: number; lt: number; perf: number };
+  /** Minuti a settimana, all'intensità delle tue sedute, per tenere il VO2max. */
+  maintenanceMinPerWeek: number;
+}
+
+export function computeBikeCoverage(
+  profile: Profile | null | undefined,
+  runs: Run[],
+  bikes: BikeSession[],
+  vdot: number | null,
+  daysOff: number,
+): BikeCoverage | null {
+  const lastRun = runs.reduce((max, r) => (isoDay(r.date) > max ? isoDay(r.date) : max), '');
+  if (!lastRun) return null;
+
+  const maxHr = Number(profile?.max_hr) || 190;
+  const restingHr = Number(profile?.resting_hr) || 50;
+  const athlete: BikeAthlete = {
+    maxHr,
+    restingHr,
+    weightKg: Number(profile?.weight_kg) || 70,
+    vo2max: Number(vdot) || 45,
+  };
+
+  // Carico di corsa prima dello stop: stessa formula e stesso ripiego (0.55) del backend.
+  const from = shiftIso(lastRun, 1 - BIKE_BASELINE_DAYS);
+  let runTrimp = 0;
+  for (const r of runs) {
+    const d = isoDay(r.date);
+    if (d < from || d > lastRun) continue;
+    const x = r.avg_hr && maxHr > restingHr ? clamp((r.avg_hr - restingHr) / (maxHr - restingHr)) : 0.55;
+    runTrimp += trimp(Number(r.duration_minutes) || 0, x);
+  }
+  const runWeeklyTrimp = runTrimp / (BIKE_BASELINE_DAYS / 7);
+  if (runWeeklyTrimp <= 0) return null;
+
+  const measured = bikes.map((s) => bikeIntensity(s, athlete));
+  const known = measured.flatMap((m) => (m ? [m.x] : [])).sort((a, b) => a - b);
+  const fallback = known.length ? median(known) : BIKE_DEFAULT_HRR;
+
+  const sources: Record<BikeIntensitySource, number> = { hr: 0, power: 0, estimate: 0 };
+  let sessions = 0;
+  let minutes = 0;
+  let weightedX = 0;
+  let bikeTrimp = 0;
+  bikes.forEach((s, i) => {
+    if (isoDay(s.date) <= lastRun) return;
+    const m = measured[i];
+    const x = m?.x ?? fallback;
+    const min = Number(s.duration_minutes) || 0;
+    sources[m?.source ?? 'estimate'] += 1;
+    sessions += 1;
+    minutes += min;
+    weightedX += x * min;
+    bikeTrimp += trimp(min, x);
+  });
+
+  // Meno di una settimana di stop vale come una settimana: una seduta non è un ritmo.
+  const bikeWeeklyTrimp = bikeTrimp / (Math.max(daysOff, 7) / 7);
+  const ratio = bikeWeeklyTrimp / runWeeklyTrimp;
+  const coverage = clamp(ratio * 3);
+  const vo2 = TRANSFER_CENTRAL * coverage;
+  const lt = TRANSFER_PERIPHERAL * clamp(ratio * 1.5);
+  const typicalX = Math.max(minutes > 0 ? weightedX / minutes : fallback, BIKE_MIN_HRR);
+
+  return {
+    sessions,
+    minutes,
+    sources,
+    bikeWeeklyTrimp,
+    runWeeklyTrimp,
+    coverage,
+    protection: { vo2, lt, perf: 0.6 * vo2 + 0.4 * lt },
+    maintenanceMinPerWeek: runWeeklyTrimp / 3 / trimp(1, typicalX),
+  };
+}
+
+/** Scenario reale con la bici: sistema per sistema, fra fermo totale e taper. */
+export function bikeScenarioPoint(
+  taper: DetrainingPoint,
+  fullStop: DetrainingPoint,
+  p: BikeCoverage['protection'],
+): Pick<DetrainingPoint, 'vo2Pct' | 'ltPct' | 'performancePct'> {
+  const mix = (worst: number, best: number, k: number) => worst + k * (best - worst);
+  return {
+    vo2Pct: mix(fullStop.vo2Pct, taper.vo2Pct, p.vo2),
+    ltPct: mix(fullStop.ltPct, taper.ltPct, p.lt),
+    performancePct: mix(fullStop.performancePct, taper.performancePct, p.perf),
+  };
 }

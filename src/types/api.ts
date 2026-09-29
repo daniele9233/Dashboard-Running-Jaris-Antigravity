@@ -14,6 +14,7 @@ export interface Profile {
   weight_kg: number;
   height_cm: number;
   max_hr: number;
+  resting_hr?: number | null;
   sex: string;
   profile_pic: string;
   strava_profile_pic: string;
@@ -141,6 +142,28 @@ export interface Run {
 
 export interface RunsResponse {
   runs: Run[];
+}
+
+// ─── BICI ────────────────────────────────────────────────────────────────────
+
+/**
+ * Seduta in bici (cyclette o uscita). La usa solo il widget DETRAINING: non
+ * entra in corse, km, carico o statistiche. Niente distanza, apposta.
+ */
+export interface BikeSession {
+  id: string;
+  date: string;
+  name: string | null;
+  sport_type: string | null;
+  duration_minutes: number;
+  avg_hr: number | null;
+  max_hr: number | null;
+  /** Solo se misurata (cyclette, rullo): quella stimata da Strava non si salva. */
+  avg_watts: number | null;
+}
+
+export interface BikeSessionsResponse {
+  sessions: BikeSession[];
 }
 
 // ─── TRAINING PLAN ───────────────────────────────────────────────────────────
