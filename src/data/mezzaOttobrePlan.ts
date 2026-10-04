@@ -1,19 +1,18 @@
 import type { Session } from "../types/api";
 
 /**
- * PIANO: MEZZA MARATONA IL 18 OTTOBRE.
+ * PIANO: MEZZA MARATONA IL 18 OTTOBRE, A 4:45 AL KM.
  *
- * Versione del 18 settembre 2026. Il test 5 km del 10 ottobre è tolto: il
- * piano pensa solo alla mezza, la Rome Half Marathon (partenza a Porta
- * Ardeatina, arrivo al Colosseo). Scritto a mano e trascritto così com'è: cinque
- * settimane dal 14 settembre, una sola qualità a settimana (il mercoledì),
- * corsa lenta intorno, il lungo la domenica e la forza a casa — giubbotto da
- * 10 kg e manubri a dischi, niente palestra. Nessun motore sotto: le date sono
- * fisse e i ritmi sono quelli scritti.
+ * Versione del 4 ottobre 2026, rifatta da zero: due settimane, dal 5 al 18
+ * ottobre, per la Rome Half Marathon (partenza a Porta Ardeatina, arrivo al
+ * Colosseo). La prima è di carico — il test sui 18 km di martedì 6, che dice
+ * se il 4:45 si regge, e una qualità a nove giorni dalla gara — la seconda è
+ * l'unica di scarico. Niente forza fino alla gara, solo mobilità. Scritto a
+ * mano: nessun motore sotto, le date sono fisse e i ritmi sono quelli scritti.
  *
  * Due cose sono pensate anche per le macchine:
  *   - `adherence` è la stessa seduta scritta nel formato che l'esito automatico
- *     sa leggere ("3×3000 m @ 4:19/km", "8 km continui @ 4:26/km"): il titolo
+ *     sa leggere ("3×2000 m @ 4:17/km", "12 km continui @ 4:45/km"): il titolo
  *     resta quello del piano, l'aderenza legge questa riga;
  *   - `PLAN_GOALS` è l'obiettivo, per chi calcola date e probabilità.
  */
@@ -60,19 +59,19 @@ export interface PlanWeek {
 export const PLAN_META = {
   id: "mezza-ottobre-2026",
   name: "Mezza del 18 ottobre",
-  version: "Versione del 20 settembre: dopo il lungo, si beve e sulla base comanda la FC.",
-  start: "2026-09-14",
+  version: "Versione del 4 ottobre: rifatto da zero, obiettivo 4:45 e test sui 18 km di martedì 6.",
+  start: "2026-10-05",
   end: "2026-10-18",
 };
 
 /** La targa in testa alla pagina. */
 export const PLAN_BIBS = [
-  { id: "hm", value: "4:47", title: "Mezza maratona, passo al km", when: "domenica 18 ottobre", band: "#F0A040" },
+  { id: "hm", value: "4:45", title: "Mezza maratona, passo al km", when: "domenica 18 ottobre", band: "#F0A040" },
 ] as const;
 
-/** L'obiettivo in forma di numeri: 4:47 al km sui 21,0975. */
+/** L'obiettivo in forma di numeri: 4:45 al km sui 21,0975, cioè 1:40:13. */
 export const PLAN_GOALS = [
-  { id: "mezza", label: "Mezza a 4:47/km", distM: 21097.5, targetSec: Math.round(287 * 21.0975), dateIso: "2026-10-18" },
+  { id: "mezza", label: "Mezza a 4:45/km", distM: 21097.5, targetSec: Math.round(285 * 21.0975), dateIso: "2026-10-18" },
 ];
 
 /** Colori in ordine di zona, come sul Garmin: dal grigio del riposo al rosso. */
@@ -86,108 +85,46 @@ export const PLAN_KINDS: Record<PlanKind, { label: string; color: string }> = {
   bike: { label: "bici", color: "#A08BEA" },
   strength: { label: "forza", color: "#E07BB5" },
 };
-export const PLAN_LEGEND: PlanKind[] = ["rest", "easy", "long", "key", "quality", "bike", "strength"];
+export const PLAN_LEGEND: PlanKind[] = ["rest", "easy", "long", "key", "quality"];
 
 export const PLAN_WEEKS: PlanWeek[] = [
   {
-    n: 1, dates: "14–20 settembre", km: "~42 km",
-    days: [
-      { date: "2026-09-14", kind: "bike", title: "Cyclette B1 65'", done: true },
-      { date: "2026-09-15", kind: "easy", title: "Lento 8 km", detail: "5:58 al km, FC media 130.", km: 8, done: true,
-        adherence: { title: "Lento 8 km" } },
-      { date: "2026-09-16", kind: "quality", title: "5×1000, recupero 2'", km: 10.4, done: true,
-        detail: "Ripetute tra 3:56 e 4:02, media 3:58. FC a fine ripetuta 154–165.", moved: "Spostato da giovedì.",
-        adherence: { title: "5×1000 m", description: "5×1000 m @ 3:58/km, recupero 2′" } },
-      { date: "2026-09-17", kind: "bike", title: "Cyclette facile 45–60'", detail: "FC sotto 130." },
-      { date: "2026-09-18", kind: "easy", title: "Lento 8 km, poi Forza leggera", km: 8, routine: "L", done: true,
-        detail: "Gli 8 km di sabato, corsi oggi. La sera la prima seduta di forza: due giri leggeri e niente affondi, perché domenica c'è il lungo. Se salta, pazienza.",
-        adherence: { title: "Lento 8 km" } },
-      { date: "2026-09-19", kind: "bike", title: "Cyclette B1 20' o riposo",
-        detail: "Niente corsa: gli 8 km li hai già corsi ieri. Correrli anche oggi porterebbe la settimana a 50 km, il doppio delle due precedenti." },
-      { date: "2026-09-20", kind: "long", title: "Lungo 16 km, ultimi 4 a 4:50", km: 16, big: true, done: true,
-        detail: "Fatto 16,01 km in 1:19:38, senza pause. Base 12 km a 5:08 invece di 5:20, FC da 128 a 155; finale 4 km a 4:30 invece di 4:50, FC 162–171, ultimo km 4:12 con gli ultimi 400 m a 3:57. A 20 °C e 75 % di umidità. Gel SiS da 40 g al km 9, ma niente acqua per tutta l'uscita.",
-        verify: "Il drift: a passo identico la FC è salita da 137 (km 1–6) a 150 (km 7–12), +9,0 %. Con 40 g di carboidrati a bordo e 385 W di media al km 16, la causa non è il carburante né il motore: restano passo troppo alto, caldo e sete. Il gel senza acqua non aiuta — 40 g concentrati tirano liquidi nell'intestino, e infatti il drift è passato da +0,31 a +0,50 bpm al minuto dopo il km 9.",
-        adherence: { title: "Lungo 16 km" } },
-    ],
-  },
-  {
-    n: 2, dates: "21–27 settembre", km: "47 km",
-    days: [
-      { date: "2026-09-21", kind: "strength", title: "Cyclette leggera 20' + Forza B", routine: "B",
-        detail: "20' di cyclette facile come riscaldamento, poi la seduta B. È quella che indolenzisce meno: mercoledì c'è la qualità." },
-      { date: "2026-09-22", kind: "easy", title: "Lento 8 km", detail: "FC fino a 138.", km: 8,
-        adherence: { title: "Lento 8 km" } },
-      { date: "2026-09-23", kind: "rest", title: "Riposo",
-        detail: "Il 3×3000 è slittato a giovedì 24." },
-      { date: "2026-09-24", kind: "quality", title: "Cruise intervals: 3×3000 a 4:18–4:20", km: 15, big: true, done: true,
-        moved: "Spostato da mercoledì.",
-        detail: "Fatto, e fatto bene: 4:15,1 · 4:16,6 · 4:14,3, con 2 km di riscaldamento e 2 km di defaticamento a parte (13,88 km in tutto, 68'). FC media per ripetuta 146 · 154 · 157, picco 164. Recuperi 2:32 e 2:29 a 5:44 e 6:00, con la FC che cala di 24 e 20 battiti. A 16,5 °C, con la Polar H10.",
-        verify: "La terza è stata la più veloce, e il suo ultimo km — 4:08,8 a FC 160 — è il più rapido della serie: il passo prescritto era tarato lento, non sei andato in debito. Soglia confermata fra 158 e 162, adesso su dato da fascia: il 155 di partenza era sbagliato di un intervallo intero. Il tetto a 168 ha salvato la seduta — a 162 avresti chiuso a 2×3000 buttando via la ripetuta migliore.",
-        adherence: { title: "3×3000 m", description: "3×3000 m @ 4:19/km, recupero 3′" } },
-      { date: "2026-09-25", kind: "strength", title: "Cyclette leggera 20' + Forza A", routine: "A",
-        detail: "20' di cyclette facile come riscaldamento, poi la seduta A. Spostata dal giovedì perché lì è finita la qualità: qui restano due giorni pieni prima del lungo, e sabato c'è solo il lento." },
-      { date: "2026-09-26", kind: "easy", title: "Lento 6 km + 6 allunghi", detail: "FC fino a 138.", km: 6,
-        adherence: { title: "Lento 6 km" } },
-      { date: "2026-09-27", kind: "long", title: "Lungo 18 km, ultimi 5 a 4:47", km: 18, big: true,
-        detail: "13 km con la FC sotto 145: se per restarci il passo scende da 5:10 a 5:25, scendi — sulla base comanda la FC, non il cronometro. Poi 5 km a 4:47, non più forte: la domanda è quanto ti costa il ritmo gara, e a 4:30 non la stai misurando. Circa 91 minuti: 500 ml addosso, bevi dal km 5 in poi. Gel al km 9, prima dei 5 km a ritmo: lo provi come in gara, e stavolta con acqua: il 20 settembre lo stesso SiS da 40 g è andato giù asciutto.",
-        verify: "Verifica 1: se il passo cede negli ultimi 2 km, l'obiettivo della mezza scende verso 4:52. Guarda anche il drift sui 13 km di base: sotto il 9 % del 20 settembre vuol dire che passo, acqua e freschezza stanno facendo il loro.",
-        adherence: { title: "Lungo 18 km" } },
-    ],
-  },
-  {
-    n: 3, dates: "28 settembre – 4 ottobre", km: "43 km",
-    days: [
-      { date: "2026-09-28", kind: "strength", title: "Forza leggera", routine: "L",
-        detail: "L'ultima seduta di forza prima della gara: due giri, carichi da mantenimento. Niente cyclette questa settimana." },
-      { date: "2026-09-29", kind: "easy", title: "Lento 8 km", detail: "FC fino a 138.", km: 8,
-        adherence: { title: "Lento 8 km" } },
-      { date: "2026-09-30", kind: "key", title: "Medio 8 km in progressione", km: 13, big: true,
-        detail: "3 km di riscaldamento, 5 km a 4:30 e subito 3 km a 4:20, 2 km di defaticamento. Allena gambe e testa alla fatica continua della mezza. Con la fascia H10.",
-        verify: "Verifica 2: se chiudi gli 8 km a fatica 8 o meno, il 4:47 in gara regge. Se per tenere 4:20 negli ultimi 3 km devi andare oltre, in gara parti a 4:52 e decidi al km 10.",
-        adherence: { title: "Medio 8 km", description: "8 km continui @ 4:26/km" } },
-      { date: "2026-10-01", kind: "rest", title: "Riposo" },
-      { date: "2026-10-02", kind: "rest", title: "Riposo o mobilità 12'", routine: "M" },
-      { date: "2026-10-03", kind: "easy", title: "Lento 6 km + 6 allunghi", detail: "FC fino a 138.", km: 6,
-        adherence: { title: "Lento 6 km" } },
-      { date: "2026-10-04", kind: "long", title: "Lungo 16 km, tutto a 5:15–5:20", km: 16, big: true,
-        detail: "Tetto FC 145, fisso: il passo lo decide lui. Nessun finale veloce, è la settimana che assorbe il lavoro. Circa 85 minuti: 400–500 ml, bevi dal km 5. Se le gambe sono pesanti, fermati a 15.",
-        verify: "È la misura pulita del drift: stesso passo per 16 km, in ottobre e senza la tassa del caldo. Confronta la FC media dei km 1–8 con quella dei km 9–16. Sotto il 5 % la tenuta c'è; sopra il 7,5 % in gara si parte a 4:52.",
-        adherence: { title: "Lungo 16 km" } },
-    ],
-  },
-  {
-    n: 4, dates: "5–11 ottobre", km: "30 km",
+    n: 1, dates: "5–11 ottobre", km: "43 km",
     days: [
       { date: "2026-10-05", kind: "rest", title: "Riposo + mobilità 12'", routine: "M",
-        detail: "Da qui in poi niente forza: si scarica." },
-      { date: "2026-10-06", kind: "easy", title: "Lento 7 km + 4 allunghi", detail: "FC fino a 138.", km: 7,
-        adherence: { title: "Lento 7 km" } },
-      { date: "2026-10-07", kind: "quality", title: "Ultima qualità: 3×2000 a 4:15–4:18", km: 12, big: true,
-        detail: "3 km di riscaldamento, 3×2000 con 2'30\" di corsa lenta, 2 km di defaticamento. Undici giorni alla gara: deve restarti la voglia di farne un'altra. Dopo, solo brillantezza e scarico.",
+        detail: "Domani c'è il test e serve una misura pulita: niente corsa, niente alcol, a letto presto." },
+      { date: "2026-10-06", kind: "key", title: "Test: 18 km con 12 a 4:45", km: 18, big: true,
+        detail: "3 km di riscaldamento con la FC sotto 140, 12 km a 4:45 senza pause, 3 km di defaticamento. In piano, con la fascia H10. Il passo è 4:45 e basta: più forte cancella la misura. Circa 90 minuti: 500 ml addosso, bevi dal km 5, gel al km 8 con acqua come in gara. Tetto 168: se la FC ci arriva, il blocco finisce lì. Se ti svegli con febbre, tosse di petto o la FC a riposo 7 battiti sopra il solito, niente test: 10 km lenti, e venerdì 9 il 3×2000 lascia il posto a 8 km a 4:45.",
+        verify: "Tre numeri, tutti sul blocco da 12 km: la FC media dei km 10–12, il drift (FC dei km 2–6 contro i km 8–12) e quanto ti è costato. Verde — FC fino a 160, drift sotto il 5 %, fatica fino a 7 su 10: in gara 4:45. Giallo — FC 161–165 o drift fra 5 e 8 %: parti a 4:50 e decidi al km 10. Rosso — FC oltre 165, passo che cede negli ultimi 3 km o blocco interrotto: l'obiettivo diventa 4:53, intorno a 1:43. Col naso ancora chiuso la FC legge qualche battito in più: tienine conto prima di abbassare l'obiettivo.",
+        adherence: { title: "Ritmo gara 12 km", description: "12 km continui @ 4:45/km" } },
+      { date: "2026-10-07", kind: "rest", title: "Riposo + mobilità 12'", routine: "M" },
+      { date: "2026-10-08", kind: "easy", title: "Lento 5 km + 4 allunghi", detail: "FC fino a 138.", km: 5,
+        adherence: { title: "Lento 5 km" } },
+      { date: "2026-10-09", kind: "quality", title: "Ultima qualità: 3×2000 a 4:15–4:18", km: 10, big: true,
+        detail: "2 km di riscaldamento, 3×2000 con 2'30\" di corsa lenta, 1 km di defaticamento. Nove giorni alla gara: deve restarti la voglia di farne un'altra. Se il test di martedì è finito in rosso, o giovedì le gambe sono ancora pesanti, fermati a 2×2000.",
         adherence: { title: "3×2000 m", description: "3×2000 m @ 4:17/km, recupero 2′30″" } },
-      { date: "2026-10-08", kind: "bike", title: "Cyclette leggera 30' + mobilità", routine: "M", detail: "FC fino a 118." },
-      { date: "2026-10-09", kind: "rest", title: "Riposo" },
       { date: "2026-10-10", kind: "rest", title: "Riposo" },
-      { date: "2026-10-11", kind: "long", title: "Lungo 11 km con 6 allunghi", km: 11, big: true,
-        detail: "A 5:15–5:30 con FC 135–145. Negli ultimi 2 km, 6 allunghi da 20\" a sensazione, senza forzare. Prova la colazione, il gel e il modo di bere della gara: qui non serve per la sete, serve perché il giorno della gara niente sia nuovo.",
-        adherence: { title: "Lungo 11 km" } },
+      { date: "2026-10-11", kind: "long", title: "Lungo 10 km con 6 allunghi", km: 10, big: true,
+        detail: "A 5:15–5:30 con la FC sotto 145. Negli ultimi 2 km, 6 allunghi da 20\" a sensazione, senza forzare. Prova la colazione, il gel e il modo di bere della gara: il 18 niente deve essere nuovo.",
+        adherence: { title: "Lungo 10 km" } },
     ],
   },
   {
-    n: 5, dates: "12–18 ottobre", km: "15 km + gara",
+    n: 2, dates: "12–18 ottobre", km: "15 km + gara",
     days: [
-      { date: "2026-10-12", kind: "rest", title: "Riposo" },
-      { date: "2026-10-13", kind: "key", title: "Lento 6 km con 3×1 km a 4:45", detail: "I 3 km a ritmo dentro la corsa, con 2' di recupero.", km: 6,
+      { date: "2026-10-12", kind: "rest", title: "Riposo", detail: "Da oggi si scarica: è l'unica settimana di taper." },
+      { date: "2026-10-13", kind: "key", title: "Lento 7 km con 3×1 km a 4:45", detail: "I 3 km a ritmo dentro la corsa, con 2' di recupero.", km: 7,
         adherence: { title: "3×1000 m", description: "3×1000 m @ 4:45/km, recupero 2′" } },
       { date: "2026-10-14", kind: "rest", title: "Riposo" },
       { date: "2026-10-15", kind: "easy", title: "5 km sciolti + 6 allunghi", km: 5, adherence: { title: "5 km sciolti" } },
-      { date: "2026-10-16", kind: "rest", title: "Riposo, da stasera carboidrati",
-        detail: "Da stasera a sabato sera 8–10 g di carboidrati per kg al giorno: pasta, riso, pane bianco, patate. Poche fibre e pochi grassi." },
-      { date: "2026-10-17", kind: "easy", title: "4 km sciolti + 3×200 a ritmo mezza", km: 4,
-        detail: "Carboidrati anche oggi, cena presto e niente di nuovo.", adherence: { title: "4 km sciolti" } },
+      { date: "2026-10-16", kind: "easy", title: "3 km sciolti + 3×200 a ritmo mezza", km: 3,
+        detail: "L'ultima corsa. Da stasera a sabato sera 8–10 g di carboidrati per kg al giorno: pasta, riso, pane bianco, patate. Poche fibre e pochi grassi.",
+        adherence: { title: "3 km sciolti" } },
+      { date: "2026-10-17", kind: "rest", title: "Riposo, carboidrati",
+        detail: "Niente corsa: con una settimana sola di scarico la vigilia si passa fermi. Carboidrati anche oggi, cena presto e niente di nuovo." },
       { date: "2026-10-18", kind: "race", title: "Mezza maratona di Roma", km: 21.1, big: true, more: "gara",
         detail: "Colazione 3 ore prima, 1–2 g di carboidrati per kg. Gel al km 8 e al km 15.",
-        adherence: { title: "Mezza maratona", description: "21,1 km continui @ 4:47/km" } },
+        adherence: { title: "Mezza maratona", description: "21,1 km continui @ 4:45/km" } },
     ],
   },
 ];
@@ -196,31 +133,26 @@ export const PLAN_DAYS: PlanDay[] = PLAN_WEEKS.flatMap((w) => w.days);
 export const PLAN_DAY_BY_DATE: Record<string, PlanDay> = Object.fromEntries(PLAN_DAYS.map((d) => [d.date, d]));
 
 export const PLAN_CHANGES = [
-  "Il test 5 km del 10 ottobre è tolto: il piano pensa solo alla mezza.",
-  "Una sola qualità a settimana, il mercoledì: 3×3000 il 23 settembre, medio in progressione il 30, 3×2000 il 7 ottobre. Saltano i 6×800 e i 3×1000.",
-  "Entra la forza a casa, con giubbotto da 10 kg e manubri: la B il 21 e la A il 24 settembre, a 2 serie; una leggera il 18 e il 28, poi solo mobilità.",
-  "Gli 8 km di sabato 19 sono stati corsi venerdì 18: sabato niente corsa, e la settimana resta a 42 km invece di 50.",
-  "Il passo di gara segue l'altimetria di Roma: discesa in partenza, strappi fra il km 2,5 e il 5, salite e sampietrini negli ultimi 3,5 km.",
-  "Carboidrati negli ultimi due giorni e un gel al km 8 e al km 15, provati prima nei lunghi.",
-  "La cyclette scende a 20' leggeri prima della forza; saltano i 3×10' in B4 e le uscite lunghe in bici.",
-  "Il lungo del 20 settembre chiude con 4 km a 4:50, quello del 4 ottobre scende a 16 km tutti a 5:15–5:20, quello dell'11 ottobre diventa 11 km con allunghi.",
-  "Scarico anticipato: 30 km nella settimana del 5 ottobre, 15 km più la gara in quella del 12.",
-  "Dopo il lungo del 20 settembre: si beve. Oltre i 70 minuti, 300–500 ml dal km 5 in poi, e a ogni ristoro in gara.",
-  "Dopo il lungo del 20 settembre: sulla base dei lunghi comanda la FC, tetto 145, e il passo la segue. Corso a 5:08 invece di 5:20, la FC è arrivata a 155.",
-  "Dopo il lungo del 20 settembre: le zone di FC salgono di 5 battiti (soglia 160–163, non 155) e il tetto della stop-rule del 3×3000 passa da 162 a 168. Da riconfermare con la H10 il 23 settembre.",
-  "Il lungo del 4 ottobre diventa anche la misura pulita del drift: stesso passo per 16 km, senza caldo, km 1–8 contro km 9–16.",
-  "Il 3×3000 è slittato da mercoledì 23 a giovedì 24, e la Forza A dal giovedì al venerdì 25: due giorni pieni prima del lungo, e il sabato resta solo il lento.",
-  "Soglia misurata con la Polar H10 il 24 settembre: 158–162, passo di soglia 4:15–4:20. Non è più una stima.",
+  "L'obiettivo passa da 4:47 a 4:45 al km: 1:40:13 sul traguardo.",
+  "Il piano riparte da zero lunedì 5 ottobre: due settimane invece di cinque. Le ultime due del piano vecchio sono finite a 22 km l'una contro i 47 e i 43 scritti, senza il lungo da 18 e senza il medio.",
+  "Martedì 6 il test: 18 km con 12 a 4:45. Decide se in gara si parte a 4:45, a 4:50 o a 4:53.",
+  "L'ultima qualità, il 3×2000, va a venerdì 9: nove giorni prima della gara. Era mercoledì 7.",
+  "Scarico solo nell'ultima settimana: 43 km in quella del 5 ottobre (erano 30), 15 più la gara in quella del 12.",
+  "L'ultima corsa è venerdì 16 e sabato 17 si riposa: con una settimana sola di scarico, la corsetta della vigilia costa freschezza che non c'è.",
+  "Niente forza fino alla gara, solo mobilità.",
+  "Il sub 20 sui 5 km ha la sua finestra dopo la mezza: vedi in fondo.",
+  "Resta la soglia misurata con la Polar H10 il 24 settembre: 158–162, passo di soglia 4:15–4:20.",
 ];
 
-/** Le regole che valgono per tutte le settimane. */
+/** Le regole che valgono per tutte e due le settimane. */
 export const PLAN_RULES = [
-  "Un solo lavoro di qualità a settimana, il mercoledì. Intorno solo corsa lenta, con la FC fino a 138, e il lungo della domenica.",
-  "Chiudi ogni seduta con la sensazione di poterne fare ancora un'altra ripetuta: fatica mai sopra 8 su 10.",
-  "L'ultima qualità è il 3×2000 di mercoledì 7 ottobre, 11 giorni prima della gara. Poi solo brillantezza e scarico.",
-  "Bevi. Il 20 settembre hai corso 80 minuti a 20 °C e 75 % di umidità senza liquidi. Da oggi, su ogni uscita oltre i 70 minuti: 300–500 ml, a sorsi, a partire dal km 5. Una fetta di quei 27 battiti di drift è disidratazione, ed è gratis riprendersela.",
-  "Sulla base dei lunghi comanda la FC, non il passo: tetto 145. Se per restare sotto devi scendere a 5:30, scendi. Il lungo compra autonomia, e l'autonomia si paga andando piano.",
-  "Il tratto a ritmo gara si corre a ritmo gara. Correrlo più forte sembra una vittoria ma cancella la misura: la domanda non è se il 4:30 lo sai fare, è quanto ti costa il 4:47.",
+  "Due sedute contano, il test di martedì 6 e il 3×2000 di venerdì 9. Intorno solo corsa lenta, con la FC fino a 138. Dopo il 9 nessun lavoro: nove giorni servono per assorbire.",
+  "Il tratto a ritmo gara si corre a ritmo gara. Correrlo più forte sembra una vittoria ma cancella la misura: la domanda non è se il 4:30 lo sai fare, è quanto ti costa il 4:45.",
+  "Fino al 18 niente prove a tutta fuori programma. Il sub 20 ha la sua finestra dopo la mezza.",
+  "Niente alcol nelle 48 ore prima del test, del 3×2000 e della gara: disidrata, spezza il sonno e alza la FC a parità di passo — sporca proprio la misura che ti serve.",
+  "Raffreddore: col solo naso chiuso si corre, ma la FC legge alto. Se scende sotto il collo — tosse di petto, febbre, dolori — la seduta del giorno diventa riposo.",
+  "Bevi. Su ogni uscita oltre i 70 minuti: 300–500 ml, a sorsi, a partire dal km 5. Il 20 settembre hai corso 80 minuti senza liquidi e il drift è arrivato al 9 %.",
+  "Sulle corse lente e sul lungo comanda la FC, non il passo: tetto 138 sul lento, 145 sul lungo. Se per restare sotto devi rallentare, rallenti.",
 ];
 
 // ── forza a casa ──────────────────────────────────────────────────────────────
@@ -302,12 +234,11 @@ export const ROUTINES: Record<RoutineId, Routine> = {
 };
 
 export const ROUTINE_RULES = [
-  "Fino alla gara 2 serie per esercizio: con due sole sedute vere la forza non ti fa correre più forte il 18, serve a cominciare senza pagarlo in gambe. Le 3 serie arrivano dopo la gara.",
+  "Fino alla gara niente forza, solo mobilità: mancano due settimane, e una seduta adesso la paghi in gambe il 18 senza guadagnarci niente.",
+  "Si riparte dopo la mezza dalla seduta leggera; poi la A e la B due volte a settimana, a 2 serie la prima settimana e a 3 dalla seconda.",
   "Il carico si sceglie sulle ripetizioni, non sui kg: ogni serie finisce con 3 ripetizioni ancora in canna. Se ne restano 5, la volta dopo aggiungi un disco.",
   "Discesa controllata in 2 secondi, salita decisa. Serve forza, non fiatone: fra le serie si recupera davvero.",
-  "Mai il giorno prima di ripetute, medio o lungo. La B, che indolenzisce meno, va il lunedì prima della qualità; la A, con affondi e stacchi, il giovedì dopo.",
-  "Le prime volte i muscoli fanno male per uno–tre giorni: per questo si comincia con la leggera e la A arriva per ultima.",
-  "Ultima seduta di forza lunedì 28 settembre. Dal 5 ottobre solo mobilità: alla gara si arriva con le gambe fresche.",
+  "Mai il giorno prima di ripetute, medio o lungo. La B, che indolenzisce meno, va prima della qualità; la A, con affondi e stacchi, il giorno dopo.",
   "Se un esercizio fa male a un tendine, Achille o rotula, toglilo: non si stringono i denti.",
 ];
 
@@ -316,7 +247,7 @@ export interface ZoneRow { kind: PlanKind; name: string; pace: string; hr: strin
 export const RUN_ZONES: ZoneRow[] = [
   { kind: "easy", name: "Lento", pace: "decide la FC", hr: "fino a 138" },
   { kind: "long", name: "Lungo", pace: "decide la FC", hr: "135–145, tetto 145" },
-  { kind: "key", name: "Ritmo mezza", pace: "4:47", hr: "148–155 nei primi 10 km" },
+  { kind: "key", name: "Ritmo mezza", pace: "4:45", hr: "148–155 nei primi 10 km" },
   { kind: "key", name: "Medio", pace: "4:20–4:30", hr: "fra ritmo mezza e soglia" },
   { kind: "quality", name: "Soglia", pace: "4:15–4:20", hr: "158–165" },
   { kind: "quality", name: "Allunghi", pace: "3:40–3:50", hr: "non conta" },
@@ -331,30 +262,30 @@ export const BIKE_ZONES: ZoneRow[] = [
 export const ZONE_NOTES = {
   intro: "La soglia era stimata intorno a 155 sui lavori di giugno–agosto: sbagliata di un intervallo intero. Il 3×3000 del 24 settembre l'ha misurata con la Polar H10 — 9 km a 4:15 con la FC che si assesta fra 157 e 162 e il passo che migliora ripetuta dopo ripetuta. La soglia è fra 158 e 162, il passo di soglia fra 4:15 e 4:20, e tutte le zone di qui sopra valgono cinque battiti più in alto di come erano scritte. Il lungo del 20 settembre, da polso, diceva la stessa cosa: due misure indipendenti, stessa risposta.",
   bike: "Le zone bici sono stime: in bici i battiti stanno 5–10 sotto la corsa. Pedala a 90–95 rpm; prima della forza basta la B1.",
-  heat: "Fino al 30 settembre, se T+DP supera 130, rallenta del 2–3% i ritmi di qualità. In ottobre la correzione è quasi nulla.",
+  heat: "In ottobre la correzione per il caldo è quasi nulla: i ritmi si corrono come sono scritti.",
 };
 
 /**
  * La gara: Rome Half Marathon. Il percorso costa circa mezzo minuto rispetto
  * al piano (+63 m letti sull'altimetria ufficiale, col modello di pendenza del
- * backend), quindi 4:47 di media a Roma valgono 4:45 in piano. I tratti
- * sommano a circa 1:40:55.
+ * backend), quindi 4:45 di media a Roma valgono 4:43 in piano. I tratti
+ * sommano a circa 1:40:15.
  */
 export const RACE_HM = {
   segments: [
-    { stretch: "km 0–2,5", where: "Discesa da Porta Ardeatina", pace: "4:48–4:50", hr: "sotto 155" },
-    { stretch: "km 2,5–5", where: "Aventino e Circo Massimo, a sforzo", pace: "~4:52", hr: "sotto 157" },
-    { stretch: "km 5–17,5", where: "Lungotevere, San Pietro, Foro Italico: piatto", pace: "4:45", hr: "fino a 160 al km 10, fino a 165 al km 15" },
-    { stretch: "km 17,5–21,1", where: "Centro e salita al Colosseo, a sforzo", pace: "4:48–4:52", hr: "libera" },
+    { stretch: "km 0–2,5", where: "Discesa da Porta Ardeatina", pace: "4:46–4:48", hr: "sotto 155" },
+    { stretch: "km 2,5–5", where: "Aventino e Circo Massimo, a sforzo", pace: "~4:50", hr: "sotto 157" },
+    { stretch: "km 5–17,5", where: "Lungotevere, San Pietro, Foro Italico: piatto", pace: "4:43", hr: "fino a 160 al km 10, fino a 165 al km 15" },
+    { stretch: "km 17,5–21,1", where: "Centro e salita al Colosseo, a sforzo", pace: "4:46–4:50", hr: "libera" },
   ],
   notes: [
     "La discesa iniziale e la folla spingono: non guadagnare tempo nei primi 2,5 km, lo ripaghi sugli strappi dell'Aventino.",
-    "Il tempo si fa sui 12 km piatti lungo il Tevere: lì il 4:45 deve sembrarti controllato.",
-    "Negli ultimi 3,5 km sampietrini nelle piazze e due salite, l'ultima fino al Colosseo: il passo cala anche a sforzo uguale. Lì non inseguire il 4:47, spingi sullo sforzo.",
-    "Il GPS in città misura di più: a fine gara segnerà 21,3–21,4 km. Prendi il giro a mano ai cartelli dei km, oppure punta a 4:44 sul Garmin.",
-    "Se al km 10 sei stabilmente sopra 160, passa a 4:52 e chiudi intorno a 1:42. I tetti erano cinque battiti più bassi, tarati su una soglia da 155: alzati dopo il lungo del 20 settembre e confermati con la H10 nel 3×3000 del 24.",
-    "Bevi a ogni ristoro, anche i primi, anche se non hai sete: sono cento minuti e il drift del 20 settembre ti ha mostrato cosa costa non farlo. Due sorsi e via, non una borraccia intera.",
-    "Arrivo previsto intorno a 1:40:55, se le verifiche del 27 e del 30 settembre sono andate bene.",
+    "Il tempo si fa sui 12 km piatti lungo il Tevere: lì il 4:43 deve sembrarti controllato.",
+    "Negli ultimi 3,5 km sampietrini nelle piazze e due salite, l'ultima fino al Colosseo: il passo cala anche a sforzo uguale. Lì non inseguire il 4:45, spingi sullo sforzo.",
+    "Il GPS in città misura di più: a fine gara segnerà 21,3–21,4 km. Prendi il giro a mano ai cartelli dei km, oppure punta a 4:42 sul Garmin.",
+    "Se al km 10 sei stabilmente sopra 160, passa a 4:52 e chiudi intorno a 1:41:30.",
+    "Bevi a ogni ristoro, anche i primi, anche se non hai sete: sono cento minuti. Due sorsi e via, non una borraccia intera.",
+    "Arrivo previsto intorno a 1:40:15, se il test di martedì 6 è finito in verde. In giallo si parte a 4:50, in rosso a 4:53.",
     "Se riesci, prima della gara corri piano il finale del percorso, da Piazza del Popolo al Colosseo: vedi dove sono sampietrini e salite.",
   ],
 };
@@ -364,16 +295,21 @@ export const RACE_FUEL = [
   "Da venerdì sera a sabato sera 8–10 g di carboidrati per kg al giorno: con i tuoi 68 kg sono 550–680 g. Pasta, riso, pane bianco, patate; poche fibre e pochi grassi.",
   "Colazione 3 ore prima della partenza: 1–2 g per kg, cioè 70–130 g di carboidrati, cibi già provati.",
   "In gara 30–60 g all'ora: un gel al km 8 e uno al km 15, con acqua.",
-  "Acqua a ogni ristoro, dal primo: due sorsi. Su cento minuti la disidratazione non si recupera, si previene — è la stessa lezione del lungo del 20 settembre.",
+  "Acqua a ogni ristoro, dal primo: due sorsi. Su cento minuti la disidratazione non si recupera, si previene.",
   "Il gel da 40 g vuole acqua, sempre: è concentrato, e senza liquido tira acqua nell'intestino invece di darne. Prendilo al ristoro, non fra un ristoro e l'altro.",
-  "Il gel si prova prima, nei lunghi del 27 settembre e dell'11 ottobre: il giorno della gara niente di nuovo.",
+  "Il gel si prova prima, nel test di martedì 6 e nel lungo dell'11 ottobre: il giorno della gara niente di nuovo.",
   "Caffeina 3 mg per kg, circa 200 mg, un'ora prima: solo se l'hai già provata in allenamento.",
 ];
 
+/** Dopo la mezza: la strada per i 5 km sotto i 20 minuti. */
 export const AFTER_RACE = [
-  "Test della FC massima con la H10, sul tapis roulant o in piano.",
-  "Volume verso 45–50 km a settimana, con una settimana di scarico ogni 3–4.",
-  "Forza due volte a settimana, con le sedute A e B a 3 serie.",
+  "Il prossimo obiettivo: 5 km sotto i 20 minuti, sabato 28 novembre. Sei settimane dalla mezza: una di recupero, quattro di lavoro, una di scarico.",
+  "Domenica 4 ottobre ti sei fermato a 1,9 km: primo km a 3:56 in leggera discesa, poi 4:10 in leggera salita, FC massima 159. Il 16 settembre a fine ripetuta arrivavi a 165: non era il cuore al limite, era la giornata. Naso chiuso da quattro giorni, alcol, 2 km di riscaldamento a 6:33 e otto minuti fermo prima del via, alle 7:25.",
+  "Non è la forma che manca: il 24 settembre hai corso 9 km a 4:15 senza passare 164. Ma l'ultimo lavoro a ritmo 5 km è il 5×1000 del 16 settembre e le ultime due settimane sono a 22 km: il 4:00 va riallenato, non solo ritentato.",
+  "19–25 ottobre, recupero: tre corse lente, 20 km in tutto. Riparte la forza, dalla seduta leggera.",
+  "26 ottobre – 22 novembre: 40–45 km a settimana con due qualità. Il martedì il ritmo 5 km — 6×800, poi 5×1000, poi 4×1200 a 3:55–3:58 — e il venerdì la soglia a 4:10–4:15. Lungo da 14–16 km la domenica, Forza A e B.",
+  "Il via libera, dieci giorni prima: 5×1000 a 3:57 con 90\" di recupero, l'ultimo veloce come il primo. Se cede, il tentativo slitta di una settimana.",
+  "Il giorno del tentativo: sano, 48 ore senza alcol, in piano e non all'alba. 15' lenti, 4 allunghi, 2×1' a ritmo, via entro 5 minuti. Primo km a 4:00–4:02: quello regalato al via si ripaga con gli interessi al terzo.",
 ];
 
 const DOW = ["domenica", "lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato"];

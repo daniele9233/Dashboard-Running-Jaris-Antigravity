@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-09-29T06:03:43.186Z",
+  "generated_at": "2026-10-04T14:56:07.808Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -2985,9 +2985,9 @@
         "react",
         "recharts"
       ],
-      "hash": "df7024f20c067bb758ea6abb506a2faefbbc22d30ad4045efa864e8bcab5e9b1",
-      "last_modified": "2026-09-18T13:23:11.118Z",
-      "size_bytes": 9916
+      "hash": "4dc3d19c25763d3596ac042e09f9a94256fff5a55cf54f3a3e1d15b02d5ebd3a",
+      "last_modified": "2026-10-04T14:53:51.596Z",
+      "size_bytes": 9978
     },
     {
       "path": "src/components/dashboard/widgets/WeatherNormalizerWidget.tsx",
@@ -4590,8 +4590,8 @@
         "lucide-react",
         "react"
       ],
-      "hash": "1c45d947bc1131b12b6ae40ec97bd4b14c909d23950202b14e7b14b0c9294376",
-      "last_modified": "2026-09-19T10:53:34.604Z",
+      "hash": "fe7b7f47a0104a398d38d281158fa7f7e090f6622678bc844b8e2357fd5e8f21",
+      "last_modified": "2026-10-04T14:53:52.312Z",
       "size_bytes": 18289
     },
     {
@@ -5924,9 +5924,9 @@
         "react",
         "react-i18next"
       ],
-      "hash": "4a70f64e1a8c5a89c2a8b74b5a316bc9d5c9f0fe455eae07ca38bd277cb5724a",
-      "last_modified": "2026-09-18T13:13:02.542Z",
-      "size_bytes": 23577
+      "hash": "bd3745884d32bbc59b21469e697d56f1663fb0bd7458aae657a051196480cec9",
+      "last_modified": "2026-10-04T14:56:07.808Z",
+      "size_bytes": 23576
     },
     {
       "path": "src/components/TrainingPlanPanels.tsx",
@@ -6359,9 +6359,9 @@
         "./mezzaOttobrePlan",
         "vitest"
       ],
-      "hash": "60ea2ea4024cce91e6aac548bf8cdcaf53a0293f37753c4a7d06a5a11a382324",
-      "last_modified": "2026-09-24T08:42:47.873Z",
-      "size_bytes": 5750
+      "hash": "d9c987819e01c222430693fc6373cf2234e3bf8822b7227af84342a6b868b960",
+      "last_modified": "2026-10-04T14:54:17.046Z",
+      "size_bytes": 6013
     },
     {
       "path": "src/data/mezzaOttobrePlan.ts",
@@ -6411,9 +6411,9 @@
       "imports": [
         "../types/api"
       ],
-      "hash": "2a11fcb65ecec6f9c438ee13f7860253a9dd1373325e4c67adc91722c1d7ef16",
-      "last_modified": "2026-09-24T08:42:04.065Z",
-      "size_bytes": 29729
+      "hash": "a29ba640ddb97fcd21476df44a008a7df0420899acfa9654141b99935c4bbfd6",
+      "last_modified": "2026-10-04T14:53:26.438Z",
+      "size_bytes": 23987
     },
     {
       "path": "src/data/sub20Plan.ts",
@@ -7037,9 +7037,9 @@
         "./taperForecast",
         "vitest"
       ],
-      "hash": "9053eac45b8999fa201743fa082849652b941b35b80b65f36d5143007d50d145",
-      "last_modified": "2026-09-18T13:19:57.661Z",
-      "size_bytes": 4671
+      "hash": "1ffd96b2962c2f7b4423f0c89e82a338fb00f49fd90d9117bd17db51a9741292",
+      "last_modified": "2026-10-04T14:54:35.487Z",
+      "size_bytes": 5013
     },
     {
       "path": "src/utils/taperForecast.ts",
@@ -7073,9 +7073,9 @@
         "../data/mezzaOttobrePlan",
         "../types/api"
       ],
-      "hash": "73adef9e63d4031a738be56fc8da64f449f39626046fa1c28a4aece8ec44c96c",
-      "last_modified": "2026-09-18T13:22:29.385Z",
-      "size_bytes": 11722
+      "hash": "32ae2925ec2f16ec6e5c1a2fde7fd74e1250248c5a05e7e04455247e66c8e22a",
+      "last_modified": "2026-10-04T14:53:42.036Z",
+      "size_bytes": 11714
     },
     {
       "path": "src/utils/telemetry.ts",

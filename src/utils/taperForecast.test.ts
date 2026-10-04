@@ -2,12 +2,13 @@ import { describe, it, expect } from "vitest";
 import type { FitnessFreshnessPoint } from "../types/api";
 import { PLAN_DAY_BY_DATE } from "../data/mezzaOttobrePlan";
 import {
-  ALPHA_ATL, ALPHA_CTL, PLAN_ANCHOR, RACE_EVE_ISO, actualDaily, addDays, formOf, plannedCurve, plannedTrimp, taperReport,
+  ALPHA_ATL, ALPHA_CTL, PLAN_ANCHOR, RACE_EVE_ISO, TAPER_START_ISO, actualDaily, addDays, formOf, plannedCurve,
+  plannedTrimp, taperReport,
 } from "./taperForecast";
 
 /** Documenti come li salva il backend, generati seguendo il piano alla lettera fino a `untilIso`. */
 function docsFollowingPlan(untilIso: string, extra: Record<string, number> = {}): FitnessFreshnessPoint[] {
-  const out: FitnessFreshnessPoint[] = [{ ...PLAN_ANCHOR, tsb: PLAN_ANCHOR.ctl - PLAN_ANCHOR.atl, trimp: 92 }];
+  const out: FitnessFreshnessPoint[] = [{ ...PLAN_ANCHOR, tsb: PLAN_ANCHOR.ctl - PLAN_ANCHOR.atl, trimp: 98 }];
   let ctl = PLAN_ANCHOR.ctl, atl = PLAN_ANCHOR.atl;
   for (let iso = addDays(PLAN_ANCHOR.date, 1); iso <= untilIso; iso = addDays(iso, 1)) {
     const load = plannedTrimp(PLAN_DAY_BY_DATE[iso]) + (extra[iso] ?? 0);
@@ -24,26 +25,31 @@ describe("la curva prevista dal piano", () => {
   const curve = plannedCurve();
   const at = (iso: string) => curve.find((p) => p.date === iso)!;
 
-  it("va dal 17 settembre alla gara", () => {
-    expect(curve[0].date).toBe("2026-09-17");
+  it("va dal 5 ottobre alla gara", () => {
+    expect(curve[0].date).toBe("2026-10-05");
     expect(curve.at(-1)!.date).toBe("2026-10-18");
   });
 
-  it("nelle settimane di carico va in rosso, alla vigilia arriva fresca", () => {
-    const loading = curve.filter((p) => p.date <= "2026-10-04");
+  it("al test si arriva riposati", () => {
+    expect(at("2026-10-05").tsb).toBeGreaterThan(5);
+  });
+
+  it("nella settimana di carico va in rosso, alla vigilia arriva fresca", () => {
+    const loading = curve.filter((p) => p.date < TAPER_START_ISO);
     expect(Math.min(...loading.map((p) => p.tsb))).toBeLessThan(-20);
     expect(at(RACE_EVE_ISO).tsb).toBeGreaterThan(10);
     expect(at(RACE_EVE_ISO).tsb).toBeLessThan(25);
   });
 
   it("nello scarico la TSB sale", () => {
-    expect(at(RACE_EVE_ISO).tsb).toBeGreaterThan(at("2026-10-11").tsb);
-    expect(at("2026-10-11").tsb).toBeGreaterThan(at("2026-10-04").tsb);
+    expect(at(RACE_EVE_ISO).tsb).toBeGreaterThan(at("2026-10-14").tsb);
+    expect(at("2026-10-14").tsb).toBeGreaterThan(at("2026-10-11").tsb);
   });
 
-  it("bici e forza non pesano: il backend conta solo le corse", () => {
-    expect(plannedTrimp(PLAN_DAY_BY_DATE["2026-09-21"])).toBe(0);
-    expect(plannedTrimp(PLAN_DAY_BY_DATE["2026-09-22"])).toBeCloseTo(64.8, 1);
+  it("i giorni fermi non pesano, le corse sì", () => {
+    expect(plannedTrimp(PLAN_DAY_BY_DATE["2026-10-05"])).toBe(0);
+    expect(plannedTrimp(PLAN_DAY_BY_DATE["2026-10-08"])).toBeCloseTo(39, 1);
+    expect(plannedTrimp(PLAN_DAY_BY_DATE["2026-10-06"])).toBeCloseTo(185.4, 1);
   });
 });
 
@@ -62,8 +68,13 @@ describe("la serie reale", () => {
 });
 
 describe("il resoconto", () => {
+  it("la sera prima il piano non è ancora partito", () => {
+    const r = taperReport(docsFollowingPlan("2026-10-04"), "2026-10-04");
+    expect(r.phase).toBe("prima");
+  });
+
   it("chi segue il piano è in linea e arriva fresco", () => {
-    const r = taperReport(docsFollowingPlan("2026-09-24"), "2026-09-24");
+    const r = taperReport(docsFollowingPlan("2026-10-08"), "2026-10-08");
     expect(r.phase).toBe("carico");
     expect(r.ctlDelta).toBeCloseTo(0, 1);
     expect(r.eve!.tsb).toBeCloseTo(r.plannedEve.tsb, 1);
@@ -72,16 +83,16 @@ describe("il resoconto", () => {
   });
 
   it("al mattino di un lungo non ancora corso si confronta con ieri", () => {
-    const r = taperReport(docsFollowingPlan("2026-09-26"), "2026-09-27");
-    expect(r.compareIso).toBe("2026-09-26");
+    const r = taperReport(docsFollowingPlan("2026-10-10"), "2026-10-11");
+    expect(r.compareIso).toBe("2026-10-10");
     expect(r.ctlDelta).toBeCloseTo(0, 1);
     // la proiezione conta il lungo di oggi
     expect(r.eve!.tsb).toBeCloseTo(r.plannedEve.tsb, 1);
   });
 
   it("chi aggiunge corse viene avvisato", () => {
-    const extra = { "2026-09-19": 65, "2026-09-25": 65, "2026-09-28": 65, "2026-10-01": 65, "2026-10-02": 80 };
-    const r = taperReport(docsFollowingPlan("2026-10-02", extra), "2026-10-02");
+    const extra = { "2026-10-05": 80, "2026-10-07": 80, "2026-10-08": 60, "2026-10-10": 80 };
+    const r = taperReport(docsFollowingPlan("2026-10-10", extra), "2026-10-10");
     expect(r.ctlDelta!).toBeGreaterThan(5);
     expect(r.verdict.tone).not.toBe("ok");
   });
@@ -93,7 +104,7 @@ describe("il resoconto", () => {
   });
 
   it("senza dati non inventa niente", () => {
-    const r = taperReport(undefined, "2026-09-24");
+    const r = taperReport(undefined, "2026-10-08");
     expect(r.today).toBeNull();
     expect(r.eve).toBeNull();
     expect(r.verdict.title).toBe("Dati in arrivo");

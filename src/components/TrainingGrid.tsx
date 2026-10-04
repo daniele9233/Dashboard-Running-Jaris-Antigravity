@@ -353,7 +353,7 @@ export function TrainingGrid() {
             <span className="w-2 h-2 rounded-full shrink-0" style={{ background: "#0A0A0A" }} />
             {PLAN_META.name}
           </span>
-          <span className="text-xs text-gray-500" style={{ fontFamily: "'JetBrains Mono', monospace" }}>14 set → 18 ott</span>
+          <span className="text-xs text-gray-500" style={{ fontFamily: "'JetBrains Mono', monospace" }}>5 ott → 18 ott</span>
           <AdherenceStrip evals={adherence} />
         </div>
 

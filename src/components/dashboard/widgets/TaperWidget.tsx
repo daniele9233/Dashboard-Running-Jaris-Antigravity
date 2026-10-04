@@ -7,7 +7,7 @@ import type { FitnessFreshnessPoint } from "../../../types/api";
 import { InfoTooltip } from "./InfoTooltip";
 import { CHART_SERIES, CHART_SURFACE, CHART_TEXT, CHART_TYPE, chartAxis, chartGrid } from "../../statistics/chartTheme";
 import { PLAN_DAYS } from "../../../data/mezzaOttobrePlan";
-import { RACE_EVE_ISO, RACE_ISO, TAPER_START_ISO, addDays, formOf, taperReport } from "../../../utils/taperForecast";
+import { PLAN_ANCHOR, RACE_EVE_ISO, RACE_ISO, TAPER_START_ISO, addDays, formOf, taperReport } from "../../../utils/taperForecast";
 
 /**
  * FRESCHEZZA E TAPER — quanto sei fresco oggi, dove arrivi alla vigilia della
@@ -16,7 +16,7 @@ import { RACE_EVE_ISO, RACE_ISO, TAPER_START_ISO, addDays, formOf, taperReport }
 
 const TONE = { ok: CHART_SERIES.positive, warn: CHART_SERIES.load, bad: CHART_SERIES.risk } as const;
 const MONO = { fontFamily: CHART_TYPE.mono };
-const VERIFY_ISO = PLAN_DAYS.find((d) => d.verify?.startsWith("Verifica 1"))?.date ?? "2026-09-27";
+const VERIFY_ISO = PLAN_DAYS.find((d) => d.verify)?.date ?? "2026-10-06";
 
 const signed = (n: number) => {
   const r = Math.round(n);
@@ -50,11 +50,12 @@ export function TaperWidget({ ff }: { ff: FitnessFreshnessPoint[] | undefined })
 
   const now = r.today ? formOf(r.today.tsb) : null;
   const eve = r.eve ? formOf(r.eve.tsb) : null;
-  const plannedAtVerify = r.planned.find((p) => p.date === VERIFY_ISO)?.tsb;
+  // la TSB con cui ti presenti al test: quella della sera prima
+  const plannedBeforeVerify = r.planned.find((p) => p.date === addDays(VERIFY_ISO, -1))?.tsb;
 
   const note =
     r.phase === "carico" && todayIso <= VERIFY_ISO
-      ? `Nelle settimane 2–3 il rosso è normale: è il carico, non un allarme. La Verifica 1 del ${short(VERIFY_ISO)} la corri con la TSB intorno a ${signed(plannedAtVerify ?? -27)}: se va così così, pesa la fatica e non la forma.`
+      ? `Il test del ${short(VERIFY_ISO)} lo corri riposato, con la TSB intorno a ${signed(plannedBeforeVerify ?? 8)}: quello che leggi è la forma, non la fatica. Dopo, il rosso è normale: è il carico, non un allarme.`
       : r.phase === "carico"
       ? `Dal ${short(TAPER_START_ISO)} inizia lo scarico: da lì la TSB deve salire fino a sopra +10 alla vigilia.`
       : r.phase === "scarico"
@@ -68,7 +69,7 @@ export function TaperWidget({ ff }: { ff: FitnessFreshnessPoint[] | undefined })
         <h3 className="text-white text-lg font-black tracking-tight">Freschezza e taper</h3>
         <InfoTooltip title="FRESCHEZZA E TAPER" lines={[
           "TSB = fitness (CTL) meno fatica (ATL). Sopra +10 sei fresco, sotto −20 in sovraccarico: stessa formula e stesse soglie della card Status di Forma.",
-          "Piano: la curva che il piano della mezza prevede, partendo dal tuo stato del 16 settembre.",
+          `Piano: la curva che il piano della mezza prevede, partendo dal tuo stato del ${short(PLAN_ANCHOR.date)}.`,
           "Proiezione: dove arrivi alla vigilia con quello che hai fatto davvero più il resto del piano.",
           "Fondo: CTL classica a 42 giorni. Quella dell'app è una media di circa tre settimane e nel taper scende più in fretta della forma vera.",
           "Bici e forza non entrano nel conto: il backend misura solo le corse.",
@@ -108,7 +109,7 @@ export function TaperWidget({ ff }: { ff: FitnessFreshnessPoint[] | undefined })
                 <ReferenceArea y1={yMin} y2={-20} fill={CHART_SERIES.risk} fillOpacity={0.07} ifOverflow="hidden" />
                 <ReferenceLine y={0} stroke={CHART_SURFACE.borderStrong} />
                 <ReferenceLine x={short(VERIFY_ISO)} stroke={CHART_TEXT.faint} strokeDasharray="2 3"
-                  label={{ value: "Verifica 1", position: "top", fill: CHART_TEXT.axis, fontSize: 10 }} />
+                  label={{ value: "test", position: "top", fill: CHART_TEXT.axis, fontSize: 10 }} />
                 <ReferenceLine x={short(TAPER_START_ISO)} stroke={CHART_TEXT.faint} strokeDasharray="2 3"
                   label={{ value: "scarico", position: "top", fill: CHART_TEXT.axis, fontSize: 10 }} />
                 {todayIso >= PLAN_DAYS[0].date && todayIso <= RACE_EVE_ISO && (

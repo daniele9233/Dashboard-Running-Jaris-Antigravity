@@ -10,8 +10,8 @@ import { PLAN_DAYS, PLAN_DAY_BY_DATE, PLAN_GOALS, type PlanDay } from "../data/m
  * della card Status di Forma.
  *
  * Tre curve:
- *   - prevista: dallo stato del backend al 16 settembre, il giorno prima della
- *     verifica del piano, più il carico stimato di ogni seduta del piano;
+ *   - prevista: dallo stato del backend al 4 ottobre, la sera prima che il
+ *     piano riparta, più il carico stimato di ogni seduta del piano;
  *   - reale: i documenti del backend, giorno per giorno;
  *   - proiezione: dallo stato reale di oggi più il resto del piano.
  * Il confronto fra prevista e reale dice se il carico va come deve; la
@@ -26,13 +26,13 @@ export const ALPHA_CTL = 2 / 43;
 export const ALPHA_ATL = 2 / 8;
 const ALPHA_BASE = 1 / 42;
 
-/** Stato del backend a fine 16 settembre (dopo il 5×1000): l'ancora della curva prevista. */
-export const PLAN_ANCHOR = { date: "2026-09-16", ctl: 42.0, atl: 58.69 };
+/** Stato del backend a fine 4 ottobre, la sera prima che il piano riparta: l'ancora della curva prevista. */
+export const PLAN_ANCHOR = { date: "2026-10-04", ctl: 34.66, atl: 33.74 };
 
 export const RACE_ISO = PLAN_GOALS[0].dateIso;
 export const RACE_EVE_ISO = addDays(RACE_ISO, -1);
 /** Primo giorno di scarico: da qui la TSB deve salire. */
-export const TAPER_START_ISO = "2026-10-05";
+export const TAPER_START_ISO = "2026-10-12";
 
 /** Stesse soglie della card Status di Forma in dashboard. */
 export function formOf(tsb: number): { label: string; color: string } {
@@ -52,17 +52,18 @@ export function addDays(iso: string, n: number): string {
 
 /**
  * TRIMP stimato di una giornata del piano: km × TRIMP al km per tipo di
- * seduta, tarato sulle tue corse con la formula del backend (lento 8 km a FC
- * 132 ≈ 65, lungo 18 km con 5 a ritmo ≈ 178, 3×3000 ≈ 154, mezza ≈ 264).
- * Bici e forza restano a zero: il backend conta solo le corse.
+ * seduta, tarato sui documenti del backend di settembre (lento 8 km a FC 130
+ * = 61, 3×3000 = 126 su 13,9 km, 14 km a 4:41 più defaticamento = 167; la
+ * mezza è una stima, ≈ 264). Bici e forza restano a zero: il backend conta
+ * solo le corse.
  */
 export function plannedTrimp(d: PlanDay | undefined): number {
   if (!d?.km) return 0;
   const perKm =
-    d.kind === "easy" ? 8.1
-      : d.kind === "long" ? (d.title.includes("ultimi") ? 9.8 : 9.0)
-      : d.kind === "quality" ? 10.0
-      : d.kind === "key" ? 9.8
+    d.kind === "easy" ? 7.8
+      : d.kind === "long" ? 9.0
+      : d.kind === "quality" ? 9.1
+      : d.kind === "key" ? 10.3
       : d.kind === "race" ? 12.5
       : 0;
   return d.km * perKm;
@@ -85,7 +86,7 @@ function walkPlan(from: LoadPoint, untilIso: string, loadOf: (iso: string) => nu
   return out;
 }
 
-/** La curva che il piano prevede, dal 17 settembre alla gara. */
+/** La curva che il piano prevede, dal 5 ottobre alla gara. */
 export function plannedCurve(): LoadPoint[] {
   const anchor = { ...PLAN_ANCHOR, tsb: PLAN_ANCHOR.ctl - PLAN_ANCHOR.atl };
   return walkPlan(anchor, RACE_ISO, (iso) => plannedTrimp(PLAN_DAY_BY_DATE[iso]));
@@ -211,9 +212,9 @@ function signed(n: number): string {
 }
 
 function verdictOf(phase: TaperPhase, ctlDelta: number | null, eve: LoadPoint | null, actual: LoadPoint[]): TaperReport["verdict"] {
-  if (phase === "prima") return { tone: "ok", title: "Il piano non è ancora partito", text: "La curva prevista parte il 14 settembre." };
+  if (phase === "prima") return { tone: "ok", title: "Il piano non è ancora partito", text: "La curva prevista parte il 5 ottobre." };
   if (phase === "dopo") return { tone: "ok", title: "Gara fatta", text: "Da qui in poi la curva racconta il recupero." };
-  if (phase === "gara") return { tone: "ok", title: "Oggi si corre", text: "Il lavoro è fatto: parti a 4:48–4:50 in discesa e non guadagnare tempo." };
+  if (phase === "gara") return { tone: "ok", title: "Oggi si corre", text: "Il lavoro è fatto: parti a 4:46–4:48 in discesa e non guadagnare tempo." };
   if (!eve || ctlDelta === null) return { tone: "warn", title: "Dati in arrivo", text: "Serve lo storico di Fitness & Freschezza del backend." };
 
   const eveTxt = `alla vigilia arrivi a TSB ${signed(eve.tsb)}`;

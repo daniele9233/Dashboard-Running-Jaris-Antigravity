@@ -46,7 +46,7 @@ export interface PaceCtx {
 type LevelMode = "target" | "vdot";
 
 const DEFAULT_TARGETS: Record<DistanceId, number> = {
-  "3k": 705, "5k": 1200, "10k": 2500, "15k": 4125, "21k": 6055,
+  "3k": 705, "5k": 1200, "10k": 2500, "15k": 4125, "21k": 6013,
 };
 
 interface Saved {
