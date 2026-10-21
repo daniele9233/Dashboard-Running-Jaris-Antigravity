@@ -15,18 +15,18 @@
     "semantic_hash": "714f6d258cebdd4ffd805c711363fab2"
   },
   "D:\\webapp-antiG\\package.json": {
-    "mtime": 1789395681.0173,
-    "ast_hash": "b7a326e0d5ca67dca465bc5469134f3d",
+    "mtime": 1792599622.64848,
+    "ast_hash": "9f8fd708aa30f2329b939ec3e975a808",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\repo-map.json": {
-    "mtime": 1792595588.7930248,
-    "ast_hash": "4d0ba8aaf27ab78add7f368c1231d95d",
+    "mtime": 1792607870.018731,
+    "ast_hash": "ba28f6db13359039fee041e75b1ac812",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\skills-lock.json": {
-    "mtime": 1784392811.8135781,
-    "ast_hash": "0eb4cf5a954f5b0e45580e2070d4bd41",
+    "mtime": 1792596007.8551981,
+    "ast_hash": "bb459ec7dbdb98a26927a349b702d233",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\test_backend.py": {
@@ -255,48 +255,48 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\ActivitiesView.tsx": {
-    "mtime": 1789731038.2803435,
-    "ast_hash": "c26cf6be1df7108edbb780ca7e2f06c3",
+    "mtime": 1792600975.7678814,
+    "ast_hash": "641aad659fad76e3d461290ebbf67b65",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\AdaptationPanel.tsx": {
-    "mtime": 1789731038.2803435,
-    "ast_hash": "7f926ba2fe07bbe72d5e0649329c6af2",
+    "mtime": 1792606491.8400393,
+    "ast_hash": "093cc759c03dd0a6956cfeb941fb3510",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\AnaerobicThreshold.tsx": {
-    "mtime": 1789731038.2803435,
-    "ast_hash": "f4b4ed5e1040b36318767189d9629d7d",
+    "mtime": 1792606470.5000618,
+    "ast_hash": "77e4f4583571eb8cb704c69d87113d9f",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\CardiacDrift.tsx": {
-    "mtime": 1789731038.2813435,
-    "ast_hash": "cdcd7c96e384ea2051b6d1021352196a",
+    "mtime": 1792606470.8724391,
+    "ast_hash": "af9ea7139df42811fa4c40df6707b36b",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\DashboardView.tsx": {
-    "mtime": 1792592343.842618,
-    "ast_hash": "9d5b4854d3b1e06349e661326650744e",
+    "mtime": 1792606470.2126565,
+    "ast_hash": "1f3071c8ccf55b1d89611d54576b8ad6",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\DetrainingWidget.tsx": {
-    "mtime": 1790661794.4033332,
-    "ast_hash": "4c9a154442f78e5c6b85d98b5f0b6235",
+    "mtime": 1792600824.6942308,
+    "ast_hash": "b2d4402762a9d9de8a5e0a4edd0f086e",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\ErrorBoundary.tsx": {
-    "mtime": 1789731038.2813435,
-    "ast_hash": "77d17478971a71ca7c64be1a83714c76",
+    "mtime": 1792606491.8410387,
+    "ast_hash": "fcd101eeaad4a22872463b61848045b8",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\FirstRunOnboarding.tsx": {
-    "mtime": 1777460681.652269,
-    "ast_hash": "453d3ae7b4c00ef85ee2d2affcc49d6b",
-    "semantic_hash": "453d3ae7b4c00ef85ee2d2affcc49d6b"
+    "mtime": 1792606491.8410387,
+    "ast_hash": "d747ad01921e8721f2244925050c697a",
+    "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\FitnessFreshness.tsx": {
-    "mtime": 1789731038.2813435,
-    "ast_hash": "6969f03c094889d8683b9fbad4456081",
+    "mtime": 1792606470.406622,
+    "ast_hash": "d5760c62b5311125f3cb544f6a3869b6",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\GridCard.tsx": {
@@ -315,8 +315,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\LastRunMap.tsx": {
-    "mtime": 1789731038.2823434,
-    "ast_hash": "a76ca37e029fdb38cb89f6e27ad0558d",
+    "mtime": 1792606132.7340436,
+    "ast_hash": "d27437a8caf49b3e43c04afc4951ecd3",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\LiveTelemetry3DMap.tsx": {
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\MainChart.tsx": {
-    "mtime": 1789731038.2823434,
-    "ast_hash": "2365b26c1bf689c3c9676cb39cc5f378",
+    "mtime": 1792606470.312461,
+    "ast_hash": "3a41081ca0a2b59b9587d9c8f5803194",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\MapFallback.tsx": {
@@ -335,23 +335,23 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\ProfileView.tsx": {
-    "mtime": 1790657439.3052447,
-    "ast_hash": "534a3722aa45419fa78feb1fb8d9b216",
+    "mtime": 1792600975.752875,
+    "ast_hash": "44cb3425e33ed1f1bf265a9f49bb195e",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\RacePredictions.tsx": {
-    "mtime": 1789731038.2833433,
-    "ast_hash": "87a2aa9b59a7e5f5f8710ad8c958c24c",
+    "mtime": 1792606470.6880894,
+    "ast_hash": "73ef8c71c68fb82677d0ecec9a309c13",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\RankingView.tsx": {
-    "mtime": 1789731038.2833433,
-    "ast_hash": "c1b2c3f1f4e2bba628bf31687a56723e",
+    "mtime": 1792606517.133952,
+    "ast_hash": "3203c2ec0cdf8578cd1b7c58bcc95ddb",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\RecentActivities.tsx": {
-    "mtime": 1789731038.2843435,
-    "ast_hash": "c62c749c30d7965865bcc8e4c52ae887",
+    "mtime": 1792600975.845264,
+    "ast_hash": "194cf58373b0ffb46024363b7859843b",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\RoutesView.tsx": {
@@ -360,8 +360,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\RunnerDnaView.tsx": {
-    "mtime": 1789731038.2843435,
-    "ast_hash": "51a12101166d368e5039a8ec13df9341",
+    "mtime": 1792599429.2984738,
+    "ast_hash": "8ca0a3efddb880bf12e266f2fcea6e68",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\SettingsControls.tsx": {
@@ -380,28 +380,28 @@
     "semantic_hash": "63207e0704638c2b61cb75b3cc568ede"
   },
   "D:\\webapp-antiG\\src\\components\\SupercompensationChart.tsx": {
-    "mtime": 1789731038.2853434,
-    "ast_hash": "e74f3d348e959ecb5b3055ce70ccf2f3",
+    "mtime": 1792606470.595554,
+    "ast_hash": "9753ffd0ee8274947ca56e63a86a57e0",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\TopStats.tsx": {
-    "mtime": 1789731038.2853434,
-    "ast_hash": "7ad4f2da7bda66b9fd2df9b2cb9bff17",
+    "mtime": 1792606470.9659965,
+    "ast_hash": "317b6f1efe245b4c4966cbf2117a77d3",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\TrainingView.tsx": {
-    "mtime": 1789731038.2863436,
-    "ast_hash": "617bd3dafa9f002adafbe5fa22e50e8b",
+    "mtime": 1792606132.7350426,
+    "ast_hash": "58633771c73bca0fe92e9e8e8696fd4f",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\VO2MaxChart.tsx": {
-    "mtime": 1789731038.2863436,
-    "ast_hash": "c5627aebd8737872c5460e0ca9844552",
+    "mtime": 1792606470.7811122,
+    "ast_hash": "77ed31f6b370501a4cc5740970900767",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\WeeklyStatsPanel.tsx": {
-    "mtime": 1789731038.2863436,
-    "ast_hash": "459f62c4d64e2bb3534593343fe3c78d",
+    "mtime": 1792606471.0611982,
+    "ast_hash": "24180442bcab4a99ea4bef66b344988d",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\dashboard\\widgetRegistry.ts": {
@@ -410,28 +410,28 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\dashboard\\widgets\\FitnessChart.tsx": {
-    "mtime": 1789731038.2883434,
-    "ast_hash": "c91623d24085ef3f3a01fd07264e60c6",
+    "mtime": 1792606471.1548834,
+    "ast_hash": "294ad125dacd2d19e55ae0a1746fb717",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\dashboard\\widgets\\HRZones.tsx": {
-    "mtime": 1789731038.2883434,
-    "ast_hash": "5ba4142e2d2b46f17f9857c6a43a6857",
+    "mtime": 1792606471.3418128,
+    "ast_hash": "10cc7af56823a3ef9017580ab1f9d63a",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\dashboard\\widgets\\InfoTooltip.tsx": {
-    "mtime": 1789731038.2883434,
-    "ast_hash": "48dab5bef2e969cdb6a1dc8072267b94",
+    "mtime": 1792600825.1038406,
+    "ast_hash": "4e9d0f6d2c909c53af695327d052dad1",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\dashboard\\widgets\\NextOptimalSessionWidget.tsx": {
-    "mtime": 1789731038.2883434,
-    "ast_hash": "3a6624a945e4e1fddbb5f9d08a110a57",
+    "mtime": 1792600825.184043,
+    "ast_hash": "c7dbedb3339fcd5264c5a901356ace6e",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\dashboard\\widgets\\WeeklyKmChart.tsx": {
-    "mtime": 1789731038.2893436,
-    "ast_hash": "531b86bba40034f33f23aaff58597571",
+    "mtime": 1792606471.2528229,
+    "ast_hash": "51ffffcbddb4e359bb1b343ff5db240c",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\runner-dna\\RunnerDnaLoading.tsx": {
@@ -440,77 +440,77 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\AnalyticsV2.tsx": {
-    "mtime": 1789731038.2923436,
-    "ast_hash": "c7bfc574c8f65f8487959f010f0d4a68",
+    "mtime": 1792606469.5510347,
+    "ast_hash": "240e6ea9b49213192f9cb024390ef68f",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\AnalyticsV3.tsx": {
-    "mtime": 1789731038.2923436,
-    "ast_hash": "925f9255c605a2b069443c821ef281fd",
+    "mtime": 1792606469.6618705,
+    "ast_hash": "63520e8f67aadfbba2aa85d9fe9c3a84",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\AnalyticsV4.tsx": {
-    "mtime": 1789731038.2933433,
-    "ast_hash": "14fa0aeac07ffa4a971a8dc7bf673e67",
+    "mtime": 1792606075.617527,
+    "ast_hash": "f789418b1a5704d546bb243757f068f5",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\AnalyticsV5.tsx": {
-    "mtime": 1789731038.2933433,
-    "ast_hash": "2842c196c0df394fb68efc6a44b5cfcd",
+    "mtime": 1792606469.7709835,
+    "ast_hash": "49054970ed5fa2ead1f3b36c8fa7737f",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\AthletePotentialVector.tsx": {
-    "mtime": 1789731038.2933433,
-    "ast_hash": "42c0bb676f031b0ca90bd6fd6c6952f1",
+    "mtime": 1792600822.3083603,
+    "ast_hash": "94010350223ddca323aba4a8b335aa97",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\BiologyFutureLab.tsx": {
-    "mtime": 1789731038.2933433,
-    "ast_hash": "02cb5a982af8dd0fc5651174972fcb30",
+    "mtime": 1792601073.211429,
+    "ast_hash": "230bdb1916d52d02bcd483184a9e6460",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\BiologyFutureV2.tsx": {
-    "mtime": 1789731038.2943435,
-    "ast_hash": "9c8e750914ec8a4b3e0c465e97df1f32",
+    "mtime": 1792601416.807534,
+    "ast_hash": "bdd93b8aa544f679b76a1ab3dca30dac",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\CaricoFormaV2.tsx": {
-    "mtime": 1789731038.2943435,
-    "ast_hash": "258cbf68d5e69636fee6e03a5583f584",
+    "mtime": 1792599225.4226084,
+    "ast_hash": "1b70b5aa614e365ab6ef813cab26ab7a",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\ChartFullscreenModal.tsx": {
-    "mtime": 1789731038.2943435,
-    "ast_hash": "3824c53f78f2eff31450388db808b952",
+    "mtime": 1792599375.601224,
+    "ast_hash": "75e5f746f7f59f8f5fe068888117d006",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\EnvironmentalNormalizerView.tsx": {
-    "mtime": 1789731038.2953436,
-    "ast_hash": "c6a07ddf729e905ee3c1e4962f369349",
+    "mtime": 1792606469.4248943,
+    "ast_hash": "2443c329096b7c8774954296c11eaae0",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\PotenzialProgressiV2.tsx": {
-    "mtime": 1789731038.2963436,
-    "ast_hash": "a062529f8246302cf2b1ae968c0278d3",
+    "mtime": 1792600850.7444434,
+    "ast_hash": "4a6aa5c02b2be35d7e11ca4ec9dd9012",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\StatisticsView.tsx": {
-    "mtime": 1789748413.145767,
-    "ast_hash": "09ce6f06e4bb73b94d9bded55c171301",
+    "mtime": 1792606470.0113442,
+    "ast_hash": "d5580e2caf04e3e6fd36b7f359ebae1e",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\StatsCalc.tsx": {
-    "mtime": 1789731038.2963436,
+    "mtime": 1792599225.4932258,
     "ast_hash": "55647007e77f22f4bdb1a938216f181f",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\StatsDrift.tsx": {
-    "mtime": 1789731038.2973435,
-    "ast_hash": "9ba6794540a837862063fdd2c8088fa8",
+    "mtime": 1792599328.0936759,
+    "ast_hash": "ace4b8df1e69820b9652ea6f5ebfe42a",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\StatsProgress.tsx": {
-    "mtime": 1789731038.2973435,
+    "mtime": 1792599225.5082276,
     "ast_hash": "bd56fb2c3abe0580040ed8f160d97971",
     "semantic_hash": ""
   },
@@ -590,8 +590,8 @@
     "semantic_hash": "419f521050cae93543b878e3f0b3cf9f"
   },
   "D:\\webapp-antiG\\src\\utils\\cardiacDrift.ts": {
-    "mtime": 1789731038.2983434,
-    "ast_hash": "22a930bdf7433027da0ced9dc0712b6d",
+    "mtime": 1792599170.9373355,
+    "ast_hash": "36a0ce66ef33507eb9e20d89617bff6a",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\utils\\detrainingModel.ts": {
@@ -690,8 +690,8 @@
     "semantic_hash": "9b8439940dffb3411a018fbe81d62be9"
   },
   "D:\\webapp-antiG\\repo-map.md": {
-    "mtime": 1792595588.7940264,
-    "ast_hash": "f5d7b9a84289c62b0018c3c911437190",
+    "mtime": 1792607870.0197296,
+    "ast_hash": "dd3c8120115cd28818f070188941d469",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\REPORT-TECNICO.md": {
@@ -930,8 +930,8 @@
     "semantic_hash": "149956cf2fb9a20cb4886b3f59f64047"
   },
   "D:\\webapp-antiG\\src\\components\\BadgesView.tsx": {
-    "mtime": 1789731038.2803435,
-    "ast_hash": "26273bed9247acc4de81399fe94a5097",
+    "mtime": 1792600975.7398767,
+    "ast_hash": "ef6e89b71a2f35f6eb2364e6cfac54dc",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\celebrations\\BadgeProvider.tsx": {
@@ -1035,8 +1035,8 @@
     "semantic_hash": "89c77e0fb1f07da348ac65ce1241ef77"
   },
   "D:\\webapp-antiG\\src\\components\\gamification\\AthleteEvolutionFramework.tsx": {
-    "mtime": 1792593113.8544333,
-    "ast_hash": "aad635c975c6b08ca841e6b48d2e8671",
+    "mtime": 1792599429.296852,
+    "ast_hash": "ed6b9594b4ae82ae0f98495b179e3f46",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\gamification\\evolutionEngine.ts": {
@@ -1050,8 +1050,8 @@
     "semantic_hash": "396ccdd4df06ff2c11338c0739036ac9"
   },
   "D:\\webapp-antiG\\src\\components\\gamification\\GamificationV1.tsx": {
-    "mtime": 1789731038.2893436,
-    "ast_hash": "d4b2572f34b7d1786b4ab91d226ad3d0",
+    "mtime": 1792600975.803113,
+    "ast_hash": "3b16593aa44551fea22efda2914893d8",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\runner-dna\\dnaShared.ts": {
@@ -1185,13 +1185,13 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\chartTheme.ts": {
-    "mtime": 1789731038.2973435,
-    "ast_hash": "ecb999a8925d07c7349d26fdf93eb67a",
+    "mtime": 1792597530.074896,
+    "ast_hash": "89e45f6d8c483c023a22205de02220bc",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\ChartTooltip.tsx": {
-    "mtime": 1785064145.7183344,
-    "ast_hash": "274762b1a3c6cf1547f4d32dfeb90fbc",
+    "mtime": 1792599225.430859,
+    "ast_hash": "50db34938b2eebf4170c94f77d9272ba",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\.agents\\skills\\banner-design\\SKILL.md": {
@@ -2240,13 +2240,13 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\dashboard\\widgets\\WeatherNormalizerWidget.tsx": {
-    "mtime": 1789731038.2883434,
-    "ast_hash": "a1d9efc11bbe8ee3a586e14d4dd0cc13",
+    "mtime": 1792599225.3676987,
+    "ast_hash": "6c163a349802b27b76e5f4a5b209b05f",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\PaceCalculator.tsx": {
-    "mtime": 1789731038.2953436,
-    "ast_hash": "ecc007a66f91abe465d9f9e3d35960ac",
+    "mtime": 1792599225.4564507,
+    "ast_hash": "70973b03f84abac256500b15fe094ff3",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\backend\\intervals.py": {
@@ -2280,8 +2280,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\TrainingAdherence.tsx": {
-    "mtime": 1792593113.8524315,
-    "ast_hash": "a6cdb8d268bab7021a48b2b1f6f3fba8",
+    "mtime": 1792606491.8410387,
+    "ast_hash": "aa5c1ec18938f6272715d9293b0fe64b",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\utils\\trainingAdherence.test.ts": {
@@ -2335,8 +2335,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\gamification\\PhysioVerdict.tsx": {
-    "mtime": 1789731038.2903435,
-    "ast_hash": "aef8f5e176d7b3c0e35e36f463e138b4",
+    "mtime": 1792600975.8281155,
+    "ast_hash": "df09880b5bf2a8612a5937137d7d1e75",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\gamification\\usePhysio.ts": {
@@ -2355,8 +2355,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\racelab\\RaceLabView.tsx": {
-    "mtime": 1789746918.3965902,
-    "ast_hash": "2eef95e109cd30de3a2e317567dea080",
+    "mtime": 1792601416.786064,
+    "ast_hash": "e8d83a892913cfc297c3726bf7c22f63",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\racelab\\shoeLab.ts": {
@@ -2365,13 +2365,13 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\TrainingGrid.tsx": {
-    "mtime": 1792595580.9738755,
-    "ast_hash": "fb2720d22a94b71d8dc615add335fbdf",
+    "mtime": 1792600975.7864976,
+    "ast_hash": "e9f9e9c35792dacd117e564cb15f04ce",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\TrainingSidebar.tsx": {
-    "mtime": 1792593113.8534317,
-    "ast_hash": "2beda6b7f81a1e9e7c498b10979f3ac3",
+    "mtime": 1792599327.5886312,
+    "ast_hash": "4977a51cefbdc5a0bf992684ad710c97",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\data\\kikkoSub135Plan.test.ts": {
@@ -2470,8 +2470,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\DESIGN.md": {
-    "mtime": 1789412536.3974307,
-    "ast_hash": "143203b5698c6c9980bebfb6f54dc71e",
+    "mtime": 1792597529.953795,
+    "ast_hash": "df46962bfc4859134d31270742be3201",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\docs\\hero-page\\HERO-PAGE.md": {
@@ -2505,8 +2505,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\gamification\\GoalCone.tsx": {
-    "mtime": 1792593113.8554327,
-    "ast_hash": "3a0990065f483a3e71ce2a91af68f62a",
+    "mtime": 1792599429.2943246,
+    "ast_hash": "97a4601bbab091c71187548c250105fd",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\gamification\\goalConeEngine.test.ts": {
@@ -2520,8 +2520,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\gamification\\WorldConquest.tsx": {
-    "mtime": 1789731038.2903435,
-    "ast_hash": "a9cb83fb3c9876335303d256cb778eaa",
+    "mtime": 1792600975.820114,
+    "ast_hash": "78f6a9822c842a20a4ffa85877f0bfa2",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\gamification\\worldData.ts": {
@@ -2540,8 +2540,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\FastBiomechanics.tsx": {
-    "mtime": 1789731038.2953436,
-    "ast_hash": "e74bd1a10bb3829f4ac486ba09aef725",
+    "mtime": 1792600822.9002542,
+    "ast_hash": "18b5c260c08e831d39798375b37e0fa0",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\celebrations\\badgeProgress.ts": {
@@ -2550,18 +2550,18 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\racelab\\GoalTrajectory.tsx": {
-    "mtime": 1789747288.3525565,
-    "ast_hash": "2c0440da10432a4bd64a823edeb59adf",
+    "mtime": 1792599429.2923245,
+    "ast_hash": "5724c6ae3a754a7d929e0fdfdb2a977c",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\BiologyFutureV3.tsx": {
-    "mtime": 1789731038.2943435,
-    "ast_hash": "37b831ac76b38509fde5081842a40ba3",
+    "mtime": 1792605826.3304136,
+    "ast_hash": "9f3296ce7ec8c2db0721efa7092b5c5b",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\statistics\\PotentialProgressV3.tsx": {
-    "mtime": 1789731038.2953436,
-    "ast_hash": "ea6a340e40b70b4cba2eec3b4639def0",
+    "mtime": 1792605848.9613461,
+    "ast_hash": "afb110350b75516bdee87131e2d08d74",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\.agents\\skills\\impeccable\\scripts\\impeccable": {
@@ -2600,8 +2600,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\.impeccable\\hook.cache.json": {
-    "mtime": 1792595380.4490867,
-    "ast_hash": "4e3a473b08792780abe7295fe70cc2f3",
+    "mtime": 1792607699.7410295,
+    "ast_hash": "e91e20adac81efee25c71709ff7f796c",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\.agents\\skills\\impeccable\\agents\\openai.yaml": {
@@ -2705,18 +2705,18 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\pacelab\\DistancesSection.tsx": {
-    "mtime": 1789814616.2961214,
-    "ast_hash": "b1143b4cf900323ed8c86338d511bdf8",
+    "mtime": 1792600975.6937337,
+    "ast_hash": "5f95eeb7d1136cba43da3ab0699c0819",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\pacelab\\FastStartSection.tsx": {
-    "mtime": 1789815202.5952163,
-    "ast_hash": "8902951c8f98aef711dd58900c76d6cd",
+    "mtime": 1792599429.2882483,
+    "ast_hash": "f220cec0fff701659d874105c1833771",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\pacelab\\ListinoSection.tsx": {
-    "mtime": 1789815188.4771142,
-    "ast_hash": "f34cb409ba11079d7fc129c61acef768",
+    "mtime": 1792599429.289786,
+    "ast_hash": "14891aabfabf6e4986478e969a46b802",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\pacelab\\paceEngine.test.ts": {
@@ -2730,23 +2730,23 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\pacelab\\PaceLabView.tsx": {
-    "mtime": 1791125632.3119948,
-    "ast_hash": "630cec31351b4ca40f486e03c750b90f",
+    "mtime": 1792600975.709731,
+    "ast_hash": "8ad2b73fd7693b2cb847d818b5900caa",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\pacelab\\PaceProChart.tsx": {
-    "mtime": 1789815188.5015194,
-    "ast_hash": "945bb68531c7c8ba7a2e01b3655bd5ef",
+    "mtime": 1792599429.286247,
+    "ast_hash": "c536feaccf825273ce0814d5d2c15731",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\pacelab\\PaceProSection.tsx": {
-    "mtime": 1789815298.5826464,
-    "ast_hash": "da65af6ba51c35f82a430c6003f02b93",
+    "mtime": 1792601416.7675095,
+    "ast_hash": "180e8fe405b2174f762634ec85b8e60a",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\pacelab\\ui.tsx": {
-    "mtime": 1789815099.685038,
-    "ast_hash": "3f79b6d52222d2ecdcceb30cb3d69e86",
+    "mtime": 1792599455.3175695,
+    "ast_hash": "0e00a9692526f7f4b2e2a70826a63288",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\backend\\routers\\bike.py": {
@@ -2760,8 +2760,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\TrainingGoalBox.tsx": {
-    "mtime": 1792595580.9738755,
-    "ast_hash": "55add4a14be755aa9ad26ed44ca4be17",
+    "mtime": 1792606491.8410387,
+    "ast_hash": "67939aa5d5e2ca5414436abac64e23bc",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\utils\\trainingGoal.test.ts": {
@@ -2777,6 +2777,591 @@
   "D:\\webapp-antiG\\backend\\test_interval_sessions.py": {
     "mtime": 1792595578.7595115,
     "ast_hash": "2e10208642a168a5b9d66d36f56f2708",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\docs\\design-system\\audit-dom-after.json": {
+    "mtime": 1792601331.9159625,
+    "ast_hash": "35ed7deec552f003e81c0a6d50ae95f3",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\docs\\design-system\\audit-dom-baseline.json": {
+    "mtime": 1792597499.9137218,
+    "ast_hash": "3905cd9a41039930d7f1d65a1c8cb1d2",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\scripts\\design-check.baseline.json": {
+    "mtime": 1792606776.9003816,
+    "ast_hash": "f381ccd438440d5336b5ef44a7acd0d9",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\scripts\\design-check.ts": {
+    "mtime": 1792606098.8049524,
+    "ast_hash": "ef18aa0acbc1ef3ef5f84286a95138d5",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\scripts\\design-codemod.py": {
+    "mtime": 1792606466.5595686,
+    "ast_hash": "afc5e0412f9ca0c37ce64c1363a9cbf2",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\scripts\\prune-imports.py": {
+    "mtime": 1792599322.7346072,
+    "ast_hash": "94efd4e971ae9bbada2681dc39fee2a7",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\src\\components\\charts\\ChartCard.tsx": {
+    "mtime": 1792598223.2957907,
+    "ast_hash": "8712a2dca1e9290115041e6587501d66",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\src\\components\\charts\\ChartKpi.tsx": {
+    "mtime": 1792599383.5832925,
+    "ast_hash": "52d03c8641d7c19c40a3aac2de225972",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\src\\components\\charts\\ChartLegend.tsx": {
+    "mtime": 1792597247.1773713,
+    "ast_hash": "207ecbfea0f4b709e89cd481bd364bc1",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\src\\components\\charts\\ChartRangeSelector.tsx": {
+    "mtime": 1792597250.5417066,
+    "ast_hash": "3b3f8237802779714cddc9baa93e685e",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\src\\components\\charts\\charts.test.tsx": {
+    "mtime": 1792597330.7660935,
+    "ast_hash": "c255f0da602210291fa339af09f732ec",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\src\\components\\charts\\ChartStates.tsx": {
+    "mtime": 1792597229.2268393,
+    "ast_hash": "5e1756090d741a2acd9cdb0296d7c3cc",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\src\\components\\charts\\ChartTooltip.tsx": {
+    "mtime": 1792599383.5832925,
+    "ast_hash": "ed8cb284e085f38c3013e62caf2e3169",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\src\\components\\charts\\index.ts": {
+    "mtime": 1792599383.584293,
+    "ast_hash": "84bd1447f3362963cf0fcfe0a95f6df6",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\src\\components\\charts\\theme.test.ts": {
+    "mtime": 1792597310.0034902,
+    "ast_hash": "e52bc76f650aec70311986d01247f6e4",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\src\\components\\charts\\theme.ts": {
+    "mtime": 1792597151.271379,
+    "ast_hash": "8e981b873bb95daa94f702d7336c3709",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\src\\components\\charts\\useElementSize.ts": {
+    "mtime": 1792597599.2379036,
+    "ast_hash": "ab3539cbcac07305de5db5a363b39155",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\src\\components\\charts\\useMediaQuery.ts": {
+    "mtime": 1792597268.2591987,
+    "ast_hash": "c677ef4d9b561e1211a7ca83a43cac41",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\src\\components\\charts\\utils.ts": {
+    "mtime": 1792599379.1938274,
+    "ast_hash": "5fdd178b2a8485ac98ce2f5152bc8c01",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\PRODUCT.md": {
+    "mtime": 1792596185.2724676,
+    "ast_hash": "bd49257791a82bef4fb2edc113d11519",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-composition-patterns\\AGENTS.md": {
+    "mtime": 1792596002.9923284,
+    "ast_hash": "6ca48da2d9f2e3df4bc875543b2c5d52",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-composition-patterns\\README.md": {
+    "mtime": 1792596002.993328,
+    "ast_hash": "d0e78645434d460eaa1defbdff1d57df",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-composition-patterns\\SKILL.md": {
+    "mtime": 1792596002.993328,
+    "ast_hash": "641a0ff3ecebfadb5234a13faa54f428",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-composition-patterns\\rules\\architecture-avoid-boolean-props.md": {
+    "mtime": 1792596002.9953282,
+    "ast_hash": "0363b55141376d4059e2625a90fdba8b",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-composition-patterns\\rules\\architecture-compound-components.md": {
+    "mtime": 1792596002.9953282,
+    "ast_hash": "c21a8bd7f19ce7bb68fd970e307bd9a7",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-composition-patterns\\rules\\patterns-children-over-render-props.md": {
+    "mtime": 1792596002.9953282,
+    "ast_hash": "cc134df030320f336a570f5d5bb19a9b",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-composition-patterns\\rules\\patterns-explicit-variants.md": {
+    "mtime": 1792596002.9963293,
+    "ast_hash": "da06c21b2c17c157b370e5b2c6fbb4a3",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-composition-patterns\\rules\\react19-no-forwardref.md": {
+    "mtime": 1792596002.9963293,
+    "ast_hash": "8268c880a29f7326048cb637ea3ef534",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-composition-patterns\\rules\\state-context-interface.md": {
+    "mtime": 1792596002.997328,
+    "ast_hash": "bfd14c0e521b2593e70de8ef1b5c20a9",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-composition-patterns\\rules\\state-decouple-implementation.md": {
+    "mtime": 1792596002.997328,
+    "ast_hash": "cf84b77776095d867d5ba3bee5c4b76e",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-composition-patterns\\rules\\state-lift-state.md": {
+    "mtime": 1792596002.997328,
+    "ast_hash": "722dac7f3c9fd540380a4a7ec015cd0a",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-composition-patterns\\rules\\_sections.md": {
+    "mtime": 1792596002.9943285,
+    "ast_hash": "23f1c9af766ed9246d052484d5e0ed73",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-composition-patterns\\rules\\_template.md": {
+    "mtime": 1792596002.9943285,
+    "ast_hash": "1bfa639fa580642b7372425e0182edbf",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\AGENTS.md": {
+    "mtime": 1792596006.904814,
+    "ast_hash": "f2639073a4b0e835bed60d37c6fd41f2",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\README.md": {
+    "mtime": 1792596006.905814,
+    "ast_hash": "ea0b87a642d12567a80424f12365a934",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\SKILL.md": {
+    "mtime": 1792596006.905814,
+    "ast_hash": "f196f239081f4f193ccf785e11efb85f",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\advanced-effect-event-deps.md": {
+    "mtime": 1792596006.906814,
+    "ast_hash": "d505719c2c940fe7484021947538027b",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\advanced-event-handler-refs.md": {
+    "mtime": 1792596006.9078145,
+    "ast_hash": "e277ef383b038da08b81404c569af6cd",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\advanced-init-once.md": {
+    "mtime": 1792596006.9078145,
+    "ast_hash": "8e7759bb017e5d0d1dd64f6f60f85d3e",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\advanced-use-latest.md": {
+    "mtime": 1792596006.9088142,
+    "ast_hash": "21d3dbb5f2b557f6d14b224af2d47dc5",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\async-api-routes.md": {
+    "mtime": 1792596006.9088142,
+    "ast_hash": "94058ab5b50f99781e5aa56183b00008",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\async-cheap-condition-before-await.md": {
+    "mtime": 1792596006.9088142,
+    "ast_hash": "1f34f4c469dc79d9b56610967697c087",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\async-defer-await.md": {
+    "mtime": 1792596006.9098146,
+    "ast_hash": "7ae1ade2d9621cc4f820f2e9ffd6357c",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\async-dependencies.md": {
+    "mtime": 1792596006.9098146,
+    "ast_hash": "3bd47351349c6fe86323bf32dd017d76",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\async-parallel.md": {
+    "mtime": 1792596006.9098146,
+    "ast_hash": "5029495e12b0b9b3c03b0ae4f3085659",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\async-suspense-boundaries.md": {
+    "mtime": 1792596006.9098146,
+    "ast_hash": "00c19181680f2f698664db510da810d4",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\bundle-analyzable-paths.md": {
+    "mtime": 1792596006.910814,
+    "ast_hash": "62351ac5830fb55b2f77d3a4835529ac",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\bundle-barrel-imports.md": {
+    "mtime": 1792596006.910814,
+    "ast_hash": "66868890a107341db885ff644ac1be04",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\bundle-conditional.md": {
+    "mtime": 1792596006.910814,
+    "ast_hash": "d1e3c1adf9989359446cbf624bc0587d",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\bundle-defer-third-party.md": {
+    "mtime": 1792596006.9118142,
+    "ast_hash": "476bf2e75198f7c6accc17ea81f3a161",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\bundle-dynamic-imports.md": {
+    "mtime": 1792596006.9118142,
+    "ast_hash": "2ccb840f6d1c0b4ccf9714dc3fb05651",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\bundle-preload.md": {
+    "mtime": 1792596006.9118142,
+    "ast_hash": "b67a4242446249b2bafdeb6a620a2af7",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\client-event-listeners.md": {
+    "mtime": 1792596006.912814,
+    "ast_hash": "78c4562d3fa71d314c7b98d272f56045",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\client-localstorage-schema.md": {
+    "mtime": 1792596006.912814,
+    "ast_hash": "65c4468bd1d170a5f36003b23062a1e7",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\client-passive-event-listeners.md": {
+    "mtime": 1792596006.912814,
+    "ast_hash": "fbeb4ae3eb20a5bde142b50686e7a166",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\client-swr-dedup.md": {
+    "mtime": 1792596006.913814,
+    "ast_hash": "e912f4b5ee9e04bcf1b12cb86c86e192",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\js-batch-dom-css.md": {
+    "mtime": 1792596006.913814,
+    "ast_hash": "8aeccee9fc15f16f17a8a035b095a088",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\js-cache-function-results.md": {
+    "mtime": 1792596006.913814,
+    "ast_hash": "352d02de8ae05ca73448044591fedd70",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\js-cache-property-access.md": {
+    "mtime": 1792596006.9148157,
+    "ast_hash": "3fc311109878cb0564faad1c3f8992a8",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\js-cache-storage.md": {
+    "mtime": 1792596006.9148157,
+    "ast_hash": "ae2d1432a80c552513c42dac684d8663",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\js-combine-iterations.md": {
+    "mtime": 1792596006.9148157,
+    "ast_hash": "afe61f0854bf49bd52475dbaae3bac85",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\js-early-exit.md": {
+    "mtime": 1792596006.915815,
+    "ast_hash": "729d6ae7f359973121b30dcb3c8e5d9b",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\js-flatmap-filter.md": {
+    "mtime": 1792596006.915815,
+    "ast_hash": "9aa17a40be8457b4d9dbcaf7791acb23",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\js-hoist-regexp.md": {
+    "mtime": 1792596006.915815,
+    "ast_hash": "76ec43c627c68eca559e7a79a6520bbc",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\js-index-maps.md": {
+    "mtime": 1792596006.915815,
+    "ast_hash": "8462667d199be001ed6df6cc0cb5c83b",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\js-length-check-first.md": {
+    "mtime": 1792596006.9168139,
+    "ast_hash": "ded33d19a9c0d1aa4138838fd6c30402",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\js-min-max-loop.md": {
+    "mtime": 1792596006.9168139,
+    "ast_hash": "3b812151da0f973d0006fc954eeb1950",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\js-request-idle-callback.md": {
+    "mtime": 1792596006.9168139,
+    "ast_hash": "eba2c241f730a01cec317c06b53b50c2",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\js-set-map-lookups.md": {
+    "mtime": 1792596006.9178143,
+    "ast_hash": "e26c96c5383f2afef8788fc4de914e97",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\js-tosorted-immutable.md": {
+    "mtime": 1792596006.9178143,
+    "ast_hash": "55999ff61e2a85ef01e19c685fd1f0c0",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rendering-activity.md": {
+    "mtime": 1792596006.9178143,
+    "ast_hash": "3d75187b877aef28c7b4d6b5f33b2915",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rendering-animate-svg-wrapper.md": {
+    "mtime": 1792596006.918814,
+    "ast_hash": "b471e4d8054772a6c5e6a67cf5589e8c",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rendering-conditional-render.md": {
+    "mtime": 1792596006.918814,
+    "ast_hash": "c61896d12e979f353634cc6e5f1b27f0",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rendering-content-visibility.md": {
+    "mtime": 1792596006.918814,
+    "ast_hash": "20a486c49754b5fb0bf806d303118aa2",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rendering-hoist-jsx.md": {
+    "mtime": 1792596006.918814,
+    "ast_hash": "776e60b758a1e9fc755f112ae2dd6253",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rendering-hydration-no-flicker.md": {
+    "mtime": 1792596006.9198148,
+    "ast_hash": "dc8c31d3ea2156299b3da17364fc51cb",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rendering-hydration-suppress-warning.md": {
+    "mtime": 1792596006.9198148,
+    "ast_hash": "ad795d33558ef725bb5204e122e9ffbd",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rendering-resource-hints.md": {
+    "mtime": 1792596006.9198148,
+    "ast_hash": "207930cc268f9a74c3cdd79f89330d1c",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rendering-script-defer-async.md": {
+    "mtime": 1792596006.9208143,
+    "ast_hash": "bb06001577eb52b221ba79abefbfaa6d",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rendering-svg-precision.md": {
+    "mtime": 1792596006.9208143,
+    "ast_hash": "bb74883dab6f28f8f5652ca779867be0",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rendering-usetransition-loading.md": {
+    "mtime": 1792596006.9218142,
+    "ast_hash": "5d8cd195730cf58891d3878bafe64bb0",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rerender-defer-reads.md": {
+    "mtime": 1792596006.9218142,
+    "ast_hash": "75aa954f318eedc3a9ca14fed5aebcac",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rerender-dependencies.md": {
+    "mtime": 1792596006.9218142,
+    "ast_hash": "52f7b732ffe56cd965fe0843a3bb0734",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rerender-derived-state-no-effect.md": {
+    "mtime": 1792596006.9228146,
+    "ast_hash": "31ea3f116cd42a25443867bc093d3694",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rerender-derived-state.md": {
+    "mtime": 1792596006.9228146,
+    "ast_hash": "37b637d1bc1c176c0e25900d61783766",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rerender-functional-setstate.md": {
+    "mtime": 1792596006.9228146,
+    "ast_hash": "ad5f7b2581764321ef7c856530130152",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rerender-lazy-state-init.md": {
+    "mtime": 1792596006.9228146,
+    "ast_hash": "8232f3ad1c39eb66fbbd7586bba68477",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rerender-memo-with-default-value.md": {
+    "mtime": 1792596006.9238145,
+    "ast_hash": "4a9093e4588f6bddd7bde77956ba12f9",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rerender-memo.md": {
+    "mtime": 1792596006.9238145,
+    "ast_hash": "ffc8ff5758af92671ad9073316eeec96",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rerender-move-effect-to-event.md": {
+    "mtime": 1792596006.9248147,
+    "ast_hash": "0f0a135c2841f75d12197e8d7a5b1dce",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rerender-no-inline-components.md": {
+    "mtime": 1792596006.9248147,
+    "ast_hash": "e3d4873ce0a8685edb279f3ea195437d",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rerender-simple-expression-in-memo.md": {
+    "mtime": 1792596006.9248147,
+    "ast_hash": "93133bbfc9e82851d12dd10314b17239",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rerender-split-combined-hooks.md": {
+    "mtime": 1792596006.925815,
+    "ast_hash": "dd4d7c3c88422702722a10bcb150f645",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rerender-transitions.md": {
+    "mtime": 1792596006.925815,
+    "ast_hash": "a6900c7ea8278db5ebdc0dfea981da68",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rerender-use-deferred-value.md": {
+    "mtime": 1792596006.925815,
+    "ast_hash": "3e3740199ed0050be4c382e2dc38df43",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\rerender-use-ref-transient-values.md": {
+    "mtime": 1792596006.926814,
+    "ast_hash": "7518ae1a018dd77897cba1897d321f5f",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\server-after-nonblocking.md": {
+    "mtime": 1792596006.926814,
+    "ast_hash": "ef9df9991c5ac8ef7d4685219fc4f2fe",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\server-auth-actions.md": {
+    "mtime": 1792596006.926814,
+    "ast_hash": "79f807c5ceed427137d46e125b47c188",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\server-cache-lru.md": {
+    "mtime": 1792596006.927816,
+    "ast_hash": "b4bff68df5ef6067861ffd725c5de9db",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\server-cache-react.md": {
+    "mtime": 1792596006.927816,
+    "ast_hash": "07ef8edb8485881cb4d5dc679998a69b",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\server-dedup-props.md": {
+    "mtime": 1792596006.9288168,
+    "ast_hash": "01b8f05177ca9fec8af89db728dad353",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\server-hoist-static-io.md": {
+    "mtime": 1792596006.9288168,
+    "ast_hash": "1592802f3d317a216b5782ff6de2a331",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\server-no-shared-module-state.md": {
+    "mtime": 1792596006.9288168,
+    "ast_hash": "5f330a1601f30a516ab2b865ba08b45e",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\server-parallel-fetching.md": {
+    "mtime": 1792596006.9288168,
+    "ast_hash": "30af1819ffffec5afcababf49ed8e9f1",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\server-parallel-nested-fetching.md": {
+    "mtime": 1792596006.9298165,
+    "ast_hash": "406444eacc5c3e039ef8dde372924a0e",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\server-serialization.md": {
+    "mtime": 1792596006.9298165,
+    "ast_hash": "65ef936a259fe0bfcdae6e70b643cf8b",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\_sections.md": {
+    "mtime": 1792596006.906814,
+    "ast_hash": "2e0313063b1c0e4f2aa9cfde7bc73321",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\vercel-react-best-practices\\rules\\_template.md": {
+    "mtime": 1792596006.906814,
+    "ast_hash": "83904a5210a1031a1a4dfdde0f49c088",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\.agents\\skills\\web-design-guidelines\\SKILL.md": {
+    "mtime": 1792595999.369359,
+    "ast_hash": "8d96a7f6f0c5e1908bab8faf8cd2f9b4",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\docs\\design-system\\01-AUDIT.md": {
+    "mtime": 1792597518.4825764,
+    "ast_hash": "43ae8b377cf4c585df953950edae3484",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\docs\\design-system\\03-CHART-CONTRACT.md": {
+    "mtime": 1792599602.8485215,
+    "ast_hash": "bdc43d0c0f7bf5ad296bface59acbb35",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\docs\\design-system\\04-MIGRATION-LOG.md": {
+    "mtime": 1792607497.4071848,
+    "ast_hash": "7c86e7cdc7d4fa6c64b26e85736f8dc0",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\docs\\design-system\\05-VERIFICATION.md": {
+    "mtime": 1792607497.4071848,
+    "ast_hash": "a2c112f30558cbc03b006d2882d21407",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\docs\\design-system\\INVENTORY-after.md": {
+    "mtime": 1792601349.3548384,
+    "ast_hash": "58fb0f43984cef9194852606891e0600",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\docs\\design-system\\INVENTORY-baseline.md": {
+    "mtime": 1792597507.0832827,
+    "ast_hash": "2f8fe05e36774230684440b10bd202f3",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\docs\\design-system\\README.md": {
+    "mtime": 1792599637.1624064,
+    "ast_hash": "4450c790aa0d438b4b899bb4940cb25d",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\docs\\hero-page\\DESIGN-HERO.md": {
+    "mtime": 1789412536.3974307,
+    "ast_hash": "143203b5698c6c9980bebfb6f54dc71e",
     "semantic_hash": ""
   }
 }
