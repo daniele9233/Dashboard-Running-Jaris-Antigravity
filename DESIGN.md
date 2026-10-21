@@ -1,201 +1,216 @@
-# Intro Hero — Design Spec
+---
+name: METIC LAB · Elite Analytics
+description: Cruscotto scuro di analisi della corsa — numeri in mono tabulare, un solo accento lime, il colore significa una cosa sola.
+colors:
+  volt-lime: "#C0FF00"
+  ink: "#050505"
+  surface-1: "#0E0E0E"
+  surface-2: "#141414"
+  surface-3: "#1A1A1A"
+  hairline: "#1E1E1E"
+  hairline-strong: "#2A2A2A"
+  text-primary: "#FFFFFF"
+  text-muted: "#A0A0A0"
+  text-axis: "#8A8A8A"
+  text-faint: "#666666"
+  aerobic-cyan: "#22D3EE"
+  structure-violet: "#A78BFA"
+  threshold-amber: "#F59E0B"
+  risk-rose: "#F43F5E"
+  recovery-green: "#22C55E"
+  projection-indigo: "#818CF8"
+typography:
+  kpi:
+    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+    fontSize: "32px"
+    fontWeight: 700
+    lineHeight: "36px"
+    letterSpacing: "-0.02em"
+    fontFeature: "tnum"
+  title:
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "18px"
+    fontWeight: 700
+    lineHeight: "24px"
+    letterSpacing: "-0.01em"
+  body:
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "14px"
+    fontWeight: 400
+    lineHeight: "20px"
+  label:
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "12px"
+    fontWeight: 600
+    lineHeight: "16px"
+    letterSpacing: "0.06em"
+  axis:
+    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+    fontSize: "12px"
+    fontWeight: 400
+    lineHeight: "16px"
+    fontFeature: "tnum"
+rounded:
+  control: "8px"
+  tile: "12px"
+  card: "16px"
+spacing:
+  xs: "4px"
+  sm: "8px"
+  md: "12px"
+  lg: "16px"
+  card: "20px"
+  xl: "24px"
+  xxl: "32px"
+components:
+  chart-card:
+    backgroundColor: "{colors.surface-1}"
+    textColor: "{colors.text-primary}"
+    rounded: "{rounded.card}"
+    padding: "20px"
+  kpi-tile:
+    backgroundColor: "{colors.surface-2}"
+    textColor: "{colors.text-primary}"
+    rounded: "{rounded.tile}"
+    padding: "12px 16px"
+  range-selector-active:
+    backgroundColor: "{colors.volt-lime}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.control}"
+    padding: "4px 12px"
+  tooltip:
+    backgroundColor: "{colors.surface-2}"
+    textColor: "{colors.text-primary}"
+    rounded: "{rounded.tile}"
+    padding: "10px 14px"
+---
 
-The full-screen running hero that opens before METIC LAB. Lives in `src/components/hero/`.
+# Design System: METIC LAB · Elite Analytics
 
-## 1. Reference analysis — tigranz.com (art direction only, nothing reused)
+## Overview
 
-Captured with Playwright (Edge) at 1440×900, 1920×1080, 390×844, plus entrance
-frames at 0.3 / 0.8 / 1.4 / 2.2 / 3.2 / 5 s and hover states.
+**Creative North Star: "The Instrument Panel"**
 
-| Aspect | Observation |
-|---|---|
-| Build | Framer site. Hero wordmark, logo and nav labels are Rive canvases, not DOM text. |
-| Composition | One centred lock-up (~1040×560 at 1440w). Two words: a top word where every letter is a different object/material, a bottom word in a single wide grotesk that tucks under it (overlap ~15px). Everything else is empty dark space. |
-| Viewport | Stage 777px + ticker 88px = 865px at 900 tall: ~96vh, the next section peeks. Fixed nav 72px. |
-| Background | Flat `rgb(9,10,12)`. No visible noise, no glow. Contrast comes from saturated letters, not the ground. |
-| Type | Display: Neue Regrade (wide grotesk, geometric "ı" without a dot). Nav: lowercase ~20px. Scale gap is enormous — 200px display vs 20px UI, nothing in between. |
-| Colour | Red, violet, yellow, pink, lime — each confined to exactly one letter. Off-white for the second word and all UI. |
-| Entrance | Ticker is present first (~0.8s), nav at ~2s, then letters appear one by one, left→right, each ~150ms apart with scale/rotate overshoot (the O spins in as a small rotated square and grows). The bottom word comes last. Total ≈ 4s — sequential, slow, deliberate. |
-| Idle | Letters keep micro-animating (character blinks, squiggle breathes). |
-| Hover | Hovering the lock-up flips it into a "design tool" wireframe state: letters become outlines, bottom word gets a selection box with handles and a pointer. Nav: hovered label swaps a letter for a sparkle glyph and turns violet. |
-| Cursor | No parallax detected; interaction is state-swap, not physics. |
-| Ticker | Full-bleed, hairline top border, 88px tall. Translates ~60 px/s linearly. Items restyle themselves over time (plain → logo → script), separators are 4-point stars. |
-| Scroll | Native scroll, ticker scrolls away with the hero; a sticky-feeling nav stays. Next block is a showreel with a cursor-follow "play" label. |
-| Mobile | Not 100vh. Lock-up shrinks to full width (~315px tall block), nav collapses into three diamonds, ticker sits directly below. |
+Un cruscotto di strumentazione scientifica, non una dashboard da template. Ogni grafico è uno strumento di misura: si legge, non si ammira. I numeri stanno in monospazio tabulare così le cifre non ballano sotto il cursore; il nero è stratificato in livelli tonali piatti (nessun vetro, nessun alone); il lime è l'unica voce di marca e indica la metrica primaria. Tutto il resto del colore ha un significato fisso: lo stesso concetto ha lo stesso colore in ogni rotta.
 
-**What makes it work:** one idea (letters as characters), colour concentrated per
-glyph, a huge scale gap between display and UI, long patient timing, and an
-interaction that reveals *process* rather than adding decoration.
+La densità è alta ma calma. Un atleta evoluto deve poter confrontare Carico & Forma con Biomeccanica passando da una scheda all'altra e riconoscere subito la stessa mano: stessa card, stessa testata, stessi assi, stessa legenda, stesso tooltip. I grafici hanno forme diverse (serie temporale, barre, dispersione, radar) ma la stessa identità.
 
-## 2. Our concept — "The line, read like a run"
+**Key Characteristics:**
+- Un solo accento di marca (lime) e una palette semantica chiusa: il colore indica il ruolo della metrica, mai il capriccio del file.
+- Superfici piatte e tonali; profondità data dal livello di nero e da un filo di bordo, non da blur o gradienti decorativi.
+- Cifre sempre in JetBrains Mono con `tabular-nums`; testo informativo mai sotto i 12 px.
+- Misurato, derivato e previsto si distinguono sempre per tratto (continuo, continuo sottile con area, tratteggiato), mai per solo colore.
+- Nessuna decorazione che non serva alla lettura: niente glow, niente gradienti su testo, niente card dentro card.
 
-The hero is a running quote, set as a typographic poster:
+## Colors
 
-> non sono nemmeno vicino a dove voglio essere,
-> ma sono lontano da dove ho iniziato
-> e questo mi basta per farmi andare avanti.
+Nero stratificato più un accento chirurgico; sei colori di metrica con significato fisso.
 
-Three words carry it — **VICINO / LONTANO / AVANTI** — set huge; the words that
-join them are set small, in reading order, zig-zagging left and right like a
-line on a track. The one memorable interaction is still **the lime loupe**: it
-follows the cursor and X-rays the poster the way METIC LAB reads a run —
-outlines, construction lines, and a readout that turns position into a race
-(x = km of the goal race, y = pace per km). Entering means going *through* it:
-the lens fills the screen, "Pronti · partenza · VIA!" fires, the stage slides up.
+### Primary
+- **Volt Lime** (#C0FF00): marchio e metrica primaria (valore attuale, selezione, serie principale). Contrasto 16:1 su `surface-1`. Va usato per l'informazione che conta di più nella schermata, non per riempire.
 
-Original on purpose: no mascots, no material-per-letter, no hover state-swap.
+### Secondary (metriche)
+- **Aerobic Cyan** (#22D3EE): confronto, seconda serie, lavoro aerobico, zona 1.
+- **Threshold Amber** (#F59E0B): carico, soglia, attenzione, zona 4.
+- **Risk Rose** (#F43F5E): rischio, fatica, deriva, frequenza cardiaca, zona 5.
+- **Recovery Green** (#22C55E): recupero, progresso positivo, forma fresca, obiettivo raggiunto.
+- **Structure Violet** (#A78BFA): biomeccanica e struttura (cadenza, contatto al suolo), terza serie categorica.
+- **Projection Indigo** (#818CF8): dato modellato o scenario ipotetico; sempre tratteggiato. È il tono 400 di indigo, scelto perché il tono 500 non raggiunge 4.5:1 come testo.
 
-### Words and objects (editable in `heroContent.ts`)
+### Neutral
+- **Ink** (#050505): fondo dell'app.
+- **Surface 1** (#0E0E0E): card di grafico e di sezione.
+- **Surface 2** (#141414): tile KPI, tooltip, controlli segmentati: un livello sopra la card.
+- **Surface 3** (#1A1A1A): hover e popover: due livelli sopra la card.
+- **Hairline** (#1E1E1E) e **Hairline Strong** (#2A2A2A): bordi, griglia, cursore.
+- **Text Primary** (#FFFFFF, 19:1), **Text Muted** (#A0A0A0, 7.4:1), **Text Axis** (#8A8A8A, 5.6:1), **Text Faint** (#666666, 3.4:1: solo decorativo, mai informativo).
 
-```
-VICINO    solid · wide · the O is a stopwatch (crown, orange start button,
-          lime hand sweeping, the goal time on the dial)
-LONTANO   outlined · condensed · stretched up · the O is a 400 m track seen
-          from above, lanes dashed, a lime runner lapping lane two
-AVANTI    solid · wide · the i carries the lime orb, which drops in and squashes
-bib       yellow race bib pinned to LONTANO, the goal distance on it
-route     Km 0 ●━━━━━◉ sei qui ┄┄┄○ goal time — the quote as an infographic
-```
+### Named Rules
+**The One Meaning Rule.** Un colore, un significato, in tutte le rotte. Il lime non è mai "positivo", il verde non è mai "serie primaria". Un'eccezione si documenta nel file in cui nasce.
 
-Goal race and time come from `KIKKO_SUB20_META` (the training plan), so the
-dial, bib, route and ticker never promise a stale target.
+**The Not-Color-Alone Rule.** Rischio, miglioramento e peggioramento si leggono anche senza colore: segno (+/−), icona o etichetta di testo, e per più di tre serie anche tratteggio e marcatore.
 
-### Layout — desktop
+**The Zone Ramp Rule.** Le zone di intensità Z1→Z5 usano una rampa propria (cyan → verde → lime → ambra → rosa-rosso) e non si mescolano con i colori di metrica.
 
-- Nav (88px): stopwatch monogram + "Metic Lab / Running Lab" · four routes into
-  the app (Dashboard, Allenamento, Runner DNA, Race Lab) · a race clock started
-  when the page opened.
-- Grid of 25cqw + 1fr:
-  `(kicker) non sono nemmeno` ← `VICINO` (right) · `a dove voglio essere,` (right) ·
-  `ma sono` + ENTER disc ← `LONTANO` (right, bib on its end) ·
-  `da dove ho iniziato e questo mi basta per farmi andare` (right) ·
-  `AVANTI` (left) → route (right).
-- Ticker (72px): Metic Lab · un chilometro alla volta · Obiettivo 5K · passo ·
-  cuore · testa · Km 0 → ∞ · sempre avanti · Roma · Corri. Misura. Ripeti.
+## Typography
 
-### Layout — phone & portrait tablet (poster, not scaled)
+**UI Font:** Inter (con system-ui)
+**Data Font:** JetBrains Mono (con ui-monospace)
 
-- Kicker + `non sono nemmeno`, then `VICINO` full width (wdth 75).
-- `LONTANO` becomes a spine down the right edge, read top to bottom; the bib is
-  pinned across its foot.
-- Left of the spine, in order: `a dove voglio essere,` · `ma sono` · ENTER disc ·
-  `da dove ho iniziato e questo mi basta per farmi andare` · route.
-- `AVANTI` full width at the bottom. Loupe autopilots; a tap moves it.
+**Character:** Inter porta titoli, descrizioni e controlli; JetBrains Mono porta ogni numero, asse e unità. Il contrasto fra le due famiglie dice "questo è testo / questa è misura".
 
-### Palette
+### Hierarchy
+- **KPI** (mono 700, 32 px, 36 lh, -0.02em, tabular): il valore principale di un indicatore. Variante grande 40 px per il KPI di sezione, piccola 24 px per i tile affiancati.
+- **Title** (Inter 700, 18 px, 24 lh): titolo di card. Mai in corsivo, mai in nero 900, mai in maiuscolo.
+- **Body** (Inter 400, 14 px, 20 lh): descrizioni, note, interpretazioni.
+- **Label** (Inter 600, 12 px, 16 lh, 0.06em, maiuscolo): etichette di KPI e di gruppo.
+- **Axis / Caption** (mono 400, 12 px, 16 lh, tabular): tick degli assi, legende, unità, note del grafico.
 
-| Token | Value | Use |
-|---|---|---|
-| `--h-ink` | `#080908` | ground |
-| `--h-paper` | `#F1EFE6` | type, UI |
-| `--h-lime` | `#C0FF00` | orb, stopwatch hand, runner, "sei qui", loupe, ENTER, portal |
-| `--h-violet` | `#7C5CFF` | distance already run on the route |
-| `--h-orange` | `#FF5B1F` | stopwatch start button |
-| `--h-yellow` | `#FFD23F` | race bib |
+### Named Rules
+**The Twelve Floor Rule.** Nessun testo informativo sotto 12 px. Gli 8, 9, 10 e 11 px che oggi popolano assi e etichette non hanno posto nel sistema.
 
-Background: `#080908` + static SVG grain + a lime radial glow low-left + a violet
-one top-right. No blur filters.
+**The Tabular Rule.** Ogni numero che cambia (KPI, tick, tooltip, delta) usa `font-variant-numeric: tabular-nums`.
 
-### Typography
+## Layout
 
-- Display: **Archivo** variable (wdth 62–125, wght 100–900). Wide black for
-  VICINO/AVANTI, condensed outline for LONTANO.
-- Connective words: **Instrument Serif** italic, clamp(15px, 2.35cqw, 40px).
-- Micro UI: **JetBrains Mono** (the app's mono), 9–11px, tracked out.
+Griglia a 4 px con ritmo a 8: 4 micro, 8 minimo, 12 compatto, 16 standard, 20 padding di card, 24 fra blocchi interni e fra card, 32 separazione maggiore. Una card di grafico ha sempre la stessa struttura verticale: testata, KPI opzionali, area del grafico, legenda, nota interpretativa; fra i blocchi 16 px.
 
-## 3. Motion
+L'area del grafico ha classi di altezza per famiglia, non altezze fisse globali: compact 160, standard 240, tall 320, hero 360 (ridotte di circa 15% sotto i 768 px). I grafici non si comprimono sotto 240 px di larghezza utile: su telefono le card di grafico passano a colonna singola e le legende vanno a capo.
 
-Custom eases (GSAP CustomEase):
+Responsive strutturale: da 4 colonne a 2 a 1; la barra delle schede di sezione scorre in orizzontale con frecce; nessuno scroll orizzontale di pagina.
 
-- `hero.out` — `M0,0 C0.12,0.9 0.2,1 1,1` (long decisive settle)
-- `hero.pop` — `M0,0 C0.3,1.6 0.55,1 1,1` (overshoot for objects)
-- `hero.inOut` — `M0,0 C0.7,0 0.2,1 1,1` (exit)
+## Elevation & Depth
 
-Entrance — one timeline that reads the sentence (≈ 3.6s):
+Piatto per scelta. La profondità è tonale: ink → surface-1 → surface-2 → surface-3, separati da un filo di bordo da 1 px. Nessun `backdrop-filter`, nessun gradiente bianco→nero sulle card, nessun alone colorato a offset zero. Un'ombra compare solo sugli overlay che si staccano dalla pagina (tooltip, popover) e ha offset e sfocatura reali.
 
-| t (s) | Beat |
-|---|---|
-| 0.00 | grain + glows |
-| 0.10 | kicker, "non sono nemmeno" |
-| 0.25 | VICINO letters rise, rotate ±13° → 0; stopwatch pops, its hand spins two turns and lands |
-| 0.80 | "a dove voglio essere," · 0.98 "ma sono" |
-| 1.05 | LONTANO letters grow up from the baseline |
-| 1.50 | "da dove ho iniziato e questo mi basta per farmi andare" |
-| 1.62 | AVANTI letters rise |
-| 1.70 | bib drops and swings · runner appears on the track · orb falls onto the i and squashes · route draws |
-| 2.35 | ticker, nav, ENTER, loupe, hint — interface last |
+### Shadow Vocabulary
+- **Overlay** (`box-shadow: 0 8px 24px rgba(0,0,0,0.5)`): tooltip e popover.
 
-Idle: stopwatch hand 9s per turn, runner laps in 6.5s (MotionPath, counter-clockwise
-from the finish line), bib sways, orb bobs, glows drift, ENTER ring turns.
-Pointer: parallax on three depths, letters within 240px lean in (scaleY ≤ 1.11,
-skew ≤ 7°), the loupe's bezel turns with pointer velocity.
+### Named Rules
+**The Flat-By-Default Rule.** A riposo le superfici sono piatte. Lo stato (hover, focus, selezione) si comunica con bordo e colore, non con luce.
 
-Exit (scrubbed by Lenis, or played by ENTER / ↵, ≈ 1.9s): small words slide out,
-letters disperse by row, bib flies off → loupe centres and covers → lime →
-"Pronti · partenza / VIA!" → the stage slides up off the dashboard.
+## Shapes
 
-Reduced motion: no stagger/parallax/idle/loupe tracking; fades only; runner parked
-on the finish line; ticker static.
+Tre raggi soltanto: 16 px per le card, 12 px per tile e tooltip, 8 px per controlli e chip; le pillole completamente tonde sono riservate ai badge di stato. Le barre dei grafici hanno raggio superiore 4 px. Linee: tratto 2.5 px per la serie misurata, 2 px per la derivata, 1.5 px per i riferimenti; terminali arrotondati. Nessun bordo colorato spesso su un solo lato.
 
-## 4. Implementation notes
+## Components
 
-- Stack: the site is a Vite + React 19 SPA, so the hero lives inside it (not a
-  separate Next.js app): TypeScript, Tailwind 4, GSAP 3.15 (+ CustomEase, MotionPath), Motion
-  (magnetic springs), Lenis (scroll-scrubbed exit on the hero's own scroller).
-- `IntroGate` (in `main.tsx`) renders the hero over the app. `App` is a lazy
-  chunk, requested only when the entrance ends; until the hero leaves, the app
-  wrapper is `inert`. Skips: `?strava_code` (OAuth return), `?intro=0`.
-- Inputs: scroll/swipe scrubs the exit (released past 30% it completes, below it
-  springs back) · ENTER disc or ↵ plays it · nav items enter at a route · Esc skips.
-- Quote cut, words, ticker, nav routes, portal: `src/components/hero/heroContent.ts`.
+### Chart Card
+- **Corner Style:** 16 px
+- **Background:** surface-1, bordo 1 px hairline
+- **Internal Padding:** 20 px (16 px sotto 768 px)
+- **Struttura:** testata (titolo, descrizione opzionale, azioni, selettore di intervallo) → KPI → plot → legenda → nota. Mai una card dentro la card: i KPI sono tile surface-2 senza bordo proprio ridondante.
 
-| File | Role |
-|---|---|
-| `IntroGate.tsx` | when to show, mounts app underneath |
-| `IntroHero.tsx` | choreography, Lenis, the single ticker loop (parallax, loupe, letter lean) |
-| `HeroArtwork.tsx` | ground + solid specimen + loupe with X-ray twin |
-| `AnimatedWordmark.tsx` | the quote lock-up, rendered twice with identical markup |
-| `HeroGlyphs.tsx` | orb-i, stopwatch-O, track-O, bib, spark, marks, monogram |
-| `CursorLens.tsx` · `Marquee.tsx` · `HeroNav.tsx` · `EnterDisc.tsx` · `Magnetic.tsx` | UI pieces |
+### KPI Tile
+- **Style:** surface-2, raggio 12 px, padding 12×16, valore in mono tabulare, etichetta label sotto, delta con segno e colore.
+- **State:** selezionabile (filtra le serie) con bordo del colore della serie.
 
-## 5. Refinement log
+### Range Selector
+- **Style:** controllo segmentato surface-2 raggio 8 px; voce attiva lime con testo ink.
+- **Focus:** anello lime 2 px con offset 2 px.
 
-1. **Pass 1** — CREATIVE's outline crossed DANIELE's white letters → row 1 now
-   sits above row 2, so CREATIVE tucks *behind*. Loupe's drop shadow smudged the
-   white Δ → replaced by a 3px ink ring. Ring text was stretched letter-by-letter
-   → larger mono, longer copy. Caption swash touched the L → caption raised.
-   Hairline seam between B stem and bowls → bowls overlap the stem by 0.01em.
-   Ticker outline items were muddy at 30px → light condensed, dimmed.
-2. **Pass 2** — Loupe resting on Δ hid the orange ball → rests on CREATIVE.
-   Bowl sway read as misalignment in stills → ±1.5°. Phone: readout clipped at
-   the edge → hidden; spine pulled inside the gutter. Tap-to-move compared two
-   different clocks → fixed.
-3. **Pass 3** — Exit felt empty mid-way → lime portal with "Entering / Metic Lab"
-   before the curtain. Loupe bezel now turns with pointer velocity. Over controls
-   the loupe shrinks to a ring with `difference` blending (it vanished on lime).
-   The X-ray twin's CTA slot was catching clicks above the real button → every
-   node in the loupe is `pointer-events: none`.
-4. **Pass 4** — Clicking ENTER while hovering it left the loupe in hover state, so
-   the lime fill never showed → hover is cleared the moment the exit commits.
-   Portrait tablets got the desktop layout with a huge empty band → they use the
-   poster composition. Nav labels wrapped at 768 → `nowrap`. ENTER disc aligned to
-   LAB's baseline (it grazed CREATIVE at 1366×660).
+### Tooltip
+- **Style:** surface-2, bordo hairline-strong, raggio 12 px, ombra overlay. Titolo (contesto: data, km) in label, righe con pallino del colore della serie, nome a sinistra, valore mono tabulare a destra.
 
-5. **Running version** — the lock-up became the quote. Measured every word
-   first (VICINO 4.68em wide, LONTANO 3.49em condensed, AVANTI 4.99em wide) and
-   built the zig-zag grid from those numbers. Fixes after the first render:
-   the ENTER disc overlapped "ma sono" at 1366×660 → it spans two grid rows;
-   the bib touched "a dove voglio essere," → pinned lower; the loupe's readout
-   covered a phrase at rest → rest point raised; letters left with a residual
-   `scaleY(1.0004)` looked soft → the transform is removed once they settle.
+### Legend
+- **Style:** riga di voci, ciascuna con campione che riproduce il tratto della serie (linea, tratteggio, quadrato per barre, punto per dispersione) e nome in 12 px.
 
-Measured (Playwright, Edge headless, 1440×900): idle worst frame 7.2 ms. Initial
-JS chunk 315 kB (gzip 106 kB) with `App` lazy, vs 648 kB before the hero.
-The build's >600 kB warning is `vendor-mapbox` (2.9 MB, pre-existing, lazy).
+### Empty / Loading / Error
+- Stesso rettangolo del plot; testo a una riga che dice cosa manca e come recuperare; skeleton a tono surface-2 durante il caricamento.
 
-## 6. Performance rules
+## Do's and Don'ts
 
-- Only `transform` and `opacity` animate. Loupe uses translate + counter-translate, no clip-path.
-- Pointer moves write to a plain object; one `gsap.ticker` callback applies transforms. No React state per frame.
-- Dashboard mounts after the entrance ends (or on exit start), so its data/render work never competes with the choreography.
-- Fonts awaited (max 1.2s) before the timeline starts, so glyph sizes don't jump.
+### Do:
+- **Do** usare i token (`--ea-*` in CSS, `chartTheme` in TypeScript) per ogni colore, misura e tratto di un grafico.
+- **Do** tenere ogni numero in JetBrains Mono tabulare e ogni tick a 12 px o più.
+- **Do** distinguere misurato (continuo), derivato (continuo con area), previsto (tratteggio `6 4`), scenario (puntinato `2 4`).
+- **Do** mostrare l'intervallo di incertezza solo quando il dato lo fornisce.
+- **Do** lasciare i domini, le unità, le scale e la direzione degli assi (passo in min/km invertito) esattamente come li impone il dato.
+
+### Don't:
+- **Don't** usare vetro, blur, gradienti bianco→nero o aloni colorati come decorazione di card.
+- **Don't** annidare card dentro card.
+- **Don't** usare il colore come unico segnale di rischio o miglioramento.
+- **Don't** introdurre un tooltip, una legenda o un selettore di intervallo locale per differenze solo estetiche.
+- **Don't** scrivere un esadecimale in un componente di grafico: ogni colore passa dal tema.
+- **Don't** usare titoli in corsivo nero maiuscolo o etichette sopra il titolo ("kicker") come grammatica di card.

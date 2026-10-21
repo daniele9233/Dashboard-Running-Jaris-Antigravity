@@ -1,0 +1,208 @@
+{
+  "src/components/ActivitiesView.tsx": {
+    "glass": 5,
+    "italic-title": 1
+  },
+  "src/components/AdaptationPanel.tsx": {
+    "glass": 2
+  },
+  "src/components/AnaerobicThreshold.tsx": {
+    "hex": 6
+  },
+  "src/components/BadgesView.tsx": {
+    "italic-title": 1
+  },
+  "src/components/charts/ChartTooltip.tsx": {
+    "local-tooltip-style": 1
+  },
+  "src/components/dashboard/widgets/FitnessChart.tsx": {
+    "hex": 1
+  },
+  "src/components/dashboard/widgets/WeatherNormalizerWidget.tsx": {
+    "hex": 1
+  },
+  "src/components/dashboard/widgets/WeeklyKmChart.tsx": {
+    "hex": 5
+  },
+  "src/components/DashboardView.tsx": {
+    "hex": 7
+  },
+  "src/components/DetrainingWidget.tsx": {
+    "hex": 4
+  },
+  "src/components/FitnessFreshness.tsx": {
+    "hex": 12
+  },
+  "src/components/gamification/AthleteEvolutionFramework.tsx": {
+    "hex": 28,
+    "glass": 1,
+    "italic-title": 1
+  },
+  "src/components/gamification/GamificationV1.tsx": {
+    "glass": 4,
+    "italic-title": 2
+  },
+  "src/components/gamification/GoalCone.tsx": {
+    "hex": 5,
+    "glass": 1
+  },
+  "src/components/gamification/PhysioVerdict.tsx": {
+    "tiny-text": 1
+  },
+  "src/components/gamification/WorldConquest.tsx": {
+    "tiny-text": 3,
+    "glass": 3,
+    "italic-title": 1
+  },
+  "src/components/JarvisOverlay.tsx": {
+    "tiny-text": 6
+  },
+  "src/components/LastRunMap.tsx": {
+    "tiny-text": 7,
+    "glass": 2
+  },
+  "src/components/LiveTelemetry3DMap.tsx": {
+    "tiny-text": 17,
+    "glass": 2,
+    "italic-title": 1
+  },
+  "src/components/MainChart.tsx": {
+    "hex": 5
+  },
+  "src/components/MapFallback.tsx": {
+    "tiny-text": 1
+  },
+  "src/components/pacelab/FastStartSection.tsx": {
+    "hex": 7
+  },
+  "src/components/pacelab/ListinoSection.tsx": {
+    "hex": 11,
+    "tiny-text": 1
+  },
+  "src/components/pacelab/PaceLabView.tsx": {
+    "glass": 2,
+    "italic-title": 1
+  },
+  "src/components/pacelab/PaceProChart.tsx": {
+    "hex": 6
+  },
+  "src/components/pacelab/ui.tsx": {
+    "hex": 1
+  },
+  "src/components/ProfileView.tsx": {
+    "glass": 12
+  },
+  "src/components/racelab/GoalTrajectory.tsx": {
+    "hex": 27
+  },
+  "src/components/racelab/RaceLabView.tsx": {
+    "hex": 26,
+    "italic-title": 1
+  },
+  "src/components/RacePredictions.tsx": {
+    "hex": 2
+  },
+  "src/components/RankingView.tsx": {
+    "hex": 39
+  },
+  "src/components/RecentActivities.tsx": {
+    "glass": 1
+  },
+  "src/components/RoutesView.tsx": {
+    "hex": 61,
+    "tiny-text": 60,
+    "glass": 6,
+    "italic-title": 2
+  },
+  "src/components/runner-dna/RunnerDnaLoading.tsx": {
+    "tiny-text": 1
+  },
+  "src/components/RunnerDnaView.tsx": {
+    "hex": 54,
+    "glass": 1,
+    "italic-title": 1
+  },
+  "src/components/SettingsControls.tsx": {
+    "tiny-text": 1
+  },
+  "src/components/Sidebar.tsx": {
+    "tiny-text": 3,
+    "glass": 2
+  },
+  "src/components/statistics/AnalyticsV2.tsx": {
+    "hex": 9
+  },
+  "src/components/statistics/AnalyticsV3.tsx": {
+    "hex": 12
+  },
+  "src/components/statistics/AnalyticsV4.tsx": {
+    "hex": 6
+  },
+  "src/components/statistics/AnalyticsV5.tsx": {
+    "hex": 9
+  },
+  "src/components/statistics/AthletePotentialVector.tsx": {
+    "hex": 3
+  },
+  "src/components/statistics/BiologyFutureLab.tsx": {
+    "hex": 6
+  },
+  "src/components/statistics/BiologyFutureV2.tsx": {
+    "hex": 7
+  },
+  "src/components/statistics/ChartFullscreenModal.tsx": {
+    "glass": 1
+  },
+  "src/components/statistics/EnvironmentalNormalizerView.tsx": {
+    "hex": 21
+  },
+  "src/components/statistics/FastBiomechanics.tsx": {
+    "hex": 4
+  },
+  "src/components/statistics/PaceCalculator.tsx": {
+    "hex": 6
+  },
+  "src/components/statistics/PotentialProgressV3.tsx": {
+    "hex": 2
+  },
+  "src/components/statistics/PotenzialProgressiV2.tsx": {
+    "hex": 9,
+    "tiny-text": 2
+  },
+  "src/components/statistics/StatisticsView.tsx": {
+    "hex": 18
+  },
+  "src/components/statistics/StatsCalc.tsx": {
+    "hex": 52,
+    "tiny-text": 3,
+    "glass": 9,
+    "local-tooltip-style": 1
+  },
+  "src/components/statistics/StatsDrift.tsx": {
+    "hex": 15
+  },
+  "src/components/statistics/StatsProgress.tsx": {
+    "hex": 60,
+    "tiny-text": 9,
+    "glass": 6,
+    "local-tooltip-style": 4
+  },
+  "src/components/SupercompensationChart.tsx": {
+    "hex": 13
+  },
+  "src/components/TopStats.tsx": {
+    "hex": 8
+  },
+  "src/components/TrainingSidebar.tsx": {
+    "hex": 8
+  },
+  "src/components/TrainingView.tsx": {
+    "glass": 1
+  },
+  "src/components/VO2MaxChart.tsx": {
+    "hex": 10
+  },
+  "src/components/WeeklyStatsPanel.tsx": {
+    "hex": 4
+  }
+}

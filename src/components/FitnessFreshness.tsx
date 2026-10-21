@@ -1,22 +1,11 @@
 import { useMemo, useState, useRef } from "react";
 import { Activity, RefreshCw, Info } from "lucide-react";
-import {
-  AreaChart,
-  Area,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-  ReferenceArea,
-} from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import type { FitnessFreshnessPoint, CurrentFF } from "../types/api";
 import { recalculateFitnessFreshness } from "../api";
 import { ChartExpandButton, ChartFullscreenModal } from "./statistics/ChartFullscreenModal";
 
+import { CHART_SERIES, chartGrid, chartXAxis, chartYAxis } from "./charts";
 interface FitnessFreshnessProps {
   fitnessFreshness: FitnessFreshnessPoint[];
   currentFf: CurrentFF | null;
@@ -63,7 +52,7 @@ const FFTooltip = ({ active, payload, label }: any) => {
   const tsbColor = tsb !== null ? tsbStatusColor(tsb) : CLR_TSB;
 
   return (
-    <div className="bg-[#0F172A] border border-[#334155] px-3 py-2 rounded-xl shadow-xl text-xs">
+    <div className="ea-tooltip text-xs">
       <p className="text-[#94A3B8] font-semibold mb-1.5 capitalize">{dateStr}</p>
       <div className="flex gap-3 flex-wrap">
         {ctl !== null && (
@@ -97,17 +86,17 @@ function InfoTooltip({ title, lines }: { title: string; lines: string[] }) {
         onMouseLeave={() => setOpen(false)}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
-        className="text-[#555] hover:text-[#A0A0A0] transition-colors focus:outline-none"
+        className="text-ea-text-axis hover:text-ea-text-muted transition-colors focus:outline-none"
       >
         <Info size={13} />
       </button>
       {open && (
-        <div className="absolute z-50 bottom-full right-0 mb-2 w-64 bg-[#111] border border-white/10 rounded-2xl p-4 shadow-2xl pointer-events-none">
-          <div className="text-[#C0FF00] text-[10px] font-black tracking-widest mb-2">{title}</div>
+        <div className="absolute z-50 bottom-full right-0 mb-2 w-64 bg-ea-surface-1 border border-ea-hairline rounded-2xl p-4 shadow-2xl pointer-events-none">
+          <div className="text-ea-lime text-xs font-black tracking-widest mb-2">{title}</div>
           <ul className="space-y-1.5">
             {lines.map((l, i) => (
-              <li key={i} className="text-[#A0A0A0] text-[10px] leading-relaxed flex gap-1.5">
-                <span className="text-[#555] shrink-0">-</span>
+              <li key={i} className="text-ea-text-muted text-xs leading-relaxed flex gap-1.5">
+                <span className="text-ea-text-axis shrink-0">-</span>
                 {l}
               </li>
             ))}
@@ -190,14 +179,14 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
       </div>
       <div className="flex items-center gap-1.5">
         <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-        <span className="text-[9px] font-bold uppercase tracking-widest leading-tight" style={{ color }}>
+        <span className="text-xs font-bold uppercase tracking-widest leading-tight" style={{ color }}>
           {label}
         </span>
       </div>
       {trend !== null && trend !== undefined && trend !== 0 && (
         <div
           className="text-xs font-bold"
-          style={{ color: (trendInverted ? trend < 0 : trend >= 0) ? "#22c55e" : "#ef4444" }}
+          style={{ color: (trendInverted ? trend < 0 : trend >= 0) ? CHART_SERIES.positive : CHART_SERIES.risk }}
         >
           {trend >= 0 ? "+" : ""}{trend}
         </div>
@@ -205,7 +194,7 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
       {/* Status badge per TSB */}
       {showSign && (
         <div
-          className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md self-start"
+          className="text-xs font-black uppercase tracking-widest px-2 py-0.5 rounded-md self-start"
           style={{ color, backgroundColor: color + "18" }}
         >
           {statusLabel}
@@ -233,25 +222,9 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
               <stop offset="100%" stopColor={CLR_TSB} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="2 6" vertical={false} stroke="rgba(192,255,0,0.08)" />
-          <XAxis
-            dataKey="date"
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: "#475569", fontSize: isExpanded ? 12 : 9 }}
-            dy={6}
-            ticks={monthTicks}
-            tickFormatter={tickFormatter}
-            interval={0}
-          />
-          <YAxis
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: "#475569", fontSize: isExpanded ? 12 : 9 }}
-            dx={-4}
-            width={isExpanded ? 40 : 28}
-            ticks={[0, 20, 40, 60, 80]}
-          />
+          <CartesianGrid {...chartGrid} />
+          <XAxis {...chartXAxis} dataKey="date" dy={6} ticks={monthTicks} tickFormatter={tickFormatter} interval={0} />
+          <YAxis {...chartYAxis} dx={-4} width={isExpanded ? 40 : 28} ticks={[0, 20, 40, 60, 80]} />
           <ReferenceLine y={0} stroke="rgba(192,255,0,0.24)" strokeDasharray="4 3" strokeWidth={1} />
           <Tooltip
             content={<FFTooltip />}
@@ -284,7 +257,7 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
             type="monotone"
             dataKey="tsb"
             name="Forma fisica"
-            stroke="#F59E0B"
+            stroke={CHART_SERIES.load}
             strokeWidth={2}
             fillOpacity={1}
             fill={`url(#ff-tsb-grad${suffix})`}
@@ -298,8 +271,7 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 group"
-      style={{ borderLeft: `3px solid ${CLR_TSB}` }}
+      className="relative overflow-hidden rounded-xl border border-ea-hairline bg-ea-surface-2 p-6 group"
     >
       {/* â”€â”€ Header â”€â”€ */}
       <div className="flex items-center justify-between mb-5">
@@ -316,7 +288,7 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
           <button
             onClick={handleRecalculate}
             disabled={recalcLoading}
-            className="flex items-center gap-1.5 text-[10px] font-bold text-text-muted hover:text-white border border-white/10 hover:border-white/30 rounded-lg px-3 py-1.5 transition-all disabled:opacity-50"
+            className="flex items-center gap-1.5 text-xs font-bold text-text-muted hover:text-white border border-ea-hairline hover:border-white/30 rounded-lg px-3 py-1.5 transition-all disabled:opacity-50"
           >
             <RefreshCw className={`w-3 h-3 ${recalcLoading ? "animate-spin" : ""}`} />
             Ricalcola
@@ -365,11 +337,11 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
           </div>
 
           {/* â”€â”€ Legenda â”€â”€ */}
-          <div className="flex gap-5 mt-3 mb-4 text-[9px] font-semibold tracking-wider">
+          <div className="flex gap-5 mt-3 mb-4 text-xs font-semibold tracking-wider">
             {[
               { label: "Condizione fisica", color: CLR_CTL, width: 2.5 },
               { label: "Affaticamento",     color: CLR_ATL, width: 1.5 },
-              { label: "Forma fisica",      color: "#F59E0B", width: 2 },
+              { label: "Forma fisica",      color: CHART_SERIES.load, width: 2 },
             ].map(({ label, color, width }) => (
               <div key={label} className="flex items-center gap-1.5">
                 <div className="w-5 rounded-full" style={{ height: width, backgroundColor: color }} />
@@ -379,7 +351,7 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
           </div>
 
           {/* â”€â”€ Insight â”€â”€ */}
-          <div className="bg-[#10130D] border border-[#243018] rounded-xl px-4 py-3 text-xs text-[#A9B5C9]">
+          <div className="bg-ea-lime/5 border border-[#243018] rounded-xl px-4 py-3 text-xs text-[#A9B5C9]">
             <span className="mr-1.5">{insight.emoji}</span>
             {insight.text}
           </div>
@@ -390,7 +362,7 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
           <button
             onClick={handleRecalculate}
             disabled={recalcLoading}
-            className="text-xs font-bold text-[#C0FF00] border border-[#C0FF00]/30 hover:border-[#C0FF00] rounded-lg px-4 py-2 transition-all"
+            className="text-xs font-bold text-ea-lime border border-ea-lime/30 hover:border-ea-lime rounded-lg px-4 py-2 transition-all"
           >
             {recalcLoading ? "Calcolo in corso..." : "Ricalcola ora"}
           </button>
@@ -405,24 +377,24 @@ export function FitnessFreshness({ fitnessFreshness, currentFf, prevCtl }: Fitne
         details={
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-4 items-center">
             <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
-                <div className="text-[9px] text-[#555] uppercase tracking-widest font-black">Condizione</div>
+              <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-3">
+                <div className="text-xs text-ea-text-axis uppercase tracking-widest font-black">Condizione</div>
                 <div className="text-xl font-black" style={{ color: CLR_CTL }}>{ctl.toFixed(1)}</div>
               </div>
-              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
-                <div className="text-[9px] text-[#555] uppercase tracking-widest font-black">Affaticamento</div>
+              <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-3">
+                <div className="text-xs text-ea-text-axis uppercase tracking-widest font-black">Affaticamento</div>
                 <div className="text-xl font-black" style={{ color: CLR_ATL }}>{atl.toFixed(1)}</div>
               </div>
-              <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
-                <div className="text-[9px] text-[#555] uppercase tracking-widest font-black">Forma</div>
+              <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-3">
+                <div className="text-xs text-ea-text-axis uppercase tracking-widest font-black">Forma</div>
                 <div className="text-xl font-black" style={{ color: statusColor }}>{tsb >= 0 ? '+' : ''}{tsb.toFixed(1)}</div>
               </div>
             </div>
             <div className="text-xs text-[#94A3B8] flex flex-col gap-2">
-              <div className="flex flex-wrap gap-5 text-[9px] font-semibold tracking-wider">
+              <div className="flex flex-wrap gap-5 text-xs font-semibold tracking-wider">
                 <span className="flex items-center gap-1.5" style={{ color: CLR_CTL }}><span className="w-5 h-0.5 rounded-full" style={{ backgroundColor: CLR_CTL }} />Condizione fisica</span>
                 <span className="flex items-center gap-1.5" style={{ color: CLR_ATL }}><span className="w-5 h-0.5 rounded-full" style={{ backgroundColor: CLR_ATL }} />Affaticamento</span>
-                <span className="flex items-center gap-1.5" style={{ color: '#F59E0B' }}><span className="w-5 h-0.5 rounded-full bg-[#F59E0B]" />Forma fisica</span>
+                <span className="flex items-center gap-1.5" style={{ color: CHART_SERIES.load }}><span className="w-5 h-0.5 rounded-full bg-ea-amber" />Forma fisica</span>
               </div>
               <div>{insight.text}</div>
             </div>

@@ -1,0 +1,1490 @@
+[
+ {
+  "page": "dashboard",
+  "items": [
+   {
+    "type": "recharts",
+    "kind": "other",
+    "title": "QUESTA SETTIMANA",
+    "w": 500,
+    "h": 96,
+    "ticks": "",
+    "tickColors": "",
+    "tickFamily": "",
+    "gridStroke": "",
+    "gridDash": "",
+    "strokeW": "",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "yes"
+    }
+   },
+   {
+    "type": "svg",
+    "kind": "svg",
+    "title": "LIVE BIO-FEED",
+    "w": 224,
+    "h": 224,
+    "ticks": "",
+    "tickColors": "",
+    "tickFamily": "",
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "yes"
+    },
+    "paths": 0
+   },
+   {
+    "type": "svg",
+    "kind": "img",
+    "title": "NEXT OPTIMAL SESSION",
+    "w": 220,
+    "h": 132,
+    "ticks": "",
+    "tickColors": "",
+    "tickFamily": "",
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "yes"
+    },
+    "paths": 2
+   },
+   {
+    "type": "svg",
+    "kind": "img",
+    "title": "Heart Rate Zones",
+    "w": 200,
+    "h": 200,
+    "ticks": "12px,22px",
+    "tickColors": "rgb(136, 136, 136) | rgb(255, 255, 255) | rgb(85, 85, 85)",
+    "tickFamily": "Inter",
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "yes"
+    },
+    "paths": 3
+   },
+   {
+    "type": "svg",
+    "kind": "img",
+    "title": "Condizione fisica",
+    "w": 689,
+    "h": 348,
+    "ticks": "12px",
+    "tickColors": "rgb(102, 102, 102) | rgb(136, 136, 136)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "yes"
+    },
+    "paths": 2
+   }
+  ],
+  "sizes": {
+   "14px": 23,
+   "9px": 3,
+   "12px": 156,
+   "20px": 7,
+   "10px": 16,
+   "18px": 8,
+   "36px": 2,
+   "48px": 3,
+   "30px": 2,
+   "16px": 6,
+   "22px": 1
+  },
+  "fams": {
+   "Inter": 191,
+   "JetBrains Mono": 36
+  }
+ },
+ {
+  "page": "training",
+  "items": [
+   {
+    "type": "recharts",
+    "kind": "bar",
+    "title": null,
+    "w": 301,
+    "h": 192,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "",
+    "gridDash": "",
+    "strokeW": "",
+    "legend": false,
+    "card": null
+   }
+  ],
+  "sizes": {
+   "14px": 27,
+   "9px": 4,
+   "12px": 95,
+   "20px": 1,
+   "10px": 15,
+   "24px": 2,
+   "11px": 5,
+   "16px": 1,
+   "11.5px": 1
+  },
+  "fams": {
+   "Inter": 110,
+   "JetBrains Mono": 41
+  }
+ },
+ {
+  "page": "statistics-carico-forma",
+  "items": [
+   {
+    "type": "recharts",
+    "kind": "bar",
+    "title": "Carico chilometrico",
+    "w": 516,
+    "h": 240,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "recharts",
+    "kind": "bar",
+    "title": "Distribuzione del Passo",
+    "w": 516,
+    "h": 240,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "recharts",
+    "kind": "scatter",
+    "title": "Matrice degli Sforzi",
+    "w": 516,
+    "h": 240,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "svg",
+    "kind": "svg",
+    "title": "Condizione · Affaticamento · Forma",
+    "w": 1098,
+    "h": 320,
+    "ticks": "12px,13px",
+    "tickColors": "rgb(138, 138, 138) | rgb(245, 158, 11)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    },
+    "paths": 7
+   }
+  ],
+  "sizes": {
+   "14px": 1,
+   "9px": 2,
+   "12px": 105,
+   "20px": 11,
+   "10px": 14,
+   "48px": 1,
+   "18px": 5,
+   "13px": 7,
+   "32px": 3,
+   "16px": 2
+  },
+  "fams": {
+   "Inter": 63,
+   "JetBrains Mono": 88
+  }
+ },
+ {
+  "page": "statistics-potenziale-progressi",
+  "items": [
+   {
+    "type": "recharts",
+    "kind": "area",
+    "title": "Cosa puoi correre oggi",
+    "w": 673,
+    "h": 279,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "2.5",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "48px/48px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "recharts",
+    "kind": "area",
+    "title": "Progressione Temporale",
+    "w": 828,
+    "h": 320,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "2",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "recharts",
+    "kind": "area",
+    "title": "VO₂ Max / VDOT Trend",
+    "w": 516,
+    "h": 240,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "3",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "svg",
+    "kind": "svg",
+    "title": "Radar Prontezza Gara",
+    "w": 302,
+    "h": 213,
+    "ticks": "12px,28px",
+    "tickColors": "rgb(138, 138, 138) | rgb(255, 255, 255)",
+    "tickFamily": "Inter",
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    },
+    "paths": 0
+   },
+   {
+    "type": "svg",
+    "kind": "svg",
+    "title": "VDOT",
+    "w": 160,
+    "h": 95,
+    "ticks": "28px,12px",
+    "tickColors": "rgb(255, 255, 255) | rgb(138, 138, 138)",
+    "tickFamily": "Inter",
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    },
+    "paths": 2
+   },
+   {
+    "type": "svg",
+    "kind": "svg",
+    "title": "Soglia AT",
+    "w": 160,
+    "h": 95,
+    "ticks": "28px,12px",
+    "tickColors": "rgb(255, 255, 255) | rgb(138, 138, 138)",
+    "tickFamily": "Inter",
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    },
+    "paths": 2
+   }
+  ],
+  "sizes": {
+   "14px": 6,
+   "9px": 2,
+   "12px": 107,
+   "20px": 11,
+   "10px": 14,
+   "48px": 2,
+   "60px": 1,
+   "30px": 1,
+   "120px": 1,
+   "18px": 6,
+   "24px": 4,
+   "52px": 2,
+   "13px": 2,
+   "28px": 3,
+   "16px": 1
+  },
+  "fams": {
+   "Inter": 85,
+   "JetBrains Mono": 78
+  }
+ },
+ {
+  "page": "statistics-potenziale-progressi-v2",
+  "items": [
+   {
+    "type": "recharts",
+    "kind": "area",
+    "title": "La traiettoria del potenziale",
+    "w": 1098,
+    "h": 320,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "2.5,2",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "recharts",
+    "kind": "radialbar",
+    "title": "I cinque serbatoi",
+    "w": 518,
+    "h": 240,
+    "ticks": "",
+    "tickColors": "",
+    "tickFamily": "",
+    "gridStroke": "",
+    "gridDash": "",
+    "strokeW": "",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "recharts",
+    "kind": "bar",
+    "title": "Quanto lasci sul tavolo",
+    "w": 518,
+    "h": 240,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "recharts",
+    "kind": "other",
+    "title": "Dove finiscono i minuti",
+    "w": 406,
+    "h": 240,
+    "ticks": "",
+    "tickColors": "",
+    "tickFamily": "",
+    "gridStroke": "",
+    "gridDash": "",
+    "strokeW": "",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "recharts",
+    "kind": "scatter",
+    "title": "Le sedute che pesano",
+    "w": 630,
+    "h": 240,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   }
+  ],
+  "sizes": {
+   "14px": 1,
+   "9px": 2,
+   "12px": 104,
+   "20px": 1,
+   "10px": 14,
+   "48px": 1,
+   "32px": 4,
+   "13px": 9
+  },
+  "fams": {
+   "Inter": 74,
+   "JetBrains Mono": 62
+  }
+ },
+ {
+  "page": "statistics-biomeccanica",
+  "items": [
+   {
+    "type": "recharts",
+    "kind": "line",
+    "title": "Efficiency Correlation",
+    "w": 516,
+    "h": 200,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "2",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "recharts",
+    "kind": "area",
+    "title": "Long-Term Training Adaptation",
+    "w": 1098,
+    "h": 220,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "2,2.5",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "recharts",
+    "kind": "line",
+    "title": "Andamento Paces",
+    "w": 516,
+    "h": 256,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "2",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "recharts",
+    "kind": "line",
+    "title": "Cadenza Mensile",
+    "w": 516,
+    "h": 256,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "2",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "recharts",
+    "kind": "line",
+    "title": "Deriva Cardiaca",
+    "w": 1090,
+    "h": 200,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "2.5",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "24px/24px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "recharts",
+    "kind": "line",
+    "title": "Tempo Contatto Suolo (GCT)",
+    "w": 1098,
+    "h": 288,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "2",
+    "legend": true,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "recharts",
+    "kind": "scatter",
+    "title": "GCT vs Cadenza",
+    "w": 516,
+    "h": 320,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "recharts",
+    "kind": "scatter",
+    "title": "corseripetute e km sotto 4:45",
+    "w": 508,
+    "h": 200,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "24px/24px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "svg",
+    "kind": "svg",
+    "title": "Athletic Profile",
+    "w": 280,
+    "h": 260,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138) | rgb(192, 255, 0)",
+    "tickFamily": "monospace",
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    },
+    "paths": 0
+   }
+  ],
+  "sizes": {
+   "14px": 7,
+   "9px": 2,
+   "12px": 316,
+   "20px": 6,
+   "10px": 14,
+   "48px": 1,
+   "18px": 8,
+   "30px": 4,
+   "36px": 6,
+   "72px": 1,
+   "24px": 1,
+   "13px": 4,
+   "11px": 3
+  },
+  "fams": {
+   "Inter": 131,
+   "JetBrains Mono": 224,
+   "monospace": 18
+  }
+ },
+ {
+  "page": "statistics-biologia-futuro",
+  "items": [
+   {
+    "type": "recharts",
+    "kind": "area",
+    "title": "Curva Biologica",
+    "w": 710,
+    "h": 360,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "1.5,3",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "svg",
+    "kind": "svg",
+    "title": "Golden Day",
+    "w": 176,
+    "h": 176,
+    "ticks": "",
+    "tickColors": "",
+    "tickFamily": "",
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    },
+    "paths": 0
+   }
+  ],
+  "sizes": {
+   "14px": 4,
+   "9px": 2,
+   "12px": 149,
+   "20px": 4,
+   "10px": 14,
+   "48px": 2,
+   "13px": 2,
+   "16px": 28,
+   "24px": 1,
+   "18px": 22
+  },
+  "fams": {
+   "Inter": 188,
+   "JetBrains Mono": 40
+  }
+ },
+ {
+  "page": "statistics-clima-ritmo",
+  "items": [
+   {
+    "type": "recharts",
+    "kind": "bar",
+    "title": "Actual vs STP",
+    "w": 554,
+    "h": 360,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "2.5,3",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "24px/24px",
+     "border": "1px rgb(32, 32, 32)",
+     "bg": "rgb(13, 13, 13)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   }
+  ],
+  "sizes": {
+   "14px": 76,
+   "9px": 2,
+   "12px": 423,
+   "20px": 1,
+   "10px": 14,
+   "48px": 1,
+   "34px": 1,
+   "16px": 4,
+   "28px": 4,
+   "24px": 62,
+   "18px": 90,
+   "26px": 90
+  },
+  "fams": {
+   "Inter": 757,
+   "JetBrains Mono": 11
+  }
+ },
+ {
+  "page": "statistics-detraining",
+  "items": [
+   {
+    "type": "recharts",
+    "kind": "area",
+    "title": "Curva Performance — Taper vs Detraining",
+    "w": 1098,
+    "h": 360,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "3,1.5,2.5,2",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "svg",
+    "kind": "svg",
+    "title": "PREDITTORE DETRAINING — Coyle / Mujika / Bosquet",
+    "w": 260,
+    "h": 260,
+    "ticks": "12px",
+    "tickColors": "rgb(102, 102, 102)",
+    "tickFamily": "Inter",
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    },
+    "paths": 2
+   },
+   {
+    "type": "svg",
+    "kind": "svg",
+    "title": "Tachimetri Sistemici",
+    "w": 170,
+    "h": 170,
+    "ticks": "12px",
+    "tickColors": "rgb(102, 102, 102)",
+    "tickFamily": "Inter",
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    },
+    "paths": 2
+   },
+   {
+    "type": "svg",
+    "kind": "svg",
+    "title": "Tachimetri Sistemici",
+    "w": 170,
+    "h": 170,
+    "ticks": "12px",
+    "tickColors": "rgb(102, 102, 102)",
+    "tickFamily": "Inter",
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    },
+    "paths": 2
+   },
+   {
+    "type": "svg",
+    "kind": "svg",
+    "title": "Tachimetri Sistemici",
+    "w": 170,
+    "h": 170,
+    "ticks": "12px",
+    "tickColors": "rgb(102, 102, 102)",
+    "tickFamily": "Inter",
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    },
+    "paths": 2
+   }
+  ],
+  "sizes": {
+   "14px": 34,
+   "9px": 2,
+   "12px": 285,
+   "20px": 8,
+   "10px": 14,
+   "48px": 2,
+   "36px": 2,
+   "16px": 11,
+   "18px": 14,
+   "30px": 5,
+   "24px": 12,
+   "13px": 9
+  },
+  "fams": {
+   "Inter": 367,
+   "JetBrains Mono": 31
+  }
+ },
+ {
+  "page": "statistics-biologia-futuro-v2",
+  "items": [
+   {
+    "type": "recharts",
+    "kind": "line",
+    "title": "Se mi fermo, cosa perdo prima",
+    "w": 728,
+    "h": 240,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "2",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "recharts",
+    "kind": "line",
+    "title": "Quale seduta conviene aggiungere",
+    "w": 701,
+    "h": 320,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "2",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "recharts",
+    "kind": "bar",
+    "title": "Quando corri forte",
+    "w": 518,
+    "h": 240,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "2",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   },
+   {
+    "type": "recharts",
+    "kind": "area",
+    "title": "Il tetto biologico",
+    "w": 518,
+    "h": 240,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "rgb(34, 34, 34)",
+    "gridDash": "3 3",
+    "strokeW": "2",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   }
+  ],
+  "sizes": {
+   "14px": 1,
+   "9px": 2,
+   "12px": 104,
+   "20px": 1,
+   "10px": 14,
+   "48px": 1,
+   "13px": 8,
+   "26px": 1,
+   "18px": 4
+  },
+  "fams": {
+   "Inter": 53,
+   "JetBrains Mono": 83
+  }
+ },
+ {
+  "page": "statistics-calcolatore",
+  "items": [],
+  "sizes": {
+   "14px": 20,
+   "9px": 2,
+   "12px": 73,
+   "20px": 1,
+   "10px": 14,
+   "48px": 2,
+   "18px": 5,
+   "13px": 10
+  },
+  "fams": {
+   "Inter": 97,
+   "JetBrains Mono": 30
+  }
+ },
+ {
+  "page": "race-lab",
+  "items": [
+   {
+    "type": "svg",
+    "kind": "img",
+    "title": "Come ci arrivi",
+    "w": 1096,
+    "h": 404,
+    "ticks": "10px,9px,10.5px,9.5px,11px",
+    "tickColors": "rgb(107, 114, 128) | rgb(75, 85, 99) | rgb(209, 213, 219) | rgb(255, 255, 255)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "card": {
+     "radius": "12px",
+     "padding": "16px/16px",
+     "border": "1px oklab(0.999994 0.0000455678 0.0000200868 / 0.08)",
+     "bg": "oklab(0 0 0 / 0.25)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    },
+    "paths": 8
+   }
+  ],
+  "sizes": {
+   "14px": 1,
+   "9px": 13,
+   "12px": 81,
+   "20px": 1,
+   "10px": 29,
+   "24px": 1,
+   "13px": 19,
+   "17px": 2,
+   "12.5px": 8,
+   "48px": 1,
+   "19px": 5,
+   "10.5px": 1,
+   "9.5px": 5,
+   "11px": 1
+  },
+  "fams": {
+   "Inter": 78,
+   "JetBrains Mono": 90
+  }
+ },
+ {
+  "page": "pace-lab",
+  "items": [
+   {
+    "type": "svg",
+    "kind": "img",
+    "title": "Il listino",
+    "w": 1130,
+    "h": 290,
+    "ticks": "10.5px,12px",
+    "tickColors": "rgb(138, 138, 138) | rgb(255, 255, 255) | rgb(192, 255, 0)",
+    "tickFamily": "\"JetBrains Mono\",Inter",
+    "card": {
+     "radius": "16px",
+     "padding": "0px/0px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    },
+    "paths": 3
+   },
+   {
+    "type": "svg",
+    "kind": "img",
+    "title": null,
+    "w": 1096,
+    "h": 398,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138) | rgb(192, 255, 0) | rgb(244, 63, 94)",
+    "tickFamily": "Inter,\"JetBrains Mono\"",
+    "card": {
+     "radius": "12px",
+     "padding": "16px/16px",
+     "border": "1px oklab(0.999994 0.0000455678 0.0000200868 / 0.07)",
+     "bg": "oklab(0 0 0 / 0.25)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    },
+    "paths": 5
+   },
+   {
+    "type": "svg",
+    "kind": "img",
+    "title": null,
+    "w": 1096,
+    "h": 480,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138) | rgb(192, 255, 0) | rgb(244, 63, 94)",
+    "tickFamily": "Inter,\"JetBrains Mono\"",
+    "card": {
+     "radius": "12px",
+     "padding": "16px/16px",
+     "border": "1px oklab(0.999994 0.0000455678 0.0000200868 / 0.07)",
+     "bg": "oklab(0 0 0 / 0.25)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    },
+    "paths": 4
+   }
+  ],
+  "sizes": {
+   "14px": 8,
+   "9px": 2,
+   "12px": 550,
+   "20px": 5,
+   "10px": 14,
+   "13px": 6,
+   "15px": 3,
+   "24px": 1,
+   "19px": 3,
+   "26px": 8,
+   "16px": 8,
+   "10.5px": 10,
+   "13.5px": 35,
+   "12.5px": 77,
+   "18px": 4,
+   "28px": 4
+  },
+  "fams": {
+   "Inter": 179,
+   "JetBrains Mono": 559
+  }
+ },
+ {
+  "page": "runner-dna",
+  "items": [
+   {
+    "type": "svg",
+    "kind": "svg",
+    "title": "94%",
+    "w": 140,
+    "h": 140,
+    "ticks": "",
+    "tickColors": "",
+    "tickFamily": "",
+    "card": {
+     "radius": "24px",
+     "padding": "24px/24px",
+     "border": "1px oklab(0.999994 0.0000455678 0.0000200868 / 0.12)",
+     "bg": "rgba(0, 0, 0, 0)",
+     "bgImage": "gradient",
+     "blur": "blur(40px)",
+     "shadow": "yes"
+    },
+    "paths": 0
+   }
+  ],
+  "sizes": {
+   "14px": 4,
+   "9px": 2,
+   "12px": 63,
+   "20px": 7,
+   "10px": 14,
+   "48px": 1,
+   "72px": 1,
+   "24px": 7,
+   "16px": 7
+  },
+  "fams": {
+   "Inter": 80,
+   "JetBrains Mono": 26
+  }
+ },
+ {
+  "page": "gamification-v1",
+  "items": [
+   {
+    "type": "svg",
+    "kind": "img",
+    "title": "Lv 37",
+    "w": 523,
+    "h": 227,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138) | rgb(129, 140, 248) | rgb(102, 102, 102)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px oklab(0.999994 0.0000455678 0.0000200868 / 0.1)",
+     "bg": "oklab(0.999994 0.0000455678 0.0000200868 / 0.03)",
+     "bgImage": "none",
+     "blur": "blur(24px)",
+     "shadow": "no"
+    },
+    "paths": 2
+   },
+   {
+    "type": "svg",
+    "kind": "img",
+    "title": "★Il tuo · 5K in 19:40· gara 20 dic",
+    "w": 1130,
+    "h": 260,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138) | rgb(160, 160, 160) | rgb(255, 255, 255)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px oklab(0.999994 0.0000455678 0.0000200868 / 0.1)",
+     "bg": "oklab(0.999994 0.0000455678 0.0000200868 / 0.03)",
+     "bgImage": "none",
+     "blur": "blur(24px)",
+     "shadow": "no"
+    },
+    "paths": 3
+   }
+  ],
+  "sizes": {
+   "14px": 3,
+   "9px": 2,
+   "12px": 260,
+   "20px": 4,
+   "10px": 14,
+   "26px": 1,
+   "24px": 2,
+   "13px": 14,
+   "8.5px": 2,
+   "60px": 1,
+   "18px": 4,
+   "12.5px": 13
+  },
+  "fams": {
+   "Inter": 171,
+   "JetBrains Mono": 149
+  }
+ },
+ {
+  "page": "ranking",
+  "items": [
+   {
+    "type": "recharts",
+    "kind": "area",
+    "title": "Curva del Campo",
+    "w": 332,
+    "h": 190,
+    "ticks": "12px",
+    "tickColors": "rgb(138, 138, 138)",
+    "tickFamily": "\"JetBrains Mono\"",
+    "gridStroke": "",
+    "gridDash": "",
+    "strokeW": "1.5",
+    "legend": false,
+    "card": {
+     "radius": "16px",
+     "padding": "20px/20px",
+     "border": "1px rgb(30, 30, 30)",
+     "bg": "rgb(14, 14, 14)",
+     "bgImage": "none",
+     "blur": "-",
+     "shadow": "no"
+    }
+   }
+  ],
+  "sizes": {
+   "14px": 2,
+   "9px": 2,
+   "12px": 142,
+   "20px": 2,
+   "10px": 14,
+   "48px": 2,
+   "72px": 1,
+   "24px": 1,
+   "16px": 5,
+   "30px": 2,
+   "36px": 1,
+   "18px": 3
+  },
+  "fams": {
+   "Inter": 79,
+   "JetBrains Mono": 98
+  }
+ },
+ {
+  "page": "badges",
+  "items": [],
+  "sizes": {
+   "14px": 9,
+   "9px": 2,
+   "12px": 294,
+   "20px": 1,
+   "10px": 14,
+   "48px": 1,
+   "27px": 1,
+   "60px": 1,
+   "24px": 1,
+   "15px": 6
+  },
+  "fams": {
+   "Inter": 260,
+   "JetBrains Mono": 70
+  }
+ },
+ {
+  "page": "profile",
+  "items": [],
+  "sizes": {
+   "14px": 25,
+   "9px": 2,
+   "12px": 86,
+   "20px": 3,
+   "10px": 14,
+   "36px": 1,
+   "30px": 3,
+   "18px": 12,
+   "16px": 3
+  },
+  "fams": {
+   "Inter": 149
+  }
+ },
+ {
+  "page": "activities",
+  "items": [],
+  "sizes": {
+   "14px": 2147,
+   "9px": 2,
+   "12px": 3317,
+   "20px": 1,
+   "10px": 14,
+   "30px": 1
+  },
+  "fams": {
+   "Inter": 5482
+  }
+ }
+]

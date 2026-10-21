@@ -4,17 +4,11 @@
  * Sharp panels Â· bracket decorations Â· terminal data Â· dense charts
  */
 import React, { useMemo, useState } from 'react';
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, ScatterChart, Scatter, ZAxis,
-  LineChart, Line, ReferenceLine, BarChart, Bar, Cell,
-  ComposedChart, RadarChart, Radar, PolarGrid,
-  PolarAngleAxis, PolarRadiusAxis,
-} from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, ZAxis, Line, ReferenceLine, ComposedChart, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from "recharts";
 import type { Run, FitnessFreshnessPoint, ProAnalyticsChart } from '../../types/api';
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
-import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from './chartTheme';
 
+import { CHART_SERIES, CHART_SURFACE, CHART_TEXT, ChartCard, ChartTooltip, chartGrid, chartGridBoth, chartMargin, chartXAxis, chartYAxis } from "../charts";
 // â”€â”€â”€ Palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Alias sul tema condiviso (chartTheme.ts).
 const N  = CHART_SERIES.primary;
@@ -36,42 +30,19 @@ const MT = CHART_SURFACE.border;
 // â”€â”€â”€ Shared tiny label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function Lbl({ children, color = DM }: { children: React.ReactNode; color?: string }) {
   return (
-    <span style={{ color, fontSize: 9, fontWeight: 900, letterSpacing: '0.22em', textTransform: 'uppercase', fontFamily: 'monospace' }}>
+    <span style={{ color, fontSize: 12, fontWeight: 900, letterSpacing: '0.22em', textTransform: 'uppercase', fontFamily: 'monospace' }}>
       {children}
     </span>
   );
 }
 
-// â”€â”€â”€ Corner bracket decoration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function Bracket({ size = 10, color = N, pos }: { size?: number; color?: string; pos: 'tl'|'tr'|'bl'|'br' }) {
-  const s = size;
-  const tl = pos === 'tl', tr = pos === 'tr', bl = pos === 'bl', br = pos === 'br';
-  return (
-    <svg
-      width={s} height={s}
-      style={{
-        position: 'absolute',
-        top:    (tl || tr) ? 0 : undefined,
-        bottom: (bl || br) ? 0 : undefined,
-        left:   (tl || bl) ? 0 : undefined,
-        right:  (tr || br) ? 0 : undefined,
-        pointerEvents: 'none',
-      }}
-    >
-      {tl && <><line x1={0} y1={s} x2={0} y2={0} stroke={color} strokeWidth={1.5}/><line x1={0} y1={0} x2={s} y2={0} stroke={color} strokeWidth={1.5}/></>}
-      {tr && <><line x1={s} y1={s} x2={s} y2={0} stroke={color} strokeWidth={1.5}/><line x1={0} y1={0} x2={s} y2={0} stroke={color} strokeWidth={1.5}/></>}
-      {bl && <><line x1={0} y1={0} x2={0} y2={s} stroke={color} strokeWidth={1.5}/><line x1={0} y1={s} x2={s} y2={s} stroke={color} strokeWidth={1.5}/></>}
-      {br && <><line x1={s} y1={0} x2={s} y2={s} stroke={color} strokeWidth={1.5}/><line x1={0} y1={s} x2={s} y2={s} stroke={color} strokeWidth={1.5}/></>}
-    </svg>
-  );
-}
+
 
 // Panel with bracket corners
 function Panel({
   children,
   className = '',
   style = {},
-  accent = N,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -79,21 +50,9 @@ function Panel({
   accent?: string;
 }) {
   return (
-    <div
-      className={`relative ${className}`}
-      style={{
-        background: S1,
-        border: `1px solid ${MT}`,
-        borderLeft: `3px solid ${accent}`,
-        ...style,
-      }}
-    >
-      <Bracket pos="tl" size={12} />
-      <Bracket pos="tr" size={12} />
-      <Bracket pos="bl" size={12} />
-      <Bracket pos="br" size={12} />
+    <ChartCard className={className} style={style}>
       {children}
-    </div>
+    </ChartCard>
   );
 }
 
@@ -101,17 +60,14 @@ function Panel({
 function TT({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: '#050505', border: `1px solid ${BR}`, padding: '8px 14px', fontFamily: 'monospace' }}>
-      <p style={{ color: DM, fontSize: 9, fontWeight: 900, letterSpacing: '0.2em', marginBottom: 4 }}>{label}</p>
-      {payload.map((p, i) => (
-        <p key={i} style={{ fontSize: 11, fontWeight: 900 }}>
-          <span style={{ color: p.color }}>{p.name}</span>
-          <span style={{ color: '#fff', marginLeft: 8 }}>
-            {typeof p.value === 'number' ? p.value.toFixed(2) : p.value}
-          </span>
-        </p>
-      ))}
-    </div>
+    <ChartTooltip
+      title={label}
+      rows={payload.map((p) => ({
+        label: p.name,
+        value: typeof p.value === 'number' ? p.value.toFixed(2) : p.value,
+        color: p.color,
+      }))}
+    />
   );
 }
 
@@ -200,10 +156,10 @@ function KpiTile({ label, value, unit, sub, accent = N }: { label: string; value
     <Panel className="p-5 flex flex-col gap-2" accent={accent}>
       <Lbl color={DM}>{label}</Lbl>
       <div className="flex items-baseline gap-1.5 mt-1">
-        <span style={{ fontSize: 44, fontWeight: 900, lineHeight: 1, color: '#fff', fontFamily: 'monospace', letterSpacing: '-0.04em' }}>{value}</span>
+        <span style={{ fontSize: 44, fontWeight: 900, lineHeight: 1, color: CHART_TEXT.primary, fontFamily: 'monospace', letterSpacing: '-0.04em' }}>{value}</span>
         <span style={{ fontSize: 13, fontWeight: 900, color: accent, fontFamily: 'monospace' }}>{unit}</span>
       </div>
-      <span style={{ fontSize: 9, color: DM, fontWeight: 900, letterSpacing: '0.18em', fontFamily: 'monospace' }}>{sub.toUpperCase()}</span>
+      <span style={{ fontSize: 12, color: DM, fontWeight: 900, letterSpacing: '0.18em', fontFamily: 'monospace' }}>{sub.toUpperCase()}</span>
       <div style={{ height: 2, background: MT, marginTop: 4 }}>
         <div style={{ height: '100%', width: '100%', background: `linear-gradient(90deg, ${accent}, transparent)` }} />
       </div>
@@ -228,13 +184,13 @@ function HeatmapCalendar() {
       {/* Day labels */}
       <div className="flex gap-1 mb-1.5 ml-[52px]">
         {DAYS.map((d, i) => (
-          <div key={i} style={{ width: 16, fontSize: 8, fontWeight: 900, color: DM, textAlign: 'center', fontFamily: 'monospace', letterSpacing: '0.1em' }}>{d}</div>
+          <div key={i} style={{ width: 16, fontSize: 12, fontWeight: 900, color: DM, textAlign: 'center', fontFamily: 'monospace', letterSpacing: '0.1em' }}>{d}</div>
         ))}
       </div>
       <div className="flex flex-col gap-1">
         {heatmap.map((week, wi) => (
           <div key={wi} className="flex items-center gap-1">
-            <span style={{ width: 44, fontSize: 8, color: MT, fontFamily: 'monospace', fontWeight: 900, textAlign: 'right', paddingRight: 8, letterSpacing: '0.1em' }}>W{wi + 1}</span>
+            <span style={{ width: 44, fontSize: 12, color: MT, fontFamily: 'monospace', fontWeight: 900, textAlign: 'right', paddingRight: 8, letterSpacing: '0.1em' }}>W{wi + 1}</span>
             {week.map((day, di) => (
               <div
                 key={di}
@@ -267,19 +223,19 @@ function LactateCurve() {
         <Lbl color={OR}>LT2 @ 4:32 MIN/KM</Lbl>
       </div>
       <ResponsiveContainer width="100%" height={200}>
-        <AreaChart data={lactate} margin={{ top: 4, right: 12, bottom: 0, left: -16 }}>
+        <AreaChart data={lactate} margin={chartMargin}>
           <defs>
             <linearGradient id="laGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%"  stopColor={OR} stopOpacity={0.3} />
               <stop offset="95%" stopColor={OR} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="2 4" stroke={MT} vertical={false} />
-          <XAxis dataKey="pace" tick={{ fill: DM, fontSize: 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} label={{ value: 'PACE MIN/KM', position: 'insideBottom', fill: DM, fontSize: 8, fontWeight: 900, offset: -2 }} />
-          <YAxis tick={{ fill: DM, fontSize: 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} />
+          <CartesianGrid {...chartGrid} />
+          <XAxis {...chartXAxis} dataKey="pace" label={{ value: 'PACE MIN/KM', position: 'insideBottom', fill: DM, fontSize: 12, fontWeight: 900, offset: -2 }} />
+          <YAxis {...chartYAxis} />
           <Tooltip content={<TT />} />
-          <ReferenceLine x={4.4} stroke={OR} strokeDasharray="5 3" strokeWidth={1.5} label={{ value: 'LT2', fill: OR, fontSize: 9, fontWeight: 900 }} />
-          <ReferenceLine y={4} stroke={N} strokeDasharray="5 3" strokeWidth={1} label={{ value: '4 mmol/L', fill: N, fontSize: 8, fontWeight: 900, position: 'right' }} />
+          <ReferenceLine x={4.4} stroke={OR} strokeDasharray="5 3" strokeWidth={1.5} label={{ value: 'LT2', fill: OR, fontSize: 12, fontWeight: 900 }} />
+          <ReferenceLine y={4} stroke={N} strokeDasharray="5 3" strokeWidth={1} label={{ value: '4 mmol/L', fill: N, fontSize: 12, fontWeight: 900, position: 'right' }} />
           <Area type="monotone" dataKey="la" name="Lactate (mmol/L)" stroke={OR} strokeWidth={2.5} fill="url(#laGrad)" dot={{ r: 3, fill: OR, stroke: BG, strokeWidth: 1.5 }} />
         </AreaChart>
       </ResponsiveContainer>
@@ -287,7 +243,7 @@ function LactateCurve() {
         {[['LT1','5:05','Aerobic',N],['LT2','4:32','Threshold',OR],['MAP','3:58','VO2Max',RD]].map(([k,v,l,c]) => (
           <div key={k}>
             <Lbl color={c as string}>{k}</Lbl>
-            <p style={{ fontSize: 20, fontWeight: 900, color: '#fff', fontFamily: 'monospace', lineHeight: 1.2, marginTop: 2 }}>{v}</p>
+            <p style={{ fontSize: 20, fontWeight: 900, color: CHART_TEXT.primary, fontFamily: 'monospace', lineHeight: 1.2, marginTop: 2 }}>{v}</p>
             <Lbl color={DM}>{l}</Lbl>
           </div>
         ))}
@@ -312,21 +268,21 @@ export function AnalyticsV4CadenceSpeedMatrix({ chart, onRequestDetail }: { char
   const renderChart = (isExpanded = false) => {
     const points = isExpanded ? detailPoints : cardPoints;
     if (!points.length) {
-      return <div className="h-full flex items-center justify-center text-[#555] text-xs font-black tracking-widest uppercase">Dati reali insufficienti</div>;
+      return <div className="h-full flex items-center justify-center text-ea-text-axis text-xs font-black tracking-widest uppercase">Dati reali insufficienti</div>;
     }
     return (
     <ResponsiveContainer width="100%" height="100%">
-      <ScatterChart margin={{ top: isExpanded ? 20 : 4, right: isExpanded ? 20 : 12, bottom: isExpanded ? 24 : 0, left: isExpanded ? -4 : -16 }}>
-        <CartesianGrid strokeDasharray="2 4" stroke={MT} />
-        <XAxis type="number" dataKey="speed" name="Speed" domain={[7,17]} tick={{ fill: DM, fontSize: isExpanded ? 12 : 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} label={{ value: 'SPEED KM/H', position: 'insideBottom', fill: DM, fontSize: 8, fontWeight: 900, offset: -2 }} />
-        <YAxis type="number" dataKey="cadence" name="Cadence" domain={[150,190]} tick={{ fill: DM, fontSize: isExpanded ? 12 : 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} />
+      <ScatterChart margin={{ top: isExpanded ? 20 : 4, right: isExpanded ? 20 : 12, bottom: isExpanded ? 24 : 0, left: 0 }}>
+        <CartesianGrid {...chartGridBoth} />
+        <XAxis {...chartXAxis} type="number" dataKey="speed" name="Speed" domain={[7,17]} label={{ value: 'SPEED KM/H', position: 'insideBottom', fill: DM, fontSize: 12, fontWeight: 900, offset: -2 }} />
+        <YAxis {...chartYAxis} type="number" dataKey="cadence" name="Cadence" domain={[150,190]} />
         <ZAxis type="number" dataKey="r" range={isExpanded ? [45,180] : [20,100]} />
         <Tooltip cursor={{ stroke: MT }} content={({ active, payload }) => {
           if (!active || !payload?.length) return null;
           const d = payload[0].payload;
           return (
-            <div style={{ background: '#050505', border: `1px solid ${BR}`, padding: '8px 12px', fontFamily: 'monospace' }}>
-              <p style={{ color: CY, fontSize: 10, fontWeight: 900 }}>{d.speed.toFixed(1)} km/h · {d.cadence.toFixed(0)} spm</p>
+            <div style={{ background: CHART_SURFACE.ink, border: `1px solid ${BR}`, padding: '8px 12px', fontFamily: 'monospace' }}>
+              <p style={{ color: CY, fontSize: 12, fontWeight: 900 }}>{d.speed.toFixed(1)} km/h · {d.cadence.toFixed(0)} spm</p>
             </div>
           );
         }} />
@@ -345,8 +301,7 @@ export function AnalyticsV4CadenceSpeedMatrix({ chart, onRequestDetail }: { char
         className="p-6 group"
         accent={N}
         style={{
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02), 0 0 0 1px rgba(192,255,0,0.04)',
-          background: 'radial-gradient(circle at top left, rgba(192,255,0,0.07), transparent 24%), #0E0E0E',
+          background: CHART_SURFACE.panel,
         }}
       >
         <div className="flex items-center justify-between mb-2">
@@ -356,13 +311,13 @@ export function AnalyticsV4CadenceSpeedMatrix({ chart, onRequestDetail }: { char
             <ChartExpandButton onClick={() => { onRequestDetail?.(); setExpanded(true); }} />
           </div>
         </div>
-        <div className="flex items-center gap-4 mb-3 text-[9px] font-black uppercase tracking-widest" style={{ color: DM }}>
+        <div className="flex items-center gap-4 mb-3 text-xs font-black uppercase tracking-widest" style={{ color: DM }}>
           <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: CY }} />corse</span>
           <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: N }} />ripetute e km sotto 4:45</span>
         </div>
         <div className="h-[200px] w-full">{renderChart(false)}</div>
         <div className="flex items-center justify-between mt-4 pt-4" style={{ borderTop: `1px solid ${MT}` }}>
-          <div><Lbl color={DM}>{fastCard.length ? 'CADENZA A RITMO' : 'AVG CADENCE'}</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>{avgCadence || '—'} <span style={{ fontSize: 11, color: DM }}>spm</span></p></div>
+          <div><Lbl color={DM}>{fastCard.length ? 'CADENZA A RITMO' : 'AVG CADENCE'}</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: CHART_TEXT.primary, fontFamily: 'monospace' }}>{avgCadence || '—'} <span style={{ fontSize: 12, color: DM }}>spm</span></p></div>
           <div><Lbl color={DM}>OPT. WINDOW</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: N, fontFamily: 'monospace' }}>{fastCard.length ? '180-190' : '170-180'}</p></div>
           <div><Lbl color={DM}>OVER-STRIDE</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: OR, fontFamily: 'monospace' }}>{overStride}%</p></div>
         </div>
@@ -375,9 +330,9 @@ export function AnalyticsV4CadenceSpeedMatrix({ chart, onRequestDetail }: { char
         accent={CY}
         details={
           <div className="grid grid-cols-3 gap-4">
-            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>AVG CADENCE</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>{avgCadence || '—'} spm</p></div>
-            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>OPT. WINDOW</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: N, fontFamily: 'monospace' }}>170-180</p></div>
-            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>OVER-STRIDE</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: OR, fontFamily: 'monospace' }}>{overStride}%</p></div>
+            <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4"><Lbl color={DM}>AVG CADENCE</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: CHART_TEXT.primary, fontFamily: 'monospace' }}>{avgCadence || '—'} spm</p></div>
+            <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4"><Lbl color={DM}>OPT. WINDOW</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: N, fontFamily: 'monospace' }}>170-180</p></div>
+            <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4"><Lbl color={DM}>OVER-STRIDE</Lbl><p style={{ fontSize: 20, fontWeight: 900, color: OR, fontFamily: 'monospace' }}>{overStride}%</p></div>
           </div>
         }
       >
@@ -402,12 +357,12 @@ function SplitAnalysis() {
           const width = `${(1 - norm) * 80 + 20}%`;
           return (
             <div key={s.km} className="flex items-center gap-3">
-              <span style={{ width: 22, fontSize: 9, color: DM, fontFamily: 'monospace', fontWeight: 900, textAlign: 'right' }}>K{s.km}</span>
+              <span style={{ width: 22, fontSize: 12, color: DM, fontFamily: 'monospace', fontWeight: 900, textAlign: 'right' }}>K{s.km}</span>
               <div style={{ flex: 1, height: 14, background: S2, position: 'relative', overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width, background: `${barColor}22`, borderRight: `2px solid ${barColor}` }} />
               </div>
-              <span style={{ width: 36, fontSize: 10, fontWeight: 900, color: '#fff', fontFamily: 'monospace', textAlign: 'right' }}>{s.label}</span>
-              <span style={{ width: 32, fontSize: 9, fontWeight: 900, fontFamily: 'monospace', textAlign: 'right', color: s.delta < 0 ? N : s.delta > 5 ? RD : DM }}>
+              <span style={{ width: 36, fontSize: 12, fontWeight: 900, color: CHART_TEXT.primary, fontFamily: 'monospace', textAlign: 'right' }}>{s.label}</span>
+              <span style={{ width: 32, fontSize: 12, fontWeight: 900, fontFamily: 'monospace', textAlign: 'right', color: s.delta < 0 ? N : s.delta > 5 ? RD : DM }}>
                 {s.delta < 0 ? '' : '+'}{s.delta}s
               </span>
             </div>
@@ -434,18 +389,18 @@ function WeeklyVolume() {
         </div>
       </div>
       <ResponsiveContainer width="100%" height={200}>
-        <ComposedChart data={movAvg} margin={{ top: 4, right: 12, bottom: 0, left: -16 }}>
+        <ComposedChart data={movAvg} margin={chartMargin}>
           <defs>
             <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%"  stopColor={N} stopOpacity={0.25} />
               <stop offset="95%" stopColor={N} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="2 4" stroke={MT} vertical={false} />
-          <XAxis dataKey="w" tick={{ fill: DM, fontSize: 8, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} interval={3} />
-          <YAxis tick={{ fill: DM, fontSize: 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} domain={[0, 90]} />
+          <CartesianGrid {...chartGrid} />
+          <XAxis {...chartXAxis} dataKey="w" interval={3} />
+          <YAxis {...chartYAxis} domain={[0, 90]} />
           <Tooltip content={<TT />} />
-          <ReferenceLine y={60} stroke={DM} strokeDasharray="6 4" strokeWidth={1} label={{ value: 'TARGET', fill: DM, fontSize: 8, fontWeight: 900, position: 'right' }} />
+          <ReferenceLine y={60} stroke={DM} strokeDasharray="6 4" strokeWidth={1} label={{ value: 'TARGET', fill: DM, fontSize: 12, fontWeight: 900, position: 'right' }} />
           <Area type="monotone" dataKey="km" name="KM" stroke={N} strokeWidth={2} fill="url(#volGrad)" dot={false} />
           <Line type="monotone" dataKey="avg" name="4W Avg" stroke={OR} strokeWidth={2} dot={false} strokeDasharray="0" />
         </ComposedChart>
@@ -466,7 +421,7 @@ export function AnalyticsV4PaceZoneDistribution({ chart, onRequestDetail }: { ch
   const highPct = Math.round(zones.filter((z) => ['Z4', 'Z5'].includes(z.zone)).reduce((s, z) => s + z.pct, 0));
   const renderZones = (isExpanded = false) => {
     if (!zones.length) {
-      return <div className="h-[180px] flex items-center justify-center text-[#555] text-xs font-black tracking-widest uppercase">Dati reali insufficienti</div>;
+      return <div className="h-[180px] flex items-center justify-center text-ea-text-axis text-xs font-black tracking-widest uppercase">Dati reali insufficienti</div>;
     }
     return (
     <div className={`${isExpanded ? 'h-full flex flex-col justify-center gap-5' : 'mt-5 space-y-3'}`}>
@@ -476,7 +431,7 @@ export function AnalyticsV4PaceZoneDistribution({ chart, onRequestDetail }: { ch
             <Lbl color={z.color}>{z.zone}</Lbl>
             <div className="flex items-center gap-3">
               <Lbl color={DM}>{z.pace}</Lbl>
-              <span style={{ fontSize: isExpanded ? 18 : 13, fontWeight: 900, color: '#fff', fontFamily: 'monospace', width: isExpanded ? 46 : 32, textAlign: 'right' }}>{z.pct}%</span>
+              <span style={{ fontSize: isExpanded ? 18 : 13, fontWeight: 900, color: CHART_TEXT.primary, fontFamily: 'monospace', width: isExpanded ? 46 : 32, textAlign: 'right' }}>{z.pct}%</span>
             </div>
           </div>
           <div style={{ height: isExpanded ? 10 : 6, background: S2, width: '100%' }}>
@@ -511,7 +466,7 @@ export function AnalyticsV4PaceZoneDistribution({ chart, onRequestDetail }: { ch
           </div>
           <div>
             <Lbl color={DM}>GIORNI AD ALTA INTENSITA</Lbl>
-            <p style={{ fontSize: 22, fontWeight: 900, color: '#fff', fontFamily: 'monospace', marginTop: 2 }}>{chart?.quality?.sample_size ?? 0} <span style={{ fontSize: 12, color: DM }}>corse</span></p>
+            <p style={{ fontSize: 22, fontWeight: 900, color: CHART_TEXT.primary, fontFamily: 'monospace', marginTop: 2 }}>{chart?.quality?.sample_size ?? 0} <span style={{ fontSize: 12, color: DM }}>corse</span></p>
             <Lbl color={DM}>ENTRO I LIMITI</Lbl>
           </div>
         </div>
@@ -524,8 +479,8 @@ export function AnalyticsV4PaceZoneDistribution({ chart, onRequestDetail }: { ch
         accent={N}
         details={
           <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>RAPPORTO 80/20</Lbl><p style={{ fontSize: 22, fontWeight: 900, color: N, fontFamily: 'monospace' }}>{easyPct} / {highPct}</p></div>
-            <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4"><Lbl color={DM}>CORSE VALIDATE</Lbl><p style={{ fontSize: 22, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>{chart?.quality?.sample_size ?? 0}</p></div>
+            <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4"><Lbl color={DM}>RAPPORTO 80/20</Lbl><p style={{ fontSize: 22, fontWeight: 900, color: N, fontFamily: 'monospace' }}>{easyPct} / {highPct}</p></div>
+            <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4"><Lbl color={DM}>CORSE VALIDATE</Lbl><p style={{ fontSize: 22, fontWeight: 900, color: CHART_TEXT.primary, fontFamily: 'monospace' }}>{chart?.quality?.sample_size ?? 0}</p></div>
           </div>
         }
       >
@@ -547,7 +502,7 @@ function ShoeWearRadar() {
       <ResponsiveContainer width="100%" height={220}>
         <RadarChart data={shoeRadar} outerRadius={80}>
           <PolarGrid stroke={MT} strokeDasharray="2 4" />
-          <PolarAngleAxis dataKey="axis" tick={{ fill: DM, fontSize: 9, fontFamily: 'monospace', fontWeight: 900 }} />
+          <PolarAngleAxis dataKey="axis" tick={{ fill: DM, fontSize: 12, fontFamily: 'monospace', fontWeight: 900 }} />
           <PolarRadiusAxis tick={false} axisLine={false} domain={[0, 100]} />
           <Tooltip content={<TT />} />
           <Radar name="Left" dataKey="A" stroke={N} fill={N} fillOpacity={0.18} strokeWidth={2} />
@@ -555,7 +510,7 @@ function ShoeWearRadar() {
         </RadarChart>
       </ResponsiveContainer>
       <div className="flex items-center justify-between mt-2 pt-4" style={{ borderTop: `1px solid ${MT}` }}>
-        <div><Lbl color={DM}>KM ON SHOE</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>487 <span style={{ fontSize: 11, color: DM }}>km</span></p></div>
+        <div><Lbl color={DM}>KM ON SHOE</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: CHART_TEXT.primary, fontFamily: 'monospace' }}>487 <span style={{ fontSize: 12, color: DM }}>km</span></p></div>
         <div><Lbl color={DM}>ESTIMATED LIFE</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: N, fontFamily: 'monospace' }}>~113 km</p></div>
         <div><Lbl color={DM}>HEEL DROP Î”</Lbl><p style={{ fontSize: 18, fontWeight: 900, color: OR, fontFamily: 'monospace' }}>-1.2 mm</p></div>
       </div>
@@ -571,17 +526,17 @@ function ElevationHR() {
         <Lbl color={PU}>HR DRIFT: +6 BPM</Lbl>
       </div>
       <ResponsiveContainer width="100%" height={200}>
-        <ComposedChart data={elvHr} margin={{ top: 4, right: 12, bottom: 0, left: -16 }}>
-          <CartesianGrid strokeDasharray="2 4" stroke={MT} vertical={false} />
-          <XAxis dataKey="elev" tick={{ fill: DM, fontSize: 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} label={{ value: 'ELEV (m)', position: 'insideBottom', fill: DM, fontSize: 8, fontWeight: 900, offset: -2 }} />
-          <YAxis yAxisId="hr" tick={{ fill: DM, fontSize: 9, fontFamily: 'monospace', fontWeight: 900 }} axisLine={false} tickLine={false} domain={[130, 185]} />
+        <ComposedChart data={elvHr} margin={chartMargin}>
+          <CartesianGrid {...chartGrid} />
+          <XAxis {...chartXAxis} dataKey="elev" label={{ value: 'ELEV (m)', position: 'insideBottom', fill: DM, fontSize: 12, fontWeight: 900, offset: -2 }} />
+          <YAxis {...chartYAxis} yAxisId="hr" domain={[130, 185]} />
           <Tooltip content={<TT />} />
           <Area yAxisId="hr" type="monotone" dataKey="hr" name="HR (bpm)" stroke={PU} strokeWidth={2} fill={`${PU}18`} dot={false} />
           <Line yAxisId="hr" type="monotone" dataKey="pace" name="Pace" stroke={RD} strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
         </ComposedChart>
       </ResponsiveContainer>
       <div className="flex items-center justify-between mt-4 pt-4" style={{ borderTop: `1px solid ${MT}` }}>
-        <div><Lbl color={DM}>CARDIAC EFFICIENCY</Lbl><p style={{ fontSize: 16, fontWeight: 900, color: '#fff', fontFamily: 'monospace', marginTop: 2 }}>1.42 bpm/m</p></div>
+        <div><Lbl color={DM}>CARDIAC EFFICIENCY</Lbl><p style={{ fontSize: 16, fontWeight: 900, color: CHART_TEXT.primary, fontFamily: 'monospace', marginTop: 2 }}>1.42 bpm/m</p></div>
         <div><Lbl color={DM}>DECOUPLING</Lbl><p style={{ fontSize: 16, fontWeight: 900, color: PU, fontFamily: 'monospace', marginTop: 2 }}>3.8%</p></div>
         <div><Lbl color={DM}>AEROBIC BASE</Lbl><p style={{ fontSize: 16, fontWeight: 900, color: N, fontFamily: 'monospace', marginTop: 2 }}>SOLID</p></div>
       </div>
@@ -609,14 +564,14 @@ export function AnalyticsV4() {
         }}
       >
         <div className="flex items-center gap-4">
-          <span style={{ color: N, fontSize: 10, fontWeight: 900, letterSpacing: '0.3em' }}>RACE ENGINEERING â€” DATA OBSERVATORY v4</span>
-          <span style={{ color: MT, fontSize: 9, letterSpacing: '0.2em' }}>SESSION: 2026-04-15 Â· ATHLETE: #00312 Â· STATUS: ACTIVE</span>
+          <span style={{ color: N, fontSize: 12, fontWeight: 900, letterSpacing: '0.3em' }}>RACE ENGINEERING â€” DATA OBSERVATORY v4</span>
+          <span style={{ color: MT, fontSize: 12, letterSpacing: '0.2em' }}>SESSION: 2026-04-15 Â· ATHLETE: #00312 Â· STATUS: ACTIVE</span>
         </div>
         <div className="flex items-center gap-6">
           <Lbl color={DM}>VDOT <span style={{ color: N }}>54.2</span></Lbl>
           <Lbl color={DM}>CTL <span style={{ color: CY }}>61.4</span></Lbl>
           <Lbl color={DM}>TSB <span style={{ color: OR }}>+8.2</span></Lbl>
-          <div style={{ width: 8, height: 8, background: N, borderRadius: '50%', boxShadow: `0 0 6px ${N}` }} />
+          <div style={{ width: 8, height: 8, background: N, borderRadius: '50%' }} />
         </div>
       </div>
 
@@ -665,7 +620,7 @@ export function AnalyticsV4() {
       >
         <Lbl color={MT}>DATA LAST SYNC: 2026-04-15 Â· 08:32 UTC+1</Lbl>
         <div className="flex items-center gap-6">
-          <Lbl color={DM}>TOTAL RUNS THIS YEAR: <span style={{ color: '#fff' }}>87</span></Lbl>
+          <Lbl color={DM}>TOTAL RUNS THIS YEAR: <span style={{ color: CHART_TEXT.primary }}>87</span></Lbl>
           <Lbl color={DM}>YTD DISTANCE: <span style={{ color: N }}>1,248 km</span></Lbl>
           <Lbl color={DM}>YTD ELEV: <span style={{ color: CY }}>8,420 m</span></Lbl>
         </div>

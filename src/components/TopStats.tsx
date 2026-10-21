@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import type { Run } from "../types/api";
 
+import { chartXAxis } from "./charts";
 interface TopStatsProps {
   runs: Run[];
 }
@@ -29,7 +30,7 @@ const DayTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ p
   if (active && payload && payload.length) {
     const { name, value } = payload[0].payload;
     return (
-      <div className="bg-[#1E293B] border border-[#334155] px-3 py-2 rounded-lg shadow-xl text-xs">
+      <div className="ea-tooltip text-xs">
         <p className="text-text-muted mb-1 font-semibold">{name}</p>
         <p className="text-text-primary font-bold">{value > 0 ? `${value} km` : "Riposo"}</p>
       </div>
@@ -75,7 +76,7 @@ export function TopStats({ runs }: TopStatsProps) {
   return (
     <div className="mb-6">
       {/* ── Total Distance ── */}
-      <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex flex-col justify-between max-w-sm">
+      <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-5 flex flex-col justify-between max-w-sm">
         <div className="flex justify-between items-start mb-4">
           <div>
             <h3 className="text-xs text-text-muted font-semibold tracking-wider mb-1 uppercase">Total Distance</h3>
@@ -84,7 +85,7 @@ export function TopStats({ runs }: TopStatsProps) {
                 {thisWeekKm > 0 ? `${thisWeekKm} km` : "0 km"}
               </span>
               {weekPct !== null && (
-                <span className={`text-xs px-1.5 py-0.5 rounded ${weekPct >= 0 ? "text-[#14B8A6] bg-[#14B8A6]/10" : "text-[#F43F5E] bg-[#F43F5E]/10"}`}>
+                <span className={`text-xs px-1.5 py-0.5 rounded ${weekPct >= 0 ? "text-ea-cyan bg-[#14B8A6]/10" : "text-ea-rose bg-ea-rose/10"}`}>
                   {weekPct >= 0 ? "+" : ""}{weekPct}%
                 </span>
               )}
@@ -96,7 +97,7 @@ export function TopStats({ runs }: TopStatsProps) {
         <div className="h-20 w-full mt-auto">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={weekDayData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-              <XAxis dataKey="name" hide />
+              <XAxis {...chartXAxis} dataKey="name" hide />
               <Tooltip
                 content={<DayTooltip />}
                 cursor={{ fill: "rgba(255,255,255,0.04)" }}
@@ -109,7 +110,7 @@ export function TopStats({ runs }: TopStatsProps) {
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div className="flex justify-between mt-2 text-[10px] text-text-muted">
+        <div className="flex justify-between mt-2 text-xs text-text-muted">
           {DAY_NAMES.map((d) => <span key={d}>{d}</span>)}
         </div>
       </div>

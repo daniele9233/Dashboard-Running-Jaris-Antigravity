@@ -1,0 +1,103 @@
+/*
+ * Elite Analytics — design token CSS.
+ *
+ * Fonte unica per i valori usati da CSS e dalle classi Tailwind (`bg-ea-surface-1`,
+ * `text-ea-muted`, `rounded-ea-card`…). Lo specchio TypeScript sta in
+ * `src/components/charts/theme.ts` e un test (`theme.test.ts`) verifica che i due
+ * restino identici: cambiare un valore qui senza cambiarlo lì fa fallire i test.
+ *
+ * Documentazione: DESIGN.md (sistema), docs/design-system/02-TOKENS.md (tabella).
+ */
+@theme static {
+  /* ── Superfici: nero stratificato, nessun vetro ─────────────────────────── */
+  --color-ea-ink: #050505;
+  --color-ea-surface-1: #0e0e0e;
+  --color-ea-surface-2: #141414;
+  --color-ea-surface-3: #1a1a1a;
+  --color-ea-hairline: #1e1e1e;
+  --color-ea-hairline-strong: #2a2a2a;
+  --color-ea-grid: #222222;
+
+  /* ── Testo (contrasto su surface-1) ─────────────────────────────────────── */
+  --color-ea-text: #ffffff; /* 19.3:1 */
+  --color-ea-text-muted: #a0a0a0; /* 7.4:1 */
+  --color-ea-text-axis: #8a8a8a; /* 5.6:1 */
+  --color-ea-text-faint: #666666; /* 3.4:1 — solo decorativo */
+
+  /* ── Marchio e metriche: un colore, un significato ──────────────────────── */
+  --color-ea-lime: #c0ff00; /* metrica primaria */
+  --color-ea-cyan: #22d3ee; /* aerobico, confronto */
+  --color-ea-violet: #a78bfa; /* biomeccanica, struttura */
+  --color-ea-amber: #f59e0b; /* soglia, carico */
+  --color-ea-rose: #f43f5e; /* rischio, fatica, FC */
+  --color-ea-green: #22c55e; /* recupero, progresso positivo */
+  --color-ea-indigo: #818cf8; /* modello, previsione, scenario */
+
+  /* ── Rampa delle zone di intensità Z1→Z5 ────────────────────────────────── */
+  --color-ea-zone-1: #22d3ee;
+  --color-ea-zone-2: #22c55e;
+  --color-ea-zone-3: #c0ff00;
+  --color-ea-zone-4: #f59e0b;
+  --color-ea-zone-5: #f43f5e;
+
+  /* ── Tipi di seduta (categoria, non metrica) ────────────────────────────── */
+  --color-ea-workout-recovery: #8a8a8a;
+  --color-ea-workout-easy: #22c55e;
+  --color-ea-workout-long: #22d3ee;
+  --color-ea-workout-tempo: #f59e0b;
+  --color-ea-workout-intervals: #f43f5e;
+  --color-ea-workout-race: #c0ff00;
+  --color-ea-workout-strength: #a78bfa;
+
+  /* ── Stati di sistema (separati dalla palette delle metriche) ───────────── */
+  --color-ea-status-success: #22c55e;
+  --color-ea-status-warning: #f59e0b;
+  --color-ea-status-danger: #f43f5e;
+  --color-ea-status-info: #22d3ee;
+
+  /* ── Forme ──────────────────────────────────────────────────────────────── */
+  --radius-ea-card: 16px;
+  --radius-ea-tile: 12px;
+  --radius-ea-control: 8px;
+
+  /* ── Tipografia (scala fissa, nessun testo informativo sotto 12 px) ─────── */
+  --font-ea-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-ea-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --text-ea-kpi-lg: 40px;
+  --text-ea-kpi-lg--line-height: 44px;
+  --text-ea-kpi: 32px;
+  --text-ea-kpi--line-height: 36px;
+  --text-ea-kpi-sm: 24px;
+  --text-ea-kpi-sm--line-height: 28px;
+  --text-ea-title: 18px;
+  --text-ea-title--line-height: 24px;
+  --text-ea-body: 14px;
+  --text-ea-body--line-height: 20px;
+  --text-ea-label: 12px;
+  --text-ea-label--line-height: 16px;
+}
+
+/* ── Variabili non-tema: misure del contratto grafico ───────────────────── */
+:root {
+  /* Altezze dell'area di plot per famiglia (ridotte sotto i 768 px) */
+  --ea-plot-compact: 160px;
+  --ea-plot-standard: 240px;
+  --ea-plot-tall: 320px;
+  --ea-plot-hero: 360px;
+  /* Padding di card: 20 px, 16 px sotto i 768 px */
+  --ea-card-pad: 20px;
+  /* Ritmo verticale dentro la card (4 px base: 16 tra i blocchi) */
+  --ea-card-gap: 16px;
+  /* Durata unica dei cambi di stato (hover, selezione, intervallo) */
+  --ea-motion: 200ms;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --ea-plot-compact: 136px;
+    --ea-plot-standard: 208px;
+    --ea-plot-tall: 264px;
+    --ea-plot-hero: 296px;
+    --ea-card-pad: 16px;
+  }
+}

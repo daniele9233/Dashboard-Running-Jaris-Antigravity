@@ -113,10 +113,10 @@ class _WidgetBoundaryImpl extends React.Component<
         <div className="h-full flex items-center justify-center bg-[#0a0a0a] border border-rose-500/30 rounded-xl p-4">
           <div className="text-center">
             <p className="text-xs font-bold text-rose-400 mb-1">{this.props.label ?? 'Errore widget'}</p>
-            <p className="text-[10px] text-gray-500 mb-3 line-clamp-2">{this.state.error?.message ?? '—'}</p>
+            <p className="text-xs text-gray-500 mb-3 line-clamp-2">{this.state.error?.message ?? '—'}</p>
             <button
               onClick={() => this.setState({ hasError: false, error: null })}
-              className="text-[10px] px-3 py-1 bg-[#1E1E1E] hover:bg-[#2A2A2A] text-white rounded-md font-bold transition-colors"
+              className="text-xs px-3 py-1 bg-[#1E1E1E] hover:bg-[#2A2A2A] text-white rounded-md font-bold transition-colors"
             >
               Riprova
             </button>

@@ -104,12 +104,12 @@ function RangeRow({ label, left, right, value, min, max, step, onChange, fmt }: 
   return (
     <div className="min-w-0">
       <div className="flex items-baseline justify-between mb-1">
-        <span className="text-[11px] text-gray-400">{label}</span>
+        <span className="text-xs text-gray-400">{label}</span>
         <span className="text-[12px] font-black tabular-nums text-white" style={{ fontFamily: MONO }}>{fmt(value)}</span>
       </div>
       <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(+e.target.value)}
-        className="w-full accent-[#C0FF00] cursor-pointer" aria-label={label} />
-      <div className="flex justify-between text-[9.5px] text-gray-600 mt-0.5"><span>{left}</span><span>{right}</span></div>
+        className="w-full accent-ea-lime cursor-pointer" aria-label={label} />
+      <div className="flex justify-between text-xs text-gray-600 mt-0.5"><span>{left}</span><span>{right}</span></div>
     </div>
   );
 }
@@ -277,7 +277,7 @@ export function PaceProSection({ ctx }: { ctx: PaceCtx }) {
                 <Upload className="w-3.5 h-3.5" />{gpx ? "GPX" : "Carica GPX"}
               </Chip>
               {gpx && kind === "gpx" && (
-                <button type="button" onClick={() => fileRef.current?.click()} className="text-[10.5px] font-bold text-gray-500 hover:text-white px-1">cambia file</button>
+                <button type="button" onClick={() => fileRef.current?.click()} className="text-xs font-bold text-gray-500 hover:text-white px-1">cambia file</button>
               )}
               <input ref={fileRef} type="file" accept=".gpx,application/gpx+xml" className="hidden"
                 onChange={(e) => { void onGpx(e.target.files?.[0]); e.target.value = ""; }} />
@@ -293,11 +293,11 @@ export function PaceProSection({ ctx }: { ctx: PaceCtx }) {
                   ))}
                 </select>
               ) : (
-                <p className="text-[11px] text-gray-500">Nessuna tua corsa lunga fra {fmtKm(D * 0.9, 1)} e {fmtKm(D * 1.25, 1)} km con gli split: uso il piatto.</p>
+                <p className="text-xs text-gray-500">Nessuna tua corsa lunga fra {fmtKm(D * 0.9, 1)} e {fmtKm(D * 1.25, 1)} km con gli split: uso il piatto.</p>
               )
             )}
-            {gpxError && <p className="text-[11px]" style={{ color: RISK }}>{gpxError}</p>}
-            <p className="text-[11px] text-gray-400 leading-relaxed">
+            {gpxError && <p className="text-xs" style={{ color: RISK }}>{gpxError}</p>}
+            <p className="text-xs text-gray-400 leading-relaxed">
               {course.flat ? (
                 <>Percorso piatto: passo costante e sforzo costante coincidono.</>
               ) : (
@@ -381,16 +381,16 @@ export function PaceProSection({ ctx }: { ctx: PaceCtx }) {
         <div className="rounded-xl border border-white/[0.07] bg-black/25 p-4">
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <Label>Frazioni</Label>
-            <span className="text-[10.5px] text-gray-600">Con − e + blocchi una frazione a un passo tuo (la folla al via, un ristoro): il resto si ricalcola.</span>
+            <span className="text-xs text-gray-600">Con − e + blocchi una frazione a un passo tuo (la folla al via, un ristoro): il resto si ricalcola.</span>
             <div className="ml-auto flex items-center gap-2">
               {hasLocks && (
                 <button type="button" onClick={() => setLocks({})}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-white/10 text-[11px] font-bold text-gray-300 hover:text-white hover:border-white/25 transition-colors">
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-white/10 text-xs font-bold text-gray-300 hover:text-white hover:border-white/25 transition-colors">
                   <RotateCcw className="w-3.5 h-3.5" />Reimposta
                 </button>
               )}
               <button type="button" onClick={copySplits}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-black transition-transform hover:scale-105"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-black text-black transition-transform hover:scale-105"
                 style={{ background: LIT }}>
                 {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}{copied ? "Copiati" : "Copia split"}
               </button>
@@ -399,7 +399,7 @@ export function PaceProSection({ ctx }: { ctx: PaceCtx }) {
           <div className="overflow-x-auto -mx-4 px-4">
             <table className="w-full min-w-[640px] border-separate border-spacing-0 text-left">
               <thead>
-                <tr className="text-[9px] font-black tracking-[0.18em] uppercase text-gray-500">
+                <tr className="text-xs font-black tracking-[0.18em] uppercase text-gray-500">
                   <th className="py-2 pr-3 font-black">Frazione</th>
                   <th className="py-2 pr-3 font-black">Distanza</th>
                   {!course.flat && <th className="py-2 pr-3 font-black">Dislivello</th>}
@@ -427,7 +427,7 @@ export function PaceProSection({ ctx }: { ctx: PaceCtx }) {
                         {fmtKm(s.distKm, 2)} km
                       </td>
                       {!course.flat && (
-                        <td className="py-1.5 pr-3 border-t border-white/[0.05] text-[11.5px] tabular-nums whitespace-nowrap" style={{ fontFamily: MONO }}>
+                        <td className="py-1.5 pr-3 border-t border-white/[0.05] text-xs tabular-nums whitespace-nowrap" style={{ fontFamily: MONO }}>
                           <span style={{ color: s.up >= 1 ? "#FCA5A5" : "#4B5563" }}>↑{Math.round(s.up)}</span>{" "}
                           <span style={{ color: s.down >= 1 ? "#93C5FD" : "#4B5563" }}>↓{Math.round(s.down)}</span>
                         </td>
@@ -460,9 +460,9 @@ export function PaceProSection({ ctx }: { ctx: PaceCtx }) {
                           <div className="relative h-[6px] w-20 rounded-full bg-white/[0.06] overflow-hidden">
                             <div className="h-full rounded-full" style={{ width: `${tank * 100}%`, background: LIT, opacity: 0.85 }} />
                           </div>
-                          <span className="text-[11px] tabular-nums text-gray-300 w-9" style={{ fontFamily: MONO }}>{Math.round(tank * 100)}%</span>
+                          <span className="text-xs tabular-nums text-gray-300 w-9" style={{ fontFamily: MONO }}>{Math.round(tank * 100)}%</span>
                           {badAt && badAt.tank <= 0 && badAt.km <= s.km1 + 1e-6 && (
-                            <span className="text-[9.5px] font-black" style={{ color: RISK }} title="Giornata storta: serbatoio già vuoto">✕</span>
+                            <span className="text-xs font-black" style={{ color: RISK }} title="Giornata storta: serbatoio già vuoto">✕</span>
                           )}
                         </div>
                       </td>
@@ -477,14 +477,14 @@ export function PaceProSection({ ctx }: { ctx: PaceCtx }) {
         {/* ── le strategie a confronto ── */}
         <div className="rounded-xl border border-white/[0.07] bg-black/25 p-4">
           <Label className="mb-1">Le strategie a confronto</Label>
-          <p className="text-[10.5px] text-gray-500 mb-3 leading-relaxed">
+          <p className="text-xs text-gray-500 mb-3 leading-relaxed">
             Stesso percorso, stesso livello. Nella giornata storta ({String(sigma).replace(".", ",")}% peggio del previsto) chi ragiona segue il piano fino a
             metà gara, poi corre il resto al meglio che le gambe gli permettono: il numero è quanto perde rispetto al meglio possibile di quel giorno.
           </p>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[620px] border-separate border-spacing-0 text-left">
               <thead>
-                <tr className="text-[9px] font-black tracking-[0.18em] uppercase text-gray-500">
+                <tr className="text-xs font-black tracking-[0.18em] uppercase text-gray-500">
                   <th className="py-2 pr-3 font-black">Strategia</th>
                   <th className="py-2 pr-3 font-black">Tempo</th>
                   <th className="py-2 pr-3 font-black">Sul migliore</th>
@@ -504,7 +504,7 @@ export function PaceProSection({ ctx }: { ctx: PaceCtx }) {
                       <td className="py-2 pr-3 border-t border-white/[0.05]" style={{ boxShadow: on ? `inset 3px 0 0 ${LIT}` : undefined }}>
                         <span className="pl-2 inline-flex items-center gap-1.5 text-[12.5px] font-black text-white">
                           {s.id === "consigliata" && <Shield className="w-3.5 h-3.5" style={{ color: LIT }} />}
-                          {s.label}{s.id === strategy && hasLocks && <span className="text-[10px] font-normal text-gray-500">+ split tuoi</span>}
+                          {s.label}{s.id === strategy && hasLocks && <span className="text-xs font-normal text-gray-500">+ split tuoi</span>}
                         </span>
                       </td>
                       <td className="py-2 pr-3 border-t border-white/[0.05] text-[12.5px] font-black tabular-nums text-white" style={{ fontFamily: MONO }}>{fmtClock(p.totalSec)}</td>
@@ -530,7 +530,7 @@ export function PaceProSection({ ctx }: { ctx: PaceCtx }) {
           </div>
         </div>
 
-        <p className="-mt-1 text-[11px] text-gray-500 leading-relaxed max-w-5xl">
+        <p className="-mt-1 text-xs text-gray-500 leading-relaxed max-w-5xl">
           <b className="text-gray-300">Il livello.</b>{" "}
           {ctx.levelMode === "target"
             ? <>L'obiettivo è preso come il tuo limite su questo percorso: VDOT {vdot.toFixed(1).replace(".", ",")}, che in piano vale {fmtPace(flatLimit)}/km.</>
@@ -548,7 +548,7 @@ function SummaryTile({ label, value, sub, color = "#fff" }: { label: string; val
     <div className="min-w-0 rounded-xl border border-white/[0.07] bg-black/30 px-4 py-3">
       <Label>{label}</Label>
       <div className="mt-1.5 text-[24px] md:text-[28px] font-black leading-none whitespace-nowrap" style={{ fontFamily: MONO, color }}>{value}</div>
-      <div className="mt-1.5 text-[11px] text-gray-400 leading-snug">{sub}</div>
+      <div className="mt-1.5 text-xs text-gray-400 leading-snug">{sub}</div>
     </div>
   );
 }
@@ -638,17 +638,17 @@ function StrategyNote({
     <div className="rounded-xl border px-4 py-3.5" style={{ borderColor: strategy === "consigliata" ? `${LIT}33` : "rgba(255,255,255,0.07)", background: strategy === "consigliata" ? `${LIT}0a` : "rgba(0,0,0,0.3)" }}>
       <div className="flex items-center gap-2 mb-1.5">
         {strategy === "consigliata" && <Shield className="w-4 h-4" style={{ color: LIT }} />}
-        <span className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: strategy === "consigliata" ? LIT : "#9CA3AF" }}>{strategyLabel}</span>
+        <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: strategy === "consigliata" ? LIT : "#9CA3AF" }}>{strategyLabel}</span>
         {levelMode === "vdot" && best < targetSec - 0.5 && (
-          <span className="ml-auto text-[10.5px] text-gray-500">il tuo meglio su questo percorso: <b className="text-gray-300 tabular-nums" style={{ fontFamily: MONO }}>{fmtClock(best)}</b></span>
+          <span className="ml-auto text-xs text-gray-500">il tuo meglio su questo percorso: <b className="text-gray-300 tabular-nums" style={{ fontFamily: MONO }}>{fmtClock(best)}</b></span>
         )}
       </div>
       <p className="text-[13px] md:text-[14px] text-gray-300 leading-relaxed">{body}</p>
       {strategy === "consigliata" && robustMatters && (
-        <p className="mt-2 text-[11px] text-gray-500">In piano il tuo limite è {fmtPace(flatLimit)}/km: la prudenza vale {robust.deltaSec.toFixed(1).replace(".", ",")}″, non di più. Più sei incerto sul tuo livello, più conviene.</p>
+        <p className="mt-2 text-xs text-gray-500">In piano il tuo limite è {fmtPace(flatLimit)}/km: la prudenza vale {robust.deltaSec.toFixed(1).replace(".", ",")}″, non di più. Più sei incerto sul tuo livello, più conviene.</p>
       )}
       {!course.flat && strategy !== "passo" && (
-        <p className="mt-2 text-[11px] text-gray-500">
+        <p className="mt-2 text-xs text-gray-500">
           Sul percorso il passo cambia da solo con la pendenza: in discesa più veloce, in salita più lento, allo stesso sforzo. Un km in
           discesa sotto la media non è partire forte — lo è correrlo più veloce di così.
         </p>

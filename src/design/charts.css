@@ -1,0 +1,412 @@
+/*
+ * Elite Analytics — contratto grafico (classi `ea-*`).
+ *
+ * Chart Container → Header → KPI → Plot → Legenda → Nota. Ogni classe legge i
+ * token di `tokens.css`: nessun esadecimale qui dentro. Le classi stanno in
+ * `@layer components` così le utility Tailwind possono ancora regolare layout
+ * (colonne, span) senza lottare con la specificità.
+ */
+@layer components {
+  /* ── Card ─────────────────────────────────────────────────────────────── */
+  .ea-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ea-card-gap);
+    min-width: 0;
+    padding: var(--ea-card-pad);
+    color: var(--color-ea-text);
+    font-family: var(--font-ea-sans);
+    background: var(--color-ea-surface-1);
+    border: 1px solid var(--color-ea-hairline);
+    border-radius: var(--radius-ea-card);
+  }
+  /* Card che contiene una superficie a tutto bordo (mappe, heatmap) */
+  .ea-card--flush {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  /* ── Testata ──────────────────────────────────────────────────────────── */
+  .ea-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .ea-header__text {
+    flex: 1 1 220px;
+    min-width: 0;
+  }
+  .ea-header__icon {
+    display: inline-flex;
+    margin-right: 8px;
+    vertical-align: -3px;
+    color: var(--color-ea-text-axis);
+  }
+  .ea-title {
+    margin: 0;
+    font-size: var(--text-ea-title);
+    line-height: var(--text-ea-title--line-height);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--color-ea-text);
+    text-wrap: balance;
+  }
+  .ea-desc {
+    margin: 4px 0 0;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--color-ea-text-muted);
+  }
+  .ea-header__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  /* ── KPI ──────────────────────────────────────────────────────────────── */
+  .ea-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 12px;
+  }
+  .ea-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: 12px 16px;
+    text-align: left;
+    color: var(--color-ea-text);
+    background: var(--color-ea-surface-2);
+    border: 1px solid transparent;
+    border-radius: var(--radius-ea-tile);
+  }
+  button.ea-kpi {
+    cursor: pointer;
+    transition: border-color var(--ea-motion), background-color var(--ea-motion);
+  }
+  button.ea-kpi:hover {
+    background: var(--color-ea-surface-3);
+  }
+  .ea-kpi[aria-pressed="true"],
+  .ea-kpi[data-active="true"] {
+    border-color: var(--ea-kpi-accent, var(--color-ea-hairline-strong));
+  }
+  .ea-kpi__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 8px;
+  }
+  .ea-kpi__value {
+    font-family: var(--font-ea-mono);
+    font-size: var(--text-ea-kpi);
+    line-height: var(--text-ea-kpi--line-height);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ea-kpi-accent, var(--color-ea-text));
+  }
+  .ea-kpi--lg .ea-kpi__value {
+    font-size: var(--text-ea-kpi-lg);
+    line-height: var(--text-ea-kpi-lg--line-height);
+  }
+  .ea-kpi--sm .ea-kpi__value {
+    font-size: var(--text-ea-kpi-sm);
+    line-height: var(--text-ea-kpi-sm--line-height);
+  }
+  .ea-kpi__unit {
+    font-family: var(--font-ea-mono);
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--color-ea-text-muted);
+  }
+  .ea-kpi__label {
+    font-size: var(--text-ea-label);
+    line-height: var(--text-ea-label--line-height);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-ea-text-muted);
+  }
+  .ea-kpi__icon {
+    display: inline-flex;
+    margin-right: 6px;
+    vertical-align: -2px;
+    color: var(--ea-kpi-accent, var(--color-ea-text-axis));
+  }
+  .ea-kpi__note {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--color-ea-text-muted);
+  }
+  .ea-kpi__delta {
+    font-family: var(--font-ea-mono);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .ea-kpi__delta[data-trend="up"] {
+    color: var(--color-ea-green);
+  }
+  .ea-kpi__delta[data-trend="down"] {
+    color: var(--color-ea-rose);
+  }
+  .ea-kpi__delta[data-trend="flat"] {
+    color: var(--color-ea-text-muted);
+  }
+
+  /* ── Area del grafico: altezze per famiglia, mai globali ──────────────── */
+  .ea-plot {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    height: var(--ea-plot-standard);
+  }
+  .ea-plot--compact {
+    height: var(--ea-plot-compact);
+  }
+  .ea-plot--standard {
+    height: var(--ea-plot-standard);
+  }
+  .ea-plot--tall {
+    height: var(--ea-plot-tall);
+  }
+  .ea-plot--hero {
+    height: var(--ea-plot-hero);
+  }
+  /* Plot proporzionale (radar, anelli): quadrato fino a un massimo */
+  .ea-plot--square {
+    height: auto;
+    aspect-ratio: 1 / 1;
+    max-height: var(--ea-plot-tall);
+    margin-inline: auto;
+  }
+  /* Plot che si adatta al contenuto (SVG con viewBox proprio) */
+  .ea-plot--auto {
+    height: auto;
+  }
+
+  /* ── Legenda ──────────────────────────────────────────────────────────── */
+  .ea-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--color-ea-text-muted);
+  }
+  .ea-legend__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ea-legend__item--button {
+    padding: 2px 4px;
+    margin: -2px -4px;
+    background: none;
+    border: 0;
+    border-radius: 6px;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  .ea-legend__item--button[aria-pressed="false"] {
+    opacity: 0.45;
+  }
+  .ea-legend__item--button:hover {
+    color: var(--color-ea-text);
+  }
+  .ea-legend__swatch {
+    flex: none;
+    display: inline-block;
+  }
+  .ea-legend__value {
+    font-family: var(--font-ea-mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-ea-text);
+  }
+
+  /* ── Nota di interpretazione / footer ─────────────────────────────────── */
+  .ea-insight {
+    margin: 0;
+    padding-top: 12px;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--color-ea-text-muted);
+    border-top: 1px solid var(--color-ea-hairline);
+  }
+  .ea-insight strong {
+    font-weight: 600;
+    color: var(--color-ea-text);
+  }
+  .ea-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+    gap: 12px 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-ea-hairline);
+  }
+
+  /* ── Selettore di intervallo (controllo segmentato) ───────────────────── */
+  .ea-range {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    background: var(--color-ea-surface-2);
+    border-radius: var(--radius-ea-control);
+  }
+  .ea-range__btn {
+    min-width: 36px;
+    min-height: 32px;
+    padding: 0 12px;
+    font-family: var(--font-ea-mono);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-ea-text-muted);
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: color var(--ea-motion), background-color var(--ea-motion);
+  }
+  .ea-range__btn:hover {
+    color: var(--color-ea-text);
+  }
+  .ea-range__btn[aria-pressed="true"],
+  .ea-range__btn[aria-checked="true"] {
+    color: var(--color-ea-ink);
+    background: var(--color-ea-lime);
+  }
+  @media (pointer: coarse) {
+    .ea-range__btn {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+
+  /* ── Tooltip ──────────────────────────────────────────────────────────── */
+  .ea-tooltip {
+    min-width: 140px;
+    max-width: 280px;
+    padding: 10px 14px;
+    font-family: var(--font-ea-sans);
+    color: var(--color-ea-text);
+    background: var(--color-ea-surface-2);
+    border: 1px solid var(--color-ea-hairline-strong);
+    border-radius: var(--radius-ea-tile);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+  }
+  .ea-tooltip__title {
+    margin: 0 0 8px;
+    font-size: var(--text-ea-label);
+    line-height: var(--text-ea-label--line-height);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-ea-text-muted);
+  }
+  .ea-tooltip__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .ea-tooltip__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .ea-tooltip__dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+  }
+  .ea-tooltip__name {
+    color: var(--color-ea-text-muted);
+  }
+  .ea-tooltip__value {
+    margin-left: auto;
+    padding-left: 12px;
+    font-family: var(--font-ea-mono);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-ea-text);
+    white-space: nowrap;
+  }
+
+  /* ── Stati: vuoto / caricamento / errore (stesso rettangolo del plot) ─── */
+  .ea-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    height: 100%;
+    min-height: 120px;
+    padding: 16px;
+    text-align: center;
+    color: var(--color-ea-text-muted);
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .ea-state__title {
+    font-weight: 600;
+    color: var(--color-ea-text);
+  }
+  .ea-state--error .ea-state__title {
+    color: var(--color-ea-rose);
+  }
+  .ea-skeleton {
+    width: 100%;
+    height: 100%;
+    min-height: 120px;
+    background: var(--color-ea-surface-2);
+    border-radius: var(--radius-ea-tile);
+    animation: ea-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes ea-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
+
+  /* ── Focus e movimento ────────────────────────────────────────────────── */
+  .ea-card :focus-visible,
+  .ea-tooltip :focus-visible {
+    outline: 2px solid var(--color-ea-lime);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ea-range__btn,
+    button.ea-kpi {
+      transition: none;
+    }
+    .ea-skeleton {
+      animation: none;
+    }
+  }
+}

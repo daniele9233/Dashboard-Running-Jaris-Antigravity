@@ -56,14 +56,14 @@ export function DistancesSection({ ctx, onPickDistance }: { ctx: PaceCtx; onPick
           <table className="w-full min-w-[860px] border-separate" style={{ borderSpacing: 3 }}>
             <thead>
               <tr>
-                <th className="text-left text-[9px] font-black tracking-[0.18em] uppercase text-gray-500 pb-1">Distanza · il tuo limite</th>
+                <th className="text-left text-xs font-black tracking-[0.18em] uppercase text-gray-500 pb-1">Distanza · il tuo limite</th>
                 {offsets.map((o) => (
-                  <th key={o} className="text-[11px] font-black tabular-nums pb-1" style={{ fontFamily: MONO, color: o < 0 ? "#FDA4AF" : o > 0 ? "#FCD34D" : "#fff" }}>
+                  <th key={o} className="text-xs font-black tabular-nums pb-1" style={{ fontFamily: MONO, color: o < 0 ? "#FDA4AF" : o > 0 ? "#FCD34D" : "#fff" }}>
                     {o === 0 ? "limite" : `${o > 0 ? "+" : "−"}${Math.abs(o)}″`}
                   </th>
                 ))}
                 {mode === "race" && (
-                  <th className="text-left text-[9px] font-black tracking-[0.18em] uppercase text-gray-500 pb-1 pl-2">1″/km nel serbatoio</th>
+                  <th className="text-left text-xs font-black tracking-[0.18em] uppercase text-gray-500 pb-1 pl-2">1″/km nel serbatoio</th>
                 )}
               </tr>
             </thead>
@@ -78,9 +78,9 @@ export function DistancesSection({ ctx, onPickDistance }: { ctx: PaceCtx; onPick
                         style={{ boxShadow: cur ? `inset 3px 0 0 ${LIT}` : undefined, background: cur ? "rgba(192,255,0,0.06)" : undefined }}
                         title={`Porta tutta la pagina ${r.dist.on}`}>
                         <span className="block text-[13px] font-black text-white">{r.dist.label}
-                          {mode === "start" && <span className="ml-1.5 text-[10px] font-normal text-gray-500">primi {fmtKm(r.dist.km * START_FRACTION)} km</span>}
+                          {mode === "start" && <span className="ml-1.5 text-xs font-normal text-gray-500">primi {fmtKm(r.dist.km * START_FRACTION)} km</span>}
                         </span>
-                        <span className="block text-[10.5px] tabular-nums text-gray-500" style={{ fontFamily: MONO }}>
+                        <span className="block text-xs tabular-nums text-gray-500" style={{ fontFamily: MONO }}>
                           {fmtPace(r.limitPace)}/km · {fmtClock(r.limitSec)}
                         </span>
                       </button>
@@ -91,7 +91,7 @@ export function DistancesSection({ ctx, onPickDistance }: { ctx: PaceCtx; onPick
                           return (
                             <td key={c.offsetSec} className="rounded-lg text-center px-1 py-1.5 bg-white/[0.06]">
                               <span className="block text-[12px] font-black tabular-nums text-white" style={{ fontFamily: MONO }}>{fmtPace(r.limitPace)}</span>
-                              <span className="block text-[9px] text-gray-500">vuoto all'arrivo</span>
+                              <span className="block text-xs text-gray-500">vuoto all'arrivo</span>
                             </td>
                           );
                         }
@@ -102,7 +102,7 @@ export function DistancesSection({ ctx, onPickDistance }: { ctx: PaceCtx; onPick
                               style={{ background: `rgba(244,63,94,${0.1 + Math.min(1, early / 0.35) * 0.45})` }}
                               title={`${fmtPace(r.limitPace + c.offsetSec)}/km per tutta la gara: serbatoio vuoto al km ${fmtKm(c.wallKm)}`}>
                               <span className="block text-[12px] font-black tabular-nums text-white" style={{ fontFamily: MONO }}>km {fmtKm(c.wallKm)}</span>
-                              <span className="block text-[9px] tabular-nums text-white/60" style={{ fontFamily: MONO }}>{fmtPace(r.limitPace + c.offsetSec)}</span>
+                              <span className="block text-xs tabular-nums text-white/60" style={{ fontFamily: MONO }}>{fmtPace(r.limitPace + c.offsetSec)}</span>
                             </td>
                           );
                         }
@@ -110,7 +110,7 @@ export function DistancesSection({ ctx, onPickDistance }: { ctx: PaceCtx; onPick
                           <td key={c.offsetSec} className="rounded-lg text-center px-1 py-1.5" style={{ background: `rgba(245,158,11,${0.06 + Math.min(1, c.tankEnd / 0.3) * 0.22})` }}
                             title={`${fmtPace(r.limitPace + c.offsetSec)}/km: avanza il ${Math.round(c.tankEnd * 100)}% del serbatoio`}>
                             <span className="block text-[12px] font-black tabular-nums text-white" style={{ fontFamily: MONO }}>+{Math.round(c.leftSec)}″</span>
-                            <span className="block text-[9px] tabular-nums text-white/55" style={{ fontFamily: MONO }}>avanza {Math.round(c.tankEnd * 100)}%</span>
+                            <span className="block text-xs tabular-nums text-white/55" style={{ fontFamily: MONO }}>avanza {Math.round(c.tankEnd * 100)}%</span>
                           </td>
                         );
                       }
@@ -119,7 +119,7 @@ export function DistancesSection({ ctx, onPickDistance }: { ctx: PaceCtx; onPick
                         <td key={c.offsetSec} className="rounded-lg text-center px-1 py-1.5" style={{ background: `rgba(245,158,11,${0.07 + a * 0.5})` }}
                           title={`Primi ${fmtKm(r.dist.km * START_FRACTION)} km a ${fmtPace(r.limitPace + c.offsetSec)}`}>
                           <span className="block text-[12px] font-black tabular-nums text-white" style={{ fontFamily: MONO }}>{fmtDelta(c.priceSec!)}</span>
-                          <span className="block text-[9px] tabular-nums" style={{ fontFamily: MONO, color: c.wallKm != null ? "#FDA4AF" : "#86EFAC" }}>
+                          <span className="block text-xs tabular-nums" style={{ fontFamily: MONO, color: c.wallKm != null ? "#FDA4AF" : "#86EFAC" }}>
                             {c.wallKm != null ? `muro ${fmtKm(c.wallKm)}` : "regge"}
                           </span>
                         </td>
@@ -131,11 +131,11 @@ export function DistancesSection({ ctx, onPickDistance }: { ctx: PaceCtx; onPick
                           <div className="h-[7px] flex-1 rounded-full bg-white/[0.06] overflow-hidden">
                             <div className="h-full rounded-full" style={{ width: `${(r.tankPerSec / maxSens) * 100}%`, background: r === worst ? RISK : "#9CA3AF" }} />
                           </div>
-                          <span className="text-[11.5px] font-black tabular-nums w-11 text-right" style={{ fontFamily: MONO, color: r === worst ? "#FDA4AF" : "#D1D5DB" }}>
+                          <span className="text-xs font-black tabular-nums w-11 text-right" style={{ fontFamily: MONO, color: r === worst ? "#FDA4AF" : "#D1D5DB" }}>
                             {(r.tankPerSec * 100).toFixed(1).replace(".", ",")}%
                           </span>
                         </div>
-                        <span className="block text-[9.5px] text-gray-600 mt-0.5">{Math.round(r.dist.km)}″ sul cronometro</span>
+                        <span className="block text-xs text-gray-600 mt-0.5">{Math.round(r.dist.km)}″ sul cronometro</span>
                       </td>
                     )}
                   </tr>
@@ -145,7 +145,7 @@ export function DistancesSection({ ctx, onPickDistance }: { ctx: PaceCtx; onPick
           </table>
         </div>
 
-        <p className="text-[10.5px] text-gray-600 leading-relaxed max-w-5xl">
+        <p className="text-xs text-gray-600 leading-relaxed max-w-5xl">
           Le altre distanze sono al tuo stesso livello: il passo limite di ognuna è quello che il tuo VDOT regge fino in fondo.
           {ctx.levelMode === "target" && <> Il livello viene dall'obiettivo che hai scritto {ctx.distOn}.</>}
           {" "}Tocca una distanza per portarci tutta la pagina.

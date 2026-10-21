@@ -153,7 +153,7 @@ export function LastRunMap({ run }: LastRunMapProps) {
                 {new Date(run.date).toLocaleDateString("it", { day: "numeric", month: "short", year: "numeric" })}
                 {run.location && <span className="ml-2 text-gray-600">· {run.location}</span>}
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                 <div className="flex items-center gap-1.5">
                   <Zap className="w-3 h-3 text-[#14B8A6]" />
                   <span className="text-[#14B8A6] font-bold text-sm">{run.avg_pace}/km</span>
@@ -245,7 +245,7 @@ export function LastRunMap({ run }: LastRunMapProps) {
               {formatDate(run.date)}
               {run.location && <span className="ml-2 text-[#475569]">· {run.location}</span>}
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
               <div className="flex items-center gap-1.5">
                 <TrendingUp className="w-3 h-3 text-[#C0FF00]" />
                 <span className="text-white font-black text-lg">{run.distance_km.toFixed(1)}</span>

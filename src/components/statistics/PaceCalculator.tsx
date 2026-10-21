@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Calculator, Timer, Gauge, Zap, Activity } from "lucide-react";
-import { CHART_SERIES } from "./chartTheme";
 
+import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from "../charts";
 const NEON = CHART_SERIES.primary;
 const CYAN = CHART_SERIES.compare;
 const LOAD = CHART_SERIES.load;
@@ -38,7 +38,7 @@ const ALL_DISTANCES = [
 
 const VDOT_ZONES = [
   { key: "easy", label: "Easy / Recupero", abbr: "E/L", pct: 0.65, color: CYAN, desc: "Corsa facile, recupero attivo" },
-  { key: "marathon", label: "Marathon Pace", abbr: "M", pct: 0.80, color: "#34D399", desc: "Ritmo maratona" },
+  { key: "marathon", label: "Marathon Pace", abbr: "M", pct: 0.80, color: CHART_SERIES.positive, desc: "Ritmo maratona" },
   { key: "threshold", label: "Soglia / Tempo", abbr: "T", pct: 0.88, color: LOAD, desc: "Tempo run 20-40 min" },
   { key: "interval", label: "Interval VO2max", abbr: "I", pct: 0.98, color: RISK, desc: "Ripetute 800-1600m" },
   { key: "repetition", label: "Repetition / Speed", abbr: "R", pct: 1.05, color: NEON, desc: "Ripetizioni 200-400m" },
@@ -157,18 +157,18 @@ const FIELD_LABEL: Record<Field, string> = {
 /** Marcatore del campo calcolato. Resta scrivibile: scriverci dentro lo
  *  promuove a input e sposta il calcolo su un altro campo. */
 const CALC_BADGE = (
-  <span className="ml-1.5 px-1.5 py-0.5 rounded text-[7px] align-middle" style={{ background: "rgba(192,255,0,0.14)" }}>
+  <span className="ml-1.5 px-1.5 py-0.5 rounded text-xs align-middle" style={{ background: "rgba(192,255,0,0.14)" }}>
     AUTO
   </span>
 );
 
 const STYLE = {
-  card: "rounded-[26px] border p-6",
+  card: "rounded-2xl border p-6",
   cardBg: "#0E0E0E",
-  border: "#1E1E1E",
+  border: CHART_SURFACE.border,
   input:
-    "w-full bg-[#0A0A0A] border border-[#262626] rounded-xl px-4 py-3 text-white font-mono text-lg font-bold focus:outline-none focus:border-[#C0FF00]/40 text-center transition-all",
-  label: "text-[10px] font-black tracking-[0.22em] uppercase mb-2 text-center",
+    "w-full bg-ea-surface-1 border border-ea-hairline-strong rounded-xl px-4 py-3 text-white font-mono text-lg font-bold focus:outline-none focus:border-ea-lime/40 text-center transition-all",
+  label: "text-xs font-black tracking-[0.22em] uppercase mb-2 text-center",
 };
 
 export function PaceCalculator({ vdot }: { vdot?: number | null }) {
@@ -253,14 +253,14 @@ export function PaceCalculator({ vdot }: { vdot?: number | null }) {
 
   return (
     <div className="space-y-6">
-      <section className={STYLE.card} style={{ background: STYLE.cardBg, borderColor: STYLE.border, borderLeft: `3px solid ${NEON}` }}>
+      <section className={STYLE.card} style={{ background: STYLE.cardBg, borderColor: STYLE.border }}>
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(192,255,0,0.10)" }}>
             <Calculator className="w-5 h-5" style={{ color: NEON }} />
           </div>
           <div>
-            <h2 className="text-lg font-black italic text-white">Calcolatore Passo / Tempo</h2>
-            <p className="text-[10px] tracking-[0.2em] font-bold" style={{ color: "#666" }}>
+            <h2 className="ea-title">Calcolatore Passo / Tempo</h2>
+            <p className="text-xs tracking-[0.2em] font-bold" style={{ color: CHART_TEXT.faint }}>
               SCRIVI IN DUE CAMPI — IL TERZO SI CALCOLA DA SOLO
             </p>
           </div>
@@ -290,7 +290,7 @@ export function PaceCalculator({ vdot }: { vdot?: number | null }) {
                     key={d.label}
                     type="button"
                     onClick={() => { setDistance(String(d.km)); touch("distance"); }}
-                    className="px-2.5 py-1 rounded-lg text-[9px] font-black tracking-wider transition-all"
+                    className="px-2.5 py-1 rounded-lg text-xs font-black tracking-wider transition-all"
                     style={{
                       background: active ? NEON : "rgba(255,255,255,0.04)",
                       color: active ? "#0A0A0A" : "#888",
@@ -319,7 +319,7 @@ export function PaceCalculator({ vdot }: { vdot?: number | null }) {
               style={derivedStyle("time")}
               placeholder="45:00"
             />
-            <div className="text-[9px] font-bold tracking-wider text-center mt-2" style={{ color: "#555" }}>
+            <div className="text-xs font-bold tracking-wider text-center mt-2" style={{ color: "#555" }}>
               {derived === "time" ? "calcolato" : "h:mm:ss · mm:ss · 4500"}
             </div>
           </div>
@@ -339,7 +339,7 @@ export function PaceCalculator({ vdot }: { vdot?: number | null }) {
               style={derivedStyle("pace")}
               placeholder="4:30"
             />
-            <div className="text-[9px] font-bold tracking-wider text-center mt-2" style={{ color: "#555" }}>
+            <div className="text-xs font-bold tracking-wider text-center mt-2" style={{ color: "#555" }}>
               {computed.paceSec
                 ? showMiles
                   ? `${fmtPace(computed.paceSec * KM_PER_MILE)}/mi`
@@ -349,7 +349,7 @@ export function PaceCalculator({ vdot }: { vdot?: number | null }) {
           </div>
         </div>
 
-        <div className="text-[9px] font-bold tracking-[0.2em] uppercase text-center" style={{ color: "#444" }}>
+        <div className="text-xs font-bold tracking-[0.2em] uppercase text-center" style={{ color: "#444" }}>
           {`stai impostando ${FIELD_LABEL[order[0]]} e ${FIELD_LABEL[order[1]]} → `}
           <span style={{ color: NEON }}>{FIELD_LABEL[derived]} calcolato</span>
         </div>
@@ -357,11 +357,11 @@ export function PaceCalculator({ vdot }: { vdot?: number | null }) {
 
       {/* TABELLA PASSAGGI */}
       {computed.checkpoints.length > 0 && (
-        <section className={STYLE.card} style={{ background: STYLE.cardBg, borderColor: STYLE.border, borderLeft: `3px solid ${LOAD}` }}>
+        <section className={STYLE.card} style={{ background: STYLE.cardBg, borderColor: STYLE.border }}>
           <div className="flex items-center gap-2 mb-5">
             <Gauge className="w-4 h-4" style={{ color: LOAD }} />
-            <h3 className="text-sm font-black uppercase tracking-wider text-white">Tempi di passaggio</h3>
-            <span className="text-[9px] font-bold" style={{ color: "#555" }}>
+            <h3 className="ea-title">Tempi di passaggio</h3>
+            <span className="text-xs font-bold" style={{ color: "#555" }}>
               · a {fmtPace(computed.paceSec ?? 0)}/km costanti
             </span>
           </div>
@@ -377,7 +377,7 @@ export function PaceCalculator({ vdot }: { vdot?: number | null }) {
                     borderColor: isFinish ? `${NEON}44` : "#1A1A1A",
                   }}
                 >
-                  <div className="text-[9px] font-black tracking-wider mb-1" style={{ color: isFinish ? NEON : "#888" }}>
+                  <div className="text-xs font-black tracking-wider mb-1" style={{ color: isFinish ? NEON : "#888" }}>
                     {isFinish ? "ARRIVO" : `${fmtDistance(c.km)} km`}
                   </div>
                   <div className="text-[13px] font-black font-mono text-white">{fmtTime(c.atSec / 60)}</div>
@@ -389,11 +389,11 @@ export function PaceCalculator({ vdot }: { vdot?: number | null }) {
       )}
 
       {computed.predictions.length > 0 && (
-        <section className={STYLE.card} style={{ background: STYLE.cardBg, borderColor: STYLE.border, borderLeft: `3px solid ${CYAN}` }}>
+        <section className={STYLE.card} style={{ background: STYLE.cardBg, borderColor: STYLE.border }}>
           <div className="flex items-center gap-2 mb-5">
             <Timer className="w-4 h-4" style={{ color: CYAN }} />
-            <h3 className="text-sm font-black uppercase tracking-wider text-white">Previsioni su tutte le distanze</h3>
-            <span className="text-[9px] font-bold" style={{ color: "#555" }}>· Riegel T₂ = T₁ × (D₂/D₁)¹·⁰⁶</span>
+            <h3 className="ea-title">Previsioni su tutte le distanze</h3>
+            <span className="text-xs font-bold" style={{ color: "#555" }}>· Riegel T₂ = T₁ × (D₂/D₁)¹·⁰⁶</span>
           </div>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-2">
             {computed.predictions.map((p) => {
@@ -407,11 +407,11 @@ export function PaceCalculator({ vdot }: { vdot?: number | null }) {
                     borderColor: isActive ? `${NEON}44` : "#1A1A1A",
                   }}
                 >
-                  <div className="text-[9px] font-black tracking-wider mb-1.5" style={{ color: isActive ? NEON : "#888" }}>
+                  <div className="text-xs font-black tracking-wider mb-1.5" style={{ color: isActive ? NEON : "#888" }}>
                     {p.label}
                   </div>
                   <div className="text-sm font-black font-mono text-white">{fmtTime(p.timeMin)}</div>
-                  <div className="text-[9px] font-bold mt-1" style={{ color: "#555" }}>
+                  <div className="text-xs font-bold mt-1" style={{ color: "#555" }}>
                     {fmtPace((p.timeMin * 60) / p.km)}/km
                   </div>
                 </div>
@@ -423,22 +423,22 @@ export function PaceCalculator({ vdot }: { vdot?: number | null }) {
 
       {computed.computedVdot && (
         <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className={STYLE.card} style={{ background: STYLE.cardBg, borderColor: STYLE.border, borderLeft: `3px solid ${PROJECTED}` }}>
+          <div className={STYLE.card} style={{ background: STYLE.cardBg, borderColor: STYLE.border }}>
             <div className="flex items-center gap-2 mb-4">
               <Zap className="w-4 h-4" style={{ color: PROJECTED }} />
-              <h3 className="text-sm font-black uppercase tracking-wider text-white">VDOT Stimato</h3>
+              <h3 className="ea-title">VDOT Stimato</h3>
             </div>
             <div className="text-center mb-2">
               <div className="text-[48px] font-black leading-none" style={{ color: NEON }}>{computed.computedVdot}</div>
-              <div className="text-[10px] font-bold tracking-[0.2em] uppercase mt-1" style={{ color: "#666" }}>Jack Daniels Formula</div>
+              <div className="text-xs font-bold tracking-[0.2em] uppercase mt-1" style={{ color: CHART_TEXT.faint }}>Jack Daniels Formula</div>
             </div>
             {vdotDelta != null && (
-              <div className="text-center mt-3 pt-3 border-t" style={{ borderColor: "#1A1A1A" }}>
-                <span className="text-[10px] font-bold" style={{ color: "#666" }}>
+              <div className="text-center mt-3 pt-3 border-t" style={{ borderColor: CHART_SURFACE.raised }}>
+                <span className="text-xs font-bold" style={{ color: CHART_TEXT.faint }}>
                   il tuo VDOT attuale è <span className="text-white font-black">{vdot}</span> ·{" "}
                 </span>
                 <span
-                  className="text-[11px] font-black"
+                  className="text-xs font-black"
                   style={{ color: vdotDelta > 0.05 ? NEON : vdotDelta < -0.05 ? RISK : "#888" }}
                 >
                   {vdotDelta > 0 ? "+" : ""}{vdotDelta.toFixed(1)}
@@ -447,10 +447,10 @@ export function PaceCalculator({ vdot }: { vdot?: number | null }) {
             )}
           </div>
 
-          <div className={STYLE.card} style={{ background: STYLE.cardBg, borderColor: STYLE.border, borderLeft: `3px solid ${LOAD}` }}>
+          <div className={STYLE.card} style={{ background: STYLE.cardBg, borderColor: STYLE.border }}>
             <div className="flex items-center gap-2 mb-4">
               <Activity className="w-4 h-4" style={{ color: LOAD }} />
-              <h3 className="text-sm font-black uppercase tracking-wider text-white">Zone VDOT ({computed.computedVdot})</h3>
+              <h3 className="ea-title">Zone VDOT ({computed.computedVdot})</h3>
             </div>
             <div className="space-y-2">
               {computed.zones.map((z) => (
@@ -458,13 +458,13 @@ export function PaceCalculator({ vdot }: { vdot?: number | null }) {
                   <div className="flex items-center gap-2.5">
                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: z.color }} />
                     <div>
-                      <div className="text-[11px] font-bold text-white">{z.label}</div>
-                      <div className="text-[9px] font-bold" style={{ color: "#555" }}>{z.desc}</div>
+                      <div className="text-xs font-bold text-white">{z.label}</div>
+                      <div className="text-xs font-bold" style={{ color: "#555" }}>{z.desc}</div>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-black font-mono text-white">{fmtPace(z.pace)}</div>
-                    <div className="text-[9px] font-bold" style={{ color: "#555" }}>/km</div>
+                    <div className="text-xs font-bold" style={{ color: "#555" }}>/km</div>
                   </div>
                 </div>
               ))}

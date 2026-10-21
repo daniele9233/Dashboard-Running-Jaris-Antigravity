@@ -4,6 +4,7 @@ import { fmtKm, type Course, type Split } from "./paceEngine";
 import { LIT, MONO, RISK, SURFACE, LineKey } from "./ui";
 import { PACE_BINS, niceTicks, paceColor, pathOf, useWidth } from "./chartKit";
 
+import { CHART_SURFACE, CHART_TEXT } from "../charts";
 /**
  * IL GRAFICO DEL PACEPRO
  * ════════════════════════════════════════════════════════════════════════════
@@ -80,7 +81,7 @@ export function PaceProChart({ course, splits, avgPace, badTrace, badWallKm, sel
 
   return (
     <div ref={wrapRef} className="w-full">
-      <div className="min-h-[34px] mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-gray-400">
+      <div className="min-h-[34px] mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-400">
         {sp ? (
           <>
             <span className="font-black text-white tabular-nums" style={{ fontFamily: MONO }}>
@@ -124,19 +125,19 @@ export function PaceProChart({ course, splits, avgPace, badTrace, badWallKm, sel
         </defs>
 
         {/* ── il passo ── */}
-        <text x={M.l} y={M.t - 6} fontSize="9.5" fontWeight="800" fill="#8A8A8A" letterSpacing="0.14em">PASSO AL KM</text>
+        <text x={M.l} y={M.t - 6} fontSize="12" fontWeight="800" fill={CHART_TEXT.axis} letterSpacing="0.14em">PASSO AL KM</text>
         {pTicks.map((t) => (
           <g key={t}>
-            <line x1={M.l} x2={W - M.r} y1={Y1(t)} y2={Y1(t)} stroke="#1E1E1E" />
-            <text x={M.l - 7} y={Y1(t) + 3.5} textAnchor="end" fontSize="10" fill="#8A8A8A" fontFamily={MONO}>{fmtPace(t)}</text>
+            <line x1={M.l} x2={W - M.r} y1={Y1(t)} y2={Y1(t)} stroke={CHART_SURFACE.border} />
+            <text x={M.l - 7} y={Y1(t) + 3.5} textAnchor="end" fontSize="12" fill={CHART_TEXT.axis} fontFamily={MONO}>{fmtPace(t)}</text>
           </g>
         ))}
         {active != null && sp && (
-          <rect x={X(sp.km0)} y={M.t} width={Math.max(1, X(sp.km1) - X(sp.km0))} height={H1} fill="#fff" fillOpacity="0.05" />
+          <rect x={X(sp.km0)} y={M.t} width={Math.max(1, X(sp.km1) - X(sp.km0))} height={H1} fill={CHART_TEXT.primary} fillOpacity="0.05" />
         )}
         <line x1={M.l} x2={W - M.r} y1={Y1(avgPace)} y2={Y1(avgPace)} stroke={LIT} strokeOpacity="0.7" strokeWidth="1.5" strokeDasharray="5 4" />
         {!narrow && (
-          <text x={W - M.r} y={Y1(avgPace) - 5} textAnchor="end" fontSize="9.5" fontWeight="800" fill={LIT}>media {fmtPace(avgPace)}</text>
+          <text x={W - M.r} y={Y1(avgPace) - 5} textAnchor="end" fontSize="12" fontWeight="800" fill={LIT}>media {fmtPace(avgPace)}</text>
         )}
         {/* i raccordi verticali, poi i gradini colorati sopra */}
         {splits.slice(1).map((s, i) => (
@@ -147,28 +148,28 @@ export function PaceProChart({ course, splits, avgPace, badTrace, badWallKm, sel
             stroke={paceColor((s.paceSec - avgPace) / avgPace)} strokeWidth={active === i ? 4 : 3} strokeLinecap="round" />
         ))}
         {splits.map((s, i) => s.locked && (
-          <circle key={`l${i}`} cx={(X(s.km0) + X(s.km1)) / 2} cy={Y1(s.paceSec) - 8} r="2.5" fill="#fff" />
+          <circle key={`l${i}`} cx={(X(s.km0) + X(s.km1)) / 2} cy={Y1(s.paceSec) - 8} r="2.5" fill={CHART_TEXT.primary} />
         ))}
 
         {/* ── la quota ── */}
         {hasElev && (
           <g>
-            <text x={M.l} y={top2 - 8} fontSize="9.5" fontWeight="800" fill="#8A8A8A" letterSpacing="0.14em">QUOTA</text>
+            <text x={M.l} y={top2 - 8} fontSize="12" fontWeight="800" fill={CHART_TEXT.axis} letterSpacing="0.14em">QUOTA</text>
             <path d={elevD} fill={`url(#${uid}e)`} stroke="#9CA3AF" strokeWidth="1.2" strokeOpacity="0.8" />
-            <text x={M.l - 7} y={Y2(eMax) + 3.5} textAnchor="end" fontSize="10" fill="#8A8A8A" fontFamily={MONO}>{Math.round(eMax)} m</text>
-            <text x={M.l - 7} y={Y2(eMin) + 3.5} textAnchor="end" fontSize="10" fill="#8A8A8A" fontFamily={MONO}>{Math.round(eMin)} m</text>
+            <text x={M.l - 7} y={Y2(eMax) + 3.5} textAnchor="end" fontSize="12" fill={CHART_TEXT.axis} fontFamily={MONO}>{Math.round(eMax)} m</text>
+            <text x={M.l - 7} y={Y2(eMin) + 3.5} textAnchor="end" fontSize="12" fill={CHART_TEXT.axis} fontFamily={MONO}>{Math.round(eMin)} m</text>
             {active != null && sp && (
-              <rect x={X(sp.km0)} y={top2} width={Math.max(1, X(sp.km1) - X(sp.km0))} height={H2} fill="#fff" fillOpacity="0.05" />
+              <rect x={X(sp.km0)} y={top2} width={Math.max(1, X(sp.km1) - X(sp.km0))} height={H2} fill={CHART_TEXT.primary} fillOpacity="0.05" />
             )}
           </g>
         )}
 
         {/* ── il serbatoio ── */}
-        <text x={M.l} y={top3 - 8} fontSize="9.5" fontWeight="800" fill="#8A8A8A" letterSpacing="0.14em">SERBATOIO</text>
+        <text x={M.l} y={top3 - 8} fontSize="12" fontWeight="800" fill={CHART_TEXT.axis} letterSpacing="0.14em">SERBATOIO</text>
         {[0, 0.5, 1].map((t) => (
           <g key={t}>
             <line x1={M.l} x2={W - M.r} y1={Y3(t)} y2={Y3(t)} stroke={t === 0 ? "#3A3A3A" : "#1E1E1E"} />
-            <text x={M.l - 7} y={Y3(t) + 3.5} textAnchor="end" fontSize="10" fill="#8A8A8A" fontFamily={MONO}>{Math.round(t * 100)}%</text>
+            <text x={M.l - 7} y={Y3(t) + 3.5} textAnchor="end" fontSize="12" fill={CHART_TEXT.axis} fontFamily={MONO}>{Math.round(t * 100)}%</text>
           </g>
         ))}
         <path d={pathOf(badPts)} fill="none" stroke={RISK} strokeWidth="2" strokeDasharray="5 4" />
@@ -177,7 +178,7 @@ export function PaceProChart({ course, splits, avgPace, badTrace, badWallKm, sel
           return (
             <g>
               <path d={`M${x - 4.5},${y - 4.5}L${x + 4.5},${y + 4.5}M${x + 4.5},${y - 4.5}L${x - 4.5},${y + 4.5}`} stroke={RISK} strokeWidth="2.5" strokeLinecap="round" />
-              <text x={x + (x > W - 120 ? -8 : 8)} y={y - 7} textAnchor={x > W - 120 ? "end" : "start"} fontSize="9.5" fontWeight="900" fill={RISK}>
+              <text x={x + (x > W - 120 ? -8 : 8)} y={y - 7} textAnchor={x > W - 120 ? "end" : "start"} fontSize="12" fontWeight="900" fill={RISK}>
                 muro km {fmtKm(badWallKm)}
               </text>
             </g>
@@ -189,7 +190,7 @@ export function PaceProChart({ course, splits, avgPace, badTrace, badWallKm, sel
         )}
 
         {xTicks.map((t) => (
-          <text key={t} x={X(t)} y={H - 8} textAnchor="middle" fontSize="10" fill="#8A8A8A" fontFamily={MONO}>{fmtKm(t, t % 1 ? 1 : 0)}</text>
+          <text key={t} x={X(t)} y={H - 8} textAnchor="middle" fontSize="12" fill={CHART_TEXT.axis} fontFamily={MONO}>{fmtKm(t, t % 1 ? 1 : 0)}</text>
         ))}
       </svg>
     </div>

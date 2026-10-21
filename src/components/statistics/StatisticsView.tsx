@@ -67,44 +67,20 @@ import {
   Microscope,
 } from 'lucide-react';
 import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  ComposedChart,
-  Line,
-  LineChart,
-  Cell,
-  ReferenceLine,
-  Label,
-  Legend
-} from 'recharts';
-import { CHART_SERIES, CHART_SURFACE } from './chartTheme';
+import { Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarChart, Bar, ComposedChart, Line, LineChart, ReferenceLine, Label, Legend } from "recharts";
 
+import { CHART_SERIES, CHART_SURFACE, ChartCard, ChartHeader, ChartPlot, ChartTip, chartCursorBar, chartGrid, chartMargin, chartXAxis, chartYAxis } from "../charts";
 const ResponsiveGrid = WidthProvider(Responsive);
 
 // Alias sul tema condiviso (chartTheme.ts): un'unica fonte di verità.
 const PRO_ACCENT = CHART_SERIES.primary;
 const PRO_PANEL = CHART_SURFACE.panel;
 const PRO_BORDER = CHART_SURFACE.border;
-const PRO_BORDER_STRONG = CHART_SURFACE.borderStrong;
-const PRO_GRID = CHART_SURFACE.grid;
 const PRO_BLUE = CHART_SERIES.projected;
 const PRO_PURPLE = CHART_SERIES.tertiary;
 const PRO_RED = CHART_SERIES.risk;
 const PRO_ORANGE = CHART_SERIES.load;
 const PRO_ZONE_COLORS = ['#4A4A4A', '#6366F1', '#8B5CF6', '#A78BFA', PRO_ACCENT];
-const PRO_TOOLTIP_STYLE = {
-  backgroundColor: '#141414',
-  border: `1px solid ${PRO_BORDER_STRONG}`,
-  borderRadius: '12px',
-};
 
 // ─────────────────────────────────────────────────────────────
 // INFO TOOLTIP
@@ -119,17 +95,17 @@ function InfoTooltip({ title, lines }: { title: string; lines: string[] }) {
         onMouseLeave={() => setOpen(false)}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
-        className="text-[#444] hover:text-[#888] transition-colors focus:outline-none"
+        className="text-ea-text-axis hover:text-ea-text-axis transition-colors focus:outline-none"
       >
         <Info size={14} />
       </button>
       {open && (
-        <div className="absolute z-50 top-full right-0 mt-2 w-72 bg-[#0D0D0D] border border-white/10 rounded-2xl p-4 shadow-2xl pointer-events-none">
-          <div className="text-[#C0FF00] text-[10px] font-black tracking-widest mb-2">{title}</div>
+        <div className="absolute z-50 top-full right-0 mt-2 w-72 bg-ea-surface-1 border border-ea-hairline rounded-2xl p-4 shadow-2xl pointer-events-none">
+          <div className="text-ea-lime text-xs font-black tracking-widest mb-2">{title}</div>
           <ul className="space-y-1.5">
             {lines.map((l, i) => (
-              <li key={i} className="text-[#888] text-[10px] leading-relaxed flex gap-1.5">
-                <span className="text-[#444] shrink-0">·</span>{l}
+              <li key={i} className="text-ea-text-axis text-xs leading-relaxed flex gap-1.5">
+                <span className="text-ea-text-axis shrink-0">·</span>{l}
               </li>
             ))}
           </ul>
@@ -204,25 +180,14 @@ function vdotLevel(v: number, t: (k: string) => string): { label: string; color:
 function Card({
   children,
   className = '',
-  accent = '#C0FF00',
-  variant = 'default',
 }: {
   children: React.ReactNode;
   className?: string;
+  /** Mantenuti per compatibilità con i chiamanti: il filo colorato e le varianti non fanno più parte del sistema. */
   accent?: string;
   variant?: 'default' | 'pro';
 }) {
-  const isPro = variant === 'pro';
-  return (
-    <div
-      className={`${isPro ? 'rounded-2xl p-7 shadow-2xl' : 'rounded-3xl p-8'} backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 ${className}`}
-      style={{
-        borderLeft: `3px solid ${isPro ? PRO_ACCENT : accent}`,
-      }}
-    >
-      {children}
-    </div>
-  );
+  return <ChartCard className={className}>{children}</ChartCard>;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -230,38 +195,32 @@ function Card({
 // ─────────────────────────────────────────────────────────────
 function CardHeader({
   icon: Icon,
-  iconColor,
   title,
   subtitle,
   tooltip,
   onExpand,
-  variant = 'default',
 }: {
   icon: LucideIcon;
-  iconColor: string;
+  iconColor?: string;
   title: string;
   subtitle?: string;
   tooltip?: { title: string; lines: string[] };
   onExpand?: () => void;
   variant?: 'default' | 'pro';
 }) {
-  const isPro = variant === 'pro';
   return (
-    <div className={`flex items-start justify-between gap-3 ${isPro ? 'mb-6' : 'mb-8'}`}>
-      <div className="flex items-center gap-3">
-        <Icon className={`${isPro ? 'w-4 h-4' : 'w-5 h-5'} shrink-0`} style={{ color: isPro ? PRO_ACCENT : iconColor }} />
-        <div>
-          <h2 className={`${isPro ? 'text-sm text-white' : 'text-base'} font-black tracking-widest uppercase italic leading-none`}>{title}</h2>
-          {subtitle && (
-            <p className={`text-[10px] ${isPro ? 'text-[#555]' : 'text-gray-500'} font-bold uppercase tracking-widest mt-1`}>{subtitle}</p>
-          )}
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        {onExpand && <ChartExpandButton onClick={onExpand} />}
-        {tooltip && <InfoTooltip title={tooltip.title} lines={tooltip.lines} />}
-      </div>
-    </div>
+    <ChartHeader
+      icon={<Icon className="w-4 h-4" />}
+      title={title}
+      description={subtitle}
+      as="h2"
+      actions={
+        <>
+          {onExpand && <ChartExpandButton onClick={onExpand} />}
+          {tooltip && <InfoTooltip title={tooltip.title} lines={tooltip.lines} />}
+        </>
+      }
+    />
   );
 }
 
@@ -270,7 +229,7 @@ function CardHeader({
 // ─────────────────────────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[10px] text-[#333] font-black tracking-[0.3em] uppercase pt-2">{children}</div>
+    <div className="text-xs text-ea-text-axis font-black tracking-[0.3em] uppercase pt-2">{children}</div>
   );
 }
 
@@ -652,11 +611,11 @@ function buildClientAnalyticsFallbacks(runs: Run[]) {
     .map(([paceSec, count]) => ({ pace: paceLabel(paceSec), pace_sec: paceSec, runs: count }));
 
   const paceZoneBins = [
-    { zone: 'Z1', name: 'Recupero', minSec: 390, color: '#3B82F6', runs: 0, km: 0 },
-    { zone: 'Z2', name: 'Easy', minSec: 360, color: '#10B981', runs: 0, km: 0 },
+    { zone: 'Z1', name: 'Recupero', minSec: 390, color: CHART_SERIES.compare, runs: 0, km: 0 },
+    { zone: 'Z2', name: 'Easy', minSec: 360, color: CHART_SERIES.positive, runs: 0, km: 0 },
     { zone: 'Z3', name: 'Steady', minSec: 330, color: '#A3E635', runs: 0, km: 0 },
-    { zone: 'Z4', name: 'Threshold', minSec: 300, color: '#F59E0B', runs: 0, km: 0 },
-    { zone: 'Z5', name: 'Fast', minSec: 0, color: '#F43F5E', runs: 0, km: 0 },
+    { zone: 'Z4', name: 'Threshold', minSec: 300, color: CHART_SERIES.load, runs: 0, km: 0 },
+    { zone: 'Z5', name: 'Fast', minSec: 0, color: CHART_SERIES.risk, runs: 0, km: 0 },
   ];
   const cutoff90 = latestDate ? new Date(latestDate) : null;
   cutoff90?.setDate(cutoff90.getDate() - 90);
@@ -949,16 +908,13 @@ export function StatisticsView() {
     return (
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
-          <XAxis dataKey="date" stroke="#333" fontSize={10} tickLine={false} axisLine={false} />
-          <YAxis hide domain={['dataMin - 0.15', 'dataMax + 0.15']} reversed />
-          <Tooltip
-            contentStyle={PRO_TOOLTIP_STYLE}
-            formatter={(value: any) => {
+          <CartesianGrid {...chartGrid} />
+          <XAxis {...chartXAxis} dataKey="date" />
+          <YAxis {...chartYAxis} hide width={0} domain={['dataMin - 0.15', 'dataMax + 0.15']} reversed />
+          <ChartTip formatter={(value: any) => {
               const sec = Math.round(Number(value) * 60);
               return [`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} /km`, 'Passo medio'];
-            }}
-          />
+            }} />
           <Line type="monotone" dataKey="pace" stroke={PRO_ACCENT} strokeWidth={2} dot={{ r: 4, fill: PRO_ACCENT }} />
         </LineChart>
       </ResponsiveContainer>
@@ -975,11 +931,11 @@ export function StatisticsView() {
     return (
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
-          <XAxis dataKey="date" stroke="#333" fontSize={10} tickLine={false} axisLine={false} />
-          <YAxis stroke="#333" fontSize={10} domain={['dataMin - 5', 'dataMax + 5']} tickLine={false} axisLine={false} />
-          <Tooltip contentStyle={PRO_TOOLTIP_STYLE} formatter={(v: any) => [`${Number(v).toFixed(0)} spm`, 'Cadenza']} />
-          <ReferenceLine y={180} stroke="#333" strokeDasharray="5 5" />
+          <CartesianGrid {...chartGrid} />
+          <XAxis {...chartXAxis} dataKey="date" />
+          <YAxis {...chartYAxis} domain={['dataMin - 5', 'dataMax + 5']} />
+          <ChartTip formatter={(v: any) => [`${Number(v).toFixed(0)} spm`, 'Cadenza']} />
+          <ReferenceLine y={180} stroke={CHART_SURFACE.borderStrong} strokeDasharray="5 5" />
           <Line type="monotone" dataKey="cadence" stroke={PRO_ACCENT} strokeWidth={2} dot={{ r: 5, fill: PRO_ACCENT }} />
         </LineChart>
       </ResponsiveContainer>
@@ -1009,32 +965,13 @@ export function StatisticsView() {
     return (
     <ResponsiveContainer width="100%" height="100%">
       <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
-        <XAxis
-          dataKey="date"
-          stroke="#333"
-          fontSize={10}
-          tickLine={false}
-          axisLine={false}
-          interval="preserveStartEnd"
-          minTickGap={22}
-          tickFormatter={formatGctMonth}
-        />
-        <YAxis
-          stroke="#333"
-          fontSize={10}
-          tickLine={false}
-          axisLine={false}
-          domain={['dataMin - 10', 'dataMax + 10']}
-          tickFormatter={(v) => `${v}ms`}
-        />
-        <Tooltip
-          contentStyle={PRO_TOOLTIP_STYLE}
-          formatter={(value: any, name: string) => {
+        <CartesianGrid {...chartGrid} />
+        <XAxis {...chartXAxis} dataKey="date" interval="preserveStartEnd" minTickGap={22} tickFormatter={formatGctMonth} />
+        <YAxis {...chartYAxis} domain={['dataMin - 10', 'dataMax + 10']} tickFormatter={(v) => `${v}ms`} />
+        <ChartTip formatter={(value: any, name: string) => {
             if (value === null || value === undefined) return ['N/D', ''];
             return [`${value} ms`, formatGctZone(name)];
-          }}
-        />
+          }} />
         <Legend
           formatter={formatGctZone}
           wrapperStyle={{ fontSize: '11px', fontWeight: 700 }}
@@ -1058,23 +995,23 @@ export function StatisticsView() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#0A0A0A] text-white p-4 md:p-6 lg:p-10">
+    <div className="flex-1 overflow-y-auto bg-ea-ink text-white p-4 md:p-6 lg:p-10">
       <div className="max-w-[1800px] mx-auto space-y-6 md:space-y-8">
 
         {/* ── HEADER ── */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 md:gap-8">
           <div>
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter text-white uppercase italic">
-              Elite <span className="text-[#C0FF00]">Analytics</span>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter text-white uppercase">
+              Elite <span className="text-ea-lime">Analytics</span>
             </h1>
-            <p className="text-gray-600 text-[10px] font-black tracking-[0.3em] uppercase mt-2">
+            <p className="text-gray-600 text-xs font-black tracking-[0.3em] uppercase mt-2">
               Engineered for peak human performance
             </p>
           </div>
 
           {/* nove sezioni non stanno in una riga: le frecce ai lati la fanno scorrere */}
           <ScrollRow
-            className="bg-[#0D0D0D] rounded-2xl border border-[#1E1E1E] shadow-2xl -mx-4 md:mx-0"
+            className="bg-ea-surface-1 rounded-2xl border border-ea-hairline shadow-2xl -mx-4 md:mx-0"
             innerClassName="flex items-center whitespace-nowrap p-1.5"
             fade="#0D0D0D"
             activeKey={activeTab}
@@ -1086,14 +1023,14 @@ export function StatisticsView() {
                 data-scroll-key={tab.id}
                 aria-pressed={activeTab === tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 md:px-6 py-3 rounded-xl text-[10px] font-black transition-all tracking-widest shrink-0 min-h-[44px] ${
+                className={`flex items-center gap-2 px-4 md:px-6 py-3 rounded-xl text-xs font-black transition-all tracking-widest shrink-0 min-h-[44px] ${
                   activeTab === tab.id
-                    ? 'bg-[#1A1A1A] text-white shadow-lg border border-[#2A2A2A]'
+                    ? 'bg-ea-surface-3 text-white shadow-lg border border-ea-hairline-strong'
                     : 'text-gray-600 hover:text-gray-300'
                 }`}
               >
                 <tab.icon
-                  className={`w-4 h-4 ${activeTab === tab.id ? 'text-[#C0FF00]' : ''}`}
+                  className={`w-4 h-4 ${activeTab === tab.id ? 'text-ea-lime' : ''}`}
                 />
                 {tab.label.toUpperCase()}
               </button>
@@ -1102,7 +1039,7 @@ export function StatisticsView() {
         </div>
 
         {proError && ['analytics', 'analyticsv2', 'analyticsv3'].includes(activeTab) && (
-          <div className="rounded-xl border border-[#ff5b00]/40 bg-[#ff5b00]/10 px-5 py-4 text-sm text-[#ffb38a]">
+          <div className="rounded-xl border border-[#ff5b00]/40 bg-ea-amber/10 px-5 py-4 text-sm text-[#ffb38a]">
             Backend analytics non disponibile: {proError}. Verifica che Render stia servendo il backend aggiornato e che /api/analytics/pro risponda 200.
           </div>
         )}
@@ -1121,20 +1058,20 @@ export function StatisticsView() {
                       type="button"
                       onClick={() => setOpenLoadWidgetMenu((value) => !value)}
                       disabled={hiddenLoadWidgets.length === 0}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[#666] hover:text-[#C0FF00] hover:border-[#C0FF00]/30 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-[#666] disabled:hover:border-white/[0.06] text-[10px] font-black tracking-widest transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ea-hairline bg-white/[0.02] text-ea-text-axis hover:text-ea-lime hover:border-ea-lime/30 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-ea-text-axis disabled:hover:border-ea-hairline text-xs font-black tracking-widest transition-colors"
                       title="Ripristina widget nascosti"
                     >
                       <Plus size={12} />
                       AGGIUNGI WIDGET
                       {hiddenLoadWidgets.length > 0 && (
-                        <span className="bg-[#C0FF00] text-black rounded-full px-1.5 text-[9px] leading-4">
+                        <span className="bg-ea-lime text-black rounded-full px-1.5 text-xs leading-4">
                           {hiddenLoadWidgets.length}
                         </span>
                       )}
                     </button>
                     {openLoadWidgetMenu && hiddenLoadWidgets.length > 0 && (
-                      <div className="absolute right-0 mt-2 w-64 bg-[#1a1a1a] border border-white/[0.08] rounded-2xl shadow-2xl z-40 p-2">
-                        <div className="text-[#666] text-[9px] font-black tracking-widest uppercase px-3 py-2">
+                      <div className="absolute right-0 mt-2 w-64 bg-ea-surface-3 border border-ea-hairline rounded-2xl shadow-2xl z-40 p-2">
+                        <div className="text-ea-text-axis text-xs font-black tracking-widest uppercase px-3 py-2">
                           Archivio ({hiddenLoadWidgets.length})
                         </div>
                         {hiddenLoadWidgets.map((widget) => (
@@ -1148,7 +1085,7 @@ export function StatisticsView() {
                             className="w-full text-left px-3 py-2 text-[12px] text-white hover:bg-white/[0.06] rounded-xl flex items-center justify-between group"
                           >
                             <span>{widget.label}</span>
-                            <Plus size={12} className="text-[#666] group-hover:text-[#C0FF00]" />
+                            <Plus size={12} className="text-ea-text-axis group-hover:text-ea-lime" />
                           </button>
                         ))}
                       </div>
@@ -1159,7 +1096,7 @@ export function StatisticsView() {
                     onClick={() => {
                       if (window.confirm('Ripristinare il layout Carico & Forma?')) loadFormLayout.resetLayout();
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[#666] hover:text-[#C0FF00] hover:border-[#C0FF00]/30 text-[10px] font-black tracking-widest transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ea-hairline bg-white/[0.02] text-ea-text-axis hover:text-ea-lime hover:border-ea-lime/30 text-xs font-black tracking-widest transition-colors"
                     title="Ripristina posizioni widget"
                   >
                     <RotateCcw size={12} />
@@ -1196,22 +1133,21 @@ export function StatisticsView() {
                       ].map((kpi, i) => (
                         <div
                           key={i}
-                          className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 relative overflow-hidden hover:border-white/[0.2] transition-colors"
-                          style={{ borderLeft: `3px solid ${kpi.color}` }}
+                          className="rounded-2xl border border-ea-hairline bg-ea-surface-1 p-6 relative overflow-hidden hover:border-white/[0.2] transition-colors"
                         >
                           <div className="flex justify-between items-start mb-4">
                             <div>
-                              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{kpi.label}</p>
+                              <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-1">{kpi.label}</p>
                               <div className="flex items-baseline gap-2">
-                                <span className="text-3xl font-black italic">{kpi.value}</span>
-                                <span className={`text-xs font-bold ${kpi.trendUp ? 'text-[#C0FF00]' : 'text-[#F43F5E]'}`}>{kpi.trend}</span>
+                                <span className="text-3xl font-black">{kpi.value}</span>
+                                <span className={`text-xs font-bold ${kpi.trendUp ? 'text-ea-lime' : 'text-ea-rose'}`}>{kpi.trend}</span>
                               </div>
                             </div>
-                            <div className="p-3 rounded-xl bg-[#0D0D0D] border border-[#1E1E1E]" style={{ color: kpi.color }}>
+                            <div className="p-3 rounded-xl bg-ea-surface-1 border border-ea-hairline" style={{ color: kpi.color }}>
                               <kpi.icon className="w-5 h-5" />
                             </div>
                           </div>
-                          <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">{kpi.desc}</p>
+                          <p className="text-xs text-gray-600 font-bold uppercase tracking-widest">{kpi.desc}</p>
                         </div>
                       ))}
                     </div>
@@ -1315,19 +1251,18 @@ export function StatisticsView() {
                ].map((kpi, i) => (
                  <div
                    key={i}
-                   className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 relative overflow-hidden hover:border-white/[0.2] transition-colors"
-                   style={{ borderLeft: `3px solid ${kpi.color}` }}
+                   className="rounded-2xl border border-ea-hairline bg-ea-surface-1 p-6 relative overflow-hidden hover:border-white/[0.2] transition-colors"
                  >
                    <div className="flex justify-between items-start mb-4">
                      <div>
-                       <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">
+                       <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-1">
                          {kpi.label}
                        </p>
                        <div className="flex items-baseline gap-2">
-                         <span className="text-3xl font-black italic">{kpi.value}</span>
+                         <span className="text-3xl font-black">{kpi.value}</span>
                          <span
                            className={`text-xs font-bold flex items-center ${
-                             kpi.trendUp ? 'text-[#C0FF00]' : 'text-[#F43F5E]'
+                             kpi.trendUp ? 'text-ea-lime' : 'text-ea-rose'
                            }`}
                          >
                            {kpi.trendUp ? '↑' : '↓'} {kpi.trend}
@@ -1335,13 +1270,13 @@ export function StatisticsView() {
                        </div>
                      </div>
                      <div
-                       className="p-3 rounded-xl bg-[#0D0D0D] border border-[#1E1E1E]"
+                       className="p-3 rounded-xl bg-ea-surface-1 border border-ea-hairline"
                        style={{ color: kpi.color }}
                      >
                        <kpi.icon className="w-5 h-5" />
                      </div>
                    </div>
-                   <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">
+                   <p className="text-xs text-gray-600 font-bold uppercase tracking-widest">
                      {kpi.desc}
                    </p>
                  </div>
@@ -1403,18 +1338,10 @@ export function StatisticsView() {
                  <div className="h-64 w-full">
                    <ResponsiveContainer width="100%" height="100%">
                      <LineChart data={pacesTrendData}>
-                       <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
-                       <XAxis
-                         dataKey="date"
-                         stroke="#333"
-                         fontSize={10}
-                         tickLine={false}
-                         axisLine={false}
-                       />
-                       <YAxis hide domain={[3.5, 6]} reversed />
-                       <Tooltip
-                         contentStyle={PRO_TOOLTIP_STYLE}
-                       />
+                       <CartesianGrid {...chartGrid} />
+                       <XAxis {...chartXAxis} dataKey="date" />
+                       <YAxis {...chartYAxis} hide width={0} domain={[3.5, 6]} reversed />
+                       <ChartTip  />
                        <Legend
                          wrapperStyle={{ fontSize: '10px', fontWeight: 700 }}
                          formatter={(v) =>
@@ -1468,25 +1395,11 @@ export function StatisticsView() {
                  <div className="h-64 w-full">
                    <ResponsiveContainer width="100%" height="100%">
                      <LineChart data={cadenceMonthlyData}>
-                       <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
-                       <XAxis
-                         dataKey="month"
-                         stroke="#333"
-                         fontSize={10}
-                         tickLine={false}
-                         axisLine={false}
-                       />
-                       <YAxis
-                         stroke="#333"
-                         fontSize={10}
-                         domain={[160, 185]}
-                         tickLine={false}
-                         axisLine={false}
-                       />
-                       <Tooltip
-                         contentStyle={PRO_TOOLTIP_STYLE}
-                       />
-                       <ReferenceLine y={180} stroke="#333" strokeDasharray="5 5" />
+                       <CartesianGrid {...chartGrid} />
+                       <XAxis {...chartXAxis} dataKey="month" />
+                       <YAxis {...chartYAxis} domain={[160, 185]} />
+                       <ChartTip  />
+                       <ReferenceLine y={180} stroke={CHART_SURFACE.borderStrong} strokeDasharray="5 5" />
                        <Line
                          type="monotone"
                          dataKey="value"
@@ -1540,33 +1453,17 @@ export function StatisticsView() {
                  <div className="h-72 w-full">
                    <ResponsiveContainer width="100%" height="100%">
                      <LineChart data={gctData.monthly}>
-                       <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
-                       <XAxis
-                         dataKey="month"
-                         stroke="#333"
-                         fontSize={10}
-                         tickLine={false}
-                         axisLine={false}
-                         tickFormatter={(v) => {
+                       <CartesianGrid {...chartGrid} />
+                       <XAxis {...chartXAxis} dataKey="month" tickFormatter={(v) => {
                            const [y, m] = v.split('-');
                            const months = [
                              'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu',
                              'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic',
                            ];
                            return `${months[parseInt(m) - 1]} '${y.slice(2)}`;
-                         }}
-                       />
-                       <YAxis
-                         stroke="#333"
-                         fontSize={10}
-                         tickLine={false}
-                         axisLine={false}
-                         domain={['dataMin - 10', 'dataMax + 10']}
-                         tickFormatter={(v) => `${v}ms`}
-                       />
-                       <Tooltip
-                         contentStyle={PRO_TOOLTIP_STYLE}
-                         formatter={(value: any, name: string) => {
+                         }} />
+                       <YAxis {...chartYAxis} domain={['dataMin - 10', 'dataMax + 10']} tickFormatter={(v) => `${v}ms`} />
+                       <ChartTip formatter={(value: any, name: string) => {
                            if (value === null || value === undefined) return ['N/D', ''];
                            const zoneLabels: Record<string, string> = {
                              pace_530: '≥ 5:30/km',
@@ -1574,16 +1471,14 @@ export function StatisticsView() {
                              pace_445: '< 4:45/km',
                            };
                            return [`${value} ms`, zoneLabels[name] || name];
-                         }}
-                         labelFormatter={(label) => {
+                         }} labelFormatter={(label) => {
                            const [y, m] = label.split('-');
                            const months = [
                              'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
                              'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre',
                            ];
                            return `${months[parseInt(m) - 1]} ${y}`;
-                         }}
-                       />
+                         }} />
                        <Legend
                          formatter={(value: string) => {
                            const labels: Record<string, string> = {
@@ -1637,21 +1532,21 @@ export function StatisticsView() {
                      return (
                        <div
                          key={key}
-                         className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center"
+                         className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4 text-center"
                        >
                          <div
-                           className="text-[9px] font-black uppercase tracking-widest mb-2"
+                           className="text-xs font-black uppercase tracking-widest mb-2"
                            style={{ color }}
                          >
                            {label}
                          </div>
                          {avg !== null ? (
                            <>
-                             <div className="text-2xl font-black italic text-white">
+                             <div className="text-2xl font-black text-white">
                                {avg}
                                <span className="text-xs text-gray-500 font-normal ml-1">ms</span>
                              </div>
-                             <div className="text-[9px] text-gray-500 mt-1">
+                             <div className="text-xs text-gray-500 mt-1">
                                min {min}ms · max {max}ms
                              </div>
                            </>
@@ -1672,20 +1567,20 @@ export function StatisticsView() {
                  <div className="flex items-center gap-3">
                    <TrendingUp className="w-5 h-5" style={{ color: PRO_ACCENT }} />
                    <div>
-                     <h2 className="text-base font-black tracking-widest uppercase italic leading-none">
+                     <h2 className="ea-title">
                        Dislivello Mensile
                      </h2>
-                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">
+                     <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">
                        Guadagno altimetrico (m) — ultimi 12 mesi
                      </p>
                    </div>
                  </div>
                  <div className="flex items-center gap-4">
                    <div className="text-right">
-                     <div className="text-xl font-black italic" style={{ color: PRO_ACCENT }}>
+                     <div className="text-xl font-black" style={{ color: PRO_ACCENT }}>
                        {elevationData.reduce((s, d) => s + d.dislivello, 0).toLocaleString('it')} m
                      </div>
-                     <div className="text-[9px] text-gray-500 font-black uppercase tracking-widest">
+                     <div className="text-xs text-gray-500 font-black uppercase tracking-widest">
                        Totale anno
                      </div>
                    </div>
@@ -1703,33 +1598,17 @@ export function StatisticsView() {
                {elevationData.some((d) => d.dislivello > 0) ? (
                  <div className="h-64 w-full">
                    <ResponsiveContainer width="100%" height="100%">
-                     <BarChart data={elevationData} margin={{ top: 4, right: 0, left: -20, bottom: 0 }}>
+                     <BarChart data={elevationData} margin={chartMargin}>
                        <defs>
                          <linearGradient id="elevGrad" x1="0" y1="0" x2="0" y2="1">
                            <stop offset="0%" stopColor={PRO_ACCENT} stopOpacity={0.9} />
                            <stop offset="100%" stopColor={PRO_ORANGE} stopOpacity={0.45} />
                          </linearGradient>
                        </defs>
-                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1A1A1A" />
-                       <XAxis
-                         dataKey="name"
-                         stroke="#333"
-                         fontSize={10}
-                         tickLine={false}
-                         axisLine={false}
-                       />
-                       <YAxis
-                         stroke="#333"
-                         fontSize={10}
-                         tickLine={false}
-                         axisLine={false}
-                         tickFormatter={(v) => `${v}m`}
-                       />
-                       <Tooltip
-                         contentStyle={PRO_TOOLTIP_STYLE}
-                         formatter={(v: any) => [`${v.toLocaleString('it')} m`, 'Dislivello']}
-                         labelStyle={{ color: PRO_ACCENT, fontWeight: 700, fontSize: 11 }}
-                       />
+                       <CartesianGrid {...chartGrid} />
+                       <XAxis {...chartXAxis} dataKey="name" />
+                       <YAxis {...chartYAxis} tickFormatter={(v) => `${v}m`} />
+                       <ChartTip formatter={(v: any) => [`${v.toLocaleString('it')} m`, 'Dislivello']} cursor={chartCursorBar} />
                        <Bar
                          dataKey="dislivello"
                          fill="url(#elevGrad)"
@@ -1823,19 +1702,19 @@ export function StatisticsView() {
                   ].map(({ key, label, color, sub }) => (
                     <div
                       key={key}
-                      className="rounded-2xl p-5 text-center backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+                      className="rounded-2xl p-5 text-center border border-ea-hairline bg-ea-surface-1"
                     >
                       <div
-                        className="text-[10px] font-black uppercase tracking-widest mb-1"
+                        className="text-xs font-black uppercase tracking-widest mb-1"
                         style={{ color }}
                       >
                         {label}
                       </div>
-                      <div className="text-[9px] text-gray-600 font-bold mb-3">{sub}</div>
-                      <div className="text-2xl font-black italic text-white">
+                      <div className="text-xs text-gray-600 font-bold mb-3">{sub}</div>
+                      <div className="text-2xl font-black text-white">
                         {(racePredictions as Record<string, string>)[key] ?? '—'}
                       </div>
-                      <div className="text-[9px] text-gray-500 font-bold mt-1">Daniels</div>
+                      <div className="text-xs text-gray-500 font-bold mt-1">Daniels</div>
                     </div>
                   ))}
                 </div>
@@ -1877,13 +1756,13 @@ export function StatisticsView() {
                   ].map(({ key, zone, name, desc, pct, color }) => (
                     <div
                       key={key}
-                      className="rounded-2xl p-5 flex flex-col gap-2 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+                      className="rounded-2xl p-5 flex flex-col gap-2 border border-ea-hairline bg-ea-surface-1"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-2xl font-black italic" style={{ color }}>
+                        <span className="text-2xl font-black" style={{ color }}>
                           {zone}
                         </span>
-                        <span className="text-[9px] font-bold text-gray-600 uppercase tracking-wider">
+                        <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">
                           {pct}
                         </span>
                       </div>
@@ -1894,7 +1773,7 @@ export function StatisticsView() {
                         {(paces as Record<string, string | null>)[key] ?? '—'}
                         <span className="text-xs text-gray-500 font-normal ml-1">/km</span>
                       </div>
-                      <div className="text-[10px] text-gray-500 italic leading-tight">{desc}</div>
+                      <div className="text-xs text-gray-500 leading-tight">{desc}</div>
                     </div>
                   ))}
                 </div>
@@ -2047,9 +1926,9 @@ export function StatisticsView() {
                   }}
                 />
                 {biologyRuns.length > 0 && biologyProjection.length > 0 ? (
-                  <div className="h-[360px] w-full">
+                  <ChartPlot size="hero">
                     <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={biologyProjection} margin={{ top: 6, right: 10, left: -20, bottom: 0 }}>
+                      <ComposedChart data={biologyProjection} margin={chartMargin}>
                         <defs>
                           <linearGradient id="bio-neuro" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor={PRO_ACCENT} stopOpacity={0.42} />
@@ -2064,32 +1943,28 @@ export function StatisticsView() {
                             <stop offset="100%" stopColor={PRO_BLUE} stopOpacity={0.02} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke={PRO_GRID} vertical={false} />
-                        <XAxis dataKey="label" stroke="#444" fontSize={10} tickLine={false} axisLine={false} interval={2} />
-                        <YAxis yAxisId="left" hide domain={[0, 100]} />
-                        <YAxis yAxisId="right" hide domain={[0, 100]} />
-                        <Tooltip
-                          contentStyle={PRO_TOOLTIP_STYLE}
-                          labelStyle={{ color: PRO_ACCENT, fontSize: 11, fontWeight: 800 }}
-                          formatter={(value: any, name: string) => [`${Number(value).toFixed(1)}%`, name]}
-                        />
+                        <CartesianGrid {...chartGrid} />
+                        <XAxis {...chartXAxis} dataKey="label" interval={2} padding={{ left: 20, right: 12 }} />
+                        <YAxis {...chartYAxis} yAxisId="left" hide width={0} domain={[0, 100]} />
+                        <YAxis {...chartYAxis} yAxisId="right" hide width={0} domain={[0, 100]} />
+                        <ChartTip formatter={(value: any, name: string) => [`${Number(value).toFixed(1)}%`, name]} />
                         <Area yAxisId="left" type="monotone" dataKey="structural" name="Strutturale" stroke={PRO_BLUE} fill="url(#bio-structural)" strokeWidth={1.5} dot={false} />
                         <Area yAxisId="left" type="monotone" dataKey="metabolic" name="Metabolico" stroke={PRO_ORANGE} fill="url(#bio-metabolic)" strokeWidth={1.5} dot={false} />
                         <Area yAxisId="left" type="monotone" dataKey="neuromuscular" name="Neuromuscolare" stroke={PRO_ACCENT} fill="url(#bio-neuro)" strokeWidth={1.5} dot={false} />
                         <Line yAxisId="right" type="monotone" dataKey="readiness" name="Readiness" stroke={PRO_ACCENT} strokeWidth={3} dot={{ r: 3, fill: PRO_ACCENT, strokeWidth: 0 }} />
                         {biologyGoldenPoint && (
                           <ReferenceLine yAxisId="right" x={biologyGoldenPoint.label} stroke={PRO_ACCENT} strokeDasharray="4 4">
-                            <Label value="Golden Day" position="top" fill={PRO_ACCENT} fontSize={10} fontWeight="bold" />
+                            <Label value="Golden Day" position="top" fill={PRO_ACCENT} fontSize={12} fontWeight="bold" />
                           </ReferenceLine>
                         )}
                       </ComposedChart>
                     </ResponsiveContainer>
-                  </div>
+                  </ChartPlot>
                 ) : (
-                  <div className="h-[260px] flex items-center justify-center border border-dashed border-[#2A2A2A] rounded-[6px] text-center">
+                  <div className="h-[260px] flex items-center justify-center border border-dashed border-ea-hairline-strong rounded-[6px] text-center">
                     <div>
                       <div className="text-white font-black uppercase tracking-widest text-sm">Dati reali insufficienti</div>
-                      <div className="text-[#666] text-xs mt-2">Servono corse Strava recenti per calcolare la curva biologica.</div>
+                      <div className="text-ea-text-axis text-xs mt-2">Servono corse Strava recenti per calcolare la curva biologica.</div>
                     </div>
                   </div>
                 )}
@@ -2099,14 +1974,14 @@ export function StatisticsView() {
                 <div className="flex items-center gap-3 mb-6">
                   <Star className="w-5 h-5" style={{ color: PRO_ACCENT }} />
                   <div>
-                    <div className="text-white font-black uppercase italic tracking-widest">Golden Day</div>
-                    <div className="text-[10px] text-[#666] uppercase tracking-widest font-bold">Picco aggregato</div>
+                    <div className="text-white font-black uppercase tracking-widest">Golden Day</div>
+                    <div className="text-xs text-ea-text-axis uppercase tracking-widest font-bold">Picco aggregato</div>
                   </div>
                 </div>
                 <div className="flex-1 flex flex-col items-center justify-center text-center">
                   <div className="relative w-44 h-44 mb-6">
                     <svg className="w-full h-full -rotate-90">
-                      <circle cx="88" cy="88" r="78" stroke="#1A1A1A" strokeWidth="8" fill="none" />
+                      <circle cx="88" cy="88" r="78" stroke={CHART_SURFACE.raised} strokeWidth="8" fill="none" />
                       <circle
                         cx="88"
                         cy="88"
@@ -2120,12 +1995,12 @@ export function StatisticsView() {
                       />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-5xl font-black text-white italic">{biologyData.days_to_golden ?? '--'}</span>
-                      <span className="text-[10px] text-[#666] uppercase tracking-widest font-black">giorni</span>
+                      <span className="text-5xl font-black text-white">{biologyData.days_to_golden ?? '--'}</span>
+                      <span className="text-xs text-ea-text-axis uppercase tracking-widest font-black">giorni</span>
                     </div>
                   </div>
-                  <div className="text-2xl font-black italic uppercase" style={{ color: PRO_ACCENT }}>{biologyGoldenLabel}</div>
-                  <div className="text-xs text-[#777] mt-3 font-bold leading-relaxed">
+                  <div className="text-2xl font-black uppercase" style={{ color: PRO_ACCENT }}>{biologyGoldenLabel}</div>
+                  <div className="text-xs text-ea-text-axis mt-3 font-bold leading-relaxed">
                     Readiness {biologyGoldenScore != null ? `${Math.round(biologyGoldenScore)}%` : 'N/D'} con carichi reali e freschezza disponibile.
                   </div>
                 </div>
@@ -2137,34 +2012,34 @@ export function StatisticsView() {
                 <Card key={key} accent={color} variant="pro">
                   <div className="flex items-start justify-between gap-4 mb-5">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-[6px] bg-[#111] border border-[#2A2A2A]">
+                      <div className="p-2 rounded-[6px] bg-ea-surface-2 border border-ea-hairline-strong">
                         <Icon className="w-4 h-4" style={{ color }} />
                       </div>
                       <div>
-                        <div className="text-sm text-white font-black uppercase italic">{label}</div>
-                        <div className="text-[10px] text-[#666] font-bold uppercase tracking-widest">{desc}</div>
+                        <div className="text-sm text-white font-black uppercase">{label}</div>
+                        <div className="text-xs text-ea-text-axis font-bold uppercase tracking-widest">{desc}</div>
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-xl font-mono font-black" style={{ color }}>{total?.ready_pct ?? 0}%</div>
-                      <div className="text-[9px] text-[#666] uppercase font-black">maturato</div>
+                      <div className="text-xs text-ea-text-axis uppercase font-black">maturato</div>
                     </div>
                   </div>
-                  <div className="h-2 rounded-full bg-[#1A1A1A] overflow-hidden mb-4">
+                  <div className="h-2 rounded-full bg-ea-surface-3 overflow-hidden mb-4">
                     <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, total?.ready_pct ?? 0))}%`, backgroundColor: color }} />
                   </div>
                   <div className="grid grid-cols-3 gap-3 text-center">
-                    <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+                    <div className="rounded-lg border border-ea-hairline bg-ea-surface-2 p-3">
                       <div className="text-white font-mono font-black">{total?.runs ?? 0}</div>
-                      <div className="text-[9px] text-[#666] uppercase font-black">corse</div>
+                      <div className="text-xs text-ea-text-axis uppercase font-black">corse</div>
                     </div>
-                    <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+                    <div className="rounded-lg border border-ea-hairline bg-ea-surface-2 p-3">
                       <div className="text-white font-mono font-black">{total?.load ?? 0}</div>
-                      <div className="text-[9px] text-[#666] uppercase font-black">carico</div>
+                      <div className="text-xs text-ea-text-axis uppercase font-black">carico</div>
                     </div>
-                    <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+                    <div className="rounded-lg border border-ea-hairline bg-ea-surface-2 p-3">
                       <div className="text-white font-mono font-black">{total?.missing_pct ?? 0}%</div>
-                      <div className="text-[9px] text-[#666] uppercase font-black">manca</div>
+                      <div className="text-xs text-ea-text-axis uppercase font-black">manca</div>
                     </div>
                   </div>
                 </Card>
@@ -2196,36 +2071,36 @@ export function StatisticsView() {
                       ? new Date(`${run.benefit_date}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
                       : 'N/D';
                     return (
-                      <div key={`${run.id}-${run.date}`} className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 hover:border-white/[0.2] transition-colors">
+                      <div key={`${run.id}-${run.date}`} className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center rounded-lg border border-ea-hairline bg-ea-surface-2 p-4 hover:border-white/[0.2] transition-colors">
                         <div className="lg:col-span-4 min-w-0">
                           <div className="text-white font-black uppercase tracking-wide truncate">{run.name || 'Corsa'}</div>
-                          <div className="text-[10px] text-[#666] font-bold uppercase tracking-widest mt-1">
+                          <div className="text-xs text-ea-text-axis font-bold uppercase tracking-widest mt-1">
                             {run.date_label} - {run.distance_km.toFixed(2)} km - {run.avg_pace ?? 'N/D'}/km
                           </div>
                         </div>
                         <div className="lg:col-span-2">
-                          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-[6px] border border-[#2A2A2A] bg-[#0D0D0D]">
+                          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-[6px] border border-ea-hairline-strong bg-ea-surface-1">
                             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-                            <span className="text-[10px] font-black uppercase tracking-widest" style={{ color }}>{run.adaptation_type}</span>
+                            <span className="text-xs font-black uppercase tracking-widest" style={{ color }}>{run.adaptation_type}</span>
                           </div>
                         </div>
                         <div className="lg:col-span-3">
-                          <div className="flex justify-between text-[10px] uppercase font-black tracking-widest mb-2">
-                            <span className="text-[#666]">Maturato</span>
+                          <div className="flex justify-between text-xs uppercase font-black tracking-widest mb-2">
+                            <span className="text-ea-text-axis">Maturato</span>
                             <span className="text-white">{run.benefit_progress_pct}%</span>
                           </div>
-                          <div className="h-2 bg-[#1A1A1A] rounded-full overflow-hidden">
+                          <div className="h-2 bg-ea-surface-3 rounded-full overflow-hidden">
                             <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, run.benefit_progress_pct))}%`, backgroundColor: color }} />
                           </div>
                         </div>
                         <div className="lg:col-span-3 grid grid-cols-2 gap-3">
-                          <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+                          <div className="rounded-lg border border-ea-hairline bg-ea-surface-2 p-3">
                             <div className="text-lg font-mono font-black text-white">{run.missing_pct}%</div>
-                            <div className="text-[9px] text-[#666] uppercase font-black">manca</div>
+                            <div className="text-xs text-ea-text-axis uppercase font-black">manca</div>
                           </div>
-                          <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+                          <div className="rounded-lg border border-ea-hairline bg-ea-surface-2 p-3">
                             <div className="text-lg font-mono font-black" style={{ color }}>{run.days_remaining}</div>
-                            <div className="text-[9px] text-[#666] uppercase font-black">gg - {benefitDate}</div>
+                            <div className="text-xs text-ea-text-axis uppercase font-black">gg - {benefitDate}</div>
                           </div>
                         </div>
                       </div>
@@ -2233,9 +2108,9 @@ export function StatisticsView() {
                   })}
                 </div>
               ) : (
-                <div className="p-8 text-center border border-dashed border-[#2A2A2A] rounded-[6px]">
+                <div className="p-8 text-center border border-dashed border-ea-hairline-strong rounded-[6px]">
                   <div className="text-white font-black uppercase tracking-widest">Dati reali insufficienti</div>
-                  <div className="text-[#666] text-xs mt-2">Quando arrivano corse syncate su Strava, qui compariranno adattamenti e Golden Day.</div>
+                  <div className="text-ea-text-axis text-xs mt-2">Quando arrivano corse syncate su Strava, qui compariranno adattamenti e Golden Day.</div>
                 </div>
               )}
             </Card>
@@ -2272,26 +2147,14 @@ export function StatisticsView() {
                 <div className="h-80 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={futureTrendData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
-                      <XAxis
-                        dataKey="date"
-                        stroke="#333"
-                        fontSize={10}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis hide domain={[-50, 100]} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#111',
-                          border: '1px solid #1E1E1E',
-                          borderRadius: '12px',
-                        }}
-                      />
+                      <CartesianGrid {...chartGrid} />
+                      <XAxis {...chartXAxis} dataKey="date" />
+                      <YAxis {...chartYAxis} hide width={0} domain={[-50, 100]} />
+                      <ChartTip  />
                       <Line
                         type="monotone"
                         dataKey="condizione"
-                        stroke="#EAB308"
+                        stroke={CHART_SERIES.load}
                         strokeWidth={2}
                         dot={false}
                         name="Condizione"
@@ -2299,7 +2162,7 @@ export function StatisticsView() {
                       <Line
                         type="monotone"
                         dataKey="affaticamento"
-                        stroke="#F43F5E"
+                        stroke={CHART_SERIES.risk}
                         strokeWidth={2}
                         dot={false}
                         name="Affaticamento"
@@ -2307,13 +2170,13 @@ export function StatisticsView() {
                       <Line
                         type="monotone"
                         dataKey="forma"
-                        stroke="#10B981"
+                        stroke={CHART_SERIES.positive}
                         strokeWidth={3}
-                        dot={{ r: 4, fill: '#10B981' }}
+                        dot={{ r: 4, fill: CHART_SERIES.positive }}
                         name="Forma"
                       />
-                      <ReferenceLine x="1/4" stroke="#EAB308" strokeDasharray="3 3">
-                        <Label value="PICCO 1 Apr" position="top" fill="#EAB308" fontSize={10} fontWeight="black" />
+                      <ReferenceLine x="1/4" stroke={CHART_SERIES.load} strokeDasharray="3 3">
+                        <Label value="PICCO 1 Apr" position="top" fill={CHART_SERIES.load} fontSize={12} fontWeight="black" />
                       </ReferenceLine>
                     </LineChart>
                   </ResponsiveContainer>
@@ -2324,7 +2187,7 @@ export function StatisticsView() {
               <Card className="lg:col-span-4 flex flex-col items-center justify-center text-center" accent="#EAB308">
                 <div className="flex items-center gap-2 mb-6 self-stretch">
                   <Star className="w-5 h-5 text-[#EAB308]" />
-                  <span className="text-base font-black tracking-widest uppercase italic">
+                  <span className="text-base font-black tracking-widest uppercase">
                     Golden Day
                   </span>
                   <InfoTooltip
@@ -2339,12 +2202,12 @@ export function StatisticsView() {
                 </div>
                 <div className="relative w-44 h-44 mb-6">
                   <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="88" cy="88" r="80" stroke="#1A1A1A" strokeWidth="4" fill="none" />
+                    <circle cx="88" cy="88" r="80" stroke={CHART_SURFACE.raised} strokeWidth="4" fill="none" />
                     <circle
                       cx="88"
                       cy="88"
                       r="80"
-                      stroke="#EAB308"
+                      stroke={CHART_SERIES.load}
                       strokeWidth="8"
                       fill="none"
                       strokeDasharray={502.65}
@@ -2353,14 +2216,14 @@ export function StatisticsView() {
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-5xl font-black text-white italic">6</span>
-                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                    <span className="text-5xl font-black text-white">6</span>
+                    <span className="text-xs font-black text-gray-500 uppercase tracking-widest">
                       Giorni
                     </span>
                   </div>
                 </div>
-                <h3 className="text-sm font-black text-white uppercase italic">Il tuo Golden Day</h3>
-                <div className="text-2xl font-black text-[#EAB308] italic mt-1 uppercase tracking-widest">
+                <h3 className="ea-title">Il tuo Golden Day</h3>
+                <div className="text-2xl font-black text-[#EAB308] mt-1 uppercase tracking-widest">
                   Mer 1 Apr
                 </div>
               </Card>
@@ -2391,7 +2254,7 @@ export function StatisticsView() {
                       km: '0 km',
                       time: '3–7 giorni',
                       effect: 'Reattività e Potenza',
-                      color: '#EAB308',
+                      color: CHART_SERIES.load,
                       icon: Zap,
                     },
                     {
@@ -2399,7 +2262,7 @@ export function StatisticsView() {
                       km: '43.4 km',
                       time: '7–14 giorni',
                       effect: 'Efficienza e Soglia',
-                      color: '#F43F5E',
+                      color: CHART_SERIES.risk,
                       icon: Activity,
                     },
                     {
@@ -2407,31 +2270,31 @@ export function StatisticsView() {
                       km: '0 km',
                       time: '14–21 giorni',
                       effect: 'Capillari e Mitocondri',
-                      color: '#3B82F6',
+                      color: CHART_SERIES.compare,
                       icon: Dna,
                     },
                   ].map((item, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between p-4 rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+                      className="flex items-center justify-between p-4 rounded-2xl border border-ea-hairline bg-ea-surface-1"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="p-2 rounded-xl bg-[#111] border border-[#1E1E1E]">
+                        <div className="p-2 rounded-xl bg-ea-surface-2 border border-ea-hairline">
                           <item.icon className="w-4 h-4" style={{ color: item.color }} />
                         </div>
                         <div>
                           <div className="text-sm font-black text-white uppercase">{item.name}</div>
-                          <div className="text-[10px] font-bold text-gray-500">{item.km}</div>
+                          <div className="text-xs font-bold text-gray-500">{item.km}</div>
                         </div>
                       </div>
                       <div className="text-right">
                         <div
-                          className="text-[10px] font-black uppercase tracking-widest"
+                          className="text-xs font-black uppercase tracking-widest"
                           style={{ color: item.color }}
                         >
                           {item.time}
                         </div>
-                        <div className="text-[10px] text-gray-600 font-bold italic">{item.effect}</div>
+                        <div className="text-xs text-gray-600 font-bold">{item.effect}</div>
                       </div>
                     </div>
                   ))}
@@ -2453,18 +2316,18 @@ export function StatisticsView() {
                     ],
                   }}
                 />
-                <div className="space-y-4 text-xs text-gray-500 font-medium italic leading-relaxed">
+                <div className="space-y-4 text-xs text-gray-500 font-medium leading-relaxed">
                   <p>
                     Quando ti alleni, il tuo corpo subisce uno{' '}
-                    <span className="text-[#F43F5E] font-black">stress controllato</span>. Nelle ore
+                    <span className="text-ea-rose font-black">stress controllato</span>. Nelle ore
                     e giorni successivi, si ricostruisce{' '}
-                    <span className="text-[#10B981] font-black">più forte di prima</span>.
+                    <span className="text-ea-green font-black">più forte di prima</span>.
                   </p>
                   <p>
                     Questo fenomeno si chiama{' '}
                     <span className="text-white font-black">supercompensazione</span>. I cambiamenti
                     strutturali richiedono dai{' '}
-                    <span className="text-[#3B82F6] font-black">10 ai 21 giorni</span> per
+                    <span className="text-ea-cyan font-black">10 ai 21 giorni</span> per
                     manifestarsi come performance misurabile in gara.
                   </p>
                   <p>
@@ -2522,16 +2385,16 @@ export function StatisticsView() {
           accent={PRO_ACCENT}
           details={
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Easy</p>
+              <div className="rounded-xl border border-ea-hairline bg-white/[0.02] p-3">
+                <p className="text-xs text-gray-500 font-black tracking-widest uppercase">Easy</p>
                 <p className="text-sm text-gray-300 font-bold mt-1">Passo lento, scala Y invertita</p>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Tempo</p>
+              <div className="rounded-xl border border-ea-hairline bg-white/[0.02] p-3">
+                <p className="text-xs text-gray-500 font-black tracking-widest uppercase">Tempo</p>
                 <p className="text-sm text-gray-300 font-bold mt-1">Indicatore soglia lattato</p>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Fast</p>
+              <div className="rounded-xl border border-ea-hairline bg-white/[0.02] p-3">
+                <p className="text-xs text-gray-500 font-black tracking-widest uppercase">Fast</p>
                 <p className="text-sm text-gray-300 font-bold mt-1">Ripetute e lavoro veloce</p>
               </div>
             </div>
@@ -2548,16 +2411,16 @@ export function StatisticsView() {
           accent={PRO_ACCENT}
           details={
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Target</p>
+              <div className="rounded-xl border border-ea-hairline bg-white/[0.02] p-3">
+                <p className="text-xs text-gray-500 font-black tracking-widest uppercase">Target</p>
                 <p className="text-xl text-white font-black mt-1">170-185 <span className="text-xs text-gray-500">spm</span></p>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Reference</p>
+              <div className="rounded-xl border border-ea-hairline bg-white/[0.02] p-3">
+                <p className="text-xs text-gray-500 font-black tracking-widest uppercase">Reference</p>
                 <p className="text-xl text-white font-black mt-1">180 <span className="text-xs text-gray-500">spm</span></p>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Focus</p>
+              <div className="rounded-xl border border-ea-hairline bg-white/[0.02] p-3">
+                <p className="text-xs text-gray-500 font-black tracking-widest uppercase">Focus</p>
                 <p className="text-sm text-gray-300 font-bold mt-1">Stabilita e riduzione over-striding</p>
               </div>
             </div>
@@ -2574,16 +2437,16 @@ export function StatisticsView() {
           accent={PRO_ACCENT}
           details={
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Lento</p>
+              <div className="rounded-xl border border-ea-hairline bg-white/[0.02] p-3">
+                <p className="text-xs text-gray-500 font-black tracking-widest uppercase">Lento</p>
                 <p className="text-sm text-gray-300 font-bold mt-1">&gt;= 5:30/km</p>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Medio</p>
+              <div className="rounded-xl border border-ea-hairline bg-white/[0.02] p-3">
+                <p className="text-xs text-gray-500 font-black tracking-widest uppercase">Medio</p>
                 <p className="text-sm text-gray-300 font-bold mt-1">5:00-5:29/km</p>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase">Veloce</p>
+              <div className="rounded-xl border border-ea-hairline bg-white/[0.02] p-3">
+                <p className="text-xs text-gray-500 font-black tracking-widest uppercase">Veloce</p>
                 <p className="text-sm text-gray-300 font-bold mt-1">&lt; 4:45/km</p>
               </div>
             </div>

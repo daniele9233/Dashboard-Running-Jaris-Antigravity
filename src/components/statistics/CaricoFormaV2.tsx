@@ -1,13 +1,14 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useId, useMemo, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ScatterChart, Scatter, ZAxis, ReferenceLine } from "recharts";
 import type { FitnessFreshnessPoint, Run, ProAnalyticsChart } from "../../types/api";
-import { CHART_SERIES } from "./chartTheme";
+import { AREA_FILL, AnalyticsChartCard, CHART_SERIES, CHART_SHAPE, CHART_SURFACE, CHART_TEXT, CHART_TYPE, CHART_WORKOUT, CHART_ZONES, ChartCard, ChartEmptyState, ChartHeader, ChartInsight, ChartKpi, ChartKpiStrip, ChartLegend, ChartPlot, ChartRangeSelector, ChartStat, ChartStats, ChartTooltip, ChartTooltipContent, chartCursor, chartCursorBar, chartGrid, chartGridBoth, chartMargin, chartReferenceLine, chartTick, chartXAxis, chartYAxis, formatDelta, useElementSize } from "../charts";
 // WeeklyKmChart non più usato qui — sostituito da CaricoKmChart inline
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
 type FFRange = "1m" | "3m" | "6m" | "1y" | "2y";
 const FF_RANGE_DAYS: Record<FFRange, number> = { "1m": 30, "3m": 90, "6m": 182, "1y": 365, "2y": 730 };
+const FF_RANGES = (Object.keys(FF_RANGE_DAYS) as FFRange[]).map((k) => ({ value: k, label: k.toUpperCase() }));
 
 export interface CaricoFormaV2Props {
   ffHistory: FitnessFreshnessPoint[];
@@ -19,9 +20,9 @@ export interface CaricoFormaV2Props {
 // ─── MAIN MULTI-LINE SVG CHART ────────────────────────────────────────────────
 
 const CHART_LINES = [
-  { key: "ctl" as const, label: "Condizione fisica", short: "Condizione", color: CHART_SERIES.load, gradId: "v2CtlGrad" },
-  { key: "atl" as const, label: "Affaticamento",     short: "Affatica.",  color: CHART_SERIES.risk, gradId: "v2AtlGrad" },
-  { key: "tsb" as const, label: "Forma",             short: "Forma",      color: CHART_SERIES.positive, gradId: "v2TsbGrad" },
+  { key: "ctl" as const, label: "Condizione fisica", short: "Condizione", color: CHART_SERIES.load },
+  { key: "atl" as const, label: "Affaticamento",     short: "Affatica.",  color: CHART_SERIES.risk },
+  { key: "tsb" as const, label: "Forma",             short: "Forma",      color: CHART_SERIES.positive },
 ] as const;
 
 /**
@@ -37,11 +38,20 @@ const TSB_ZONES = [
 ];
 const tsbZone = (v: number) => TSB_ZONES.find((z) => v >= z.min) ?? TSB_ZONES[TSB_ZONES.length - 1];
 
+/** La fascia è la forma stessa: deve leggersi come una forma, non come un velo di contesto. */
+const RIBBON_OPACITY = 0.34;
+
+const fmtLongDate = (s: string) => new Date(s).toLocaleDateString("it", { day: "numeric", month: "short", year: "numeric" });
+
 function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
   const [range, setRange] = useState<FFRange>("3m");
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [focus, setFocus] = useState<"all" | "ctl" | "atl" | "tsb">("all");
-  const svgRef = useRef<SVGSVGElement>(null);
+  // Le misure vere del contenitore: il disegno si ricalcola, il testo resta a 12 px reali.
+  const [plotRef, { width: W, height: H }] = useElementSize<HTMLDivElement>({ width: 900, height: 320 });
+  // id univoci: la card può montare più volte (clipPath/gradienti condividono lo spazio dei nomi del documento)
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const ids = { under: `${uid}-under`, over: `${uid}-over`, spine: `${uid}-spine` };
 
   const data = useMemo(() => {
     if (!ff?.length) return [] as FitnessFreshnessPoint[];
@@ -65,10 +75,10 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
    * Niente linea tratteggiata da inseguire: il colore e lo spessore dicono
    * tutto a colpo d'occhio, e il numero esatto lo dà il cursore.
    */
-  const W = 1000, H = 300;
-  const padL = 44, padR = 62, padT = 26, padB = 30;
-  const plotW = W - padL - padR;
-  const plotH = H - padT - padB;
+  const narrow = W < 520;
+  const padL = narrow ? 36 : 44, padR = narrow ? 48 : 62, padT = 16, padB = 28;
+  const plotW = Math.max(40, W - padL - padR);
+  const plotH = Math.max(40, H - padT - padB);
   const top = padT, bot = padT + plotH;
 
   const maxLoad = useMemo(() => {
@@ -77,32 +87,30 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
     return Math.max(20, Math.ceil((mx * 1.12) / 10) * 10);
   }, [data]);
 
-  const x = (i: number) => padL + (data.length <= 1 ? plotW / 2 : (i / (data.length - 1)) * plotW);
-  /** Il carico parte da zero: non esiste un carico negativo. */
-  const y = (v: number) => bot - (v / (maxLoad || 1)) * plotH;
-
-  const path = (key: "ctl" | "atl", reverse = false) => {
-    const pts = reverse ? [...data].reverse() : data;
-    const idx = (i: number) => (reverse ? data.length - 1 - i : i);
-    return pts.map((d, i) => `${i === 0 && !reverse ? "M" : "L"} ${x(idx(i)).toFixed(1)} ${y(d[key]).toFixed(1)}`).join(" ");
-  };
-
-  const ctlPath = useMemo(() => path("ctl"), [data, maxLoad]);      // eslint-disable-line react-hooks/exhaustive-deps
-  const atlPath = useMemo(() => path("atl"), [data, maxLoad]);      // eslint-disable-line react-hooks/exhaustive-deps
-  /** La fascia: condizione all'andata, affaticamento al ritorno. */
-  const ribbon = useMemo(
-    () => (data.length ? `${ctlPath} ${path("atl", true)} Z` : ""),
-    [ctlPath, data, maxLoad],                                       // eslint-disable-line react-hooks/exhaustive-deps
-  );
-  /** Sotto la condizione = fascia verde · sopra = fascia rossa. Due ritagli. */
-  const clipUnder = useMemo(
-    () => (data.length ? `${ctlPath} L ${x(data.length - 1).toFixed(1)} ${bot} L ${padL} ${bot} Z` : ""),
-    [ctlPath, data.length],                                         // eslint-disable-line react-hooks/exhaustive-deps
-  );
-  const clipOver = useMemo(
-    () => (data.length ? `${ctlPath} L ${x(data.length - 1).toFixed(1)} ${top} L ${padL} ${top} Z` : ""),
-    [ctlPath, data.length],                                         // eslint-disable-line react-hooks/exhaustive-deps
-  );
+  const geo = useMemo(() => {
+    const x = (i: number) => padL + (data.length <= 1 ? plotW / 2 : (i / (data.length - 1)) * plotW);
+    /** Il carico parte da zero: non esiste un carico negativo. */
+    const y = (v: number) => bot - (v / (maxLoad || 1)) * plotH;
+    const path = (key: "ctl" | "atl", reverse = false) => {
+      const pts = reverse ? [...data].reverse() : data;
+      const idx = (i: number) => (reverse ? data.length - 1 - i : i);
+      return pts.map((d, i) => `${i === 0 && !reverse ? "M" : "L"} ${x(idx(i)).toFixed(1)} ${y(d[key]).toFixed(1)}`).join(" ");
+    };
+    const ctlPath = path("ctl");
+    const lastX = x(data.length - 1).toFixed(1);
+    return {
+      x,
+      y,
+      ctlPath,
+      atlPath: path("atl"),
+      /** La fascia: condizione all'andata, affaticamento al ritorno. */
+      ribbon: data.length ? `${ctlPath} ${path("atl", true)} Z` : "",
+      /** Sotto la condizione = fascia verde · sopra = fascia rossa. Due ritagli. */
+      clipUnder: data.length ? `${ctlPath} L ${lastX} ${bot} L ${padL} ${bot} Z` : "",
+      clipOver: data.length ? `${ctlPath} L ${lastX} ${top} L ${padL} ${top} Z` : "",
+    };
+  }, [data, maxLoad, padL, plotW, plotH, bot, top]);
+  const { x, y } = geo;
 
   const loadTicks = useMemo(() => {
     const step = Math.max(10, Math.ceil(maxLoad / 4 / 10) * 10);
@@ -113,7 +121,7 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
 
   const xLabels = useMemo(() => {
     if (data.length < 2) return [] as { i: number; label: string }[];
-    const want = 6;
+    const want = narrow ? 3 : 6;
     const step = Math.max(1, Math.floor(data.length / want));
     const out: { i: number; label: string }[] = [];
     const fmt = (s: string) =>
@@ -122,14 +130,26 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
     if (data.length && out[out.length - 1]?.i !== data.length - 1)
       out.push({ i: data.length - 1, label: "Oggi" });
     return out;
-  }, [data]);
+  }, [data, narrow]);
 
+  const moveTo = (idx: number) => setHoverIdx(Math.max(0, Math.min(data.length - 1, idx)));
   const onMove = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (!data.length || !svgRef.current) return;
-    const rect = svgRef.current.getBoundingClientRect();
-    const px = ((e.clientX - rect.left) / rect.width) * W;
-    const rel = (px - padL) / plotW;
-    setHoverIdx(Math.max(0, Math.min(data.length - 1, Math.round(rel * (data.length - 1)))));
+    if (!data.length) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const rel = (e.clientX - rect.left - padL) / plotW;
+    moveTo(Math.round(rel * (data.length - 1)));
+  };
+  /** Frecce, Home, Fine: lo stesso scorrimento del puntatore, da tastiera. */
+  const onKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!data.length) return;
+    const cur = hoverIdx ?? data.length - 1;
+    if (e.key === "ArrowLeft") moveTo(cur - 1);
+    else if (e.key === "ArrowRight") moveTo(cur + 1);
+    else if (e.key === "Home") moveTo(0);
+    else if (e.key === "End") moveTo(data.length - 1);
+    else if (e.key === "Escape") setHoverIdx(null);
+    else return;
+    e.preventDefault();
   };
 
   const hov = hoverIdx !== null ? data[hoverIdx] ?? null : null;
@@ -137,6 +157,7 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
   const shown = hov ?? (data.length ? data[data.length - 1] : null);
   const shownIdx = hoverIdx ?? (data.length - 1);
   const zone = shown ? tsbZone(shown.tsb) : null;
+  const signed = (v: number) => `${v > 0 ? "+" : ""}${v.toFixed(1)}`;
 
   // Delta sui 7 giorni precedenti al punto mostrato: si aggiorna scorrendo.
   const kpi = useMemo(() => {
@@ -149,212 +170,187 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
     }));
   }, [data, shown, shownIdx]);
 
-  return (
-    <div
-      className="rounded-3xl p-6 flex flex-col gap-4 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
-    >
-      {/* Header row */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h3 className="text-white text-lg font-black tracking-tight">Condizione · Affaticamento · Forma</h3>
-          <p className="text-[#555] text-[11px] tracking-wide mt-0.5">
-            {shown
-              ? <>La fascia fra le due curve è la tua forma · <span style={{ color: zone?.color }}>{zone?.label}</span></>
-              : "Andamento nel tempo"}
-          </p>
-        </div>
-        <div className="flex gap-1 bg-white/5 rounded-lg p-1">
-          {(["1m", "3m", "6m", "1y", "2y"] as FFRange[]).map(k => (
-            <button
-              key={k}
-              onClick={() => { setRange(k); setHoverIdx(null); }}
-              className={`px-3 py-1 rounded-md text-[10px] font-black tracking-widest uppercase transition-colors ${range === k ? "bg-[#C0FF00] text-black" : "text-[#666] hover:text-white"}`}
-            >
-              {k}
-            </button>
-          ))}
-        </div>
-      </div>
+  const summary = shown && zone
+    ? `${fmtLongDate(shown.date)}: condizione ${shown.ctl.toFixed(1)}, affaticamento ${shown.atl.toFixed(1)}, forma ${signed(shown.tsb)}, ${zone.label}.`
+    : undefined;
 
-      {/* KPI strip */}
+  const last = data.length ? data[data.length - 1] : null;
+
+  return (
+    <ChartCard>
+      <ChartHeader
+        title="Condizione · Affaticamento · Forma"
+        description={
+          shown
+            ? <>La fascia fra le due curve è la tua forma · <span style={{ color: zone?.color }}>{zone?.label}</span></>
+            : "Andamento nel tempo"
+        }
+        actions={
+          <ChartRangeSelector
+            value={range}
+            options={FF_RANGES}
+            onChange={(r) => { setRange(r); setHoverIdx(null); }}
+            aria-label="Intervallo del grafico condizione, affaticamento, forma"
+          />
+        }
+      />
+
       {kpi && (
-        <div className="grid grid-cols-3 gap-3">
-          {kpi.map(k => (
-            <div
-              key={k.key}
-              className="rounded-2xl px-4 py-3 flex flex-col gap-0.5 cursor-pointer transition-all"
-              style={{
-                background: (focus === "all" || focus === k.key) ? `${k.color}10` : "rgba(255,255,255,0.03)",
-                border: `1px solid ${(focus === "all" || focus === k.key) ? `${k.color}25` : "rgba(255,255,255,0.05)"}`,
-              }}
-              onClick={() => setFocus(focus === k.key ? "all" : k.key)}
-            >
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-black tabular-nums" style={{ color: k.color, fontFamily: "JetBrains Mono, monospace" }}>
-                  {k.key === "tsb" && k.current > 0 ? "+" : ""}{k.current.toFixed(1)}
-                </span>
-                <span
-                  className="text-[10px] font-black tabular-nums"
-                  style={{ color: k.delta >= 0 ? "#34D399" : "#F43F5E" }}
-                >
-                  {k.delta >= 0 ? "+" : ""}{k.delta.toFixed(1)}
-                </span>
-              </div>
-              <span className="text-[10px] font-black tracking-widest uppercase" style={{ color: `${k.color}99` }}>
-                {k.label}
-              </span>
-            </div>
-          ))}
-        </div>
+        <ChartKpiStrip>
+          {kpi.map(k => {
+            const d = formatDelta(k.delta);
+            return (
+              <ChartKpi
+                key={k.key}
+                label={k.label}
+                value={`${k.key === "tsb" && k.current > 0 ? "+" : ""}${k.current.toFixed(1)}`}
+                delta={d.text}
+                trend={d.trend}
+                color={k.color}
+                active={focus === k.key}
+                onClick={() => setFocus(focus === k.key ? "all" : k.key)}
+              />
+            );
+          })}
+        </ChartKpiStrip>
       )}
 
-      {/* SVG Chart */}
-      <div className="relative min-h-[260px]">
+      <ChartPlot
+        ref={plotRef}
+        size="tall"
+        label="Condizione, affaticamento e forma nel tempo"
+        summary={summary}
+      >
         {!data.length ? (
-          <div className="absolute inset-0 flex items-center justify-center text-[#444] text-xs font-black tracking-widest uppercase">
-            Nessun dato nel periodo selezionato
-          </div>
+          <ChartEmptyState title="Nessun dato nel periodo selezionato" />
         ) : (
-          <svg
-            ref={svgRef}
-            viewBox={`0 0 ${W} ${H}`}
-            className="w-full h-auto touch-none"
-            style={{ cursor: "crosshair" }}
-            onPointerMove={onMove}
-            onPointerLeave={() => setHoverIdx(null)}
+          <div
+            tabIndex={0}
+            role="application"
+            aria-label="Scorri con le frecce sinistra e destra per leggere un giorno"
+            onKeyDown={onKey}
+            onFocus={() => { if (hoverIdx === null) setHoverIdx(data.length - 1); }}
+            onBlur={() => setHoverIdx(null)}
+            className="absolute inset-0 outline-none"
           >
-            <defs>
-              <clipPath id="v2Under"><path d={clipUnder} /></clipPath>
-              <clipPath id="v2Over"><path d={clipOver} /></clipPath>
-              <linearGradient id="v2Spine" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={CHART_SERIES.load} stopOpacity="0.20" />
-                <stop offset="100%" stopColor={CHART_SERIES.load} stopOpacity="0" />
-              </linearGradient>
-              <filter id="v2Glow" x="-20%" y="-40%" width="140%" height="180%">
-                <feGaussianBlur stdDeviation="4" result="b" />
-                <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-              </filter>
-            </defs>
+            <svg
+              width={W}
+              height={H}
+              className="block touch-none"
+              style={{ cursor: "crosshair" }}
+              onPointerMove={onMove}
+              onPointerLeave={() => setHoverIdx(null)}
+              aria-hidden="true"
+            >
+              <defs>
+                <clipPath id={ids.under}><path d={geo.clipUnder} /></clipPath>
+                <clipPath id={ids.over}><path d={geo.clipOver} /></clipPath>
+                <linearGradient id={ids.spine} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={CHART_SERIES.load} stopOpacity={AREA_FILL.top} />
+                  <stop offset="100%" stopColor={CHART_SERIES.load} stopOpacity={AREA_FILL.bottom} />
+                </linearGradient>
+              </defs>
 
-            {/* griglia essenziale: solo orizzontali, dietro a tutto */}
-            {loadTicks.map(v => (
-              <g key={v}>
-                <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke="#191919" strokeWidth={1} />
-                <text x={padL - 8} y={y(v) + 3.5} textAnchor="end" fontSize="10" fill="#7A7A7A" fontFamily="JetBrains Mono, monospace">{v}</text>
-              </g>
-            ))}
-            <line x1={padL} x2={W - padR} y1={bot} y2={bot} stroke="#2A2A2A" strokeWidth={1} />
+              {/* griglia essenziale: solo orizzontali, dietro a tutto */}
+              {loadTicks.map(v => (
+                <g key={v}>
+                  <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke={chartGrid.stroke} strokeDasharray={chartGrid.strokeDasharray} strokeWidth={1} />
+                  <text x={padL - 8} y={y(v) + 4} textAnchor="end" fontSize={chartTick.fontSize} fill={chartTick.fill} fontFamily={chartTick.fontFamily}>{v}</text>
+                </g>
+              ))}
+              <line x1={padL} x2={W - padR} y1={bot} y2={bot} stroke={CHART_SURFACE.borderStrong} strokeWidth={1} />
 
-            <g key={range} className="animate-in fade-in duration-700">
               {/* velo sotto la condizione: dà corpo al fiume senza sporcare */}
-              <path d={clipUnder} fill="url(#v2Spine)" />
+              <path d={geo.clipUnder} fill={`url(#${ids.spine})`} />
 
               {/* LA FASCIA — verde dove assorbi, rossa dove scavi */}
               {(focus === "all" || focus === "tsb") && (
                 <>
-                  <g clipPath="url(#v2Under)">
-                    <path d={ribbon} fill={CHART_SERIES.positive} fillOpacity={0.34} />
+                  <g clipPath={`url(#${ids.under})`}>
+                    <path d={geo.ribbon} fill={CHART_SERIES.positive} fillOpacity={RIBBON_OPACITY} />
                   </g>
-                  <g clipPath="url(#v2Over)">
-                    <path d={ribbon} fill={CHART_SERIES.risk} fillOpacity={0.34} />
+                  <g clipPath={`url(#${ids.over})`}>
+                    <path d={geo.ribbon} fill={CHART_SERIES.risk} fillOpacity={RIBBON_OPACITY} />
                   </g>
                 </>
               )}
 
               {/* argine: l'affaticamento è un bordo, non una seconda curva urlata */}
               {(focus === "all" || focus === "atl") && (
-                <path d={atlPath} fill="none" stroke={CHART_SERIES.risk} strokeWidth={1.4} strokeOpacity={0.75}
-                  strokeLinejoin="round" strokeLinecap="round" />
+                <path d={geo.atlPath} fill="none" stroke={CHART_SERIES.risk} strokeWidth={CHART_SHAPE.strokeWidthDerived}
+                  strokeOpacity={0.85} strokeLinejoin="round" strokeLinecap="round" />
               )}
 
               {/* la spina dorsale: la condizione */}
               {(focus === "all" || focus === "ctl") && (
-                <path d={ctlPath} fill="none" stroke={CHART_SERIES.load} strokeWidth={3}
-                  strokeLinejoin="round" strokeLinecap="round" filter="url(#v2Glow)" />
+                <path d={geo.ctlPath} fill="none" stroke={CHART_SERIES.load} strokeWidth={CHART_SHAPE.strokeWidth}
+                  strokeLinejoin="round" strokeLinecap="round" />
               )}
-            </g>
 
-            {/* oggi: pallino + valore fuori dal riquadro, sempre leggibile */}
-            {data.length > 0 && (
-              <g pointerEvents="none">
-                <circle cx={x(data.length - 1)} cy={y(data[data.length - 1].ctl)} r={4.5}
-                  fill="#0A0A0A" stroke={CHART_SERIES.load} strokeWidth={2.5} />
-                <text x={W - padR + 8} y={y(data[data.length - 1].ctl) + 4} fontSize="13" fontWeight="800"
-                  fill={CHART_SERIES.load} fontFamily="JetBrains Mono, monospace">
-                  {data[data.length - 1].ctl.toFixed(0)}
+              {/* oggi: pallino + valore fuori dal riquadro, sempre leggibile */}
+              {last && (
+                <g pointerEvents="none">
+                  <circle cx={x(data.length - 1)} cy={y(last.ctl)} r={CHART_SHAPE.activeDotRadius}
+                    fill={CHART_SURFACE.panel} stroke={CHART_SERIES.load} strokeWidth={2.5} />
+                  <text x={W - padR + 8} y={y(last.ctl) + 4} fontSize={13} fontWeight="700"
+                    fill={CHART_SERIES.load} fontFamily={CHART_TYPE.mono}>
+                    {last.ctl.toFixed(0)}
+                  </text>
+                </g>
+              )}
+
+              {/* asse dei tempi */}
+              {xLabels.map((lbl, k) => (
+                <text key={k} x={x(lbl.i)} y={H - 8}
+                  textAnchor={k === 0 ? "start" : lbl.i === data.length - 1 ? "end" : "middle"}
+                  fontSize={chartTick.fontSize} fill={chartTick.fill} fontFamily={chartTick.fontFamily}>
+                  {lbl.label}
                 </text>
-              </g>
-            )}
+              ))}
 
-            {/* asse dei tempi */}
-            {xLabels.map((lbl, k) => (
-              <text key={k} x={x(lbl.i)} y={H - 9} textAnchor="middle" fontSize="10" fill="#7A7A7A" fontFamily="JetBrains Mono, monospace">
-                {lbl.label}
-              </text>
-            ))}
+              {/* cursore: la fascia del giorno si accende */}
+              {hov && hoverIdx !== null && (
+                <g pointerEvents="none">
+                  <line x1={x(hoverIdx)} x2={x(hoverIdx)} y1={y(Math.max(hov.ctl, hov.atl))} y2={bot}
+                    stroke={chartCursor.stroke} strokeWidth={chartCursor.strokeWidth} />
+                  <line x1={x(hoverIdx)} x2={x(hoverIdx)} y1={y(hov.ctl)} y2={y(hov.atl)}
+                    stroke={hov.tsb >= 0 ? CHART_SERIES.positive : CHART_SERIES.risk} strokeWidth={3} strokeOpacity={0.9} />
+                  <circle cx={x(hoverIdx)} cy={y(hov.atl)} r={4} fill={CHART_SURFACE.panel} stroke={CHART_SERIES.risk} strokeWidth={2} />
+                  <circle cx={x(hoverIdx)} cy={y(hov.ctl)} r={CHART_SHAPE.activeDotRadius} fill={CHART_SURFACE.panel} stroke={CHART_SERIES.load} strokeWidth={2.5} />
+                </g>
+              )}
+            </svg>
 
-            {/* cursore: la fascia del giorno si accende */}
+            {/* Targhetta: si sposta a sinistra se il cursore è nella metà destra */}
             {hov && hoverIdx !== null && (
-              <g pointerEvents="none">
-                <line x1={x(hoverIdx)} x2={x(hoverIdx)} y1={y(Math.max(hov.ctl, hov.atl))} y2={bot}
-                  stroke="rgba(255,255,255,0.16)" strokeWidth={1} />
-                <line x1={x(hoverIdx)} x2={x(hoverIdx)} y1={y(hov.ctl)} y2={y(hov.atl)}
-                  stroke={hov.tsb >= 0 ? CHART_SERIES.positive : CHART_SERIES.risk} strokeWidth={3} strokeOpacity={0.9} />
-                <circle cx={x(hoverIdx)} cy={y(hov.atl)} r={3.5} fill="#0A0A0A" stroke={CHART_SERIES.risk} strokeWidth={2} />
-                <circle cx={x(hoverIdx)} cy={y(hov.ctl)} r={4.5} fill="#0A0A0A" stroke={CHART_SERIES.load} strokeWidth={2.5} />
-              </g>
-            )}
-          </svg>
-        )}
-
-        {/* Targhetta: si sposta a sinistra se il cursore è nella metà destra */}
-        {hov && hoverIdx !== null && (
-          <div
-            className={`absolute top-2 bg-[#0E0E0E]/95 border rounded-2xl px-4 py-3 pointer-events-none min-w-[200px] shadow-2xl ${
-              hoverIdx > data.length / 2 ? "left-2" : "right-2"
-            }`}
-            style={{ borderColor: `${zone?.color ?? "#2A2A2A"}55` }}
-          >
-            <div className="flex items-center justify-between gap-3 mb-2">
-              <span className="text-[10px] text-[#A0A0A0] font-black tracking-widest uppercase">
-                {new Date(hov.date).toLocaleDateString("it", { day: "numeric", month: "short", year: "numeric" })}
-              </span>
-              <span className="text-[9px] font-black tracking-widest uppercase" style={{ color: zone?.color }}>
-                {zone?.label}
-              </span>
-            </div>
-            {CHART_LINES.map(l => (
-              <div key={l.key} className="flex items-center justify-between py-0.5">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ background: l.color }} />
-                  <span className="text-[11px] font-black" style={{ color: l.color }}>{l.short}</span>
-                </div>
-                <span className="text-white text-sm font-black tabular-nums" style={{ fontFamily: "JetBrains Mono, monospace" }}>
-                  {l.key === "tsb" && hov.tsb > 0 ? "+" : ""}{hov[l.key].toFixed(1)}
-                </span>
+              <div
+                className="absolute top-2"
+                style={hoverIdx > data.length / 2 ? { left: padL + 8 } : { right: padR + 8 }}
+              >
+                <ChartTooltip
+                  title={<>{fmtLongDate(hov.date)} · <span style={{ color: zone?.color }}>{zone?.label}</span></>}
+                  rows={CHART_LINES.map(l => ({
+                    label: l.short,
+                    value: `${l.key === "tsb" && hov.tsb > 0 ? "+" : ""}${hov[l.key].toFixed(1)}`,
+                    color: l.color,
+                  }))}
+                />
               </div>
-            ))}
+            )}
           </div>
         )}
-      </div>
+      </ChartPlot>
 
       {/* Come si legge: senza questa riga il verde e il rosso restano decorazione */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[10px] text-[#7A7A7A]">
-        <span className="flex items-center gap-1.5">
-          <span className="w-4 h-2 rounded-sm" style={{ background: CHART_SERIES.positive, opacity: 0.55 }} />
-          affaticamento sotto la condizione — stai assorbendo
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-4 h-2 rounded-sm" style={{ background: CHART_SERIES.risk, opacity: 0.55 }} />
-          affaticamento sopra — stai scavando nel serbatoio
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-4 h-[3px] rounded-full" style={{ background: CHART_SERIES.load }} />
-          condizione fisica
-        </span>
-        <span className="ml-auto text-[#5A5A5A]">Scorri sul grafico per leggere un giorno</span>
-      </div>
-    </div>
+      <ChartLegend
+        items={[
+          { key: "under", label: "affaticamento sotto la condizione — stai assorbendo", color: CHART_SERIES.positive, kind: "band" },
+          { key: "over", label: "affaticamento sopra — stai scavando nel serbatoio", color: CHART_SERIES.risk, kind: "band" },
+          { key: "ctl", label: "condizione fisica", color: CHART_SERIES.load, kind: "line" },
+        ]}
+      />
+      <ChartInsight>Scorri sul grafico, o usa le frecce ← →, per leggere un giorno.</ChartInsight>
+    </ChartCard>
   );
 }
 
@@ -363,15 +359,15 @@ function FitnessMultiChart({ ff }: { ff: FitnessFreshnessPoint[] }) {
 type ZoneRange = "7d" | "30d" | "90d" | "all";
 
 const ZONE_BINS = [
-  { zone: "Z1", name: "Recupero",  minSec: 390, color: CHART_SERIES.compare },
-  { zone: "Z2", name: "Easy",      minSec: 360, color: "#34D399" },
-  { zone: "Z3", name: "Steady",    minSec: 330, color: "#C0FF00" },
-  { zone: "Z4", name: "Threshold", minSec: 300, color: CHART_SERIES.load },
-  { zone: "Z5", name: "Fast",      minSec:   0, color: "#F43F5E" },
+  { zone: "Z1", name: "Recupero",  minSec: 390, color: CHART_ZONES[0] },
+  { zone: "Z2", name: "Easy",      minSec: 360, color: CHART_ZONES[1] },
+  { zone: "Z3", name: "Steady",    minSec: 330, color: CHART_ZONES[2] },
+  { zone: "Z4", name: "Threshold", minSec: 300, color: CHART_ZONES[3] },
+  { zone: "Z5", name: "Fast",      minSec:   0, color: CHART_ZONES[4] },
 ] as const;
 
 const RANGE_DAYS: Record<ZoneRange, number | null> = { "7d": 7, "30d": 30, "90d": 90, "all": null };
-const RANGE_LABELS: Record<ZoneRange, string> = { "7d": "7D", "30d": "30D", "90d": "90D", "all": "ALL" };
+const RANGE_OPTIONS = (Object.keys(RANGE_DAYS) as ZoneRange[]).map((k) => ({ value: k, label: k.toUpperCase() }));
 
 function parsePaceSec(pace?: string | null): number | null {
   if (!pace) return null;
@@ -406,85 +402,45 @@ function PaceZonesCard({ runs }: { runs: Run[] }) {
   const maxPct = Math.max(...zones.map(z => z.pct), 1);
 
   return (
-    <div
-      className="rounded-3xl p-6 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+    <AnalyticsChartCard
+      className="h-full"
+      title="Zone di Passo"
+      description={`Distribuzione km · ${range === "all" ? "tutte le corse" : `ultimi ${range}`}`}
+      actions={
+        <>
+          <span className="font-mono text-[14px] font-bold tabular-nums text-ea-text-muted">{totalKm} <span className="text-[12px] font-medium">km</span></span>
+          <ChartRangeSelector<ZoneRange> value={range} options={RANGE_OPTIONS} onChange={setRange} aria-label="Intervallo delle zone di passo" />
+        </>
+      }
+      size="auto"
+      plotClassName="flex-1"
+      status={totalKm ? "ready" : "empty"}
     >
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-white text-base font-black tracking-tight">Zone di Passo</h3>
-          <p className="text-[#A0A0A0] text-[10px] tracking-widest uppercase mt-0.5">
-            Distribuzione km · {range === "all" ? "tutte le corse" : `ultimi ${range}`}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-[#A0A0A0] text-sm font-black">{totalKm} <span className="text-[10px] font-bold">km</span></span>
-          <div className="flex bg-white/5 rounded-lg p-1">
-            {(["7d", "30d", "90d", "all"] as ZoneRange[]).map(r => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setRange(r)}
-                className={`px-3 py-1 rounded-md text-[10px] font-black tracking-wider transition-all ${
-                  range === r ? "bg-[#C0FF00] text-black" : "text-gray-500 hover:text-white"
-                }`}
-              >
-                {RANGE_LABELS[r]}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-      {!totalKm ? (
-        <div className="flex items-center justify-center min-h-[120px]">
-          <span className="text-[#444] text-xs font-black tracking-widest uppercase">Dati insufficienti</span>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {zones.map(z => (
-            <div key={z.zone} className="flex items-center gap-3">
-              <div className="w-16 shrink-0">
-                <div className="text-[10px] font-black tracking-widest" style={{ color: z.color }}>{z.zone}</div>
-                <div className="text-[9px] text-[#555] truncate">{z.name}</div>
-              </div>
-              <div className="flex-1 h-2.5 bg-[#111] rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-700"
-                  style={{
-                    width: `${(z.pct / maxPct) * 100}%`,
-                    background: z.color,
-                    boxShadow: z.pct === maxPct ? `0 0 8px ${z.color}55` : "none",
-                  }}
-                />
-              </div>
-              <div className="w-14 text-right shrink-0">
-                <span className="text-white text-sm font-black tabular-nums" style={{ fontFamily: "JetBrains Mono, monospace" }}>
-                  {z.pct.toFixed(1)}<span className="text-[#555] text-[10px]">%</span>
-                </span>
-              </div>
-              <div className="w-14 text-right text-[#555] text-[10px] shrink-0">{z.km} km</div>
+      <ul className="m-0 flex h-full list-none flex-col justify-between gap-4 p-0" aria-label="Chilometri per zona di passo">
+        {zones.map(z => (
+          <li key={z.zone} className="grid grid-cols-[3.75rem_1fr_3.75rem_4.5rem] items-center gap-3 text-[12px] leading-4">
+            <div className="min-w-0">
+              <div className="font-mono font-bold" style={{ color: z.color }}>{z.zone}</div>
+              <div className="truncate text-ea-text-muted">{z.name}</div>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
+            <div className="h-2.5 overflow-hidden rounded-full bg-ea-surface-2" aria-hidden="true">
+              <div
+                className="h-full rounded-full transition-[width] duration-200 motion-reduce:transition-none"
+                style={{ width: `${(z.pct / maxPct) * 100}%`, background: z.color }}
+              />
+            </div>
+            <div className="text-right font-mono text-[14px] font-bold tabular-nums text-ea-text">
+              {z.pct.toFixed(1)}<span className="text-[12px] font-medium text-ea-text-muted">%</span>
+            </div>
+            <div className="text-right font-mono tabular-nums text-ea-text-muted">{z.km} km</div>
+          </li>
+        ))}
+      </ul>
+    </AnalyticsChartCard>
   );
 }
 
 // ─── PACE DISTRIBUTION CARD ──────────────────────────────────────────────────
-
-function StatCell({ label, value, accent }: { label: string; value: string; accent?: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-[#555] text-[9px] font-black tracking-widest uppercase">{label}</span>
-      <span
-        className="text-lg font-black tabular-nums leading-none"
-        style={{ fontFamily: "JetBrains Mono, monospace", color: accent ?? "#fff" }}
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
 
 function PaceDistributionCard({ chart }: { chart?: ProAnalyticsChart }) {
   const data = (chart?.series_card ?? []) as Array<{ pace: string; pace_sec: number; runs: number }>;
@@ -498,89 +454,52 @@ function PaceDistributionCard({ chart }: { chart?: ProAnalyticsChart }) {
   const maxRuns = Math.max(...data.map(d => Number(d.runs ?? 0)), 1);
 
   return (
-    <div
-      className="rounded-3xl p-8 flex flex-col gap-6 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+    <AnalyticsChartCard
+      title="Distribuzione del Passo"
+      description={`Corse per zona · storico · ${totalRuns} corse`}
+      size="standard"
+      status={data.length ? "ready" : "empty"}
+      plotLabel="Numero di corse per passo medio"
+      summary={modal ? `Il passo più frequente è ${modal.pace} al chilometro, con ${modal.runs} corse.` : undefined}
+      stats={
+        <ChartStats>
+          <ChartStat label="Passo modale" value={modal?.pace ?? "—"} color={CHART_SERIES.primary} />
+          <ChartStat label="Più veloce" value={fastestPace} />
+          <ChartStat label="Più lento" value={slowestPace} />
+        </ChartStats>
+      }
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-white text-base font-black tracking-tight">Distribuzione del Passo</h3>
-          <p className="text-[#A0A0A0] text-[10px] tracking-widest uppercase mt-1">Corse per zona · storico</p>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#C0FF00]/10 border border-[#C0FF00]/20">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#C0FF00]" />
-          <span className="text-[#C0FF00] text-[10px] font-black tracking-widest uppercase">{totalRuns} run</span>
-        </div>
-      </div>
-
-      <div className="h-[220px] -mx-2">
-        {data.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-[#444] text-xs font-black tracking-widest uppercase">
-            Dati insufficienti
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="20%">
-              <defs>
-                <linearGradient id="paceBarGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#C0FF00" stopOpacity={1} />
-                  <stop offset="100%" stopColor="#C0FF00" stopOpacity={0.25} />
-                </linearGradient>
-                <linearGradient id="paceBarGradDim" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3A3A3A" stopOpacity={1} />
-                  <stop offset="100%" stopColor="#2A2A2A" stopOpacity={0.6} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="2 4" stroke="#252528" vertical={false} />
-              <XAxis
-                dataKey="pace"
-                tick={{ fill: "#666", fontSize: 9, fontFamily: "JetBrains Mono, monospace", fontWeight: 700 }}
-                axisLine={false}
-                tickLine={false}
-                interval="preserveStartEnd"
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={chartMargin} barCategoryGap="20%">
+          <CartesianGrid {...chartGrid} />
+          <XAxis {...chartXAxis} dataKey="pace" interval="preserveStartEnd" />
+          <YAxis {...chartYAxis} width={32} />
+          <Tooltip
+            cursor={chartCursorBar}
+            content={
+              <ChartTooltipContent
+                title={(l) => `Passo ${l} /km`}
+                row={(e) => ({ label: "Frequenza", value: `${e.value} corse`, color: CHART_SERIES.primary })}
               />
-              <YAxis
-                tick={{ fill: "#666", fontSize: 9, fontFamily: "JetBrains Mono, monospace", fontWeight: 700 }}
-                axisLine={false}
-                tickLine={false}
-                width={28}
-              />
-              <Tooltip
-                cursor={{ fill: "rgba(192,255,0,0.06)" }}
-                contentStyle={{
-                  background: "#111",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 12,
-                  fontFamily: "JetBrains Mono, monospace",
-                }}
-                labelStyle={{ color: "#A0A0A0", fontSize: 10, fontWeight: 700 }}
-                itemStyle={{ color: "#C0FF00", fontSize: 11, fontWeight: 900 }}
-                formatter={(v: any) => [`${v} corse`, "Frequenza"]}
-                labelFormatter={(l: string) => `Passo ${l} /km`}
-              />
-              <Bar dataKey="runs" radius={[6, 6, 0, 0]}>
-                {data.map((d, i) => {
-                  const isModal = modal && d.pace === modal.pace;
-                  const ratio = Number(d.runs) / maxRuns;
-                  return (
-                    <Cell
-                      key={i}
-                      fill={isModal ? "url(#paceBarGrad)" : ratio > 0.4 ? "url(#paceBarGrad)" : "url(#paceBarGradDim)"}
-                      opacity={isModal ? 1 : ratio > 0.4 ? 0.55 : 1}
-                    />
-                  );
-                })}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </div>
-
-      <div className="grid grid-cols-3 gap-4 pt-5 border-t border-white/[0.06]">
-        <StatCell label="Passo Modale" value={modal?.pace ?? "—"} accent="#C0FF00" />
-        <StatCell label="Più Veloce" value={fastestPace} />
-        <StatCell label="Più Lento" value={slowestPace} />
-      </div>
-    </div>
+            }
+          />
+          <Bar dataKey="runs" radius={CHART_SHAPE.barRadius}>
+            {data.map((d, i) => {
+              const isModal = modal && d.pace === modal.pace;
+              const ratio = Number(d.runs) / maxRuns;
+              // tre livelli: il passo modale (lime pieno), le zone frequenti (lime attenuato), il resto (neutro leggibile)
+              return (
+                <Cell
+                  key={i}
+                  fill={isModal || ratio > 0.4 ? CHART_SERIES.primary : CHART_TEXT.faint}
+                  fillOpacity={isModal ? 1 : ratio > 0.4 ? 0.55 : 1}
+                />
+              );
+            })}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </AnalyticsChartCard>
   );
 }
 
@@ -621,100 +540,55 @@ function EffortMatrixCard({ chart }: { chart?: ProAnalyticsChart }) {
   const xMax = Math.max(10, Math.ceil(stats.maxDist / 5) * 5);
 
   return (
-    <div
-      className="rounded-3xl p-8 flex flex-col gap-6 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+    <AnalyticsChartCard
+      title="Matrice degli Sforzi"
+      description={`Distanza (km) × passo (min/km) · bolla = FC · ${stats.count} corse`}
+      size="standard"
+      status={data.length ? "ready" : "empty"}
+      plotLabel="Distanza e passo di ogni corsa; la dimensione del punto indica la frequenza cardiaca"
+      legend={
+        <ChartLegend
+          items={[
+            { key: "run", label: "corsa (dimensione = FC)", color: CHART_SERIES.primary, kind: "dot" },
+            { key: "avg", label: "passo medio", color: CHART_TEXT.axis, kind: "dashed" },
+          ]}
+        />
+      }
+      stats={
+        <ChartStats>
+          <ChartStat label="Distanza media" value={stats.count ? stats.avgDist.toFixed(1) : "—"} unit={stats.count ? "km" : undefined} color={CHART_SERIES.primary} />
+          <ChartStat label="Passo medio" value={stats.count ? fmtPace(stats.avgPace) : "—"} unit={stats.count ? "/km" : undefined} />
+          <ChartStat label="FC media" value={stats.avgHr ? Math.round(stats.avgHr) : "—"} unit={stats.avgHr ? "bpm" : undefined} />
+        </ChartStats>
+      }
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-white text-base font-black tracking-tight">Matrice degli Sforzi</h3>
-          <p className="text-[#A0A0A0] text-[10px] tracking-widest uppercase mt-1">
-            Distanza × Passo · bolla = FC
-          </p>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#C0FF00]/10 border border-[#C0FF00]/20">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#C0FF00]" />
-          <span className="text-[#C0FF00] text-[10px] font-black tracking-widest uppercase">{stats.count} run</span>
-        </div>
-      </div>
-
-      <div className="h-[220px] -mx-2">
-        {data.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-[#444] text-xs font-black tracking-widest uppercase">
-            Dati insufficienti
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <ScatterChart margin={{ top: 8, right: 12, bottom: 4, left: -4 }}>
-              <defs>
-                <radialGradient id="effortDot">
-                  <stop offset="0%" stopColor="#C0FF00" stopOpacity={0.9} />
-                  <stop offset="80%" stopColor="#C0FF00" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#C0FF00" stopOpacity={0} />
-                </radialGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="2 4" stroke="#252528" />
-              <XAxis
-                type="number"
-                dataKey="dist"
-                domain={[0, xMax]}
-                tick={{ fill: "#666", fontSize: 9, fontFamily: "JetBrains Mono, monospace", fontWeight: 700 }}
-                axisLine={false}
-                tickLine={false}
-                label={{ value: "KM", position: "insideBottomRight", fill: "#444", fontSize: 9, fontWeight: 900, offset: -2 }}
-              />
-              <YAxis
-                type="number"
-                dataKey="pace"
-                domain={[3.5, 6.8]}
-                reversed={false}
-                tick={{ fill: "#666", fontSize: 9, fontFamily: "JetBrains Mono, monospace", fontWeight: 700 }}
-                axisLine={false}
-                tickLine={false}
-                width={32}
-                tickFormatter={(v: number) => fmtPace(v)}
-              />
-              <ZAxis type="number" dataKey="hr" range={[40, 240]} />
-              <ReferenceLine
-                y={stats.avgPace || 4.8}
-                stroke="#C0FF00"
-                strokeDasharray="4 4"
-                strokeOpacity={0.4}
-                label={{ value: "MEDIA", position: "right", fill: "#C0FF00", fontSize: 8, fontWeight: 900 }}
-              />
-              <Tooltip
-                cursor={{ stroke: "rgba(192,255,0,0.3)", strokeWidth: 1 }}
-                contentStyle={{
-                  background: "#111",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 12,
-                  fontFamily: "JetBrains Mono, monospace",
-                }}
-                content={({ active, payload }: any) => {
-                  if (!active || !payload?.length) return null;
-                  const d = payload[0].payload;
-                  return (
-                    <div className="bg-[#111] border border-white/[0.08] rounded-xl px-3 py-2" style={{ fontFamily: "JetBrains Mono, monospace" }}>
-                      <div className="text-[#C0FF00] text-[11px] font-black">{d.dist.toFixed(1)} km</div>
-                      <div className="text-white text-[10px] font-bold mt-0.5">{fmtPace(d.pace)} /km</div>
-                      {Number.isFinite(d.hr) && d.hr > 0 && (
-                        <div className="text-[#A0A0A0] text-[10px] font-bold mt-0.5">{Math.round(d.hr)} bpm</div>
-                      )}
-                    </div>
-                  );
-                }}
-              />
-              <Scatter data={data} fill="url(#effortDot)" />
-            </ScatterChart>
-          </ResponsiveContainer>
-        )}
-      </div>
-
-      <div className="grid grid-cols-3 gap-4 pt-5 border-t border-white/[0.06]">
-        <StatCell label="Distanza Media" value={stats.count ? `${stats.avgDist.toFixed(1)} km` : "—"} accent="#C0FF00" />
-        <StatCell label="Passo Medio" value={stats.count ? `${fmtPace(stats.avgPace)}` : "—"} />
-        <StatCell label="FC Media" value={stats.avgHr ? `${Math.round(stats.avgHr)} bpm` : "—"} />
-      </div>
-    </div>
+      <ResponsiveContainer width="100%" height="100%">
+        <ScatterChart margin={chartMargin}>
+          <CartesianGrid {...chartGridBoth} />
+          <XAxis {...chartXAxis} type="number" dataKey="dist" domain={[0, xMax]} />
+          <YAxis {...chartYAxis} type="number" dataKey="pace" domain={[3.5, 6.8]} reversed={false} width={44} tickFormatter={(v: number) => fmtPace(v)} />
+          <ZAxis type="number" dataKey="hr" range={[40, 240]} />
+          <ReferenceLine y={stats.avgPace || 4.8} {...chartReferenceLine} />
+          <Tooltip
+            cursor={{ ...chartCursor, strokeDasharray: "3 3" }}
+            content={({ active, payload }: any) => {
+              if (!active || !payload?.length) return null;
+              const d = payload[0].payload;
+              return (
+                <ChartTooltip
+                  rows={[
+                    { label: "Distanza", value: `${d.dist.toFixed(1)} km`, color: CHART_SERIES.primary },
+                    { label: "Passo", value: `${fmtPace(d.pace)} /km` },
+                    ...(Number.isFinite(d.hr) && d.hr > 0 ? [{ label: "FC", value: `${Math.round(d.hr)} bpm` }] : []),
+                  ]}
+                />
+              );
+            }}
+          />
+          <Scatter data={data} fill={CHART_SERIES.primary} fillOpacity={CHART_SHAPE.scatterOpacity} />
+        </ScatterChart>
+      </ResponsiveContainer>
+    </AnalyticsChartCard>
   );
 }
 
@@ -730,11 +604,11 @@ function getRunCategory(runType: string): "easy" | "tempo" | "intervals" | "long
 }
 
 const CAT_DEFS = [
-  { key: "easy",      label: "Easy Run",  color: "#34D399" },
-  { key: "tempo",     label: "Tempo",     color: CHART_SERIES.compare },
-  { key: "intervals", label: "Intervals", color: CHART_SERIES.load },
-  { key: "long",      label: "Long Run",  color: "#C0FF00" },
-  { key: "race",      label: "Race",      color: "#F43F5E" },
+  { key: "easy",      label: "Easy Run",  color: CHART_WORKOUT.easy },
+  { key: "tempo",     label: "Tempo",     color: CHART_WORKOUT.tempo },
+  { key: "intervals", label: "Intervals", color: CHART_WORKOUT.intervals },
+  { key: "long",      label: "Long Run",  color: CHART_WORKOUT.long },
+  { key: "race",      label: "Race",      color: CHART_WORKOUT.race },
 ] as const;
 
 function buildKmEntry(label: string, dayRuns: Run[]): Record<string, number | string> {
@@ -749,7 +623,7 @@ function buildKmEntry(label: string, dayRuns: Run[]): Record<string, number | st
 
 type KmPeriod = "7d" | "30d" | "90d" | "all";
 const KM_RANGE_DAYS: Record<KmPeriod, number | null> = { "7d": 7, "30d": 30, "90d": 90, "all": null };
-const KM_RANGE_LABELS: Record<KmPeriod, string> = { "7d": "7D", "30d": "30D", "90d": "90D", "all": "ALL" };
+const KM_RANGES = (Object.keys(KM_RANGE_DAYS) as KmPeriod[]).map((k) => ({ value: k, label: k.toUpperCase() }));
 
 function CaricoKmChart({ runs }: { runs: Run[] }) {
   const [period, setPeriod] = useState<KmPeriod>("90d");
@@ -770,8 +644,6 @@ function CaricoKmChart({ runs }: { runs: Run[] }) {
     const weekAnchorSunday = new Date(mondayOf(now));
     weekAnchorSunday.setDate(weekAnchorSunday.getDate() + 6);
     weekAnchorSunday.setHours(23, 59, 59, 999);
-    const days = KM_RANGE_DAYS[period];
-    const cutoffMs = days ? Date.now() - days * 86400000 : null;
 
     if (period === "7d") {
       // Per 7d: la settimana corrente lun→dom (7 barre giornaliere)
@@ -870,87 +742,59 @@ function CaricoKmChart({ runs }: { runs: Run[] }) {
     : "tutto";
 
   return (
-    <div
-      className="h-full rounded-3xl p-6 flex flex-col backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+    <AnalyticsChartCard
+      className="h-full"
+      title="Carico chilometrico"
+      description={`Km per tipo di seduta · ${periodLabel}`}
+      actions={<ChartRangeSelector<KmPeriod> value={period} options={KM_RANGES} onChange={setPeriod} aria-label="Intervallo del carico chilometrico" />}
+      stats={
+        <ChartStats>
+          <ChartStat label="Totale" value={stats.totalKm.toLocaleString("it", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} unit="km" color={CHART_SERIES.primary} />
+          <ChartStat label="Uscite" value={stats.count} />
+          <ChartStat label="Media" value={stats.avgKmPerWeek.toFixed(1)} unit="km/sett." />
+          <ChartStat label="Massimo" value={stats.maxKm.toFixed(1)} unit="km" />
+        </ChartStats>
+      }
+      size="standard"
+      status={chartData.length ? "ready" : "empty"}
+      plotLabel="Chilometri per tipo di seduta nel periodo"
+      legend={
+        <ChartLegend
+          items={[
+            ...CAT_DEFS.map(c => ({ key: c.key, label: c.label, color: c.color, kind: "bar" as const })),
+            ...(stats.avgKmBar > 0
+              ? [{ key: "avg", label: "media per barra", value: `${stats.avgKmBar.toFixed(1)} km`, color: CHART_TEXT.axis, kind: "dashed" as const }]
+              : []),
+          ]}
+        />
+      }
     >
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <div className="text-xl font-bold text-white">
-            {stats.totalKm.toLocaleString("it", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km
-            <span className="text-sm text-[#666] font-normal ml-2">{periodLabel}</span>
-          </div>
-          <div className="flex gap-3 mt-1 text-[10px] text-[#555] font-semibold tracking-wider">
-            <span className="text-[#888]">{stats.count} uscite</span>
-            <span>·</span>
-            <span>avg {stats.avgKmPerWeek.toFixed(1)} km/sett.</span>
-            <span>·</span>
-            <span>max {stats.maxKm.toFixed(1)} km</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
-          {(["7d", "30d", "90d", "all"] as KmPeriod[]).map(p => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPeriod(p)}
-              className={`text-[10px] font-bold px-2.5 py-1.5 rounded-md transition-all ${
-                period === p ? "bg-[#C0FF00] text-black" : "text-[#666] hover:text-white hover:bg-white/5"
-              }`}
-            >
-              {KM_RANGE_LABELS[p]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex-1 min-h-0">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} barCategoryGap="30%">
-            <defs>
-              {CAT_DEFS.map(c => (
-                <linearGradient key={c.key} id={`ckc-${c.key}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"   stopColor={c.color} stopOpacity={0.9} />
-                  <stop offset="100%" stopColor={c.color} stopOpacity={0.55} />
-                </linearGradient>
-              ))}
-            </defs>
-            <XAxis dataKey="day" stroke="#333" fontSize={10} tickLine={false} axisLine={false} tick={{ fill: "#555", fontWeight: 700 }} />
-            <YAxis stroke="#333" fontSize={10} tickLine={false} axisLine={false} tick={{ fill: "#444" }} width={32} />
-            {stats.avgKmBar > 0 && (
-              <ReferenceLine
-                y={stats.avgKmBar}
-                stroke="#C0FF00"
-                strokeOpacity={0.3}
-                strokeDasharray="4 4"
-                strokeWidth={1}
-                label={{ value: `AVG ${stats.avgKmBar.toFixed(1)} km`, position: "insideTopLeft", fontSize: 9, fontWeight: 700, fill: "#C0FF00", opacity: 0.55 }}
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chartData} margin={chartMargin} barCategoryGap="30%">
+          <CartesianGrid {...chartGrid} />
+          <XAxis {...chartXAxis} dataKey="day" />
+          <YAxis {...chartYAxis} width={32} />
+          {stats.avgKmBar > 0 && (
+            <ReferenceLine y={stats.avgKmBar} {...chartReferenceLine} />
+          )}
+          <Tooltip
+            cursor={chartCursorBar}
+            content={
+              <ChartTooltipContent
+                row={(e) => {
+                  const cat = CAT_DEFS.find(c => c.key === e.name);
+                  if (!e.value) return null;
+                  return { label: cat?.label ?? String(e.name), value: `${e.value} km`, color: cat?.color };
+                }}
               />
-            )}
-            <Tooltip
-              cursor={{ fill: "rgba(255,255,255,0.03)" }}
-              contentStyle={{ backgroundColor: "#0f0f0f", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px", color: "#fff", fontSize: 11, fontWeight: 700 }}
-              formatter={(v: number, name: string) => {
-                const cat = CAT_DEFS.find(c => c.key === name);
-                if (!v) return null;
-                return [`${v} km`, cat?.label ?? name];
-              }}
-            />
-            {CAT_DEFS.map((cat, i) => (
-              <Bar key={cat.key} dataKey={cat.key} stackId="s" fill={`url(#ckc-${cat.key})`} radius={i === CAT_DEFS.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]} />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="flex items-center gap-4 flex-wrap pt-3 mt-2 border-t border-white/[0.05]">
-        {CAT_DEFS.map(cat => (
-          <div key={cat.key} className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: cat.color }} />
-            <span className="text-[9px] font-black tracking-widest" style={{ color: cat.color }}>{cat.label.toUpperCase()}</span>
-          </div>
-        ))}
-      </div>
-    </div>
+            }
+          />
+          {CAT_DEFS.map((cat, i) => (
+            <Bar key={cat.key} dataKey={cat.key} stackId="s" fill={cat.color} radius={i === CAT_DEFS.length - 1 ? CHART_SHAPE.barRadius : [0, 0, 0, 0]} />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    </AnalyticsChartCard>
   );
 }
 
@@ -958,20 +802,18 @@ function CaricoKmChart({ runs }: { runs: Run[] }) {
 
 export function CaricoFormaV2({ ffHistory, kmRuns, paceDistributionChart, effortMatrixChart }: CaricoFormaV2Props) {
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-6">
       {/* ── Main fitness/fatigue/form chart ── */}
       <FitnessMultiChart ff={ffHistory} />
 
-      {/* ── Km stacked + Pace zones — same row ── */}
-      <div className="grid grid-cols-2 gap-5 items-stretch">
-        <div className="min-h-[280px]">
-          <CaricoKmChart runs={kmRuns} />
-        </div>
+      {/* ── Km stacked + Pace zones — una colonna sotto i 1024 px ── */}
+      <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
+        <CaricoKmChart runs={kmRuns} />
         <PaceZonesCard runs={kmRuns} />
       </div>
 
       {/* ── Distribuzione Passo + Matrice Sforzi ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <PaceDistributionCard chart={paceDistributionChart} />
         <EffortMatrixCard chart={effortMatrixChart} />
       </div>

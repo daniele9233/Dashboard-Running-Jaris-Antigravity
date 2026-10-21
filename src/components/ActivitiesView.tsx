@@ -110,7 +110,7 @@ function ViewModeButton({ active, icon, label, onClick }: ViewModeButtonProps) {
     <button
       onClick={onClick}
       className={cn(
-        'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all duration-200',
+        'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest border transition-all duration-200',
         active
           ? 'bg-[#C0FF00]/15 border-[#C0FF00]/40 text-[#C0FF00] shadow-[0_0_12px_rgba(192,255,0,0.15)]'
           : 'bg-white/5 border-white/8 text-gray-500 hover:text-gray-300 hover:border-white/20'
@@ -489,14 +489,14 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
             {/* Garmin Import button */}
             <button
               onClick={() => setShowGarminImport(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[#8B5CF6]/30 text-[#8B5CF6] bg-[#8B5CF6]/5 hover:bg-[#8B5CF6]/10 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest border border-[#8B5CF6]/30 text-[#8B5CF6] bg-[#8B5CF6]/5 hover:bg-[#8B5CF6]/10 transition-all"
               title="Importa manualmente il file CSV Garmin"
             >
               <Database className="w-3.5 h-3.5" />
               Garmin Import
             </button>
           </div>
-          <p className="text-gray-600 text-[10px] font-medium mt-2 uppercase tracking-widest">
+          <p className="text-gray-600 text-xs font-medium mt-2 uppercase tracking-widest">
             Corse Strava · Clicca card per volare · Freccia per dettaglio
           </p>
         </header>
@@ -575,16 +575,16 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                     )}>
                       {runTitle}
                     </h3>
-                    <span className={cn('px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest flex-shrink-0', bg, text)}>
+                    <span className={cn('px-1.5 py-0.5 rounded text-xs font-black uppercase tracking-widest flex-shrink-0', bg, text)}>
                       {typeLabel}
                     </span>
                     {run.is_treadmill && (
-                      <span className="px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest flex-shrink-0 bg-slate-700/60 text-slate-400" title="Tapis roulant — escluso dalle statistiche">
+                      <span className="px-1.5 py-0.5 rounded text-xs font-black uppercase tracking-widest flex-shrink-0 bg-slate-700/60 text-slate-400" title="Tapis roulant — escluso dalle statistiche">
                         🏃 tapis
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 text-gray-500 text-[10px] font-bold uppercase tracking-wider">
+                  <div className="flex items-center gap-3 text-gray-500 text-xs font-bold uppercase tracking-wider">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-2.5 h-2.5" />{formatDate(run.date)}
                     </span>
@@ -600,15 +600,15 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                 {/* Stats */}
                 <div className="flex flex-wrap gap-2 sm:gap-4 md:border-x border-white/5 sm:px-4 flex-shrink-0">
                   <div className="flex flex-col items-center">
-                    <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">km</span>
+                    <span className="text-xs font-black text-gray-600 uppercase tracking-widest mb-0.5">km</span>
                     <span className="text-sm font-black italic text-white">{run.distance_km.toFixed(1)}</span>
                   </div>
                   <div className="flex flex-col items-center">
-                    <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">pace</span>
+                    <span className="text-xs font-black text-gray-600 uppercase tracking-widest mb-0.5">pace</span>
                     <span className="text-sm font-black italic text-emerald-400">{run.avg_pace}</span>
                   </div>
                   <div className="flex flex-col items-center">
-                    <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">hr</span>
+                    <span className="text-xs font-black text-gray-600 uppercase tracking-widest mb-0.5">hr</span>
                     <span className="text-sm font-black italic text-rose-400">{run.avg_hr ?? '—'}</span>
                   </div>
 
@@ -617,14 +617,14 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                     <>
                       <div className="w-px h-8 self-center bg-white/5" />
                       <div className="flex flex-col items-center" title={`Deriva cardiaca: Prima metà ${drift.hr1} bpm → Seconda metà ${drift.hr2} bpm`}>
-                        <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">drift</span>
+                        <span className="text-xs font-black text-gray-600 uppercase tracking-widest mb-0.5">drift</span>
                         <span className="text-sm font-black italic" style={{ color: driftCfg.color }}>
                           {drift.drift >= 0 ? "+" : ""}{drift.drift.toFixed(1)}%
                         </span>
                       </div>
                       <div className="flex flex-col items-center">
-                        <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-0.5">1ª→2ª</span>
-                        <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap">
+                        <span className="text-xs font-black text-gray-600 uppercase tracking-widest mb-0.5">1ª→2ª</span>
+                        <span className="text-xs font-bold text-gray-400 whitespace-nowrap">
                           {drift.hr1}<span className="text-gray-600">→</span><span style={{ color: driftCfg.color }}>{drift.hr2}</span>
                         </span>
                       </div>
@@ -716,7 +716,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                   {/* Distance bubble on selected */}
                   {isSelected && (
                     <div
-                      className="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-lg text-[9px] font-black text-black whitespace-nowrap shadow-xl z-20"
+                      className="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-lg text-xs font-black text-black whitespace-nowrap shadow-xl z-20"
                       style={{ backgroundColor: '#C0FF00' }}
                     >
                       {run.distance_km.toFixed(1)} km
@@ -724,7 +724,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                   )}
                   {/* "LAST" badge in last-run mode */}
                   {mapViewMode === 'last-run' && isLastRun && !isSelected && (
-                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-lg text-[8px] font-black text-black whitespace-nowrap z-20" style={{ backgroundColor: markerColor }}>
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-lg text-xs font-black text-black whitespace-nowrap z-20" style={{ backgroundColor: markerColor }}>
                       LAST
                     </div>
                   )}
@@ -737,9 +737,9 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
         {/* ── View mode badge overlay (top-left) ───────────────────────── */}
         <div className="absolute top-4 left-4 pointer-events-none">
           <div className="bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2">
-            {mapViewMode === 'world'      && <><Globe className="w-3 h-3 text-[#C0FF00]" /><span className="text-[9px] font-black uppercase tracking-widest text-gray-300">Vista Mondiale</span></>}
-            {mapViewMode === 'last-run'   && <><Navigation className="w-3 h-3 text-[#C0FF00]" /><span className="text-[9px] font-black uppercase tracking-widest text-gray-300">Ultima Corsa</span></>}
-            {mapViewMode === 'all-zoomed' && <><Layers className="w-3 h-3 text-[#C0FF00]" /><span className="text-[9px] font-black uppercase tracking-widest text-gray-300">Tutte le Corse</span></>}
+            {mapViewMode === 'world'      && <><Globe className="w-3 h-3 text-[#C0FF00]" /><span className="text-xs font-black uppercase tracking-widest text-gray-300">Vista Mondiale</span></>}
+            {mapViewMode === 'last-run'   && <><Navigation className="w-3 h-3 text-[#C0FF00]" /><span className="text-xs font-black uppercase tracking-widest text-gray-300">Ultima Corsa</span></>}
+            {mapViewMode === 'all-zoomed' && <><Layers className="w-3 h-3 text-[#C0FF00]" /><span className="text-xs font-black uppercase tracking-widest text-gray-300">Tutte le Corse</span></>}
           </div>
         </div>
 
@@ -759,14 +759,14 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
               <div className="bg-[#080D18]/90 backdrop-blur-2xl border border-white/10 rounded-2xl px-5 py-3 flex items-center justify-between shadow-2xl">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className={cn('text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded', bg, text)}>{typeLabel}</span>
+                    <span className={cn('text-xs font-black uppercase tracking-widest px-1.5 py-0.5 rounded', bg, text)}>{typeLabel}</span>
                     <span className="text-xs font-black italic text-white truncate max-w-[180px]">
                       {run.notes
                         ? run.notes.replace('Importata da Strava: ', '').replace(/(\s*\[Strava:[^\]]*\])+/g, '').trim() || `${typeLabel} Run`
                         : `${typeLabel} Run`}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 text-[10px] font-bold text-gray-500">
+                  <div className="flex items-center gap-3 text-xs font-bold text-gray-500">
                     <span>{run.distance_km.toFixed(2)} km</span>
                     <span>{run.avg_pace}/km</span>
                     <span>{formatDuration(run.duration_minutes)}</span>
@@ -774,8 +774,8 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0 ml-4">
-                  <div className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Rotazione</div>
-                  <div className="text-[8px] font-black text-[#C0FF00]/70 uppercase tracking-widest">Attiva</div>
+                  <div className="text-xs font-black text-gray-600 uppercase tracking-widest">Rotazione</div>
+                  <div className="text-xs font-black text-[#C0FF00]/70 uppercase tracking-widest">Attiva</div>
                 </div>
               </div>
             </motion.div>
@@ -791,7 +791,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
               transition={{ delay: 1.5 }}
               className="bg-black/55 backdrop-blur-md border border-white/8 px-4 py-2 rounded-full"
             >
-              <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 whitespace-nowrap">
+              <p className="text-xs font-black uppercase tracking-widest text-gray-500 whitespace-nowrap">
                 ↑ Clicca una corsa per volare sulla mappa
               </p>
             </motion.div>
@@ -815,7 +815,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                 </div>
                 <div>
                   <h2 className="text-lg font-black text-white uppercase tracking-tight">Garmin CSV Import</h2>
-                  <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Upload manuale → collezione separata</p>
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Upload manuale → collezione separata</p>
                 </div>
               </div>
               <button
@@ -830,7 +830,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
             <div className="px-6 py-5 space-y-4">
               {/* Info box */}
               <div className="bg-[#8B5CF6]/5 border border-[#8B5CF6]/20 rounded-xl px-4 py-3">
-                <p className="text-[11px] text-gray-300 leading-relaxed">
+                <p className="text-xs text-gray-300 leading-relaxed">
                   <span className="text-[#8B5CF6] font-bold">ℹ️ Come funziona:</span> Carica il file CSV esportato da Garmin Connect. 
                   I dati verranno salvati nella collezione <code className="text-[#8B5CF6] font-mono">garmin_csv_data</code> senza modificare le tue corse Strava.
                   Include: Running Dynamics, HR, Cadenza, Potenza, ecc.
@@ -857,8 +857,8 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                     <>
                       <Upload className="w-8 h-8 text-gray-500 mb-3" />
                       <span className="text-sm font-bold text-gray-300">Trascina il file CSV qui</span>
-                      <span className="text-[10px] text-gray-500 mt-1">oppure clicca per selezionare</span>
-                      <span className="text-[9px] text-gray-600 mt-2">File Garmin Connect export (.csv)</span>
+                      <span className="text-xs text-gray-500 mt-1">oppure clicca per selezionare</span>
+                      <span className="text-xs text-gray-600 mt-2">File Garmin Connect export (.csv)</span>
                     </>
                   )}
                   <input
@@ -884,7 +884,7 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-white truncate">{csvFile.name}</p>
-                    <p className="text-[10px] text-gray-500">{(csvFile.size / 1024).toFixed(1)} KB</p>
+                    <p className="text-xs text-gray-500">{(csvFile.size / 1024).toFixed(1)} KB</p>
                   </div>
                   <button
                     onClick={() => { setCsvFile(null); setParsedRuns([]); setCsvResult(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
@@ -936,12 +936,12 @@ export function ActivitiesView({ onSelectRun }: ActivitiesViewProps) {
 
             {/* Footer */}
             <div className="px-6 py-3 border-t border-white/5 flex items-center justify-between">
-              <p className="text-[9px] text-gray-600 font-medium uppercase tracking-wider">
+              <p className="text-xs text-gray-600 font-medium uppercase tracking-wider">
                 Collezione: garmin_csv_data · Nessuna modifica alle corse Strava
               </p>
               <button
                 onClick={resetCsvImport}
-                className="text-[10px] text-gray-500 hover:text-white font-bold uppercase tracking-wider transition-colors"
+                className="text-xs text-gray-500 hover:text-white font-bold uppercase tracking-wider transition-colors"
               >
                 Chiudi
               </button>

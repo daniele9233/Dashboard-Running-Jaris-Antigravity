@@ -32,7 +32,7 @@ export function InfoTooltip({ title, lines }: { title: string; lines: string[] }
         onMouseLeave={() => setOpen(false)}
         onFocus={showTooltip}
         onBlur={() => setOpen(false)}
-        className="text-[#555] hover:text-[#A0A0A0] transition-colors focus:outline-none"
+        className="text-ea-text-axis hover:text-ea-text-muted transition-colors focus:outline-none"
         aria-label={`Info: ${title}`}
       >
         <Info size={13} />
@@ -40,15 +40,15 @@ export function InfoTooltip({ title, lines }: { title: string; lines: string[] }
       {open &&
         createPortal(
           <div
-            className="fixed z-[9999] w-96 max-h-[70vh] overflow-y-auto bg-[#111] border border-white/15 rounded-[16px] p-4 shadow-[0_4px_24px_rgba(0,0,0,0.4)] pointer-events-none"
+            className="fixed z-[9999] w-96 max-h-[70vh] overflow-y-auto bg-ea-surface-2 border border-white/15 rounded-[16px] p-4 shadow-[0_4px_24px_rgba(0,0,0,0.4)] pointer-events-none"
             style={{ top: position.top, left: position.left }}
             role="tooltip"
           >
-            <div className="text-[#C0FF00] text-[10px] font-black tracking-widest mb-2">{title}</div>
+            <div className="text-ea-lime text-xs font-black tracking-widest mb-2">{title}</div>
             <ul className="space-y-1.5">
               {lines.map((l, i) => (
-                <li key={i} className="text-[#D6D6D6] text-[11px] leading-relaxed flex gap-1.5">
-                  <span className="text-[#555] shrink-0">·</span>
+                <li key={i} className="text-[#D6D6D6] text-xs leading-relaxed flex gap-1.5">
+                  <span className="text-ea-text-axis shrink-0">·</span>
                   {l}
                 </li>
               ))}

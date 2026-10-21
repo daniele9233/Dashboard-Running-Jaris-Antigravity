@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import type { Run } from "../../../types/api";
 
+import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from "../../charts";
 /**
  * HRZones — donut chart with per-zone time distribution from last run splits.
  *
@@ -20,11 +21,11 @@ export function HRZones({ lastRun }: { lastRun: Run | null }) {
   const zones = useMemo(() => {
     const maxHr = lastRun?.max_hr ?? 190;
     const ranges = [
-      { n: "Z1", label: "Recovery", low: 0.5, high: 0.69, color: "#60A5FA" },
-      { n: "Z2", label: "Endurance", low: 0.69, high: 0.78, color: "#34D399" },
-      { n: "Z3", label: "Tempo", low: 0.78, high: 0.86, color: "#FBBF24" },
-      { n: "Z4", label: "Threshold", low: 0.86, high: 0.92, color: "#FB923C" },
-      { n: "Z5", label: "VO₂", low: 0.92, high: 1.0, color: "#F43F5E" },
+      { n: "Z1", label: "Recovery", low: 0.5, high: 0.69, color: CHART_SERIES.compare },
+      { n: "Z2", label: "Endurance", low: 0.69, high: 0.78, color: CHART_SERIES.positive },
+      { n: "Z3", label: "Tempo", low: 0.78, high: 0.86, color: CHART_SERIES.load },
+      { n: "Z4", label: "Threshold", low: 0.86, high: 0.92, color: CHART_SERIES.load },
+      { n: "Z5", label: "VO₂", low: 0.92, high: 1.0, color: CHART_SERIES.risk },
     ];
     const secs = ranges.map(() => 0);
     for (const sp of lastRun?.splits ?? []) {
@@ -52,9 +53,9 @@ export function HRZones({ lastRun }: { lastRun: Run | null }) {
   const maxPct = Math.max(...zones.map((z) => z.pct), 1);
 
   return (
-    <div className="rounded-[24px] p-5 h-full flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+    <div className="rounded-2xl p-5 h-full flex flex-col overflow-hidden border border-ea-hairline shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-ea-surface-1">
       {/* ── top label ── */}
-      <div className="text-[#A0A0A0] text-[9px] font-black tracking-[0.2em] uppercase mb-3 shrink-0">
+      <div className="text-ea-text-muted text-xs font-black tracking-[0.2em] uppercase mb-3 shrink-0">
         Heart Rate Zones
       </div>
 
@@ -97,15 +98,15 @@ export function HRZones({ lastRun }: { lastRun: Run | null }) {
               );
             })}
             {/* dark inner circle */}
-            <circle cx={cx} cy={cy} r={r - 5} fill="#111" />
+            <circle cx={cx} cy={cy} r={r - 5} fill={CHART_SURFACE.panelSoft} />
             {/* center text */}
-            <text x={cx} y={cy - 8} textAnchor="middle" fontSize="7.5" fontWeight="800" fill="#888" letterSpacing="1.2">
+            <text x={cx} y={cy - 8} textAnchor="middle" fontSize="12" fontWeight="800" fill={CHART_TEXT.axis} letterSpacing="1.2">
               {zones[active].n} · {zones[active].label.toUpperCase()}
             </text>
-            <text x={cx} y={cy + 12} textAnchor="middle" fontSize="22" fontWeight="900" fill="#fff">
+            <text x={cx} y={cy + 12} textAnchor="middle" fontSize="22" fontWeight="900" fill={CHART_TEXT.primary}>
               {zones[active].pct}%
             </text>
-            <text x={cx} y={cy + 26} textAnchor="middle" fontSize="7.5" fill="#555">
+            <text x={cx} y={cy + 26} textAnchor="middle" fontSize="12" fill="#555">
               {zones[active].range} bpm
             </text>
           </svg>
@@ -113,7 +114,7 @@ export function HRZones({ lastRun }: { lastRun: Run | null }) {
 
         {/* Distribution list */}
         <div className="flex flex-col flex-1 min-w-0 min-h-0">
-          <div className="text-white text-xl font-black italic tracking-tight mb-3 shrink-0">
+          <div className="text-white text-xl font-black tracking-tight mb-3 shrink-0">
             Distribution
           </div>
           <div className="flex flex-col gap-1.5 flex-1 justify-evenly">
@@ -138,10 +139,10 @@ export function HRZones({ lastRun }: { lastRun: Run | null }) {
                 {/* label + bar */}
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-white text-[10px] font-black tracking-widest uppercase truncate">
+                    <span className="text-white text-xs font-black tracking-widest uppercase truncate">
                       {z.n} · {z.label}
                     </span>
-                    <span className="text-[#A0A0A0] text-[10px] font-bold ml-2 shrink-0" style={{ fontFamily: "JetBrains Mono" }}>
+                    <span className="text-ea-text-muted text-xs font-bold ml-2 shrink-0" style={{ fontFamily: "JetBrains Mono" }}>
                       {z.pct}%
                     </span>
                   </div>

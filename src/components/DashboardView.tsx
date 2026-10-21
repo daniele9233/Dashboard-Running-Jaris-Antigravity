@@ -39,7 +39,7 @@ import { HRZones } from "./dashboard/widgets/HRZones";
 import { NextOptimalSessionWidget } from "./dashboard/widgets/NextOptimalSessionWidget";
 import { WeatherNormalizerWidget } from "./dashboard/widgets/WeatherNormalizerWidget";
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Line, CartesianGrid, Area, ComposedChart } from "recharts";
+
 import { useApi } from "../hooks/useApi";
 import { API_CACHE } from "../hooks/apiCacheKeys";
 import { getDashboard, getRuns, getBikeSessions, getAnalytics, getBestEfforts, getVdotPaces, getDashboardInsight, getProfile } from "../api";
@@ -49,6 +49,7 @@ import { computeDrift as computeDriftCanonical } from "../utils/cardiacDrift";
 import { parsePaceToSecs, secsToPaceStr, hmsToSecs, formatDuration, fmtPbTime } from "../utils/paceFormat";
 import { buildRacePredictions } from "../utils/racePredictions";
 
+import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from "./charts";
 // `bestPbTime` rimosso (round 6 — #3 dead code). Backend espone già le PB
 // projections via `analytics.race_predictions` + `buildRacePredictions` util.
 
@@ -113,7 +114,7 @@ export function DashboardView() {
 
   // Fatigue color — shared across Status of Form, Fatigue card, Next Optimal Session
   // Red when ATL > 50 (high fatigue), amber 30-50, green < 30
-  const faticaColor = atl > 50 ? "#F43F5E" : atl > 30 ? "#F59E0B" : "#C0FF00";
+  const faticaColor = atl > 50 ? CHART_SERIES.risk : atl > 30 ? CHART_SERIES.load : "#C0FF00";
   const faticaLabel = atl > 50 ? "HIGH" : atl > 30 ? "MODERATE" : "LOW";
 
   // Peak Score — map TSB [-40..+30] → [0..100]. Linear, clamped.
@@ -123,14 +124,14 @@ export function DashboardView() {
 
   const status =
     tsb === null
-      ? { label: "—",          color: "#64748B" }
+      ? { label: "—",          color: CHART_TEXT.axis }
       : tsb > 10
-      ? { label: "FRESH",      color: "#C0FF00" }
+      ? { label: "FRESH",      color: CHART_SERIES.primary }
       : tsb > -5
-      ? { label: "NEUTRAL",    color: "#14B8A6" }
+      ? { label: "NEUTRAL",    color: CHART_SERIES.compare }
       : tsb > -20
-      ? { label: "FATIGUED",   color: "#F59E0B" }
-      : { label: "OVERLOADED", color: "#F43F5E" };
+      ? { label: "FATIGUED",   color: CHART_SERIES.load }
+      : { label: "OVERLOADED", color: CHART_SERIES.risk };
 
   // chartData / weeklyKmTotal moved into WeeklyKmChart widget (round 8 — #14).
 
@@ -167,12 +168,12 @@ export function DashboardView() {
 
   // ─── Human-friendly metaphors (no jargon) ─────────────────────────────
   const tsbMeta = (() => {
-    if (tsb === null) return { icon: "🪫", label: "—", sub: "Dati non disponibili", color: "#64748B" };
-    if (tsb > 10)   return { icon: "🔋", label: "Pieno",    sub: "Sei fresco, spingi!",        color: "#C0FF00" };
-    if (tsb > -5)   return { icon: "🔋", label: "Buono",    sub: "Equilibrio perfetto",        color: "#14B8A6" };
-    if (tsb > -15)  return { icon: "🪫", label: "Medio",    sub: "Fase di allenamento",        color: "#F59E0B" };
-    if (tsb > -25)  return { icon: "🪫", label: "Scarico",  sub: "Recupera!",                  color: "#F59E0B" };
-    return              { icon: "🔴", label: "Critico",  sub: "Stop, rischio infortuni",     color: "#F43F5E" };
+    if (tsb === null) return { icon: "🪫", label: "—", sub: "Dati non disponibili", color: CHART_TEXT.axis };
+    if (tsb > 10)   return { icon: "🔋", label: "Pieno",    sub: "Sei fresco, spingi!",        color: CHART_SERIES.primary };
+    if (tsb > -5)   return { icon: "🔋", label: "Buono",    sub: "Equilibrio perfetto",        color: CHART_SERIES.compare };
+    if (tsb > -15)  return { icon: "🪫", label: "Medio",    sub: "Fase di allenamento",        color: CHART_SERIES.load };
+    if (tsb > -25)  return { icon: "🪫", label: "Scarico",  sub: "Recupera!",                  color: CHART_SERIES.load };
+    return              { icon: "🔴", label: "Critico",  sub: "Stop, rischio infortuni",     color: CHART_SERIES.risk };
   })();
 
   const ctlMeta = (() => {
@@ -333,14 +334,14 @@ export function DashboardView() {
         {dashData && (
           <div className="mb-2 flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-black italic tracking-tight text-white uppercase">
+              <h2 className="ea-title">
                 {t("dashboard.greeting")}, {profile?.name || t("dashboard.runner")} 👋
               </h2>
               <p className="text-sm text-gray-500 font-medium mt-1">
                 {profile?.race_goal}
                 {raceDate && ` — ${raceDate}`}
                 {daysToRace !== null && (
-                  <span className="ml-3 text-[#C0FF00] font-black">{t("dashboard.daysToRace", { days: daysToRace })}</span>
+                  <span className="ml-3 text-ea-lime font-black">{t("dashboard.daysToRace", { days: daysToRace })}</span>
                 )}
               </p>
             </div>
@@ -351,20 +352,20 @@ export function DashboardView() {
                     type="button"
                     onClick={() => setOpenAddMenu((v) => !v)}
                     disabled={hiddenMeta.length === 0}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[#666] hover:text-[#C0FF00] hover:border-[#C0FF00]/30 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-[#666] disabled:hover:border-white/[0.06] text-[10px] font-black tracking-widest transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ea-hairline bg-white/[0.02] text-ea-text-axis hover:text-ea-lime hover:border-ea-lime/30 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-ea-text-axis disabled:hover:border-ea-hairline text-xs font-black tracking-widest transition-colors"
                     title={t("dashboard.restoreHiddenWidgets")}
                   >
                     <Plus size={12} />
                     AGGIUNGI WIDGET
                     {hiddenMeta.length > 0 && (
-                      <span className="bg-[#C0FF00] text-black rounded-full px-1.5 text-[9px] leading-4">
+                      <span className="bg-ea-lime text-black rounded-full px-1.5 text-xs leading-4">
                         {hiddenMeta.length}
                       </span>
                     )}
                   </button>
                   {openAddMenu && hiddenMeta.length > 0 && (
-                    <div className="absolute right-0 mt-2 w-64 bg-[#1a1a1a] border border-white/[0.08] rounded-[16px] shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-40 p-2">
-                      <div className="text-[#666] text-[9px] font-black tracking-widest uppercase px-3 py-2">
+                    <div className="absolute right-0 mt-2 w-64 bg-ea-surface-3 border border-ea-hairline rounded-[16px] shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-40 p-2">
+                      <div className="text-ea-text-axis text-xs font-black tracking-widest uppercase px-3 py-2">
                         Archivio ({hiddenMeta.length})
                       </div>
                       {hiddenMeta.map((w) => (
@@ -378,7 +379,7 @@ export function DashboardView() {
                           className="w-full text-left px-3 py-2 text-[12px] text-white hover:bg-white/[0.06] rounded-[12px] flex items-center justify-between group"
                         >
                           <span>{w.label}</span>
-                          <Plus size={12} className="text-[#666] group-hover:text-[#C0FF00]" />
+                          <Plus size={12} className="text-ea-text-axis group-hover:text-ea-lime" />
                         </button>
                       ))}
                     </div>
@@ -388,7 +389,7 @@ export function DashboardView() {
                   onClick={() => {
                     if (confirm("Ripristinare il layout predefinito?")) resetLayout();
                   }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[#666] hover:text-[#C0FF00] hover:border-[#C0FF00]/30 text-[10px] font-black tracking-widest transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ea-hairline bg-white/[0.02] text-ea-text-axis hover:text-ea-lime hover:border-ea-lime/30 text-xs font-black tracking-widest transition-colors"
                   title={t("dashboard.restoreWidgetPositions")}
                 >
                   <RotateCcw size={12} />
@@ -419,12 +420,12 @@ export function DashboardView() {
           {!hiddenKeys.includes("status-form") && (
           <div key="status-form">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("status-form")}>
-            <div className="h-full rounded-[24px] p-8 relative overflow-hidden flex flex-col justify-between backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+            <div className="h-full rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between border border-ea-hairline shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-ea-surface-1">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-2">LIVE BIO-FEED</div>
+                <div className="text-ea-text-muted text-xs font-black tracking-widest mb-2">LIVE BIO-FEED</div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-white text-4xl font-black tracking-tighter italic">{t("dashboard.statusOfForm")}</h2>
+                  <h2 className="text-white text-4xl font-black tracking-tighter">{t("dashboard.statusOfForm")}</h2>
                   <InfoTooltip title="STATUS FORMA" lines={[
                     'CTL (Fitness): e il tuo "motore" costruito nel tempo. Piu e alto, piu sei allenato.',
                     "ATL (Stanchezza): lo stress accumulato negli ultimi giorni. Indica quanto hai spinto di recente.",
@@ -456,7 +457,7 @@ export function DashboardView() {
               </div>
             </div>
 
-            <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12 flex-1">
+            <div className="flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-12 flex-1">
               {/* Gauge */}
               <div className="relative w-40 h-40 md:w-56 md:h-56 flex-shrink-0">
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100" overflow="visible">
@@ -475,14 +476,13 @@ export function DashboardView() {
                     strokeDasharray="251.2"
                     strokeDashoffset={gaugeOffset}
                     strokeLinecap="round"
-                    filter="url(#gauge-glow)"
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-4xl md:text-5xl font-black" style={{ color: faticaColor }}>
                     {readiness !== null ? readiness.toFixed(0) : "—"}
                   </span>
-                  <span className="text-[#A0A0A0] text-[10px] md:text-xs font-black tracking-widest mt-1">{t("dashboard.peakScore").toUpperCase()}</span>
+                  <span className="text-ea-text-muted text-xs md:text-xs font-black tracking-widest mt-1">{t("dashboard.peakScore").toUpperCase()}</span>
                 </div>
               </div>
 
@@ -490,25 +490,25 @@ export function DashboardView() {
               <div className="flex flex-col gap-4 w-full md:min-w-[180px] md:w-auto">
                 <div>
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">{t("dashboard.fuelTitle")}</span>
-                    <span className="text-[#C0FF00]/70 text-[9px] font-black tracking-widest">TSB</span>
+                    <span className="text-ea-text-muted text-xs font-black tracking-widest uppercase">{t("dashboard.fuelTitle")}</span>
+                    <span className="text-ea-lime/70 text-xs font-black tracking-widest">TSB</span>
                   </div>
-                  <div className="text-[#555] text-[9px] font-semibold italic mb-1">{t("dashboard.fuelSub")}</div>
+                  <div className="text-ea-text-axis text-xs font-semibold mb-1">{t("dashboard.fuelSub")}</div>
                   <div className="text-xl font-black whitespace-nowrap" style={{ color: tsbMeta.color }}>
                     <span className="mr-1.5 font-mono tabular-nums">{tsbValue}</span>{tsbMeta.label}
                   </div>
-                  <div className="text-[#888] text-[11px] font-medium mt-0.5">{tsbMeta.sub}</div>
+                  <div className="text-ea-text-axis text-xs font-medium mt-0.5">{tsbMeta.sub}</div>
                 </div>
                 <div>
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">{t("dashboard.powerTitle")}</span>
-                    <span className="text-[#C0FF00]/70 text-[9px] font-black tracking-widest">EFF</span>
+                    <span className="text-ea-text-muted text-xs font-black tracking-widest uppercase">{t("dashboard.powerTitle")}</span>
+                    <span className="text-ea-lime/70 text-xs font-black tracking-widest">EFF</span>
                   </div>
-                  <div className="text-[#555] text-[9px] font-semibold italic mb-1">{t("dashboard.powerSub")}</div>
+                  <div className="text-ea-text-axis text-xs font-semibold mb-1">{t("dashboard.powerSub")}</div>
                   <div className="text-white text-xl font-black whitespace-nowrap">
                     <span className="mr-1.5 font-mono tabular-nums">{effValue}</span>{effMeta.label}
                   </div>
-                  <div className="text-[#888] text-[11px] font-medium mt-0.5">{effMeta.sub}</div>
+                  <div className="text-ea-text-axis text-xs font-medium mt-0.5">{effMeta.sub}</div>
                 </div>
               </div>
 
@@ -516,35 +516,35 @@ export function DashboardView() {
               <div className="flex flex-col gap-4 w-full md:min-w-[180px] md:w-auto">
                 <div>
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">{t("dashboard.engineTitle")}</span>
-                    <span className="text-[#C0FF00]/70 text-[9px] font-black tracking-widest">CTL</span>
+                    <span className="text-ea-text-muted text-xs font-black tracking-widest uppercase">{t("dashboard.engineTitle")}</span>
+                    <span className="text-ea-lime/70 text-xs font-black tracking-widest">CTL</span>
                   </div>
-                  <div className="text-[#555] text-[9px] font-semibold italic mb-1">{t("dashboard.engineSub")}</div>
+                  <div className="text-ea-text-axis text-xs font-semibold mb-1">{t("dashboard.engineSub")}</div>
                   <div className="text-white text-xl font-black whitespace-nowrap">
                     <span className="mr-1.5 font-mono tabular-nums">{ctlValue}</span>{ctlMeta.label}
                   </div>
-                  <div className="text-[#888] text-[11px] font-medium mt-0.5">{ctlMeta.sub}</div>
+                  <div className="text-ea-text-axis text-xs font-medium mt-0.5">{ctlMeta.sub}</div>
                 </div>
                 <div>
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">{t("dashboard.workTitle")}</span>
-                    <span className="text-[#C0FF00]/70 text-[9px] font-black tracking-widest">ATL</span>
+                    <span className="text-ea-text-muted text-xs font-black tracking-widest uppercase">{t("dashboard.workTitle")}</span>
+                    <span className="text-ea-lime/70 text-xs font-black tracking-widest">ATL</span>
                   </div>
-                  <div className="text-[#555] text-[9px] font-semibold italic mb-1">{t("dashboard.workSub")}</div>
+                  <div className="text-ea-text-axis text-xs font-semibold mb-1">{t("dashboard.workSub")}</div>
                   <div className="text-white text-xl font-black whitespace-nowrap">
                     <span className="mr-1.5 font-mono tabular-nums">{atlValue}</span>{atlMeta.label}
                   </div>
-                  <div className="text-[#888] text-[11px] font-medium mt-0.5">{atlMeta.sub}</div>
+                  <div className="text-ea-text-axis text-xs font-medium mt-0.5">{atlMeta.sub}</div>
                 </div>
               </div>
             </div>
 
             {/* PMC — Performance Management Chart (30d) */}
             {insightData?.insight && (
-              <div className="mt-2 pt-2 border-t border-white/[0.06]">
+              <div className="mt-2 pt-2 border-t border-ea-hairline">
                 <div className="flex items-start gap-2.5">
-                  <Sparkles className="text-[#C0FF00] mt-0.5 shrink-0" size={14} />
-                  <p className="text-[#A0A0A0] text-[12px] leading-snug whitespace-pre-line">
+                  <Sparkles className="text-ea-lime mt-0.5 shrink-0" size={14} />
+                  <p className="text-ea-text-muted text-[12px] leading-snug whitespace-pre-line">
                     {insightData.insight}
                   </p>
                 </div>
@@ -559,20 +559,20 @@ export function DashboardView() {
           {!hiddenKeys.includes("vo2max") && (
           <div key="vo2max">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("vo2max")}>
-            <div className="h-full rounded-[24px] p-6 flex flex-col justify-between backdrop-blur-2xl border border-white/[0.12] border-t-4 border-t-[#C0FF00] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+            <div className="h-full rounded-2xl p-5 flex flex-col justify-between border border-ea-hairline shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-ea-surface-1">
             <div className="flex justify-between items-start">
-              <Wind className="text-[#C0FF00]" size={24} />
-              <div className="bg-white/10 text-[#A0A0A0] px-2 py-1 rounded-[12px] text-[10px] font-black tracking-widest">
+              <Wind className="text-ea-lime" size={24} />
+              <div className="bg-white/10 text-ea-text-muted px-2 py-1 rounded-[12px] text-xs font-black tracking-widest">
                 {t("dashboard.vdotScore").toUpperCase()}
               </div>
             </div>
             <div>
-              <div className="text-[#A0A0A0] text-xs font-black tracking-widest mb-2">{t("dashboard.vo2MaxEst")}</div>
+              <div className="text-ea-text-muted text-xs font-black tracking-widest mb-2">{t("dashboard.vo2MaxEst")}</div>
               <div className="flex items-baseline gap-2">
                 <span className="text-white text-5xl font-black tracking-tight">
                   {vdot !== null ? vdot.toFixed(1) : "—"}
                 </span>
-                <span className="text-[#A0A0A0] text-sm font-semibold">ml/kg/min</span>
+                <span className="text-ea-text-muted text-sm font-semibold">ml/kg/min</span>
               </div>
             </div>
             </div>
@@ -584,10 +584,10 @@ export function DashboardView() {
           {!hiddenKeys.includes("previsione-gara") && (
           <div key="previsione-gara">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("previsione-gara")}>
-            <div className="h-full rounded-[24px] p-6 flex flex-col backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+            <div className="h-full rounded-2xl p-5 flex flex-col border border-ea-hairline shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-ea-surface-1">
             <div className="flex items-center gap-2 mb-3">
-              <Target className="text-[#C0FF00]" size={14} />
-              <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">{t("dashboard.racePrediction")}</span>
+              <Target className="text-ea-lime" size={14} />
+              <span className="text-ea-text-muted text-xs font-black tracking-widest uppercase">{t("dashboard.racePrediction")}</span>
             </div>
 
             {/* Selettore clima: temperatura + umidità */}
@@ -603,12 +603,12 @@ export function DashboardView() {
                       title={`${b.range} · umidità ~${b.humidity}%`}
                       className={`flex flex-col items-center py-1.5 px-1 rounded-[12px] border transition-colors ${
                         active
-                          ? "border-[#C0FF00]/40 bg-[#C0FF00]/10 text-[#C0FF00]"
-                          : "border-white/[0.06] bg-white/[0.02] text-[#777] hover:text-white hover:border-white/[0.12]"
+                          ? "border-ea-lime/40 bg-ea-lime/10 text-ea-lime"
+                          : "border-ea-hairline bg-white/[0.02] text-ea-text-axis hover:text-white hover:border-ea-hairline"
                       }`}
                     >
-                      <span className="text-[8px] font-black tracking-[0.1em] uppercase leading-tight">{b.label}</span>
-                      <span className="text-[7px] font-bold opacity-70 leading-tight mt-0.5">{b.range}</span>
+                      <span className="text-xs font-black tracking-[0.1em] uppercase leading-tight">{b.label}</span>
+                      <span className="text-xs font-bold opacity-70 leading-tight mt-0.5">{b.range}</span>
                     </button>
                   );
                 })}
@@ -620,7 +620,7 @@ export function DashboardView() {
                 const delta = p.deltaSec;
                 const improved = delta !== null && delta < 0;
                 const worsened = delta !== null && delta > 0;
-                const deltaColor = improved ? "#16A34A" : worsened ? "#F43F5E" : "#64748B";
+                const deltaColor = improved ? "#16A34A" : worsened ? CHART_SERIES.risk : "#64748B";
                 const deltaBg    = improved ? "rgba(22,163,74,0.18)" : worsened ? "rgba(244,63,94,0.15)" : "rgba(100,116,139,0.12)";
                 // Strava-style: "8m 22sec" when ≥60s, else "45sec"
                 const fmtDelta = (s: number) => {
@@ -643,7 +643,7 @@ export function DashboardView() {
                     key={p.short}
                     className="flex items-center justify-between py-2 px-3 rounded-[16px] bg-white/[0.02] border border-white/[0.04]"
                   >
-                    <span className="text-[#A0A0A0] text-[11px] font-black tracking-widest w-10">
+                    <span className="text-ea-text-muted text-xs font-black tracking-widest w-10">
                       {p.short}
                     </span>
                     <span className="text-white text-sm font-black font-mono flex-1 text-center">
@@ -651,31 +651,31 @@ export function DashboardView() {
                     </span>
                     {showClimate ? (
                       <span
-                        className="inline-flex items-center px-2 py-1 rounded-[12px] text-[9px] font-black tracking-widest uppercase"
+                        className="inline-flex items-center px-2 py-1 rounded-[12px] text-xs font-black tracking-widest uppercase"
                         style={{
                           background: tempBandKey === "ideale" ? "rgba(192,255,0,0.12)" : "rgba(244,63,94,0.12)",
-                          color: tempBandKey === "ideale" ? "#C0FF00" : "#F43F5E",
+                          color: tempBandKey === "ideale" ? CHART_SERIES.primary : CHART_SERIES.risk,
                         }}
                       >
                         {activeBand?.label}
                       </span>
                     ) : delta !== null && delta !== 0 ? (
                       <span
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-[12px] text-[11px] font-bold"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-[12px] text-xs font-bold"
                         style={{ background: deltaBg, color: deltaColor }}
                       >
                         <span className="leading-none">{improved ? "▼" : "▲"}</span>
                         <span className="leading-none font-mono">{fmtDelta(delta)}</span>
                       </span>
                     ) : (
-                      <span className="text-[#555] text-[9px] font-black tracking-widest uppercase">—</span>
+                      <span className="text-ea-text-axis text-xs font-black tracking-widest uppercase">—</span>
                     )}
                   </div>
                 );
               })}
             </div>
 
-            <div className="text-[#555] text-[9px] tracking-wider mt-3 text-center">
+            <div className="text-ea-text-axis text-xs tracking-wider mt-3 text-center">
               {tempBands.length > 0
                 ? `previsione a ${activeBand?.range ?? "clima ideale"} · umidità ~${activeBand?.humidity ?? 65}%`
                 : "stimolo fisiologico ultima corsa → beneficio per distanza"}
@@ -705,12 +705,12 @@ export function DashboardView() {
           <div key="fatigue-atl">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("fatigue-atl")}>
             <div
-              className="h-full rounded-[24px] p-6 flex flex-col justify-between shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
+              className="h-full rounded-2xl p-5 flex flex-col justify-between shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
               style={{ backgroundColor: faticaColor }}
             >
             <div className="flex justify-between items-start">
               <TrendingDown className="text-black/70" size={24} />
-              <div className="bg-black/10 text-black/70 px-2 py-1 rounded-[12px] text-[10px] font-black tracking-widest">
+              <div className="bg-black/10 text-black/70 px-2 py-1 rounded-[12px] text-xs font-black tracking-widest">
                 {faticaLabel}
               </div>
             </div>
@@ -742,34 +742,34 @@ export function DashboardView() {
           {!hiddenKeys.includes("soglia") && (
           <div key="soglia">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("soglia")}>
-            <div className="h-full rounded-[24px] p-6 flex flex-col justify-between backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
-            <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4">{t("dashboard.anaerobicThreshold").toUpperCase()}</div>
+            <div className="h-full rounded-2xl p-5 flex flex-col justify-between border border-ea-hairline shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-ea-surface-1">
+            <div className="text-ea-text-muted text-xs font-black tracking-widest mb-4">{t("dashboard.anaerobicThreshold").toUpperCase()}</div>
             <div className="flex items-stretch gap-5 mb-4">
               <div className="flex-1">
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-white text-3xl font-black">{atHr}</span>
-                  <span className="text-[#A0A0A0] text-xs">BPM</span>
+                  <span className="text-ea-text-muted text-xs">BPM</span>
                 </div>
                 <div className="flex items-center gap-1.5 mt-1">
-                  <span className="w-2 h-2 rounded-full bg-[#F43F5E] inline-block" />
-                  <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">FC</span>
+                  <span className="w-2 h-2 rounded-full bg-ea-rose inline-block" />
+                  <span className="text-ea-text-muted text-xs font-black tracking-widest uppercase">FC</span>
                 </div>
               </div>
               <div className="w-px bg-white/[0.08]" />
               <div className="flex-1">
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-white text-3xl font-black">{thresholdPace ?? "—"}</span>
-                  <span className="text-[#A0A0A0] text-xs">/km</span>
+                  <span className="text-ea-text-muted text-xs">/km</span>
                 </div>
                 <div className="flex items-center gap-1.5 mt-1">
-                  <span className="w-2 h-2 rounded-full bg-[#60A5FA] inline-block" />
-                  <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">Passo</span>
+                  <span className="w-2 h-2 rounded-full bg-ea-cyan inline-block" />
+                  <span className="text-ea-text-muted text-xs font-black tracking-widest uppercase">Passo</span>
                 </div>
               </div>
             </div>
             <div className="flex gap-1 h-1.5 mt-auto">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className={`flex-1 rounded-full ${i < 4 ? "bg-[#F43F5E]" : "bg-[#333]"}`} />
+                <div key={i} className={`flex-1 rounded-full ${i < 4 ? "bg-ea-rose" : "bg-[#333]"}`} />
               ))}
             </div>
             </div>
@@ -781,19 +781,19 @@ export function DashboardView() {
           {!hiddenKeys.includes("deriva") && (
           <div key="deriva">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("deriva")}>
-            <div className="h-full rounded-[24px] p-6 flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+            <div className="h-full rounded-2xl p-5 flex flex-col overflow-hidden border border-ea-hairline shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-ea-surface-1">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-              <div className="text-[#A0A0A0] text-[10px] font-black tracking-widest">
+              <div className="text-ea-text-muted text-xs font-black tracking-widest">
                 {t("dashboard.cardiacDrift").toUpperCase()}
               </div>
               {lastDrift !== null && (() => {
                 const abs = Math.abs(lastDrift);
-                const col = abs < 3.5 ? "#C0FF00" : abs < 5 ? "#F59E0B" : "#F43F5E";
+                const col = abs < 3.5 ? CHART_SERIES.primary : abs < 5 ? CHART_SERIES.load : "#F43F5E";
                 const lbl = abs < 3.5 ? "Ottima" : abs < 5 ? "Normale" : "Elevata";
                 return (
                   <span
-                    className="px-2 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase"
+                    className="px-2 py-0.5 rounded-full text-xs font-black tracking-widest uppercase"
                     style={{ background: `${col}15`, border: `1px solid ${col}44`, color: col }}
                   >
                     {lbl}
@@ -808,15 +808,15 @@ export function DashboardView() {
                 className="text-5xl font-black"
                 style={{
                   color: lastDrift === null ? "#666"
-                    : Math.abs(lastDrift) < 3.5 ? "#C0FF00"
-                    : Math.abs(lastDrift) < 5 ? "#F59E0B" : "#F43F5E",
+                    : Math.abs(lastDrift) < 3.5 ? CHART_SERIES.primary
+                    : Math.abs(lastDrift) < 5 ? CHART_SERIES.load : CHART_SERIES.risk,
                 }}
               >
                 {lastDrift !== null ? (lastDrift >= 0 ? "+" : "") + lastDrift.toFixed(1) : "—"}
               </span>
-              <span className="text-[#A0A0A0] text-sm font-black">%</span>
+              <span className="text-ea-text-muted text-sm font-black">%</span>
             </div>
-            <div className="text-[#666] text-[10px] tracking-wider mb-4">
+            <div className="text-ea-text-axis text-xs tracking-wider mb-4">
               ΔFC 2ª metà vs 1ª metà · ultima corsa
             </div>
 
@@ -826,19 +826,19 @@ export function DashboardView() {
               const media = vals.reduce((s, v) => s + v, 0) / vals.length;
               const best = Math.min(...vals);
               const worst = Math.max(...vals);
-              const colorFor = (v: number) => v < 3.5 ? "#C0FF00" : v < 5 ? "#F59E0B" : "#F43F5E";
+              const colorFor = (v: number) => v < 3.5 ? CHART_SERIES.primary : v < 5 ? CHART_SERIES.load : "#F43F5E";
               const Row = ({ label, value, color }: { label: string; value: string; color: string }) => (
                 <div className="flex items-center justify-between py-2.5 border-b border-white/[0.04] last:border-0">
                   <div className="flex items-center gap-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
-                    <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest uppercase">{label}</span>
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+                    <span className="text-ea-text-muted text-xs font-black tracking-widest uppercase">{label}</span>
                   </div>
                   <span className="text-white text-sm font-black font-mono" style={{ color }}>{value}</span>
                 </div>
               );
               return (
                 <div className="flex-1 flex flex-col justify-center">
-                  <div className="text-[#A0A0A0] text-[9px] font-black tracking-widest uppercase mb-1">
+                  <div className="text-ea-text-muted text-xs font-black tracking-widest uppercase mb-1">
                     Ultime {driftSeries.length} corse
                   </div>
                   <Row label="Media"    value={`${media.toFixed(1)}%`} color={colorFor(media)} />
@@ -847,7 +847,7 @@ export function DashboardView() {
                 </div>
               );
             })() : (
-              <div className="flex-1 flex items-center justify-center text-[#666] text-[10px] font-black tracking-widest uppercase">
+              <div className="flex-1 flex items-center justify-center text-ea-text-axis text-xs font-black tracking-widest uppercase">
                 dati insufficienti
               </div>
             )}
@@ -857,8 +857,8 @@ export function DashboardView() {
               {[...Array(6)].map((_, i) => {
                 const driftPct = lastDrift !== null ? Math.abs(lastDrift) : 0;
                 const filled = Math.round(Math.min(6, driftPct / 2));
-                const color = driftPct < 3.5 ? "#C0FF00" : driftPct < 5 ? "#F59E0B" : "#F43F5E";
-                return <div key={i} className="flex-1 rounded-full" style={{ backgroundColor: i < filled ? color : "#333" }} />;
+                const color = driftPct < 3.5 ? CHART_SERIES.primary : driftPct < 5 ? CHART_SERIES.load : "#F43F5E";
+                return <div key={i} className="flex-1 rounded-full" style={{ backgroundColor: i < filled ? color: CHART_SURFACE.borderStrong }} />;
               })}
             </div>
             </div>
@@ -879,7 +879,7 @@ export function DashboardView() {
           {!hiddenKeys.includes("last-run-map") && (
           <div key="last-run-map">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("last-run-map")}>
-            <div className="h-full rounded-[24px] overflow-hidden relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+            <div className="h-full rounded-2xl overflow-hidden relative shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
               <div className="absolute inset-0">
                 <LastRunMap run={lastRunForMap} />
               </div>
@@ -928,11 +928,11 @@ export function DashboardView() {
               const paces = vdotPacesData?.paces;
 
               const zones: { key: string; label: string; abbr: string; color: string; desc: string }[] = [
-                { key: "easy",       label: "Easy / Long Run",        abbr: "E", color: "#60A5FA", desc: "Corsa facile, recupero" },
-                { key: "marathon",   label: "Marathon Pace",          abbr: "M", color: "#34D399", desc: "Lungo specifico maratona" },
-                { key: "threshold",  label: "Threshold / Tempo",      abbr: "T", color: "#F59E0B", desc: "Tempo run 20-40 min" },
-                { key: "interval",   label: "Interval (VO2max)",      abbr: "I", color: "#F43F5E", desc: "Ripetute 800m-1600m" },
-                { key: "repetition", label: "Repetition / Speed",     abbr: "R", color: "#C0FF00", desc: "Ripetizioni 200-400m" },
+                { key: "easy",       label: "Easy / Long Run",        abbr: "E", color: CHART_SERIES.compare, desc: "Corsa facile, recupero" },
+                { key: "marathon",   label: "Marathon Pace",          abbr: "M", color: CHART_SERIES.positive, desc: "Lungo specifico maratona" },
+                { key: "threshold",  label: "Threshold / Tempo",      abbr: "T", color: CHART_SERIES.load, desc: "Tempo run 20-40 min" },
+                { key: "interval",   label: "Interval (VO2max)",      abbr: "I", color: CHART_SERIES.risk, desc: "Ripetute 800m-1600m" },
+                { key: "repetition", label: "Repetition / Speed",     abbr: "R", color: CHART_SERIES.primary, desc: "Ripetizioni 200-400m" },
               ];
 
               // Compute range ±5% intorno al passo centrale Daniels
@@ -946,21 +946,21 @@ export function DashboardView() {
                 `${Math.floor(Math.round(s) / 60)}:${String(Math.round(s) % 60).padStart(2, "0")}`;
 
               return (
-                <div className="h-full rounded-[24px] p-5 flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+                <div className="h-full rounded-2xl p-5 flex flex-col overflow-hidden border border-ea-hairline shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-ea-surface-1">
                   {/* Header */}
                   <div className="flex items-center justify-between mb-4 shrink-0">
                     <div>
-                      <div className="text-[#A0A0A0] text-[9px] font-black tracking-[0.2em] uppercase">
+                      <div className="text-ea-text-muted text-xs font-black tracking-[0.2em] uppercase">
                         Training Paces
                       </div>
-                      <div className="text-white text-xs font-black italic tracking-tight mt-0.5">
+                      <div className="text-white text-xs font-black tracking-tight mt-0.5">
                         Zone Daniels personalizzate
                       </div>
                     </div>
                     {vdot && (
                       <div className="flex flex-col items-end">
-                        <span className="text-[#A0A0A0] text-[9px] font-black tracking-widest uppercase">VDOT</span>
-                        <span className="text-[#C0FF00] text-xl font-black leading-none">{vdot.toFixed(1)}</span>
+                        <span className="text-ea-text-muted text-xs font-black tracking-widest uppercase">VDOT</span>
+                        <span className="text-ea-lime text-xl font-black leading-none">{vdot.toFixed(1)}</span>
                       </div>
                     )}
                   </div>
@@ -968,7 +968,7 @@ export function DashboardView() {
                   {/* Column headers */}
                   {paces ? (
                     <>
-                      <div className="grid grid-cols-[28px_1fr_auto] gap-x-3 text-[9px] font-black tracking-widest text-[#555] uppercase mb-2 px-1 shrink-0">
+                      <div className="grid grid-cols-[28px_1fr_auto] gap-x-3 text-xs font-black tracking-widest text-ea-text-axis uppercase mb-2 px-1 shrink-0">
                         <div />
                         <div>Zone</div>
                         <div className="text-right">Passo</div>
@@ -987,7 +987,7 @@ export function DashboardView() {
                             >
                               {/* Abbr badge */}
                               <div
-                                className="w-7 h-7 rounded-[12px] flex items-center justify-center text-[11px] font-black"
+                                className="w-7 h-7 rounded-[12px] flex items-center justify-center text-xs font-black"
                                 style={{ background: `${z.color}22`, color: z.color }}
                               >
                                 {z.abbr}
@@ -995,16 +995,16 @@ export function DashboardView() {
 
                               {/* Name + desc */}
                               <div className="min-w-0">
-                                <div className="text-white text-[11px] font-black truncate">{z.label}</div>
-                                <div className="text-[#555] text-[9px] truncate">{z.desc}</div>
+                                <div className="text-white text-xs font-black truncate">{z.label}</div>
+                                <div className="text-ea-text-axis text-xs truncate">{z.desc}</div>
                               </div>
 
                               {/* Pace range */}
                               <div className="text-right">
-                                <div className="font-black font-mono text-[11px]" style={{ color: z.color }}>
+                                <div className="font-black font-mono text-xs" style={{ color: z.color }}>
                                   {fmtSecs(loSecs)} – {fmtSecs(hiSecs)}
                                 </div>
-                                <div className="text-[#555] text-[9px]">min/km</div>
+                                <div className="text-ea-text-axis text-xs">min/km</div>
                               </div>
                             </div>
                           );
@@ -1012,17 +1012,17 @@ export function DashboardView() {
                       </div>
 
                       {/* Footer note */}
-                      <div className="text-[#444] text-[9px] tracking-wider mt-3 shrink-0 text-center">
+                      <div className="text-ea-text-axis text-xs tracking-wider mt-3 shrink-0 text-center">
                         basate su formula Daniels 2013 · aggiornate automaticamente
                       </div>
                     </>
                   ) : (
                     <div className="flex-1 flex flex-col items-center justify-center gap-2">
-                      <div className="text-[#555] text-[9px] font-black tracking-widest uppercase text-center">
+                      <div className="text-ea-text-axis text-xs font-black tracking-widest uppercase text-center">
                         {vdot ? "Calcolo paces…" : "Nessun dato VDOT disponibile"}
                       </div>
                       {!vdot && (
-                        <div className="text-[#444] text-[9px] text-center">
+                        <div className="text-ea-text-axis text-xs text-center">
                           Registra una corsa a sforzo medio-alto per calibrare il VDOT
                         </div>
                       )}
@@ -1040,15 +1040,15 @@ export function DashboardView() {
           <div key="session-logs">
            <GridCard disabled={isMobile} onRemove={() => hideWidget("session-logs")}>
           {recentRuns.length > 0 ? (
-            <div className="h-full rounded-[24px] p-4 md:p-6 lg:p-8 w-full overflow-auto backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+            <div className="h-full rounded-2xl p-4 md:p-6 lg:p-8 w-full overflow-auto border border-ea-hairline shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-ea-surface-1">
             <div className="mb-6 md:mb-8">
-              <div className="text-[#A0A0A0] text-[10px] md:text-xs font-black tracking-widest mb-2">{t("dashboard.sessionLogs").toUpperCase()}</div>
-              <h2 className="text-white text-xl md:text-2xl font-black tracking-tighter italic">{t("dashboard.performanceHistory")}</h2>
+              <div className="text-ea-text-muted text-xs md:text-xs font-black tracking-widest mb-2">{t("dashboard.sessionLogs").toUpperCase()}</div>
+              <h2 className="ea-title">{t("dashboard.performanceHistory")}</h2>
             </div>
 
             <div className="w-full">
               {/* Desktop header — hidden on mobile */}
-              <div className="hidden md:grid md:grid-cols-7 text-[#A0A0A0] text-[10px] font-black tracking-widest mb-4 px-4">
+              <div className="hidden md:grid md:grid-cols-7 text-ea-text-muted text-xs font-black tracking-widest mb-4 px-4">
                 <div className="col-span-2">{t("dashboard.type")}</div>
                 <div>{t("dashboard.date")}</div>
                 <div>{t("dashboard.duration")}</div>
@@ -1069,40 +1069,40 @@ export function DashboardView() {
                     : teRaw >= 2 ? t("dashboard.recovery").toUpperCase()
                     : "—";
                   const teColor =
-                    teRaw === null ? "#A0A0A0"
-                    : teRaw >= 4 ? "#C0FF00"
-                    : teRaw >= 3 ? "#60A5FA"
+                    teRaw === null ? CHART_TEXT.muted
+                    : teRaw >= 4 ? CHART_SERIES.primary
+                    : teRaw >= 3 ? CHART_SERIES.compare
                     : "#A0A0A0";
                   return (
                     <div
                       key={run.id}
                       onClick={() => navigate(`/activities/${run.id}`)}
-                      className="flex flex-col gap-3 md:grid md:grid-cols-7 md:gap-0 md:items-center rounded-[16px] backdrop-blur-2xl border border-white/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.05)] bg-gradient-to-br from-white/[0.04] to-black/40 p-4 cursor-pointer hover:border-white/[0.18] transition-all"
+                      className="flex flex-col gap-3 md:grid md:grid-cols-7 md:gap-0 md:items-center rounded-[16px] border border-ea-hairline shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.05)] bg-ea-surface-2 p-4 cursor-pointer hover:border-white/[0.18] transition-all"
                     >
                       <div className="md:col-span-2 flex items-center gap-3">
-                        <Activity className="text-[#C0FF00] shrink-0" size={18} />
+                        <Activity className="text-ea-lime shrink-0" size={18} />
                         <span className="text-white font-black text-sm truncate">{run.name || run.run_type || "Run"}</span>
-                        <span className="md:hidden text-[#C0FF00] font-black text-[10px] ml-auto shrink-0">● {t("dashboard.verified").toUpperCase()}</span>
+                        <span className="md:hidden text-ea-lime font-black text-xs ml-auto shrink-0">● {t("dashboard.verified").toUpperCase()}</span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 md:contents text-xs">
-                        <div className="text-[#A0A0A0] text-xs md:text-sm">
-                          <span className="md:hidden text-[#666] text-[9px] font-black tracking-widest uppercase block">{t("dashboard.date")}</span>
+                        <div className="text-ea-text-muted text-xs md:text-sm">
+                          <span className="md:hidden text-ea-text-axis text-xs font-black tracking-widest uppercase block">{t("dashboard.date")}</span>
                           {new Date(run.date).toLocaleDateString(i18n.language === "en" ? "en-GB" : "it-IT", { day: "numeric", month: "short" })}
                         </div>
                         <div className="text-white font-black text-xs md:text-sm">
-                          <span className="md:hidden text-[#666] text-[9px] font-black tracking-widest uppercase block">{t("dashboard.duration")}</span>
+                          <span className="md:hidden text-ea-text-axis text-xs font-black tracking-widest uppercase block">{t("dashboard.duration")}</span>
                           {formatDuration(run.duration_minutes)}
                         </div>
-                        <div className="text-[#A0A0A0] text-xs md:text-sm">
-                          <span className="md:hidden text-[#666] text-[9px] font-black tracking-widest uppercase block">{t("dashboard.pace")}</span>
+                        <div className="text-ea-text-muted text-xs md:text-sm">
+                          <span className="md:hidden text-ea-text-axis text-xs font-black tracking-widest uppercase block">{t("dashboard.pace")}</span>
                           {run.avg_pace}/km
                         </div>
                         <div className="text-xs font-black md:text-xs" style={{ color: teColor }}>
-                          <span className="md:hidden text-[#666] text-[9px] font-black tracking-widest uppercase block">TE</span>
+                          <span className="md:hidden text-ea-text-axis text-xs font-black tracking-widest uppercase block">TE</span>
                           {teRaw !== null ? teRaw.toFixed(1) + " · " : ""}{teLabel}
                         </div>
                       </div>
-                      <div className="hidden md:block text-right text-[#C0FF00] font-black text-xs">
+                      <div className="hidden md:block text-right text-ea-lime font-black text-xs">
                         ● {t("dashboard.verified").toUpperCase()}
                       </div>
                     </div>
@@ -1112,7 +1112,7 @@ export function DashboardView() {
             </div>
             </div>
           ) : (
-            <div className="h-full flex items-center justify-center text-[#666] text-[10px] font-black tracking-widest">
+            <div className="h-full flex items-center justify-center text-ea-text-axis text-xs font-black tracking-widest">
               NESSUNA CORSA RECENTE
             </div>
           )}

@@ -11,6 +11,7 @@ import {
 import { Timer, TrendingUp, TrendingDown } from "lucide-react";
 import type { Run } from "../types/api";
 
+import { CHART_SERIES, chartGrid, chartXAxis, chartYAxis } from "./charts";
 interface RacePredictionsProps {
   runs: Run[];
   vdot: number | null;
@@ -114,10 +115,10 @@ function buildMonthlyVdot(runs: Run[]): { name: string; vdot: number | null }[] 
 
 // ─── Race config ──────────────────────────────────────────────────────────────
 const RACES = [
-  { key: "5K",  label: "5K",      distKm: 5,       distM: 5000,  color: "#14B8A6" },
-  { key: "10K", label: "10K",     distKm: 10,      distM: 10000, color: "#3B82F6" },
-  { key: "HM",  label: "Mezza",   distKm: 21.0975, distM: 21097, color: "#F59E0B" },
-  { key: "M",   label: "Maratona",distKm: 42.195,  distM: 42195, color: "#8B5CF6" },
+  { key: "5K",  label: "5K",      distKm: 5,       distM: 5000,  color: CHART_SERIES.compare },
+  { key: "10K", label: "10K",     distKm: 10,      distM: 10000, color: CHART_SERIES.compare },
+  { key: "HM",  label: "Mezza",   distKm: 21.0975, distM: 21097, color: CHART_SERIES.load },
+  { key: "M",   label: "Maratona",distKm: 42.195,  distM: 42195, color: CHART_SERIES.tertiary },
 ];
 
 const BACKEND_KEYS: Record<string, string[]> = {
@@ -149,8 +150,8 @@ const PaceTooltip = ({
   if (!active || !payload?.length) return null;
   const entries = payload.filter((p) => p.value != null);
   return (
-    <div className="bg-[#1E293B] border border-[#334155] p-3 rounded-xl shadow-xl text-xs min-w-[170px]">
-      <p className="text-[#C0FF00] font-bold mb-2 uppercase tracking-wider">{label}</p>
+    <div className="ea-tooltip text-xs">
+      <p className="text-ea-lime font-bold mb-2 uppercase tracking-wider">{label}</p>
       <div className="space-y-1.5">
         {entries.map((e) => (
           <div key={e.dataKey} className="flex justify-between gap-4">
@@ -225,29 +226,29 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
 
   const FILTER_BUTTONS: { key: ActiveRace; label: string; color: string }[] = [
     { key: "all", label: "Tutte", color: "#94A3B8" },
-    { key: "5K",  label: "5K",    color: "#14B8A6" },
-    { key: "10K", label: "10K",   color: "#3B82F6" },
-    { key: "HM",  label: "Mezza", color: "#F59E0B" },
-    { key: "M",   label: "Maratona", color: "#8B5CF6" },
+    { key: "5K",  label: "5K",    color: CHART_SERIES.compare },
+    { key: "10K", label: "10K",   color: CHART_SERIES.compare },
+    { key: "HM",  label: "Mezza", color: CHART_SERIES.load },
+    { key: "M",   label: "Maratona", color: CHART_SERIES.tertiary },
   ];
 
   return (
-    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 h-full flex flex-col">
+    <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-5 h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-2">
-          <Timer className="w-4 h-4 text-[#C0FF00]" />
+          <Timer className="w-4 h-4 text-ea-lime" />
           <h2 className="text-sm font-bold tracking-wider uppercase text-text-primary">
             Previsioni di Gara
           </h2>
           {vdot && (
-            <span className="text-[10px] bg-[#C0FF00]/10 text-[#C0FF00] font-black px-2 py-0.5 rounded-md border border-[#C0FF00]/20 uppercase tracking-wider">
+            <span className="text-xs bg-ea-lime/10 text-ea-lime font-black px-2 py-0.5 rounded-md border border-ea-lime/20 uppercase tracking-wider">
               VDOT {vdot}
             </span>
           )}
         </div>
         {vdotTrend !== null && (
-          <div className={`flex items-center gap-1 text-xs font-bold ${vdotTrend >= 0 ? "text-[#14B8A6]" : "text-[#F43F5E]"}`}>
+          <div className={`flex items-center gap-1 text-xs font-bold ${vdotTrend >= 0 ? "text-ea-cyan" : "text-ea-rose"}`}>
             {vdotTrend >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
             {vdotTrend >= 0 ? "+" : ""}{vdotTrend} (3M)
           </div>
@@ -272,9 +273,9 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
               style={{ borderColor: race.color + "30", backgroundColor: race.color + "06" }}
             >
               <div className="absolute top-0 left-0 h-0.5 w-0 group-hover:w-full transition-all duration-500" style={{ backgroundColor: race.color }} />
-              <div className="text-[9px] font-black uppercase tracking-widest" style={{ color: race.color }}>{race.label}</div>
+              <div className="text-xs font-black uppercase tracking-widest" style={{ color: race.color }}>{race.label}</div>
               <div className="text-lg font-black text-white leading-tight">{displayTime ?? "—"}</div>
-              <div className="text-[9px] text-text-muted">{paceStr}</div>
+              <div className="text-xs text-text-muted">{paceStr}</div>
             </div>
           );
         })}
@@ -284,7 +285,7 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
       <div className="flex flex-col flex-1 min-h-0">
         {/* Chart header + filter */}
         <div className="flex items-center justify-between mb-2 shrink-0">
-          <div className="text-[9px] text-text-muted font-semibold tracking-wider uppercase">
+          <div className="text-xs text-text-muted font-semibold tracking-wider uppercase">
             Andamento Pace · 12 Mesi
           </div>
           {/* Filter buttons */}
@@ -293,7 +294,7 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
               <button
                 key={key}
                 onClick={() => setActiveRace(key)}
-                className="text-[9px] font-bold px-2 py-0.5 rounded-md transition-all border"
+                className="text-xs font-bold px-2 py-0.5 rounded-md transition-all border"
                 style={{
                   color: activeRace === key ? "#0F172A" : color,
                   backgroundColor: activeRace === key ? color : "transparent",
@@ -310,25 +311,9 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
         <div className="flex-1 min-h-0">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={paceData} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#1E293B" />
-              <XAxis
-                dataKey="name"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#475569", fontSize: 9 }}
-                dy={6}
-                interval={1}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#475569", fontSize: 9 }}
-                domain={yDomain}
-                tickFormatter={fmtPace}
-                dx={-4}
-                width={36}
-                reversed
-              />
+              <CartesianGrid {...chartGrid} />
+              <XAxis {...chartXAxis} dataKey="name" dy={6} interval={1} />
+              <YAxis {...chartYAxis} domain={yDomain} tickFormatter={fmtPace} dx={-4} width={36} reversed />
               <Tooltip
                 content={(props) => (
                   <PaceTooltip {...props} activeRace={activeRace} />
@@ -339,7 +324,7 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
                 type="monotone"
                 dataKey="pace5k"
                 name="5K"
-                stroke="#14B8A6"
+                stroke={CHART_SERIES.compare}
                 strokeWidth={activeRace === "5K" || activeRace === "all" ? 2 : 0.5}
                 strokeOpacity={activeRace === "all" || activeRace === "5K" ? 1 : 0.2}
                 dot={false}
@@ -350,7 +335,7 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
                 type="monotone"
                 dataKey="pace10k"
                 name="10K"
-                stroke="#3B82F6"
+                stroke={CHART_SERIES.compare}
                 strokeWidth={activeRace === "10K" || activeRace === "all" ? 2 : 0.5}
                 strokeOpacity={activeRace === "all" || activeRace === "10K" ? 1 : 0.2}
                 dot={false}
@@ -360,7 +345,7 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
                 type="monotone"
                 dataKey="paceHM"
                 name="Mezza"
-                stroke="#F59E0B"
+                stroke={CHART_SERIES.load}
                 strokeWidth={activeRace === "HM" || activeRace === "all" ? 2 : 0.5}
                 strokeOpacity={activeRace === "all" || activeRace === "HM" ? 1 : 0.2}
                 dot={false}
@@ -370,7 +355,7 @@ export function RacePredictions({ runs, vdot, racePredictions }: RacePredictions
                 type="monotone"
                 dataKey="paceM"
                 name="Maratona"
-                stroke="#8B5CF6"
+                stroke={CHART_SERIES.tertiary}
                 strokeWidth={activeRace === "M" || activeRace === "all" ? 2 : 0.5}
                 strokeOpacity={activeRace === "all" || activeRace === "M" ? 1 : 0.2}
                 dot={false}

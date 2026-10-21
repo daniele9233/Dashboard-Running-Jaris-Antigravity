@@ -6,6 +6,7 @@ import type { Run } from "../../../types/api";
 import { useApi, invalidateCache } from "../../../hooks/useApi";
 import { getWeeklyGoal, putWeeklyGoal, type WeeklyGoalResponse } from "../../../api";
 
+import { CHART_SERIES, CHART_TEXT, ChartTip, chartCursorBar, chartXAxis, chartYAxis } from "../../charts";
 /**
  * WeeklyKmChart — riepilogo settimanale (lun→dom) con obiettivo km inseribile
  * dall'utente, anello di progresso, barre giornaliere e tempo/dislivello.
@@ -29,13 +30,6 @@ const CYAN = "#22D3EE";
 const WEEK_MARGIN = { top: 6, right: 4, left: 4, bottom: 0 };
 const WEEK_Y_DOMAIN: [number, (max: number) => number] = [0, (max: number) => Math.max(max * 1.15, 1)];
 const WEEK_TOOLTIP_CURSOR = { fill: "rgba(255,255,255,0.06)" };
-const YEAR_TOOLTIP_CURSOR = { fill: "rgba(255,255,255,0.05)" };
-const YEAR_TOOLTIP_STYLE = {
-  backgroundColor: "#111",
-  border: "1px solid #333",
-  borderRadius: "12px",
-  color: "#fff",
-};
 const BAR_RADIUS: [number, number, number, number] = [4, 4, 0, 0];
 
 // Tooltip settimanale: mostra "Gio · 13 km" al passaggio del mouse.
@@ -46,8 +40,8 @@ const WeekTooltip = ({ active, payload }: {
   if (!active || !payload?.length) return null;
   const { short, km } = payload[0].payload;
   return (
-    <div className="rounded-lg border border-white/10 bg-[#0A0A0A]/95 px-3 py-1.5 shadow-xl">
-      <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">{short}</div>
+    <div className="ea-tooltip">
+      <div className="text-xs font-black uppercase tracking-widest text-gray-400">{short}</div>
       <div className="text-sm font-black tabular-nums" style={{ color: LIME }}>{km} km</div>
     </div>
   );
@@ -217,24 +211,24 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
   };
 
   return (
-    <div className="h-full rounded-[24px] p-6 flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+    <div className="h-full rounded-2xl p-5 flex flex-col overflow-hidden border border-ea-hairline shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-ea-surface-1">
       {/* Header + tab periodo */}
       <div className="flex items-center justify-between mb-3">
-        <div className="text-[#A0A0A0] text-xs font-black tracking-widest">
+        <div className="text-ea-text-muted text-xs font-black tracking-widest">
           {chartPeriod === '7d'
             ? t("dashboard.thisWeek").toUpperCase()
             : chartPeriod === 'month'
             ? t("dashboard.weeklyVolume").toUpperCase()
             : t("dashboard.last12Months").toUpperCase()}
         </div>
-        <div className="flex bg-[#111] rounded-[12px] border border-white/[0.06] p-0.5" role="tablist" aria-label="Periodo grafico">
+        <div className="flex bg-ea-surface-2 rounded-[12px] border border-ea-hairline p-0.5" role="tablist" aria-label="Periodo grafico">
           {(['7d', 'month', 'year'] as const).map(p => (
             <button
               key={p}
               type="button"
               onClick={() => setChartPeriod(p)}
-              className={`px-3 py-1 rounded-[12px] text-[10px] font-black tracking-wider transition-all ${
-                chartPeriod === p ? 'bg-[#C0FF00] text-black' : 'text-gray-500 hover:text-white'
+              className={`px-3 py-1 rounded-[12px] text-xs font-black tracking-wider transition-all ${
+                chartPeriod === p ? 'bg-ea-lime text-black' : 'text-gray-500 hover:text-white'
               }`}
               role="tab"
               aria-selected={chartPeriod === p}
@@ -263,7 +257,7 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
                       onChange={(e) => setDraft(e.target.value)}
                       onBlur={saveGoal}
                       onKeyDown={(e) => { if (e.key === "Enter") saveGoal(); if (e.key === "Escape") setEditing(false); }}
-                      className="w-14 bg-transparent border-b-2 border-[#C0FF00] text-center text-[#C0FF00] outline-none tabular-nums"
+                      className="w-14 bg-transparent border-b-2 border-ea-lime text-center text-ea-lime outline-none tabular-nums"
                     />
                     <span className="text-sm">km</span>
                   </span>
@@ -272,7 +266,7 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
                     type="button"
                     onClick={() => { setDraft(String(goal)); setEditing(true); }}
                     title={t("dashboard.setWeeklyGoal")}
-                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[#C0FF00]/10 border border-[#C0FF00]/30 text-[#C0FF00] hover:bg-[#C0FF00]/20 transition-colors"
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-ea-lime/10 border border-ea-lime/30 text-ea-lime hover:bg-ea-lime/20 transition-colors"
                   >
                     <span className="text-lg font-black tabular-nums leading-none">{goal}</span>
                     <span className="text-xs font-black">km</span>
@@ -280,18 +274,18 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
                   </button>
                 )}
               </div>
-              <div className="text-[9px] font-black tracking-widest uppercase text-gray-600 mt-1">{t("dashboard.weeklyGoal")}</div>
-              <div className="text-[10px] font-bold mt-1" style={{ color: pct >= 100 ? LIME : "#8A8A8A" }}>
+              <div className="text-xs font-black tracking-widest uppercase text-gray-600 mt-1">{t("dashboard.weeklyGoal")}</div>
+              <div className="text-xs font-bold mt-1" style={{ color: pct >= 100 ? LIME : CHART_TEXT.axis }}>
                 {pct >= 100 ? t("dashboard.goalReached") : `${t("dashboard.toGo", { km: remaining })} · ${pct}%`}
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3">
                 <div>
                   <div className="text-white text-sm font-black tabular-nums leading-none">{fmtDuration(week.totalMin)}</div>
-                  <div className="text-[9px] font-black tracking-widest uppercase text-gray-600 mt-0.5">{t("dashboard.weekTime")}</div>
+                  <div className="text-xs font-black tracking-widest uppercase text-gray-600 mt-0.5">{t("dashboard.weekTime")}</div>
                 </div>
                 <div>
                   <div className="text-white text-sm font-black tabular-nums leading-none">{week.totalElev} m</div>
-                  <div className="text-[9px] font-black tracking-widest uppercase text-gray-600 mt-0.5">{t("dashboard.weekElevation")}</div>
+                  <div className="text-xs font-black tracking-widest uppercase text-gray-600 mt-0.5">{t("dashboard.weekElevation")}</div>
                 </div>
 
                 {/* Media delle ultime N settimane, con la finestra scegliibile */}
@@ -299,8 +293,8 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-white text-sm font-black tabular-nums leading-none">{avg.km} km</span>
                     {avg.delta != null && avg.delta !== 0 && (
-                      <span className="text-[10px] font-black tabular-nums"
-                        style={{ color: avg.delta > 0 ? LIME : "#F43F5E" }}>
+                      <span className="text-xs font-black tabular-nums"
+                        style={{ color: avg.delta > 0 ? LIME : CHART_SERIES.risk }}>
                         {avg.delta > 0 ? "+" : ""}{avg.delta}
                       </span>
                     )}
@@ -310,7 +304,7 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
                     onClick={() => setAvgOpen(v => !v)}
                     aria-haspopup="listbox"
                     aria-expanded={avgOpen}
-                    className="mt-0.5 inline-flex items-center gap-1 text-[9px] font-black tracking-widest uppercase text-gray-600 hover:text-white transition-colors"
+                    className="mt-0.5 inline-flex items-center gap-1 text-xs font-black tracking-widest uppercase text-gray-600 hover:text-white transition-colors"
                   >
                     {t("dashboard.avgOverWeeks", { weeks: avgWeeks })}
                     <ChevronDown className={`w-3 h-3 transition-transform ${avgOpen ? "rotate-180" : ""}`} />
@@ -319,7 +313,7 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
                   {avgOpen && (
                     <div
                       role="listbox"
-                      className="absolute left-0 top-full mt-1.5 z-30 min-w-[132px] rounded-xl border border-white/10 bg-[#0E0E0E]/98 backdrop-blur-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150"
+                      className="absolute left-0 top-full mt-1.5 z-30 min-w-[132px] rounded-xl border border-ea-hairline bg-ea-surface-1/98 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150"
                     >
                       {AVG_WINDOWS.map(n => (
                         <button
@@ -328,7 +322,7 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
                           role="option"
                           aria-selected={n === avgWeeks}
                           onClick={() => pickAvg(n)}
-                          className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-[11px] font-bold transition-colors ${
+                          className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-xs font-bold transition-colors ${
                             n === avgWeeks ? "text-black" : "text-gray-300 hover:bg-white/[0.06]"
                           }`}
                           style={n === avgWeeks ? { background: LIME } : undefined}
@@ -375,8 +369,8 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
             <div className="h-24 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={week.days} margin={WEEK_MARGIN} barCategoryGap="32%">
-                  <XAxis dataKey="letter" hide />
-                  <YAxis hide domain={WEEK_Y_DOMAIN} />
+                  <XAxis {...chartXAxis} dataKey="letter" hide />
+                  <YAxis {...chartYAxis} hide width={0} domain={WEEK_Y_DOMAIN} />
                   <Tooltip content={<WeekTooltip />} cursor={WEEK_TOOLTIP_CURSOR} />
                   <Bar dataKey="km" radius={BAR_RADIUS} isAnimationActive={false}>
                     {week.days.map((d, i) => (
@@ -389,8 +383,8 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
             <div className="flex justify-between gap-1.5 mt-1">
               {week.days.map((d, i) => (
                 <div key={i} className="flex-1 text-center leading-none">
-                  <span className="text-[10px] font-black" style={{ color: d.isToday ? LIME : "#5A5A5A" }}>{d.letter}</span>
-                  {d.isToday && <div className="text-[7px] mt-0.5" style={{ color: LIME }}>▲</div>}
+                  <span className="text-xs font-black" style={{ color: d.isToday ? LIME : "#5A5A5A" }}>{d.letter}</span>
+                  {d.isToday && <div className="text-xs mt-0.5" style={{ color: LIME }}>▲</div>}
                 </div>
               ))}
             </div>
@@ -405,7 +399,7 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
                   <span className="text-[13px] font-black text-white">{w.label}</span>
                   {w.isCurrent && (
                     <span
-                      className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full"
+                      className="text-xs font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full"
                       style={{ color: LIME, background: `${LIME}1a` }}
                     >
                       {t("dashboard.inProgress")}
@@ -413,7 +407,7 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
                   )}
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-gray-500">{t("dashboard.totalDistance")}</span>
+                  <span className="text-xs text-gray-500">{t("dashboard.totalDistance")}</span>
                   <span className="text-sm font-black tabular-nums" style={{ color: LIME }}>{fmtKmDetailed(w.km)} km</span>
                 </div>
               </div>
@@ -424,14 +418,10 @@ export function WeeklyKmChart({ runs }: { runs: Run[] }) {
         <div className="flex-1 min-h-0">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
-              <XAxis dataKey="day" stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
-              <Tooltip
-                cursor={YEAR_TOOLTIP_CURSOR}
-                contentStyle={YEAR_TOOLTIP_STYLE}
-                formatter={(v: number) => [`${v} km`, "Volume"]}
-              />
-              <Bar dataKey="km" fill="#C0FF00" radius={BAR_RADIUS} />
+              <XAxis {...chartXAxis} dataKey="day" />
+              <YAxis {...chartYAxis} />
+              <ChartTip formatter={(v: number) => [`${v} km`, "Volume"]} cursor={chartCursorBar} />
+              <Bar dataKey="km" fill={CHART_SERIES.primary} radius={BAR_RADIUS} />
             </BarChart>
           </ResponsiveContainer>
         </div>

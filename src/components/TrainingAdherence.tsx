@@ -30,7 +30,7 @@ export function SessionVerdict({ e }: { e: SessionEval }) {
       <div className="flex items-center gap-2 mb-3">
         <Icon className="w-4 h-4" style={{ color: s.color }} />
         <span className="text-sm font-black uppercase tracking-wide" style={{ color: s.color }}>{s.label}</span>
-        <span className="ml-auto text-[10px] uppercase tracking-widest text-gray-500">esito automatico</span>
+        <span className="ml-auto text-xs uppercase tracking-widest text-gray-500">esito automatico</span>
       </div>
 
       {showNumbers ? (
@@ -50,7 +50,7 @@ export function SessionVerdict({ e }: { e: SessionEval }) {
           />
         </div>
       ) : (
-        <p className="text-[11px] text-gray-400">
+        <p className="text-xs text-gray-400">
           {e.verdict === 'missed'
             ? 'Nessuna corsa registrata in questa data.'
             : e.verdict === 'unrated'
@@ -65,11 +65,11 @@ export function SessionVerdict({ e }: { e: SessionEval }) {
 function Stat({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: string }) {
   return (
     <div>
-      <div className="text-[9px] font-black uppercase tracking-widest text-gray-500">{label}</div>
+      <div className="text-xs font-black uppercase tracking-widest text-gray-500">{label}</div>
       <div className="text-lg font-black tabular-nums" style={{ color: accent ?? '#FFFFFF', fontFamily: "'JetBrains Mono', monospace" }}>
         {value}
       </div>
-      {sub && <div className="text-[9px] text-gray-600">{sub}</div>}
+      {sub && <div className="text-xs text-gray-600">{sub}</div>}
     </div>
   );
 }
@@ -105,7 +105,7 @@ export function AdherenceBanner({ d }: { d: Diagnosis }) {
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-sm font-black text-white">{d.headline}</h3>
             {d.streak >= 2 && (
-              <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ background: `${color}1f`, color }}>
+              <span className="text-xs font-black uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ background: `${color}1f`, color }}>
                 {d.streak} di fila · su {d.considered} valutate
               </span>
             )}
@@ -113,7 +113,7 @@ export function AdherenceBanner({ d }: { d: Diagnosis }) {
           <p className="text-[12px] text-gray-300 leading-relaxed mt-1.5">{d.detail}</p>
           {d.action && (
             <p className="text-[12px] leading-relaxed mt-2 pt-2 border-t border-white/10" style={{ color }}>
-              <span className="font-black uppercase tracking-widest text-[9px] mr-1.5">Cosa fare</span>
+              <span className="font-black uppercase tracking-widest text-xs mr-1.5">Cosa fare</span>
               {d.action}
             </p>
           )}
@@ -129,7 +129,7 @@ export function AdherenceStrip({ evals }: { evals: SessionEval[] }) {
   if (key.length < 2) return null;
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">Ultime chiave</span>
+      <span className="text-xs font-black uppercase tracking-widest text-gray-500">Ultime chiave</span>
       <div className="flex items-center gap-1">
         {key.map((e, i) => {
           const s = VERDICT_STYLE[e.verdict];

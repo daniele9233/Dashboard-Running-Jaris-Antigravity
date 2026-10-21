@@ -16,7 +16,7 @@ export function ChartFullscreenModal({
   onClose,
   title,
   subtitle,
-  accent = '#C0FF00',
+  accent: _accent = '#C0FF00',
   children,
   details,
 }: ChartFullscreenModalProps) {
@@ -30,14 +30,14 @@ export function ChartFullscreenModal({
       aria-label={title}
     >
       <div
-        className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-6 md:p-8 w-[92vw] max-w-[1500px] shadow-2xl flex flex-col"
-        style={{ height: '68vh', borderLeft: `3px solid ${accent}` }}
+        className="bg-ea-surface-1 border border-ea-hairline rounded-2xl p-5 w-[92vw] max-w-[1500px] shadow-[0_8px_24px_rgba(0,0,0,0.5)] flex flex-col"
+        style={{ height: '68vh' }}
       >
         <div className="flex justify-between items-center mb-6 gap-4">
           <div>
-            <h2 className="text-white font-black text-xl tracking-widest uppercase italic">{title}</h2>
+            <h2 className="text-white font-bold text-lg tracking-tight">{title}</h2>
             {subtitle && (
-              <p className="text-[11px] mt-0.5 text-[#8E8E93]">{subtitle}</p>
+              <p className="text-xs mt-0.5 text-ea-text-muted">{subtitle}</p>
             )}
           </div>
           <button

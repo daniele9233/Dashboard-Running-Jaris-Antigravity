@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { ChevronDown, Gauge } from 'lucide-react';
 import type { ProAnalyticsChart } from '../../types/api';
-import { CHART_SERIES, CHART_TEXT } from './chartTheme';
 
+import { CHART_SERIES, CHART_TEXT } from "../charts";
 /**
  * IL GESTO A RITMO GARA.
  *
@@ -55,14 +55,13 @@ export function FastBiomechanics({ chart }: { chart?: ProAnalyticsChart }) {
 
   return (
     <section
-      className="rounded-3xl p-6 sm:p-8 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
-      style={{ borderLeft: `3px solid ${LIME}` }}
+      className="rounded-2xl p-5 sm:p-8 border border-ea-hairline bg-ea-surface-1"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3 min-w-0">
           <Gauge className="w-5 h-5 mt-0.5 shrink-0" style={{ color: LIME }} />
           <div className="min-w-0">
-            <h3 className="text-lg sm:text-xl font-black italic tracking-wide text-white uppercase">Il gesto a ritmo gara</h3>
+            <h3 className="ea-title">Il gesto a ritmo gara</h3>
             <p className="mt-1 text-[12px] leading-relaxed text-gray-400 max-w-2xl">
               Solo corse sotto i <b className="text-white">4:45/km</b> e giri delle ripetute, messi accanto al lento.
               {num(k.pace_fast_sec) != null && num(k.pace_easy_sec) != null && (
@@ -81,7 +80,7 @@ export function FastBiomechanics({ chart }: { chart?: ProAnalyticsChart }) {
       </div>
 
       {!ok ? (
-        <div className="mt-6 py-10 text-center text-[11px] font-black uppercase tracking-widest text-gray-600">
+        <div className="mt-6 py-10 text-center text-xs font-black uppercase tracking-widest text-gray-600">
           {chart?.quality?.message ?? 'Nessuna corsa sotto i 4:45/km con telemetria'}
         </div>
       ) : (
@@ -89,7 +88,7 @@ export function FastBiomechanics({ chart }: { chart?: ProAnalyticsChart }) {
           <div className="mt-6 grid gap-x-8 gap-y-5 lg:grid-cols-2">
             {metrics.map((m) => <Dumbbell key={m.label} m={m} />)}
           </div>
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-gray-500">
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
             <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-gray-500" />al lento (oltre 5:30/km)</span>
             <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: LIME }} />a ritmo (sotto 4:45/km)</span>
             <span className="inline-flex items-center gap-1.5"><span className="w-0.5 h-3 bg-white/80" />il tuo migliore</span>
@@ -97,11 +96,11 @@ export function FastBiomechanics({ chart }: { chart?: ProAnalyticsChart }) {
 
           {sessions.length > 0 && (
             <div className="mt-8">
-              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-gray-400 mb-3">Le ripetute, giro per giro</div>
-              <div className="overflow-x-auto rounded-2xl border border-white/10">
+              <div className="text-xs font-black uppercase tracking-[0.22em] text-gray-400 mb-3">Le ripetute, giro per giro</div>
+              <div className="overflow-x-auto rounded-2xl border border-ea-hairline">
                 <table className="w-full text-[12px]" style={{ fontFamily: MONO }}>
                   <thead>
-                    <tr className="text-left text-[9px] uppercase tracking-wider text-gray-500 border-b border-white/10">
+                    <tr className="text-left text-xs uppercase tracking-wider text-gray-500 border-b border-ea-hairline">
                       <th className="px-4 py-2.5 font-black">Seduta</th>
                       <th className="px-3 py-2.5 font-black text-right">Lavoro</th>
                       <th className="px-3 py-2.5 font-black text-right">Passo</th>
@@ -120,7 +119,7 @@ export function FastBiomechanics({ chart }: { chart?: ProAnalyticsChart }) {
                           <tr className="border-b border-white/[0.05] cursor-pointer hover:bg-white/[0.03]" onClick={() => setOpenSession(open ? null : i)}>
                             <td className="px-4 py-2.5 min-w-[180px]">
                               <div className="text-white font-bold truncate max-w-[260px]" style={{ fontFamily: 'inherit' }}>{String(s.name ?? 'Ripetute')}</div>
-                              <div className="text-[10px] text-gray-500">{dateShort(s.date)}</div>
+                              <div className="text-xs text-gray-500">{dateShort(s.date)}</div>
                             </td>
                             <td className="px-3 py-2.5 text-right text-gray-300 whitespace-nowrap">{s.n_work} × {it(Number(s.avg_rep_m ?? 0))} m</td>
                             <td className="px-3 py-2.5 text-right text-white font-black whitespace-nowrap">{pace(num(s.work_pace_sec))}</td>
@@ -134,7 +133,7 @@ export function FastBiomechanics({ chart }: { chart?: ProAnalyticsChart }) {
                               <td colSpan={7} className="px-4 py-3">
                                 <div className="flex flex-wrap gap-2">
                                   {reps.map((r, j) => (
-                                    <div key={j} className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 text-[10px] leading-tight">
+                                    <div key={j} className="rounded-lg border border-ea-hairline bg-black/30 px-2.5 py-1.5 text-xs leading-tight">
                                       <div className="text-gray-500">#{j + 1} · {it(Number(r.distance_m ?? 0))} m</div>
                                       <div className="text-white font-black">{pace(num(r.pace_sec))}<span className="text-gray-500 font-normal">/km</span></div>
                                       <div className="text-gray-300">{num(r.cadence) ?? '—'} spm · {num(r.stride_m) != null ? `${it(r.stride_m, 2)} m` : '—'}</div>
@@ -155,15 +154,15 @@ export function FastBiomechanics({ chart }: { chart?: ProAnalyticsChart }) {
 
           {bestRuns.length > 0 && (
             <div className="mt-8">
-              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-gray-400 mb-3">Le corse veloci con la telemetria migliore</div>
+              <div className="text-xs font-black uppercase tracking-[0.22em] text-gray-400 mb-3">Le corse veloci con la telemetria migliore</div>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {bestRuns.map((r, i) => (
-                  <div key={i} className="rounded-xl border border-white/10 bg-black/25 px-3.5 py-2.5" style={{ fontFamily: MONO }}>
+                  <div key={i} className="rounded-xl border border-ea-hairline bg-black/25 px-3.5 py-2.5" style={{ fontFamily: MONO }}>
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-[10px] text-gray-500">{dateShort(r.date)} · {it(Number(r.distance_km ?? 0), 1)} km</span>
-                      <span className="text-[13px] font-black text-white">{pace(num(r.pace_sec))}<span className="text-[10px] text-gray-500 font-normal">/km</span></span>
+                      <span className="text-xs text-gray-500">{dateShort(r.date)} · {it(Number(r.distance_km ?? 0), 1)} km</span>
+                      <span className="text-[13px] font-black text-white">{pace(num(r.pace_sec))}<span className="text-xs text-gray-500 font-normal">/km</span></span>
                     </div>
-                    <div className="mt-1 grid grid-cols-4 gap-1 text-[10px]">
+                    <div className="mt-1 grid grid-cols-4 gap-1 text-xs">
                       <Mini label="GCT" value={num(r.gct) != null ? `${r.gct}` : '—'} />
                       <Mini label="SPM" value={num(r.cadence) != null ? `${r.cadence}` : '—'} />
                       <Mini label="VR%" value={num(r.vertical_ratio) != null ? it(r.vertical_ratio, 1) : '—'} />
@@ -183,7 +182,7 @@ export function FastBiomechanics({ chart }: { chart?: ProAnalyticsChart }) {
 function Count({ value, label }: { value: number | null; label: string }) {
   if (value == null) return null;
   return (
-    <span className="inline-flex items-baseline gap-1 rounded-full border border-white/10 px-2.5 py-1 text-[10px] text-gray-400">
+    <span className="inline-flex items-baseline gap-1 rounded-full border border-ea-hairline px-2.5 py-1 text-xs text-gray-400">
       <b className="text-white" style={{ fontFamily: MONO }}>{value}</b>{label}
     </span>
   );
@@ -192,7 +191,7 @@ function Count({ value, label }: { value: number | null; label: string }) {
 function Mini({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[8px] uppercase tracking-wider text-gray-600">{label}</div>
+      <div className="text-xs uppercase tracking-wider text-gray-600">{label}</div>
       <div className="text-white font-black">{value}</div>
     </div>
   );
@@ -208,8 +207,8 @@ function Dumbbell({ m }: { m: MetricDef }) {
   if (m.fast == null || vals.length === 0) {
     return (
       <div>
-        <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">{m.label}</div>
-        <div className="mt-2 text-[11px] text-gray-600">Dato non disponibile</div>
+        <div className="text-xs font-black uppercase tracking-[0.18em] text-gray-400">{m.label}</div>
+        <div className="mt-2 text-xs text-gray-600">Dato non disponibile</div>
       </div>
     );
   }
@@ -227,8 +226,8 @@ function Dumbbell({ m }: { m: MetricDef }) {
   return (
     <div>
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">{m.label}</span>
-        <span className="text-[10px] text-gray-500 truncate">{m.hint}</span>
+        <span className="text-xs font-black uppercase tracking-[0.18em] text-gray-400">{m.label}</span>
+        <span className="text-xs text-gray-500 truncate">{m.hint}</span>
       </div>
       <div className="mt-2 flex items-baseline gap-2" style={{ fontFamily: MONO }}>
         <span className="text-3xl font-black text-white">{fmt(m.fast)}</span>
@@ -251,9 +250,9 @@ function Dumbbell({ m }: { m: MetricDef }) {
         {m.easy != null && (
           <div className="absolute top-1/2 w-3 h-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-500 ring-2 ring-[#0a0a0a]" style={{ left: x(m.easy) }} />
         )}
-        <div className="absolute top-1/2 w-3.5 h-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-[#0a0a0a]" style={{ left: x(m.fast), background: LIME, boxShadow: `0 0 12px ${LIME}88` }} />
+        <div className="absolute top-1/2 w-3.5 h-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-[#0a0a0a]" style={{ left: x(m.fast), background: LIME }} />
       </div>
-      <div className="mt-1 flex justify-between text-[10px] text-gray-500" style={{ fontFamily: MONO }}>
+      <div className="mt-1 flex justify-between text-xs text-gray-500" style={{ fontFamily: MONO }}>
         <span>{m.easy != null ? `lento ${fmt(m.easy)}` : ''}</span>
         <span>{m.best != null ? `migliore ${fmt(m.best)}` : ''}</span>
       </div>

@@ -185,7 +185,7 @@ export function PaceLabView() {
             <button type="button" onClick={() => root.current?.scrollTo({ top: 0, behavior: "smooth" })}
               className="ml-auto text-right leading-tight" aria-label="Modifica obiettivo e limite">
               <span className="block text-[13px] font-black tabular-nums" style={{ fontFamily: MONO }}>{fmtClock(targetSec)}</span>
-              <span className="block text-[10px] tabular-nums text-gray-500" style={{ fontFamily: MONO }}>{fmtPace(pace0)}/km ✎</span>
+              <span className="block text-xs tabular-nums text-gray-500" style={{ fontFamily: MONO }}>{fmtPace(pace0)}/km ✎</span>
             </button>
           </div>
         </div>
@@ -229,7 +229,7 @@ export function PaceLabView() {
             {[["listino", "01 Listino"], ["partenza", "02 Partenza"], ["distanze", "03 Distanze"], ["pacepro", "04 PacePro"]].map(([id, l]) => (
               <a key={id} href={`#${id}`}
                 onClick={(e) => { e.preventDefault(); document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
-                className="px-2.5 py-1.5 rounded-lg text-[10px] font-black tracking-[0.15em] uppercase text-gray-500 hover:text-white hover:bg-white/5 transition-colors">
+                className="px-2.5 py-1.5 rounded-lg text-xs font-black tracking-[0.15em] uppercase text-gray-500 hover:text-white hover:bg-white/5 transition-colors">
                 {l}
               </a>
             ))}
@@ -237,7 +237,7 @@ export function PaceLabView() {
         </div>
 
         {levelMode === "vdot" && (
-          <div className="mx-auto max-w-[1500px] px-4 md:px-6 pb-3 -mt-1 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] text-gray-400">
+          <div className="mx-auto max-w-[1500px] px-4 md:px-6 pb-3 -mt-1 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-gray-400">
             <span>
               VDOT <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>{vdotChosen.toFixed(1).replace(".", ",")}</b>
               {" "}= 5K <b className="text-gray-200 tabular-nums" style={{ fontFamily: MONO }}>{fmtClock(predictSec(5000, vdotChosen))}</b>
@@ -255,13 +255,13 @@ export function PaceLabView() {
               oppure da un tuo tempo:
             </span>
             <select value={fromDist} onChange={(e) => setFromDist(e.target.value as DistanceId)} aria-label="Distanza del tempo"
-              className="h-7 rounded-lg border border-white/10 bg-black/40 px-1.5 text-[11px] text-white outline-none" style={{ fontFamily: MONO }}>
+              className="h-7 rounded-lg border border-white/10 bg-black/40 px-1.5 text-xs text-white outline-none" style={{ fontFamily: MONO }}>
               {DISTANCES.map((d) => <option key={d.id} value={d.id}>{d.short}</option>)}
             </select>
             <TimeField sec={fromSec} onCommit={setFromSec} ariaLabel="Il tuo tempo" width="w-[5.4rem]" />
             <button type="button"
               onClick={() => { const d = distanceById(fromDist); setVdot(levelFromEven(d.km, fromSec / d.km)); }}
-              className="px-2.5 py-1 rounded-lg text-[11px] font-black text-black transition-transform hover:scale-105" style={{ background: LIT }}>
+              className="px-2.5 py-1 rounded-lg text-xs font-black text-black transition-transform hover:scale-105" style={{ background: LIT }}>
               Usa
             </button>
           </div>
@@ -308,7 +308,7 @@ export function PaceLabView() {
               sub={<>{fmtClock(limit * dist.km)} · VDOT {vdot.toFixed(1).replace(".", ",")}
                 {levelMode === "target" ? " · l'obiettivo, preso come limite" : " · dal livello che hai scelto"}</>} />
           </div>
-          <p className="mt-3 text-[11px] text-gray-500 leading-relaxed max-w-5xl">
+          <p className="mt-3 text-xs text-gray-500 leading-relaxed max-w-5xl">
             <b className="text-gray-300">Il serbatoio</b> è la fatica che puoi spendere in gara. Ogni ritmo ha una durata
             massima (la curva di Daniels, la stessa di tutta l'app): un minuto a un ritmo che reggeresti 40 minuti ne
             consuma 1/40. Al tuo limite, a passo costante, arriva a zero esattamente sul traguardo. Più veloce si

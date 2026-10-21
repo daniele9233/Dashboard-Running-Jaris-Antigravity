@@ -7,6 +7,7 @@ import {
 } from "./ui";
 import { niceTicks, pathOf, useWidth } from "./chartKit";
 
+import { CHART_SURFACE, CHART_TEXT } from "../charts";
 /**
  * 01 · IL LISTINO
  * ════════════════════════════════════════════════════════════════════════════
@@ -94,8 +95,8 @@ function PriceCurve({ distKm, center, vdot, limitPace, span, selected, onSelect 
 
         {yTicks.map((t) => (
           <g key={t}>
-            <line x1={M.l} x2={W - M.r} y1={Y(t)} y2={Y(t)} stroke="#1E1E1E" />
-            <text x={M.l - 8} y={Y(t) + 3.5} textAnchor="end" fontSize={narrow ? 9.5 : 10.5} fill="#8A8A8A" fontFamily={MONO}>{fmtClock(t)}</text>
+            <line x1={M.l} x2={W - M.r} y1={Y(t)} y2={Y(t)} stroke={CHART_SURFACE.border} />
+            <text x={M.l - 8} y={Y(t) + 3.5} textAnchor="end" fontSize={narrow ? 9.5 : 10.5} fill={CHART_TEXT.axis} fontFamily={MONO}>{fmtClock(t)}</text>
           </g>
         ))}
         {xTicks.map((t) => (
@@ -106,7 +107,7 @@ function PriceCurve({ distKm, center, vdot, limitPace, span, selected, onSelect 
         {crashX1 != null && (
           <g>
             <rect x={M.l} y={M.t} width={crashX1 - M.l} height={H - M.t - M.b} fill={`url(#${uid}h)`} />
-            <text x={M.l + 6} y={M.t + 12} fontSize="9.5" fontWeight="800" fill={RISK} letterSpacing="0.08em">
+            <text x={M.l + 6} y={M.t + 12} fontSize="12" fontWeight="800" fill={RISK} letterSpacing="0.08em">
               {narrow ? "CROLLO" : "CROLLO PRIMA DI METÀ GARA"}
             </text>
           </g>
@@ -121,13 +122,13 @@ function PriceCurve({ distKm, center, vdot, limitPace, span, selected, onSelect 
         {/* il limite: il fondo della V */}
         {limitPace >= lo && limitPace <= hi && (
           <g>
-            <line x1={X(limitPace)} x2={X(limitPace)} y1={M.t - 6} y2={H - M.b} stroke="#fff" strokeOpacity="0.35" strokeDasharray="2 3" />
-            <text x={X(limitPace)} y={M.t - 12} textAnchor="middle" fontSize="9.5" fontWeight="800" fill="#fff" letterSpacing="0.08em">
+            <line x1={X(limitPace)} x2={X(limitPace)} y1={M.t - 6} y2={H - M.b} stroke={CHART_TEXT.primary} strokeOpacity="0.35" strokeDasharray="2 3" />
+            <text x={X(limitPace)} y={M.t - 12} textAnchor="middle" fontSize="12" fontWeight="800" fill={CHART_TEXT.primary} letterSpacing="0.08em">
               IL TUO LIMITE
             </text>
             <circle cx={X(limitPace)} cy={Y(best)} r="5.5" fill={SURFACE} stroke={LIT} strokeWidth="2.5" />
             {!narrow && Math.abs(sel.p - limitPace) > 1.2 && (
-              <text x={X(limitPace) + 9} y={Y(best) + 17} fontSize="10" fontWeight="800" fill={LIT} fontFamily={MONO}>
+              <text x={X(limitPace) + 9} y={Y(best) + 17} fontSize="12" fontWeight="800" fill={LIT} fontFamily={MONO}>
                 {fmtClock(best)} · il meglio
               </text>
             )}
@@ -137,21 +138,21 @@ function PriceCurve({ distKm, center, vdot, limitPace, span, selected, onSelect 
         {/* etichette dirette */}
         {!narrow && (
           <>
-            <text x={X(lastPaper.p) - 4} y={Y(lastPaper.paper) - 8} textAnchor="end" fontSize="10" fill={REF} fontWeight="700">sulla carta</text>
+            <text x={X(lastPaper.p) - 4} y={Y(lastPaper.paper) - 8} textAnchor="end" fontSize="12" fill={REF} fontWeight="700">sulla carta</text>
             {realRight && (
-              <text x={X(realRight.p) - 4} y={clipY(realRight.real!) + 16} textAnchor="end" fontSize="10" fill={LIT} fontWeight="700">davvero</text>
+              <text x={X(realRight.p) - 4} y={clipY(realRight.real!) + 16} textAnchor="end" fontSize="12" fill={LIT} fontWeight="700">davvero</text>
             )}
           </>
         )}
 
         {/* il passo che stai guardando */}
-        <line x1={X(sel.p)} x2={X(sel.p)} y1={M.t} y2={H - M.b} stroke="#fff" strokeOpacity="0.5" />
+        <line x1={X(sel.p)} x2={X(sel.p)} y1={M.t} y2={H - M.b} stroke={CHART_TEXT.primary} strokeOpacity="0.5" />
         <circle cx={X(sel.p)} cy={Y(sel.paper)} r="4.5" fill={SURFACE} stroke={REF} strokeWidth="2" />
         {sel.real != null && sel.real <= yHi && (
           <circle cx={X(sel.p)} cy={Y(sel.real)} r="5" fill={LIT} stroke={SURFACE} strokeWidth="2" />
         )}
         {sel.real != null && sel.real > yHi && (
-          <text x={X(sel.p)} y={M.t + 10} textAnchor="middle" fontSize="11" fill={LIT} fontWeight="900">↑</text>
+          <text x={X(sel.p)} y={M.t + 10} textAnchor="middle" fontSize="12" fill={LIT} fontWeight="900">↑</text>
         )}
       </svg>
     </div>
@@ -173,14 +174,14 @@ function TankBar({ row, distKm }: { row: LadderRow; distKm: number }) {
               : { left: "50%", width: `${w}%`, background: LOAD, opacity: 0.8 }} />
         )}
       </div>
-      <span className="text-[11.5px] tabular-nums whitespace-nowrap" style={{ fontFamily: MONO, color: deficit ? "#FDA4AF" : row.tankEnd > 1e-4 ? "#FCD34D" : "#fff" }}>
+      <span className="text-xs tabular-nums whitespace-nowrap" style={{ fontFamily: MONO, color: deficit ? "#FDA4AF" : row.tankEnd > 1e-4 ? "#FCD34D" : "#fff" }}>
         {deficit
           ? `muro al km ${fmtKm(row.wallKm!)}`
           : row.tankEnd > 1e-4
             ? `avanza ${Math.round(row.tankEnd * 100)}%`
             : `vuoto sul traguardo`}
       </span>
-      {deficit && <span className="hidden 2xl:inline text-[10px] text-gray-600 whitespace-nowrap">{fmtKm(distKm - row.wallKm!)} km prima</span>}
+      {deficit && <span className="hidden 2xl:inline text-xs text-gray-600 whitespace-nowrap">{fmtKm(distKm - row.wallKm!)} km prima</span>}
     </div>
   );
 }
@@ -234,7 +235,7 @@ export function ListinoSection({ ctx }: { ctx: PaceCtx }) {
               <>È il tuo limite: il serbatoio si svuota esattamente sul traguardo. Nessun passo costante fa meglio.</>
             )}
           </p>
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10.5px] text-gray-500">
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
             <span className="inline-flex items-center gap-1.5"><LineKey color={REF} dashed width={2} />sulla carta: passo × km</span>
             <span className="inline-flex items-center gap-1.5"><LineKey color={LIT} />davvero: se a metà gara correggi</span>
             <span className="inline-flex items-center gap-1.5">
@@ -252,7 +253,7 @@ export function ListinoSection({ ctx }: { ctx: PaceCtx }) {
         <div className="overflow-x-auto -mx-5 px-5">
           <table className="w-full min-w-[720px] text-left border-separate border-spacing-0">
             <thead>
-              <tr className="text-[9px] font-black tracking-[0.18em] uppercase text-gray-500">
+              <tr className="text-xs font-black tracking-[0.18em] uppercase text-gray-500">
                 <th className="py-2 pr-3 font-black">Passo</th>
                 <th className="py-2 pr-3 font-black">Sulla carta</th>
                 <th className="py-2 pr-3 font-black">Vs obiettivo</th>
@@ -274,7 +275,7 @@ export function ListinoSection({ ctx }: { ctx: PaceCtx }) {
                       style={{ boxShadow: isTarget ? `inset 3px 0 0 ${LIT}` : undefined }}>
                       <div className="flex items-baseline gap-2 pl-2">
                         <span className="text-[13.5px] font-black tabular-nums text-white" style={{ fontFamily: MONO }}>{fmtPace(r.paceSec)}</span>
-                        <span className="text-[10px] tabular-nums w-7" style={{ fontFamily: MONO, color: r.offsetSec < 0 ? "#FDA4AF" : r.offsetSec > 0 ? "#9CA3AF" : LIT }}>
+                        <span className="text-xs tabular-nums w-7" style={{ fontFamily: MONO, color: r.offsetSec < 0 ? "#FDA4AF" : r.offsetSec > 0 ? "#9CA3AF" : LIT }}>
                           {r.offsetSec === 0 ? "obj" : `${r.offsetSec > 0 ? "+" : "−"}${Math.abs(r.offsetSec)}″`}
                         </span>
                         {isLimit && ctx.levelMode === "vdot" && (
@@ -309,7 +310,7 @@ export function ListinoSection({ ctx }: { ctx: PaceCtx }) {
             </tbody>
           </table>
         </div>
-        <p className="-mt-2 text-[10.5px] text-gray-600 leading-relaxed">
+        <p className="-mt-2 text-xs text-gray-600 leading-relaxed">
           <b className="text-gray-500">Motore che serve</b>: il VDOT con cui quel passo regge fino in fondo, e il tempo che vale su un'altra distanza.{" "}
           <b className="text-gray-500">Davvero</b>: il tempo finale se a metà gara ti accorgi di come stai — rallenti quanto basta per non crollare,
           o allunghi se ti avanza serbatoio — confrontato con il tuo limite ({fmtClock(bestSec)}).

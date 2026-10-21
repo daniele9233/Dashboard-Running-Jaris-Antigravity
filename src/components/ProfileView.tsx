@@ -208,17 +208,17 @@ function PersonalRecordCelebrationOverlay({ celebration, onClose }: { celebratio
         <div className="mt-3 text-4xl font-black text-white sm:text-5xl">{effort.distance}</div>
         <div className="pr-record-ring mx-auto my-7 flex h-36 w-36 items-center justify-center rounded-full border border-[#C0FF00]/30 bg-[#121212]">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Tempo</div>
+            <div className="text-xs font-bold uppercase tracking-widest text-gray-500">Tempo</div>
             <div className="mt-1 text-3xl font-black text-white">{effort.time}</div>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3 text-left">
           <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-            <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Miglioramento</div>
+            <div className="text-xs font-black uppercase tracking-widest text-gray-500">Miglioramento</div>
             <div className="mt-1 text-sm font-bold text-[#C0FF00]">{formatRecordDelta(deltaSeconds)}</div>
           </div>
           <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-            <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Passo</div>
+            <div className="text-xs font-black uppercase tracking-widest text-gray-500">Passo</div>
             <div className="mt-1 text-sm font-bold text-white">{effort.pace}</div>
           </div>
         </div>
@@ -1000,7 +1000,7 @@ export function ProfileView() {
 
                 {/* Heatmap grid */}
                 <div className="flex gap-[5px] overflow-x-auto pb-2 relative">
-                  <div className="flex flex-col gap-[5px] justify-between text-[10px] text-gray-600 font-medium pr-2 pt-0.5 flex-shrink-0">
+                  <div className="flex flex-col gap-[5px] justify-between text-xs text-gray-600 font-medium pr-2 pt-0.5 flex-shrink-0">
                     <span>Dom</span><span>Mar</span><span>Gio</span><span>Sab</span>
                   </div>
                   <div className="flex gap-[5px] flex-1">
@@ -1019,7 +1019,7 @@ export function ProfileView() {
                 </div>
 
                 {/* Legend */}
-                <div className="flex items-center justify-end gap-2 mt-3 text-[10px] text-gray-500 font-medium">
+                <div className="flex items-center justify-end gap-2 mt-3 text-xs text-gray-500 font-medium">
                   <span>Meno</span>
                   <div className="flex gap-1">{[0, 3, 7, 12, 25].map((km, i) => <div key={i} className={`w-3 h-3 rounded-[3px] ${heatmapColor(km)} ${heatmapGlow(km)}`} />)}</div>
                   <span>Di più</span>
@@ -1028,32 +1028,32 @@ export function ProfileView() {
                 {/* Stats grid */}
                 <div className="grid grid-cols-4 gap-3 mt-5 pt-4 border-t border-[#242424] relative">
                   <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
-                    <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Streak</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider font-bold mb-1">Streak</div>
                     <div className="text-xl font-black text-[#10B981]">{currentStreak}</div>
-                    <div className="text-[10px] text-gray-600">giorni</div>
+                    <div className="text-xs text-gray-600">giorni</div>
                   </div>
                   <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
-                    <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Best Streak</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider font-bold mb-1">Best Streak</div>
                     <div className="text-xl font-black text-[#EAB308]">{bestStreak}</div>
-                    <div className="text-[10px] text-gray-600">giorni</div>
+                    <div className="text-xs text-gray-600">giorni</div>
                   </div>
                   <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
-                    <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Media/Run</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider font-bold mb-1">Media/Run</div>
                     <div className="text-xl font-black text-white">{avgKmActive.toFixed(1)}</div>
-                    <div className="text-[10px] text-gray-600">km</div>
+                    <div className="text-xs text-gray-600">km</div>
                   </div>
                   <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3 text-center">
-                    <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Giorno Top</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider font-bold mb-1">Giorno Top</div>
                     <div className="text-xl font-black text-[#3B82F6]">{favDay}</div>
-                    <div className="text-[10px] text-gray-600">{dayTotals[favDayIdx] > 0 ? `${dayTotals[favDayIdx]} corse` : ""}</div>
+                    <div className="text-xs text-gray-600">{dayTotals[favDayIdx] > 0 ? `${dayTotals[favDayIdx]} corse` : ""}</div>
                   </div>
                 </div>
 
                 {/* Weekly frequency mini-bars */}
                 <div className="mt-4 pt-3 border-t border-[#242424] relative">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Frequenza per giorno</span>
-                    <span className="text-[10px] text-gray-600">{activeWeeks} settimane attive su {heatmapGrid.length}</span>
+                    <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Frequenza per giorno</span>
+                    <span className="text-xs text-gray-600">{activeWeeks} settimane attive su {heatmapGrid.length}</span>
                   </div>
                   <div className="flex gap-2">
                     {dayNames.map((name, i) => {
@@ -1069,7 +1069,7 @@ export function ProfileView() {
                               style={{ height: `${Math.max(barPct, count > 0 ? 8 : 0)}%` }}
                             />
                           </div>
-                          <span className={`text-[10px] font-medium ${isFav ? "text-[#10B981]" : "text-gray-600"}`}>{name}</span>
+                          <span className={`text-xs font-medium ${isFav ? "text-[#10B981]" : "text-gray-600"}`}>{name}</span>
                         </div>
                       );
                     })}
@@ -1173,7 +1173,7 @@ export function ProfileView() {
               {jarvisEnabled ? "Jarvis Attivo ✓" : "Attiva Jarvis"}
             </button>
             {jarvisEnabled && (
-              <p className="text-[10px] text-gray-500 mt-3 text-center">
+              <p className="text-xs text-gray-500 mt-3 text-center">
                 Clicca di nuovo per disattivare. L'orb apparirà sulla dashboard.
               </p>
             )}
@@ -1217,7 +1217,7 @@ export function ProfileView() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-bold text-white">{connection.name ?? "Atleta Strava"}</div>
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                        <div className="text-xs font-bold uppercase tracking-wider text-gray-600">
                           {connection.active ? "Attivo" : `ID ${connection.athlete_id ?? "-"}`}
                         </div>
                       </div>

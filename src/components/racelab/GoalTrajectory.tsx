@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEven
 import { dayIndex, dayToIso, fmtClock } from "../gamification/gamiCore";
 import type { GoalCurvePoint } from "./raceLabEngine";
 
+import { CHART_TEXT } from "../charts";
 /**
  * LA TRAIETTORIA
  * ════════════════════════════════════════════════════════════════════════════
@@ -126,11 +127,11 @@ function Cell({ keyMark, label, value, sub, className = "" }: {
       <div className="text-[19px] font-black leading-none text-white whitespace-nowrap tabular-nums" style={{ fontFamily: MONO }}>
         {value}
       </div>
-      <div className="mt-1.5 flex items-center gap-1.5 text-[9px] font-black tracking-[0.18em] uppercase text-gray-500">
+      <div className="mt-1.5 flex items-center gap-1.5 text-xs font-black tracking-[0.18em] uppercase text-gray-500">
         {keyMark}{label}
       </div>
       {sub != null && (
-        <div className="mt-0.5 text-[10px] text-gray-500 truncate tabular-nums" style={{ fontFamily: MONO }}>{sub}</div>
+        <div className="mt-0.5 text-xs text-gray-500 truncate tabular-nums" style={{ fontFamily: MONO }}>{sub}</div>
       )}
     </div>
   );
@@ -320,7 +321,7 @@ export function GoalTrajectory({
   });
 
   const evStyle: Record<EventId, { color: string; line: string; lineOpacity: number; width: number; dash?: string }> = {
-    race: { color: "#fff", line: "#fff", lineOpacity: 0.55, width: 1.5 },
+    race: { color: CHART_TEXT.primary, line: "#fff", lineOpacity: 0.55, width: 1.5 },
     p80: { color: LIME, line: LIME, lineOpacity: 0.4, width: 1 },
     p50: { color: LIME, line: LIME, lineOpacity: 0.28, width: 1 },
     ref: { color: "#D1D5DB", line: "#fff", lineOpacity: 0.25, width: 1, dash: "3 4" },
@@ -329,7 +330,7 @@ export function GoalTrajectory({
   const glyph = (id: EventId, cx: number, cy: number, r = 3.6) => {
     const c = evStyle[id].color;
     if (id === "race") {
-      return <rect x={cx - r} y={cy - r} width={r * 2} height={r * 2} transform={`rotate(45 ${cx} ${cy})`} fill="#fff" />;
+      return <rect x={cx - r} y={cy - r} width={r * 2} height={r * 2} transform={`rotate(45 ${cx} ${cy})`} fill={CHART_TEXT.primary} />;
     }
     if (id === "p50" || id === "ref") return <circle cx={cx} cy={cy} r={r} fill={SURFACE} stroke={c} strokeWidth={1.8} />;
     return <circle cx={cx} cy={cy} r={r} fill={c} />;
@@ -337,7 +338,7 @@ export function GoalTrajectory({
 
   // ── le etichette a fine riga: chi è chi, senza cercarlo in legenda ──
   const endItems = [
-    { id: "target", y: Y(targetSec), value: fmtClock(targetSec), name: "obiettivo", color: "#fff", dashed: true },
+    { id: "target", y: Y(targetSec), value: fmtClock(targetSec), name: "obiettivo", color: CHART_TEXT.primary, dashed: true },
     { id: "plan", y: Y(last.planSec), value: null, name: "piano", color: LIME, dashed: false },
     { id: "now", y: Y(last.nowSec), value: null, name: "attuale", color: GRAY, dashed: true },
   ];
@@ -376,12 +377,12 @@ export function GoalTrajectory({
     <div className="w-full" ref={wrapRef}>
       {/* ── la lettura: i numeri del giorno che conta, o di quello sotto il cursore ── */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <span className="text-[10px] text-gray-600">
+        <span className="text-xs text-gray-600">
           {asTable ? "Una riga a settimana, più i giorni che contano." : narrow
             ? "Trascina sul grafico per leggere un giorno."
             : "Passa sul grafico, o usa ← → dopo averlo selezionato, per leggere un giorno."}
         </span>
-        <div className="flex rounded-lg border border-white/10 overflow-hidden text-[10px] font-black uppercase tracking-[0.14em]" role="group" aria-label="Vista">
+        <div className="flex rounded-lg border border-white/10 overflow-hidden text-xs font-black uppercase tracking-[0.14em]" role="group" aria-label="Vista">
           {[{ id: false, label: "Grafico" }, { id: true, label: "Tabella" }].map((o) => (
             <button key={o.label} type="button" onClick={() => setAsTable(o.id)} aria-pressed={asTable === o.id}
               className="px-2.5 py-1 transition-colors"
@@ -414,8 +415,8 @@ export function GoalTrajectory({
 
       {asTable ? (
         <div className="mt-3 max-h-[360px] overflow-auto rounded-xl border border-white/8">
-          <table className="w-full text-[11px] tabular-nums" style={{ fontFamily: MONO }}>
-            <thead className="sticky top-0 bg-[#0A0A0A] text-[9px] uppercase tracking-[0.14em] text-gray-500">
+          <table className="w-full text-xs tabular-nums" style={{ fontFamily: MONO }}>
+            <thead className="sticky top-0 bg-[#0A0A0A] text-xs uppercase tracking-[0.14em] text-gray-500">
               <tr className="text-right [&>th]:px-3 [&>th]:py-2 [&>th]:font-black">
                 <th className="text-left">Data</th><th>°C</th><th>Piano</th><th>±1σ</th><th>Attuale</th>
                 <th>% piano</th><th>% attuale</th>
@@ -427,7 +428,7 @@ export function GoalTrajectory({
                 return (
                   <tr key={p.day} className="text-right text-gray-300 [&>td]:px-3 [&>td]:py-1.5">
                     <td className="text-left text-white whitespace-nowrap">
-                      {fmtDay(p.iso)}{t && <span className="ml-2 text-[9px] uppercase" style={{ color: t === "gara" ? "#fff" : LIME }}>{t}</span>}
+                      {fmtDay(p.iso)}{t && <span className="ml-2 text-xs uppercase" style={{ color: t === "gara" ? "#fff" : LIME }}>{t}</span>}
                     </td>
                     <td>{p.tempC}°</td>
                     <td className="text-white font-bold">{fmtClock(p.planSec)}</td>
@@ -507,7 +508,7 @@ export function GoalTrajectory({
 
             {/* ── il tempo obiettivo: la linea che conta ── */}
             <line x1={S.L} x2={plotR} y1={Y(targetSec)} y2={Y(targetSec)}
-              stroke="#fff" strokeWidth={1.5} strokeDasharray="6 4" opacity={0.7} />
+              stroke={CHART_TEXT.primary} strokeWidth={1.5} strokeDasharray="6 4" opacity={0.7} />
 
             {/* ── banda d'incertezza e curve ── */}
             <path d={bandD} fill={LIME} fillOpacity={0.09} className="gt-path gt-fade" />
@@ -546,7 +547,7 @@ export function GoalTrajectory({
                     strokeOpacity={e.id === "now" ? 0.8 : 0.6} strokeWidth={1} />
                   {e.value ? (
                     <>
-                      <text x={x} y={ly - 1} fill="#fff"
+                      <text x={x} y={ly - 1} fill={CHART_TEXT.primary}
                         style={{ fontFamily: MONO, fontSize: S.fs.end, fontWeight: 800 }}>{e.value}</text>
                       <text x={x} y={ly + S.fs.endSub + 1} fill="#9CA3AF"
                         style={{ fontFamily: MONO, fontSize: S.fs.endSub }}>{e.name}</text>
@@ -589,7 +590,7 @@ export function GoalTrajectory({
                   <circle cx={cx} cy={cy} r={6} fill={SURFACE} />
                   <circle cx={cx} cy={cy} r={4} fill={CYAN} />
                   <text x={right ? cx + 9 : cx - 9} y={above ? cy - 7 : cy + 14} textAnchor={right ? "start" : "end"}
-                    fill="#fff" stroke={SURFACE} strokeWidth={3} paintOrder="stroke"
+                    fill={CHART_TEXT.primary} stroke={SURFACE} strokeWidth={3} paintOrder="stroke"
                     style={{ fontFamily: MONO, fontSize: S.fs.prob, fontWeight: 800 }}>
                     {pct(anchorPoint.planProb)}
                   </text>
@@ -609,7 +610,7 @@ export function GoalTrajectory({
             </g>
             {months.filter((m) => m.x1 - m.x0 >= 30).map((m) => (
               <text key={`mt${m.x0}`} x={(m.x0 + m.x1) / 2} y={climTop + S.clim / 2} textAnchor="middle"
-                dominantBaseline="central" fill="#fff" fillOpacity={0.88}
+                dominantBaseline="central" fill={CHART_TEXT.primary} fillOpacity={0.88}
                 style={{ fontFamily: MONO, fontSize: S.fs.clim, fontWeight: 800 }}>
                 {Math.round(m.sum / m.n)}°
               </text>
@@ -647,14 +648,14 @@ export function GoalTrajectory({
       )}
 
       {/* ── legenda ── */}
-      <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[10px] text-gray-500">
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-gray-500">
         <span className="flex items-center gap-1.5"><LineKey color={LIME} />piano simulato</span>
         <span className="flex items-center gap-1.5"><LineKey color={GRAY} dashed width={2} />carico che tieni adesso</span>
         <span className="flex items-center gap-1.5">
           <span className="w-4 h-2.5 rounded-sm shrink-0" style={{ background: `${LIME}24`, boxShadow: `inset 0 0 0 1px ${LIME}30` }} />
           incertezza ±1σ
         </span>
-        <span className="flex items-center gap-1.5"><LineKey color="#fff" dashed width={1.5} />obiettivo</span>
+        <span className="flex items-center gap-1.5"><LineKey color={CHART_TEXT.primary} dashed width={1.5} />obiettivo</span>
         <span className="flex items-center gap-1.5"><LineKey color={CYAN} width={2} />probabilità di riuscita</span>
         <span className="flex items-center gap-1.5"><DotKey color={LIME} hollow />possibile (50%)</span>
         <span className="flex items-center gap-1.5"><DotKey color={LIME} />probabile (80%)</span>

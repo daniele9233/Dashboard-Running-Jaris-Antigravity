@@ -186,8 +186,8 @@ export function TrainingGoalBox({ goalSec, planVdot, window: win, onGenerate }: 
     <section aria-label="Obiettivo e piano" className="mb-6 rounded-xl border border-[#2A2A2A] bg-[#0F0F0F] overflow-hidden">
       <div className="px-4 py-3 border-b border-[#2A2A2A] flex flex-wrap items-center gap-x-3 gap-y-1">
         <Target className="w-4 h-4 shrink-0" style={{ color: ACCENT }} />
-        <h2 className="text-[10px] font-black tracking-[0.2em] uppercase text-gray-300">Obiettivo e piano</h2>
-        <span className="text-[11px] text-gray-500" style={MONO}>
+        <h2 className="text-xs font-black tracking-[0.2em] uppercase text-gray-300">Obiettivo e piano</h2>
+        <span className="text-xs text-gray-500" style={MONO}>
           Piano attivo · {activeGoal} · {active.weeksUsed} sett. · {fmtDay(active.firstMonday)} → {fmtDay(active.raceIso, true)}
           {planVdot && <> · VDOT {dec(planVdot.start)} → {dec(planVdot.target)}</>}
         </span>
@@ -196,10 +196,10 @@ export function TrainingGoalBox({ goalSec, planVdot, window: win, onGenerate }: 
       <div className="grid gap-x-8 gap-y-5 p-4 md:grid-cols-2">
         {/* L'obiettivo: lo scrive l'atleta */}
         <div className="min-w-0">
-          <div className="text-[9px] font-black tracking-[0.18em] uppercase text-gray-500 mb-2">Il tuo obiettivo</div>
+          <div className="text-xs font-black tracking-[0.18em] uppercase text-gray-500 mb-2">Il tuo obiettivo</div>
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="block text-[11px] text-gray-400 mb-1">Distanza</span>
+              <span className="block text-xs text-gray-400 mb-1">Distanza</span>
               <div className="relative">
                 <input
                   value={distText}
@@ -210,11 +210,11 @@ export function TrainingGoalBox({ goalSec, planVdot, window: win, onGenerate }: 
                   className={`${fieldClass(distInvalid)} pr-9`}
                   style={{ ...MONO, color: distInvalid ? RED : ACCENT }}
                 />
-                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-gray-500 pointer-events-none">km</span>
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-500 pointer-events-none">km</span>
               </div>
             </label>
             <label className="block">
-              <span className="block text-[11px] text-gray-400 mb-1">Passo medio</span>
+              <span className="block text-xs text-gray-400 mb-1">Passo medio</span>
               <div className="relative">
                 <input
                   value={paceText}
@@ -225,12 +225,12 @@ export function TrainingGoalBox({ goalSec, planVdot, window: win, onGenerate }: 
                   className={`${fieldClass(paceInvalid)} pr-11`}
                   style={{ ...MONO, color: paceInvalid ? RED : ACCENT }}
                 />
-                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-gray-500 pointer-events-none">/km</span>
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-500 pointer-events-none">/km</span>
               </div>
             </label>
           </div>
 
-          <div className="mt-2 min-h-[34px] text-[11px] leading-snug">
+          <div className="mt-2 min-h-[34px] text-xs leading-snug">
             {distInvalid && <p style={{ color: RED }}>Distanza da 3 a 42,2 km, per esempio 10 o 21,1.</p>}
             {paceInvalid && <p style={{ color: RED }}>Passo al km da 2:30 a 10:00, scritto m:ss, per esempio 4:00.</p>}
             {goal && !distInvalid && !paceInvalid && (
@@ -246,7 +246,7 @@ export function TrainingGoalBox({ goalSec, planVdot, window: win, onGenerate }: 
 
         {/* Da dove si parte */}
         <div className="min-w-0">
-          <div className="text-[9px] font-black tracking-[0.18em] uppercase text-gray-500 mb-2">Calcola il piano su</div>
+          <div className="text-xs font-black tracking-[0.18em] uppercase text-gray-500 mb-2">Calcola il piano su</div>
           <div className="inline-flex rounded-lg bg-[#1E1E1E] border border-[#2A2A2A] p-1" role="group" aria-label="Base di partenza">
             {([
               ["performance", "Una mia prestazione"],
@@ -302,9 +302,9 @@ export function TrainingGoalBox({ goalSec, planVdot, window: win, onGenerate }: 
                     )}
                   </select>
                 </label>
-                {perf && <p className="mt-2 text-[11px] leading-snug text-gray-500">{perfDetail(perf)}</p>}
+                {perf && <p className="mt-2 text-xs leading-snug text-gray-500">{perfDetail(perf)}</p>}
                 {intervalsData && perfs.reps.length === 0 && (
-                  <p className="mt-2 text-[11px] leading-snug text-gray-600">
+                  <p className="mt-2 text-xs leading-snug text-gray-600">
                     Nessuna seduta a ripetute letta dai giri negli ultimi 4 mesi.
                   </p>
                 )}
@@ -316,7 +316,7 @@ export function TrainingGoalBox({ goalSec, planVdot, window: win, onGenerate }: 
 
       {/* Quello che ne esce, prima di salvare */}
       <div className="px-4 py-3 border-t border-[#2A2A2A] flex flex-wrap items-center gap-x-6 gap-y-3">
-        <div className="flex-1 min-w-[260px] space-y-1.5 text-[11.5px] leading-snug" aria-live="polite">
+        <div className="flex-1 min-w-[260px] space-y-1.5 text-xs leading-snug" aria-live="polite">
           {blocker ? (
             <p className="text-gray-500">{blocker}</p>
           ) : plan && goal ? (

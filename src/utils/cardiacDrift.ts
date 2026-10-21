@@ -16,7 +16,7 @@ export interface DriftResult {
 }
 
 /**
- * Colori allineati alla palette dei grafici (components/statistics/chartTheme.ts:
+ * Colori allineati alla palette dei grafici (components/charts/theme.ts:
  * primary / compare / load / risk). Sono ripetuti qui come letterali perché
  * questo è un modulo puro di utility: non deve dipendere dai componenti.
  */

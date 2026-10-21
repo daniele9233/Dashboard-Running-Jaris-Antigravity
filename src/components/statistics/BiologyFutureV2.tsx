@@ -1,19 +1,6 @@
 import React from 'react';
 import type { LucideIcon } from "lucide-react";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ComposedChart,
-  Line,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import { Cell } from "recharts";
 import {
   Activity,
   ArrowRight,
@@ -52,13 +39,12 @@ import {
   projectRaceTime,
   type DetrainingPoint,
 } from '../../utils/detrainingModel';
-import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from './chartTheme';
 
+import { CHART_SERIES, CHART_SURFACE, CHART_TEXT, ChartCard } from "../charts";
 // Alias sul tema condiviso (chartTheme.ts).
 const ACCENT = CHART_SERIES.primary;
-const PANEL = CHART_SURFACE.panel;
 const PANEL_SOFT = CHART_SURFACE.panelSoft;
-const BORDER = CHART_SURFACE.border;      // era #242424
+      // era #242424
 const GRID = CHART_SURFACE.grid;          // era #1F1F1F
 const TEXT_MUTED = CHART_TEXT.muted;      // era #7A8599
 const CYAN = CHART_SERIES.compare;
@@ -240,7 +226,7 @@ function RingGauge({
   return (
     <div className="relative h-48 w-48 shrink-0">
       <svg className="h-full w-full -rotate-90">
-        <circle cx="96" cy="96" r="70" stroke="#1A1A1A" strokeWidth="12" fill="none" />
+        <circle cx="96" cy="96" r="70" stroke={CHART_SURFACE.raised} strokeWidth="12" fill="none" />
         <circle
           cx="96"
           cy="96"
@@ -251,15 +237,14 @@ function RingGauge({
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={circumference * (1 - safeValue / 100)}
-          style={{ filter: `drop-shadow(0 0 12px ${color}66)` }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
         <div className="text-5xl font-black leading-none text-white">{Math.round(safeValue)}</div>
-        <div className="mt-2 text-[10px] font-black uppercase tracking-[0.2em]" style={{ color }}>
+        <div className="mt-2 text-xs font-black uppercase tracking-[0.2em]" style={{ color }}>
           {label}
         </div>
-        <div className="mt-1 max-w-28 text-[10px] font-bold uppercase tracking-widest text-gray-600">
+        <div className="mt-1 max-w-28 text-xs font-bold uppercase tracking-widest text-gray-600">
           {sublabel}
         </div>
       </div>
@@ -270,24 +255,13 @@ function RingGauge({
 function Panel({
   children,
   className = '',
-  accent = ACCENT,
 }: {
   children: React.ReactNode;
   className?: string;
+  /** Mantenuto per compatibilità: il filo colorato non fa più parte del sistema. */
   accent?: string;
 }) {
-  return (
-    <section
-      className={`rounded-[8px] border p-5 sm:p-6 ${className}`}
-      style={{
-        background: PANEL,
-        borderColor: BORDER,
-        borderTop: `2px solid ${accent}`,
-      }}
-    >
-      {children}
-    </section>
-  );
+  return <ChartCard className={className}>{children}</ChartCard>;
 }
 
 function SectionTitle({
@@ -304,7 +278,7 @@ function SectionTitle({
   return (
     <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
-        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: ACCENT }}>
+        <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.24em]" style={{ color: ACCENT }}>
           <Icon className="h-4 w-4 shrink-0" />
           {eyebrow}
         </div>
@@ -327,8 +301,8 @@ function SmallStat({
   color?: string;
 }) {
   return (
-    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-      <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">{label}</div>
+    <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+      <div className="text-xs font-black uppercase tracking-[0.18em] text-gray-500">{label}</div>
       <div className="mt-3 break-words text-xl font-black leading-tight text-white sm:text-2xl" style={{ color }}>
         {value}
       </div>
@@ -340,8 +314,8 @@ function SmallStat({
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-[8px] border border-white/10 bg-[#101010] p-3 shadow-2xl">
-      <div className="mb-2 text-[10px] font-black uppercase tracking-widest" style={{ color: ACCENT }}>
+    <div className="ea-tooltip">
+      <div className="mb-2 text-xs font-black uppercase tracking-widest" style={{ color: ACCENT }}>
         {label}
       </div>
       <div className="space-y-1">
@@ -445,14 +419,13 @@ function GaugeChart({
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <path d={arcPath} stroke="#1A1A1A" strokeWidth={14} fill="none" strokeLinecap="round" />
+        <path d={arcPath} stroke={CHART_SURFACE.raised} strokeWidth={14} fill="none" strokeLinecap="round" />
         <motion.path
           d={activePath}
           stroke={color}
           strokeWidth={14}
           fill="none"
           strokeLinecap="round"
-          style={{ filter: `drop-shadow(0 0 18px ${color}88)` }}
           initial={{ pathLength: 0 }}
           animate={{ pathLength: 1 }}
           transition={{ duration: 1.0, ease: 'easeOut' }}
@@ -468,16 +441,15 @@ function GaugeChart({
           initial={{ x2: cx + needleLen * Math.cos((startAngle * Math.PI) / 180), y2: cy + needleLen * Math.sin((startAngle * Math.PI) / 180) }}
           animate={{ x2: nx, y2: ny }}
           transition={{ duration: 0.9, ease: 'easeOut' }}
-          style={{ filter: `drop-shadow(0 0 6px ${color})` }}
         />
-        <circle cx={cx} cy={cy} r={9} fill={color} style={{ filter: `drop-shadow(0 0 8px ${color})` }} />
-        <text x={polar(startAngle).x - 6} y={polar(startAngle).y + 18} fill="#666" fontSize={10} fontWeight={700} textAnchor="end">AMATEUR</text>
-        <text x={polar(endAngle).x + 6} y={polar(endAngle).y + 18} fill="#666" fontSize={10} fontWeight={700} textAnchor="start">ELITE</text>
+        <circle cx={cx} cy={cy} r={9} fill={color} />
+        <text x={polar(startAngle).x - 6} y={polar(startAngle).y + 18} fill={CHART_TEXT.faint} fontSize={12} fontWeight={700} textAnchor="end">AMATEUR</text>
+        <text x={polar(endAngle).x + 6} y={polar(endAngle).y + 18} fill={CHART_TEXT.faint} fontSize={12} fontWeight={700} textAnchor="start">ELITE</text>
       </svg>
       <div className="absolute left-0 right-0 text-center" style={{ top: cy + 24 }}>
         <div className="text-3xl font-black text-white leading-none">{Math.round(value)}<span className="text-base text-gray-500">/{max}</span></div>
-        <div className="mt-1 text-[10px] font-black uppercase tracking-[0.2em]" style={{ color }}>{label}</div>
-        <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-600">{sublabel}</div>
+        <div className="mt-1 text-xs font-black uppercase tracking-[0.2em]" style={{ color }}>{label}</div>
+        <div className="mt-1 text-xs font-bold uppercase tracking-widest text-gray-600">{sublabel}</div>
       </div>
     </div>
   );
@@ -501,23 +473,23 @@ function TimelineEvent({
       <div
         className="w-3 h-3 rounded-full mb-2 transition-all"
         style={{
-          background: active ? color : '#2A2A2A',
+          background: active ? color: CHART_SURFACE.borderStrong,
           boxShadow: active ? `0 0 14px ${color}` : 'none',
           transform: active ? 'scale(1.4)' : 'scale(1)',
         }}
       />
-      <div className={`text-[10px] font-black tracking-widest ${active ? 'text-white' : 'text-gray-600'}`}>D{day}</div>
-      <div className={`text-[9px] mt-0.5 ${active ? 'text-gray-400' : 'text-gray-700'}`}>{label}</div>
+      <div className={`text-xs font-black tracking-widest ${active ? 'text-white' : 'text-gray-600'}`}>D{day}</div>
+      <div className={`text-xs mt-0.5 ${active ? 'text-gray-400' : 'text-gray-700'}`}>{label}</div>
     </button>
   );
 }
 
 function SnapshotStat({ label, value, color, hint }: { label: string; value: string; color: string; hint?: string }) {
   return (
-    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-      <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">{label}</div>
+    <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+      <div className="text-xs font-black uppercase tracking-[0.2em] text-gray-500">{label}</div>
       <div className="mt-2 text-2xl font-black leading-none" style={{ color }}>{value}</div>
-      {hint && <div className="mt-2 text-[10px] font-semibold leading-relaxed text-gray-600">{hint}</div>}
+      {hint && <div className="mt-2 text-xs font-semibold leading-relaxed text-gray-600">{hint}</div>}
     </div>
   );
 }
@@ -601,7 +573,7 @@ function DetrainingPredictor({
       <Panel accent={ACCENT}>
         <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#C0FF00]/25 bg-[#C0FF00]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: ACCENT }}>
+            <div className="inline-flex items-center gap-2 rounded-full border border-ea-lime/25 bg-ea-lime/10 px-3 py-1 text-xs font-black uppercase tracking-[0.24em]" style={{ color: ACCENT }}>
               <Dna className="w-3.5 h-3.5" />
               PREDITTORE DETRAINING — Coyle / Mujika / Bosquet
             </div>
@@ -614,7 +586,7 @@ function DetrainingPredictor({
               {' '}<span className="text-white font-black">{ageActiveYears.toFixed(1)} anni di corsa</span>.
             </p>
             {isTaper && (
-              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#22C55E]/30 bg-[#22C55E]/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-widest" style={{ color: PRED_GREEN }}>
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-ea-green/30 bg-ea-green/10 px-3 py-1.5 text-xs font-black uppercase tracking-widest" style={{ color: PRED_GREEN }}>
                 <Sparkles className="w-3.5 h-3.5" />
                 FINESTRA TAPER — performance {perfDelta >= 0 ? `+${perfDelta.toFixed(1)}` : perfDelta.toFixed(1)}%
               </div>
@@ -632,10 +604,10 @@ function DetrainingPredictor({
         </div>
 
         {/* Timeline interattiva (slider + eventi) — mergiata dentro hero */}
-        <div className="mt-8 pt-6 border-t border-white/[0.06]">
+        <div className="mt-8 pt-6 border-t border-ea-hairline">
           <div className="flex items-center gap-3 mb-5">
             <Calendar className="w-4 h-4" style={{ color: CYAN }} />
-            <h3 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Timeline Personale del Detraining</h3>
+            <h3 className="ea-title">Timeline Personale del Detraining</h3>
           </div>
 
           <div className="mb-6">
@@ -645,7 +617,7 @@ function DetrainingPredictor({
               max={60}
               value={day}
               onChange={(e) => setDay(Number(e.target.value))}
-              className="w-full accent-[#C0FF00]"
+              className="w-full accent-ea-lime"
             />
             <div className="flex justify-between gap-2 mt-3">
               {TIMELINE_EVENTS.map((ev) => (
@@ -674,7 +646,7 @@ function DetrainingPredictor({
               >
                 <div className="flex items-center gap-2 mb-3">
                   <ev.icon className="w-4 h-4" style={{ color: ev.color }} />
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: ev.color }}>D{ev.day}</div>
+                  <div className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: ev.color }}>D{ev.day}</div>
                 </div>
                 <h3 className="text-2xl sm:text-3xl font-black text-white leading-tight">{ev.title}</h3>
                 <p className="mt-3 text-sm font-semibold leading-relaxed text-gray-400">{ev.body}</p>
@@ -688,29 +660,29 @@ function DetrainingPredictor({
       <Panel accent={PRED_RED}>
         <div className="flex items-center gap-3 mb-5">
           <TrendingDown className="w-4 h-4" style={{ color: PRED_RED }} />
-          <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Confronto Taper vs Fermo Totale — D{day}</h2>
+          <h2 className="ea-title">Confronto Taper vs Fermo Totale — D{day}</h2>
         </div>
         <p className="text-sm font-semibold text-gray-500 mb-5 leading-relaxed max-w-3xl">
-          Stesso giorno di stop, due scenari diversi. <span className="text-[#22C55E] font-black">Taper</span> = mantenere corsa lenta (50% volume).
-          <span className="text-[#F43F5E] font-black"> Fermo Totale</span> = zero training, sedentario (Coyle 1984).
+          Stesso giorno di stop, due scenari diversi. <span className="text-ea-green font-black">Taper</span> = mantenere corsa lenta (50% volume).
+          <span className="text-ea-rose font-black"> Fermo Totale</span> = zero training, sedentario (Coyle 1984).
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="rounded-xl border p-5" style={{ background: '#22C55E10', borderColor: '#22C55E33' }}>
             <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="w-4 h-4" style={{ color: '#22C55E' }} />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#22C55E' }}>SCENARIO TAPER</span>
+              <Sparkles className="w-4 h-4" style={{ color: CHART_SERIES.positive }} />
+              <span className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: CHART_SERIES.positive }}>SCENARIO TAPER</span>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <SnapshotStat label="VO2max" value={(1 - point.vo2Pct) * 100 < 0.05 ? '~0%' : `-${((1 - point.vo2Pct) * 100).toFixed(1)}%`} color={ORANGE} hint={`${(point.vo2Pct * 100).toFixed(1)}% mantenuto`} />
               <SnapshotStat label="Soglia" value={(1 - point.ltPct) * 100 < 0.05 ? '~0%' : `-${((1 - point.ltPct) * 100).toFixed(1)}%`} color={CYAN} />
               <SnapshotStat label="Mitocondri" value={`-${((1 - point.mitochondriaPct) * 100).toFixed(1)}%`} color={ACCENT} />
-              <SnapshotStat label="Performance" value={`${(point.performancePct - 1) * 100 >= 0 ? '+' : ''}${((point.performancePct - 1) * 100).toFixed(1)}%`} color="#22C55E" />
+              <SnapshotStat label="Performance" value={`${(point.performancePct - 1) * 100 >= 0 ? '+' : ''}${((point.performancePct - 1) * 100).toFixed(1)}%`} color={CHART_SERIES.positive} />
             </div>
           </div>
           <div className="rounded-xl border p-5" style={{ background: `${PRED_RED}10`, borderColor: `${PRED_RED}33` }}>
             <div className="flex items-center gap-2 mb-3">
               <TrendingDown className="w-4 h-4" style={{ color: PRED_RED }} />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: PRED_RED }}>SCENARIO FERMO TOTALE</span>
+              <span className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: PRED_RED }}>SCENARIO FERMO TOTALE</span>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <SnapshotStat label="VO2max" value={(1 - pointFull.vo2Pct) * 100 < 0.05 ? '~0%' : `-${((1 - pointFull.vo2Pct) * 100).toFixed(1)}%`} color={ORANGE} hint={`${(pointFull.vo2Pct * 100).toFixed(1)}% mantenuto`} />
@@ -720,8 +692,8 @@ function DetrainingPredictor({
             </div>
           </div>
         </div>
-        <div className="mt-4 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Differenziale (fermo − taper)</div>
+        <div className="mt-4 rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+          <div className="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Differenziale (fermo − taper)</div>
           <div className="mt-2 text-sm font-semibold text-gray-300 leading-relaxed">
             VO2 <span className="font-black text-white">{((point.vo2Pct - pointFull.vo2Pct) * 100).toFixed(1)} pp</span> in piu con il fermo.
             Soglia <span className="font-black text-white">{((point.ltPct - pointFull.ltPct) * 100).toFixed(1)} pp</span>.
@@ -737,30 +709,30 @@ function DetrainingPredictor({
         <Panel accent={ACCENT}>
           <div className="flex items-center gap-3 mb-5">
             <Rewind className="w-4 h-4" style={{ color: ACCENT }} />
-            <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Ritorno al Futuro</h2>
+            <h2 className="ea-title">Ritorno al Futuro</h2>
           </div>
           <p className="text-sm font-semibold text-gray-500 leading-relaxed">
             Ti sei fermato <span className="text-white font-black">{day} giorni</span>?
-            {isTaper && <span className="text-[#22C55E] font-black"> (taper window — quasi nessun debito)</span>}
+            {isTaper && <span className="text-ea-green font-black"> (taper window — quasi nessun debito)</span>}
           </p>
           <div className="mt-4 flex items-baseline gap-2">
             <span className="text-5xl font-black text-white">{recoveryDays}</span>
             <span className="text-sm font-bold text-gray-500">giorni di richiamo progressivo</span>
           </div>
-          <div className="mt-3 text-[11px] font-bold uppercase tracking-widest" style={{ color: ACCENT }}>
+          <div className="mt-3 text-xs font-bold uppercase tracking-widest" style={{ color: ACCENT }}>
             Ratio personale ×{ratio.toFixed(1)} {isTaper && '· taper esente'}
           </div>
           <ol className="mt-5 space-y-3 text-sm font-semibold text-gray-400">
             <li className="flex gap-3">
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 mt-0.5 shrink-0 w-12">Fase 1</span>
+              <span className="text-xs font-black uppercase tracking-widest text-gray-600 mt-0.5 shrink-0 w-12">Fase 1</span>
               <span>Corsa lenta, FC sotto 70% max. Ricarico plasmatico in 4-7 giorni.</span>
             </li>
             <li className="flex gap-3">
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 mt-0.5 shrink-0 w-12">Fase 2</span>
+              <span className="text-xs font-black uppercase tracking-widest text-gray-600 mt-0.5 shrink-0 w-12">Fase 2</span>
               <span>Soglia leggera + lunghi controllati. Risveglio enzimi ossidativi.</span>
             </li>
             <li className="flex gap-3">
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 mt-0.5 shrink-0 w-12">Fase 3</span>
+              <span className="text-xs font-black uppercase tracking-widest text-gray-600 mt-0.5 shrink-0 w-12">Fase 3</span>
               <span>Ripetute brevi sopra soglia. VO2max torna al valore pre-stop.</span>
             </li>
           </ol>
@@ -769,7 +741,7 @@ function DetrainingPredictor({
         <Panel accent={CYAN}>
           <div className="flex items-center gap-3 mb-5">
             <Gauge className="w-4 h-4" style={{ color: CYAN }} />
-            <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Tachimetri Sistemici</h2>
+            <h2 className="ea-title">Tachimetri Sistemici</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 place-items-center">
             <GaugeChart value={point.vo2Pct * 100} label="VO2MAX" sublabel="% mantenuta" color={ORANGE} size={170} />
@@ -783,7 +755,7 @@ function DetrainingPredictor({
       <Panel accent={ORANGE}>
         <div className="flex items-center gap-3 mb-5">
           <Timer className="w-4 h-4" style={{ color: ORANGE }} />
-          <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Se ti fermi oggi: 10K previsti</h2>
+          <h2 className="ea-title">Se ti fermi oggi: 10K previsti</h2>
         </div>
         <p className="text-sm font-semibold text-gray-500 mb-5 max-w-3xl leading-relaxed">
           Tempo base 10K oggi: <span className="text-white font-black">{formatSec(base10kSec)}</span>
@@ -794,18 +766,18 @@ function DetrainingPredictor({
           {whatIfRows.map((r, i) => {
             const fullProj = projectRaceTime(base10kSec, summaryFull.curve, r.day);
             return (
-              <div key={r.day} className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 text-center">
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Stop {r.day} gg</div>
+              <div key={r.day} className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4 text-center">
+                <div className="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Stop {r.day} gg</div>
                 <div className="mt-2 text-xl font-black text-white">{r.label}</div>
                 <div
-                  className="mt-0.5 text-[10px] font-bold"
+                  className="mt-0.5 text-xs font-bold"
                   style={{ color: r.deltaSec < -2 ? PRED_GREEN : r.deltaSec > 60 ? PRED_RED : r.deltaSec > 30 ? ORANGE : '#666' }}
                 >
                   taper {r.deltaSec < -2 ? '↓' : '+'}{Math.abs(Math.round(r.deltaSec))}s
                 </div>
-                <div className="mt-2 pt-2 border-t border-white/10">
+                <div className="mt-2 pt-2 border-t border-ea-hairline">
                   <div className="text-base font-black" style={{ color: '#FCA5A5' }}>{fullProj.label}</div>
-                  <div className="text-[10px] font-bold" style={{ color: PRED_RED }}>fermo +{Math.round(fullProj.deltaSec)}s</div>
+                  <div className="text-xs font-bold" style={{ color: PRED_RED }}>fermo +{Math.round(fullProj.deltaSec)}s</div>
                 </div>
               </div>
             );
@@ -817,7 +789,7 @@ function DetrainingPredictor({
       <Panel accent={ACCENT}>
         <div className="flex items-center gap-3 mb-5">
           <Activity className="w-4 h-4" style={{ color: ACCENT }} />
-          <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Il tuo passo nel tempo</h2>
+          <h2 className="ea-title">Il tuo passo nel tempo</h2>
         </div>
         <p className="text-sm font-semibold text-gray-500 mb-5 leading-relaxed max-w-3xl">
           Pace base easy: <span className="text-white font-black">{paceLabelFn(userBasePaceSec)}</span>.
@@ -826,7 +798,7 @@ function DetrainingPredictor({
         <div className="overflow-x-auto">
           <table className="w-full text-left text-[12px]">
             <thead>
-              <tr className="text-gray-500 uppercase tracking-widest font-black text-[10px]">
+              <tr className="text-gray-500 uppercase tracking-widest font-black text-xs">
                 {userPaceRow.map((r) => (
                   <th key={r.day} className="py-2 px-3">D{r.day}</th>
                 ))}
@@ -838,7 +810,7 @@ function DetrainingPredictor({
                   <td key={r.day} className="py-2 px-3">
                     <div className="text-lg font-black text-white">{r.paceLabel}</div>
                     <div
-                      className="text-[10px] font-bold"
+                      className="text-xs font-bold"
                       style={{ color: r.deltaPct < -0.05 ? PRED_GREEN : r.deltaPct > 5 ? PRED_RED : '#666' }}
                     >
                       {r.deltaPct < -0.05 ? '↓' : r.deltaPct > 0 ? '+' : ''}{Math.abs(r.deltaPct).toFixed(1)}%
@@ -855,17 +827,17 @@ function DetrainingPredictor({
       <Panel accent={PURPLE}>
         <div className="flex items-center gap-3 mb-5">
           <Dna className="w-4 h-4" style={{ color: PURPLE }} />
-          <h2 className="text-sm text-white font-black tracking-widest uppercase italic leading-none">Memory Cell — Memoria Muscolare</h2>
+          <h2 className="ea-title">Memory Cell — Memoria Muscolare</h2>
         </div>
         <p className="text-sm font-semibold text-gray-400 leading-relaxed">
           I nuclei mionucleari acquisiti negli anni di allenamento <span className="text-white font-black">non muoiono</span>:
           restano dormienti nelle fibre. Quando riprendi, accelerano la sintesi proteica.
           Murach 2020 e Seaborne 2018 (memoria epigenetica) confermano: chi ha corso anni recupera in modo non-lineare e piu rapido.
         </p>
-        <div className="mt-5 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Bonus muscle memory</div>
+        <div className="mt-5 rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+          <div className="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Bonus muscle memory</div>
           <div className="mt-2 text-3xl font-black" style={{ color: PURPLE }}>+{memoryBonusCapped}%</div>
-          <p className="mt-1 text-[11px] font-semibold text-gray-600 leading-relaxed">
+          <p className="mt-1 text-xs font-semibold text-gray-600 leading-relaxed">
             Con <span className="text-white font-black">{ageActiveYears.toFixed(1)} anni</span> di corsa, recuperi piu in fretta rispetto a un principiante.
           </p>
         </div>

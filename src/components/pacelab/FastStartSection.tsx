@@ -10,6 +10,7 @@ import {
 } from "./ui";
 import { niceTicks, pathOf, useWidth } from "./chartKit";
 
+import { CHART_TEXT } from "../charts";
 /**
  * 02 · PARTIRE FORTE
  * ════════════════════════════════════════════════════════════════════════════
@@ -102,7 +103,7 @@ function BankTankChart({ inp, res, noticeKm }: { inp: FastStartInput; res: FastS
   return (
     <div ref={wrapRef} className="w-full">
       {/* la lettura del km sotto il cursore */}
-      <div className="min-h-[34px] mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
+      <div className="min-h-[34px] mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
         {hv ? (
           <>
             <span className="font-black text-white tabular-nums" style={{ fontFamily: MONO }}>km {fmtKm(hv.km)}</span>
@@ -135,18 +136,18 @@ function BankTankChart({ inp, res, noticeKm }: { inp: FastStartInput; res: FastS
         </defs>
 
         {/* ── pannello 1: il conto in secondi ── */}
-        <text x={M.l} y={M.t - 6} fontSize="9.5" fontWeight="800" fill="#8A8A8A" letterSpacing="0.14em">SECONDI DI VANTAGGIO SUL PASSO COSTANTE</text>
+        <text x={M.l} y={M.t - 6} fontSize="12" fontWeight="800" fill={CHART_TEXT.axis} letterSpacing="0.14em">SECONDI DI VANTAGGIO SUL PASSO COSTANTE</text>
         {yTicks.map((t) => (
           <g key={t}>
             <line x1={M.l} x2={W - M.r} y1={Y1(t)} y2={Y1(t)} stroke={t === 0 ? "#3A3A3A" : "#1E1E1E"} />
-            <text x={M.l - 7} y={Y1(t) + 3.5} textAnchor="end" fontSize="10" fill="#8A8A8A" fontFamily={MONO}>
+            <text x={M.l - 7} y={Y1(t) + 3.5} textAnchor="end" fontSize="12" fill={CHART_TEXT.axis} fontFamily={MONO}>
               {t > 0 ? `+${t}″` : t < 0 ? `−${-t}″` : "0"}
             </text>
           </g>
         ))}
         {/* il tratto veloce */}
         <rect x={X(0)} y={M.t} width={X(inp.firstKm) - X(0)} height={H1} fill={LIT} fillOpacity="0.05" />
-        <text x={X(inp.firstKm / 2)} y={M.t + H1 - 6} textAnchor="middle" fontSize="9" fill={LIT} fillOpacity="0.8" fontWeight="800">
+        <text x={X(inp.firstKm / 2)} y={M.t + H1 - 6} textAnchor="middle" fontSize="12" fill={LIT} fillOpacity="0.8" fontWeight="800">
           {fmtPace(inp.fastPace)}
         </text>
         <g clipPath={`url(#${uid}a)`}>
@@ -160,7 +161,7 @@ function BankTankChart({ inp, res, noticeKm }: { inp: FastStartInput; res: FastS
           <g>
             <circle cx={X(payback)} cy={Y1(0)} r="4.5" fill={SURFACE} stroke={LIT} strokeWidth="2" />
             {!narrow && (
-              <text x={X(payback)} y={Y1(0) - 9} textAnchor="middle" fontSize="9.5" fill={LIT} fontWeight="800">
+              <text x={X(payback)} y={Y1(0) - 9} textAnchor="middle" fontSize="12" fill={LIT} fontWeight="800">
                 restituito al km {fmtKm(payback)}
               </text>
             )}
@@ -176,7 +177,7 @@ function BankTankChart({ inp, res, noticeKm }: { inp: FastStartInput; res: FastS
               return (
                 <g>
                   <path d={`M${e.x - 5},${e.y - 5}L${e.x + 5},${e.y + 5}M${e.x + 5},${e.y - 5}L${e.x - 5},${e.y + 5}`} stroke={RISK} strokeWidth="2.5" strokeLinecap="round" />
-                  <text x={e.x + (e.x > W - M.r - 70 ? -9 : 9)} y={e.y - 8} textAnchor={e.x > W - M.r - 70 ? "end" : "start"} fontSize="10" fill={RISK} fontWeight="900">
+                  <text x={e.x + (e.x > W - M.r - 70 ? -9 : 9)} y={e.y - 8} textAnchor={e.x > W - M.r - 70 ? "end" : "start"} fontSize="12" fill={RISK} fontWeight="900">
                     MURO · km {fmtKm(res.wallKm!)}
                   </text>
                 </g>
@@ -185,17 +186,17 @@ function BankTankChart({ inp, res, noticeKm }: { inp: FastStartInput; res: FastS
           </g>
         )}
         {sortedEnds.map((e) => (
-          <text key={e.l.id} x={W - M.r + 6} y={e.y + 3.5} fontSize="10.5" fontWeight="900" fill={e.l.color} fontFamily={MONO}>
+          <text key={e.l.id} x={W - M.r + 6} y={e.y + 3.5} fontSize="12" fontWeight="900" fill={e.l.color} fontFamily={MONO}>
             {fmtDelta(-e.last.bank)}
           </text>
         ))}
 
         {/* ── pannello 2: il serbatoio ── */}
-        <text x={M.l} y={top2 - 8} fontSize="9.5" fontWeight="800" fill="#8A8A8A" letterSpacing="0.14em">SERBATOIO RIMASTO</text>
+        <text x={M.l} y={top2 - 8} fontSize="12" fontWeight="800" fill={CHART_TEXT.axis} letterSpacing="0.14em">SERBATOIO RIMASTO</text>
         {[0, 0.5, 1].map((t) => (
           <g key={t}>
             <line x1={M.l} x2={W - M.r} y1={Y2(t)} y2={Y2(t)} stroke={t === 0 ? "#3A3A3A" : "#1E1E1E"} />
-            <text x={M.l - 7} y={Y2(t) + 3.5} textAnchor="end" fontSize="10" fill="#8A8A8A" fontFamily={MONO}>{Math.round(t * 100)}%</text>
+            <text x={M.l - 7} y={Y2(t) + 3.5} textAnchor="end" fontSize="12" fill={CHART_TEXT.axis} fontFamily={MONO}>{Math.round(t * 100)}%</text>
           </g>
         ))}
         <line x1={X(0)} y1={Y2(evenTank(0))} x2={X(D)} y2={Y2(evenTank(D))} stroke={REF} strokeWidth="2" strokeDasharray="5 4" />
@@ -206,12 +207,12 @@ function BankTankChart({ inp, res, noticeKm }: { inp: FastStartInput; res: FastS
 
         {/* asse dei km */}
         {xTicks.map((t) => (
-          <text key={t} x={X(t)} y={H - 8} textAnchor="middle" fontSize="10" fill="#8A8A8A" fontFamily={MONO}>{fmtKm(t, t % 1 ? 1 : 0)}</text>
+          <text key={t} x={X(t)} y={H - 8} textAnchor="middle" fontSize="12" fill={CHART_TEXT.axis} fontFamily={MONO}>{fmtKm(t, t % 1 ? 1 : 0)}</text>
         ))}
 
         {hv && (
           <g pointerEvents="none">
-            <line x1={X(hv.km)} x2={X(hv.km)} y1={M.t} y2={top2 + H2} stroke="#fff" strokeOpacity="0.4" />
+            <line x1={X(hv.km)} x2={X(hv.km)} y1={M.t} y2={top2 + H2} stroke={CHART_TEXT.primary} strokeOpacity="0.4" />
             {hv.rows.map(({ l, p }) => p && (
               <g key={l.id}>
                 <circle cx={X(p.km)} cy={Y1(p.bank)} r="3.8" fill={l.color} stroke={SURFACE} strokeWidth="2" />
@@ -244,7 +245,7 @@ function DelayBars({ res, noticeKm, onPick }: { res: FastStartResult; noticeKm: 
             <button key={b.atKm} type="button" onClick={() => onPick(b.atKm)}
               className="group flex-1 min-w-0 flex flex-col items-center justify-end h-full"
               title={`Te ne accorgi al km ${fmtKm(b.atKm)}: il resto a ${fmtPace(b.restPace)}, all'arrivo ${fmtDelta(b.deltaSec)}`}>
-              <span className={`${key ? "block" : "hidden sm:block"} text-[9.5px] font-black tabular-nums mb-1 whitespace-nowrap`} style={{ fontFamily: MONO, color: on ? "#fff" : "#9CA3AF" }}>
+              <span className={`${key ? "block" : "hidden sm:block"} text-xs font-black tabular-nums mb-1 whitespace-nowrap`} style={{ fontFamily: MONO, color: on ? "#fff" : "#9CA3AF" }}>
                 {fmtDelta(b.deltaSec)}
               </span>
               <span className="w-full rounded-t-[4px] transition-colors"
@@ -254,22 +255,22 @@ function DelayBars({ res, noticeKm, onPick }: { res: FastStartResult; noticeKm: 
         })}
         {res.wallKm != null && (
           <div className="flex-1 min-w-0 flex flex-col items-center justify-end h-full">
-            <span className="text-[9.5px] font-black mb-1" style={{ color: RISK }}>MURO</span>
+            <span className="text-xs font-black mb-1" style={{ color: RISK }}>MURO</span>
             <span className="w-full rounded-t-[4px]" style={{ height: 100, background: `repeating-linear-gradient(135deg, ${RISK}, ${RISK} 3px, ${RISK}66 3px, ${RISK}66 6px)` }} />
           </div>
         )}
       </div>
       <div className="flex gap-[3px] mt-1.5 border-t border-white/10 pt-1.5">
         {shown.map((b, i) => (
-          <span key={b.atKm} className="flex-1 min-w-0 text-center text-[9.5px] tabular-nums text-gray-500 overflow-hidden" style={{ fontFamily: MONO }}>
+          <span key={b.atKm} className="flex-1 min-w-0 text-center text-xs tabular-nums text-gray-500 overflow-hidden" style={{ fontFamily: MONO }}>
             <span className={i % 2 === 0 || i === shown.length - 1 ? "" : "hidden sm:inline"}>{fmtKm(b.atKm, b.atKm % 1 ? 1 : 0)}</span>
           </span>
         ))}
         {res.wallKm != null && (
-          <span className="flex-1 min-w-0 text-center text-[9.5px] tabular-nums" style={{ fontFamily: MONO, color: RISK }}>{fmtKm(res.wallKm)}</span>
+          <span className="flex-1 min-w-0 text-center text-xs tabular-nums" style={{ fontFamily: MONO, color: RISK }}>{fmtKm(res.wallKm)}</span>
         )}
       </div>
-      <div className="mt-1 text-[9.5px] text-gray-600 text-center">km in cui te ne accorgi e cambi passo</div>
+      <div className="mt-1 text-xs text-gray-600 text-center">km in cui te ne accorgi e cambi passo</div>
     </div>
   );
 }
@@ -392,20 +393,20 @@ export function FastStartSection({ ctx }: { ctx: PaceCtx }) {
             <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
               <Label>Il prezzo di accorgersene tardi</Label>
               {noticeKm != null && (
-                <button type="button" onClick={() => setNotice(null)} className="text-[10px] font-bold text-gray-500 hover:text-white transition-colors">
+                <button type="button" onClick={() => setNotice(null)} className="text-xs font-bold text-gray-500 hover:text-white transition-colors">
                   togli la linea azzurra
                 </button>
               )}
             </div>
             {!faster || res.holdOk ? (
-              <p className="mt-2 text-[11.5px] text-gray-500 leading-relaxed">
+              <p className="mt-2 text-xs text-gray-500 leading-relaxed">
                 {res.holdOk
                   ? <>Col margine che hai il passo obiettivo regge anche dopo la partenza: non c'è niente da correggere.</>
                   : <>Qui si vede quando la partenza è più veloce dell'obiettivo.</>}
               </p>
             ) : (
               <>
-                <p className="text-[10.5px] text-gray-500 mb-3 leading-relaxed">
+                <p className="text-xs text-gray-500 mb-3 leading-relaxed">
                   Tieni {fmtPace(P)} fino al km della barra, poi il passo più veloce che non ti fa crollare. Tocca una barra per
                   vederla nel grafico.{lateCorr && <> Al km {fmtKm(lateCorr.atKm, 0)}: il resto a <b className="text-gray-300">{fmtPace(lateCorr.restPace)}</b>, all'arrivo <b className="text-gray-300">{fmtDelta(lateCorr.deltaSec)}</b>.</>}
                 </p>
@@ -416,17 +417,17 @@ export function FastStartSection({ ctx }: { ctx: PaceCtx }) {
 
           <div className="rounded-xl border border-white/[0.07] bg-black/25 p-4">
             <Label className="mb-1">Tutte le combinazioni {ctx.distOn}</Label>
-            <p className="text-[10.5px] text-gray-500 mb-3 leading-relaxed">
+            <p className="text-xs text-gray-500 mb-3 leading-relaxed">
               Il prezzo all'arrivo se correggi subito; sotto, il km del muro se invece tieni {fmtPace(P)}. Tocca una casella.
             </p>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[340px] border-separate" style={{ borderSpacing: 3 }}>
                 <thead>
                   <tr>
-                    <th className="text-[9px] font-black tracking-[0.14em] uppercase text-gray-600 text-left font-black">primi</th>
+                    <th className="text-xs font-black tracking-[0.14em] uppercase text-gray-600 text-left font-black">primi</th>
                     {OFFSETS.map((o) => (
-                      <th key={o} className="text-[10px] font-black tabular-nums text-gray-400 font-black" style={{ fontFamily: MONO }}>
-                        −{Math.abs(o)}″<span className="block text-[9px] text-gray-600 font-normal">{fmtPace(P + o)}</span>
+                      <th key={o} className="text-xs font-black tabular-nums text-gray-400 font-black" style={{ fontFamily: MONO }}>
+                        −{Math.abs(o)}″<span className="block text-xs text-gray-600 font-normal">{fmtPace(P + o)}</span>
                       </th>
                     ))}
                   </tr>
@@ -434,7 +435,7 @@ export function FastStartSection({ ctx }: { ctx: PaceCtx }) {
                 <tbody>
                   {matrix.map((row) => (
                     <tr key={row.km}>
-                      <td className="text-[11px] font-black tabular-nums text-gray-300 pr-1 whitespace-nowrap" style={{ fontFamily: MONO }}>
+                      <td className="text-xs font-black tabular-nums text-gray-300 pr-1 whitespace-nowrap" style={{ fontFamily: MONO }}>
                         {fmtKm(row.km, row.km % 1 ? 1 : 0)} km
                       </td>
                       {row.cells.map((c, j) => {
@@ -451,7 +452,7 @@ export function FastStartSection({ ctx }: { ctx: PaceCtx }) {
                               <span className="block text-[12px] font-black tabular-nums text-white" style={{ fontFamily: MONO }}>
                                 {fmtDelta(c.smart.deltaSec)}
                               </span>
-                              <span className="block text-[9px] tabular-nums" style={{ fontFamily: MONO, color: c.wallKm != null ? "#FDA4AF" : "#86EFAC" }}>
+                              <span className="block text-xs tabular-nums" style={{ fontFamily: MONO, color: c.wallKm != null ? "#FDA4AF" : "#86EFAC" }}>
                                 {c.wallKm != null ? `muro ${fmtKm(c.wallKm)}` : "regge"}
                               </span>
                             </button>
@@ -466,7 +467,7 @@ export function FastStartSection({ ctx }: { ctx: PaceCtx }) {
           </div>
         </div>
 
-        <p className="-mt-1 text-[11px] text-gray-500 leading-relaxed max-w-5xl">
+        <p className="-mt-1 text-xs text-gray-500 leading-relaxed max-w-5xl">
           <b className="text-gray-300">Come leggerlo.</b> Uno strappo corretto subito costa poco: il consumo cresce più in fretta del
           passo, e un errore piccolo si ripaga con un rallentamento piccolo. Il conto vero lo presenta il passo tenuto «perché
           tanto sto bene»: la linea rossa resta sopra lo zero fino all'ultimo — sembri in vantaggio — e poi finisce il serbatoio.

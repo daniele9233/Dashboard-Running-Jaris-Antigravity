@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
 import type { Run } from "../types/api";
 
+import { CHART_SERIES, chartMargin, chartXAxis } from "./charts";
 // ─── Ultimi 8 blocchi da 7 giorni ────────────────────────────────────────────
 function buildWeeklyData(runs: Run[]) {
   const now = new Date();
@@ -34,10 +35,10 @@ const BarTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   const { km, count } = payload[0].payload;
   return (
-    <div className="bg-[#1E293B] border border-[#334155] px-2.5 py-2 rounded-lg shadow-xl text-xs">
-      <p className="text-[#C0FF00] font-bold mb-0.5">{label}</p>
+    <div className="ea-tooltip text-xs">
+      <p className="text-ea-lime font-bold mb-0.5">{label}</p>
       <p className="text-white font-black">{km.toFixed(1)} km</p>
-      <p className="text-[#64748B]">{count} {count === 1 ? "corsa" : "corse"}</p>
+      <p className="text-ea-text-axis">{count} {count === 1 ? "corsa" : "corse"}</p>
     </div>
   );
 };
@@ -52,35 +53,29 @@ export function WeeklyStatsPanel({ runs }: WeeklyStatsPanelProps) {
 
   if (runs.length === 0) {
     return (
-      <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 flex items-center justify-center h-full">
+      <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 flex items-center justify-center h-full">
         <p className="text-xs text-text-muted">Sincronizza corse per i dati settimanali</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 h-full flex overflow-hidden">
+    <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 h-full flex overflow-hidden">
       {/* Left: weekly km bars */}
       <div className="flex-1 p-4 flex flex-col min-w-0">
-        <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest mb-2">
+        <div className="text-xs text-text-muted font-bold uppercase tracking-widest mb-2">
           Volume Settimanale · 8 Settimane
         </div>
         <div className="flex-1 min-h-0">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={weeklyData} margin={{ top: 4, right: 4, left: -22, bottom: 0 }} barSize={14}>
-              <XAxis
-                dataKey="label"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#475569", fontSize: 8 }}
-                dy={4}
-              />
+            <BarChart data={weeklyData} margin={chartMargin} barSize={14}>
+              <XAxis {...chartXAxis} dataKey="label" dy={4} />
               <Tooltip content={<BarTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
               <Bar dataKey="km" radius={[3, 3, 0, 0]}>
                 {weeklyData.map((entry, idx) => (
                   <Cell
                     key={idx}
-                    fill={entry.current ? "#C0FF00" : "#3B82F6"}
+                    fill={entry.current ? CHART_SERIES.primary : CHART_SERIES.compare}
                     fillOpacity={entry.km > 0 ? (entry.current ? 0.9 : 0.6) : 0.12}
                   />
                 ))}
@@ -95,7 +90,7 @@ export function WeeklyStatsPanel({ runs }: WeeklyStatsPanelProps) {
 
       {/* Right: last runs */}
       <div className="w-[195px] shrink-0 p-4 flex flex-col overflow-hidden">
-        <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest mb-2">
+        <div className="text-xs text-text-muted font-bold uppercase tracking-widest mb-2">
           Ultime Corse
         </div>
         <div className="flex flex-col gap-0 flex-1 overflow-hidden">
@@ -107,10 +102,10 @@ export function WeeklyStatsPanel({ runs }: WeeklyStatsPanelProps) {
               <div className="min-w-0 flex items-center gap-2">
                 <div
                   className="w-1 h-6 rounded-full shrink-0"
-                  style={{ backgroundColor: i === 0 ? "#C0FF00" : "#1E293B" }}
+                  style={{ backgroundColor: i === 0 ? CHART_SERIES.primary : "#1E293B" }}
                 />
                 <div>
-                  <div className="text-[9px] text-[#64748B]">
+                  <div className="text-xs text-ea-text-axis">
                     {new Date(run.date).toLocaleDateString("it", { day: "numeric", month: "short" })}
                   </div>
                   <div className="text-xs font-black text-white leading-none">
@@ -119,11 +114,11 @@ export function WeeklyStatsPanel({ runs }: WeeklyStatsPanelProps) {
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <div className="text-[10px] font-bold text-[#14B8A6]">{run.avg_pace}/km</div>
+                <div className="text-xs font-bold text-ea-cyan">{run.avg_pace}/km</div>
                 {run.avg_hr ? (
-                  <div className="text-[9px] text-[#F43F5E]">♥ {run.avg_hr}</div>
+                  <div className="text-xs text-ea-rose">♥ {run.avg_hr}</div>
                 ) : (
-                  <div className="text-[9px] text-[#334155]">
+                  <div className="text-xs text-[#334155]">
                     {run.duration_minutes < 60
                       ? `${Math.round(run.duration_minutes)}m`
                       : `${Math.floor(Math.round(run.duration_minutes) / 60)}h${Math.round(run.duration_minutes) % 60}m`}

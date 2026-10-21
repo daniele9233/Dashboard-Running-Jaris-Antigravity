@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CloudSun, ThermometerSun, Droplets, Wind, TrendingDown, Loader2 } from "lucide-react";
 import type { Run } from "../../../types/api";
-import { CHART_SERIES } from "../../statistics/chartTheme";
 import {
   fetchWeatherBatch,
   computeEnvironmentalPenalty,
@@ -9,6 +8,7 @@ import {
   type WeatherSnapshot,
 } from "../../../utils/weather";
 
+import { CHART_SERIES } from "../../charts";
 const NEON = CHART_SERIES.primary;
 const CYAN = CHART_SERIES.compare;
 const LOAD = CHART_SERIES.load;
@@ -21,9 +21,9 @@ const SAMPLE_SIZE = 30;
 const TREND_SIZE = 12;
 
 const CARD =
-  "h-full rounded-[24px] p-6 flex flex-col backdrop-blur-2xl border border-white/[0.12] " +
+  "h-full rounded-2xl p-5 flex flex-col border border-ea-hairline " +
   "shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] " +
-  "bg-gradient-to-br from-white/[0.06] to-black/50";
+  "bg-ea-surface-2";
 
 const fmtDeg = (c: number) => `${Math.round(c)}°`;
 const fmtPct = (v: number) => `${Math.round(v)}%`;
@@ -34,11 +34,11 @@ function EmptyCard({ icon, title, hint }: { icon: React.ReactNode; title: string
   return (
     <div className={`${CARD} justify-center items-center`}>
       {icon}
-      <p className="text-[#666] text-[10px] font-black tracking-widest uppercase text-center mt-3">
+      <p className="text-ea-text-axis text-xs font-black tracking-widest uppercase text-center mt-3">
         {title}
       </p>
       {hint && (
-        <p className="text-[#4A4A4A] text-[9px] font-bold text-center mt-1.5 max-w-[85%]">{hint}</p>
+        <p className="text-[#4A4A4A] text-xs font-bold text-center mt-1.5 max-w-[85%]">{hint}</p>
       )}
     </div>
   );
@@ -160,9 +160,9 @@ export function WeatherNormalizerWidget({ runs }: { runs: Run[] }) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <CloudSun className="w-4 h-4" style={{ color: NEON }} />
-          <span className="text-[10px] font-black tracking-widest uppercase text-[#A0A0A0]">Impatto Meteo</span>
+          <span className="text-xs font-black tracking-widest uppercase text-ea-text-muted">Impatto Meteo</span>
         </div>
-        <span className="text-[9px] font-bold text-[#555] flex items-center gap-1.5">
+        <span className="text-xs font-bold text-ea-text-axis flex items-center gap-1.5">
           {isRefreshing && <Loader2 className="w-2.5 h-2.5 animate-spin" />}
           {analysis.total} corse
         </span>
@@ -172,38 +172,38 @@ export function WeatherNormalizerWidget({ runs }: { runs: Run[] }) {
         <div className="text-[42px] font-black leading-none" style={{ color: analysis.penaltyColor }}>
           {analysis.avgPenalty.toFixed(1)}
         </div>
-        <div className="text-[10px] font-bold tracking-wider text-[#666] mt-0.5">
+        <div className="text-xs font-bold tracking-wider text-ea-text-axis mt-0.5">
           sec/km di penalità media
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-2 mb-4">
-        <div className="rounded-xl border border-white/[0.06] p-2.5 text-center" style={{ background: "rgba(255,255,255,0.02)" }}>
+        <div className="rounded-xl border border-ea-hairline p-2.5 text-center" style={{ background: "rgba(255,255,255,0.02)" }}>
           <ThermometerSun className="w-3.5 h-3.5 mx-auto mb-1.5" style={{ color: LOAD }} />
           <div className="text-lg font-black text-white">{fmtDeg(analysis.avgTemp)}</div>
-          <div className="text-[8px] font-bold tracking-wider text-[#555]">TEMP</div>
+          <div className="text-xs font-bold tracking-wider text-ea-text-axis">TEMP</div>
         </div>
-        <div className="rounded-xl border border-white/[0.06] p-2.5 text-center" style={{ background: "rgba(255,255,255,0.02)" }}>
+        <div className="rounded-xl border border-ea-hairline p-2.5 text-center" style={{ background: "rgba(255,255,255,0.02)" }}>
           <Droplets className="w-3.5 h-3.5 mx-auto mb-1.5" style={{ color: CYAN }} />
           <div className="text-lg font-black text-white">
             {analysis.avgHumidity != null ? fmtPct(analysis.avgHumidity) : "—"}
           </div>
-          <div className="text-[8px] font-bold tracking-wider text-[#555]">RH</div>
+          <div className="text-xs font-bold tracking-wider text-ea-text-axis">RH</div>
         </div>
-        <div className="rounded-xl border border-white/[0.06] p-2.5 text-center" style={{ background: "rgba(255,255,255,0.02)" }}>
-          <Wind className="w-3.5 h-3.5 mx-auto mb-1.5" style={{ color: "#A78BFA" }} />
+        <div className="rounded-xl border border-ea-hairline p-2.5 text-center" style={{ background: "rgba(255,255,255,0.02)" }}>
+          <Wind className="w-3.5 h-3.5 mx-auto mb-1.5" style={{ color: CHART_SERIES.tertiary }} />
           <div className="text-lg font-black text-white">
             {analysis.avgDew != null ? fmtDeg(analysis.avgDew) : "—"}
           </div>
-          <div className="text-[8px] font-bold tracking-wider text-[#555]">DEW</div>
+          <div className="text-xs font-bold tracking-wider text-ea-text-axis">DEW</div>
         </div>
       </div>
 
       <div className="flex-1 flex flex-col justify-center min-h-0">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[9px] font-bold tracking-wider text-[#666] uppercase">Giorni caldi</span>
-          <span className="text-[11px] font-black text-white">
-            {analysis.hotDays}<span className="text-[#555]">/{analysis.total}</span>
+          <span className="text-xs font-bold tracking-wider text-ea-text-axis uppercase">Giorni caldi</span>
+          <span className="text-xs font-black text-white">
+            {analysis.hotDays}<span className="text-ea-text-axis">/{analysis.total}</span>
           </span>
         </div>
 
@@ -236,7 +236,7 @@ export function WeatherNormalizerWidget({ runs }: { runs: Run[] }) {
                 });
               })()}
             </div>
-            <div className="flex justify-between mt-1 text-[8px] font-bold text-[#333]">
+            <div className="flex justify-between mt-1 text-xs font-bold text-ea-text-axis">
               <span>passato</span>
               <span>→</span>
               <span>recente</span>
@@ -247,7 +247,7 @@ export function WeatherNormalizerWidget({ runs }: { runs: Run[] }) {
 
       <div className="flex items-center gap-1.5 mt-2 pt-3 border-t border-white/[0.04]">
         <TrendingDown className="w-3 h-3" style={{ color: analysis.penaltyColor }} />
-        <span className="text-[9px] font-bold tracking-wider" style={{ color: analysis.penaltyColor }}>
+        <span className="text-xs font-bold tracking-wider" style={{ color: analysis.penaltyColor }}>
           {analysis.avgPenalty < 3
             ? "Condizioni quasi ideali"
             : analysis.avgPenalty < 7

@@ -22,7 +22,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "context:update": "tsx scripts/update-ai-context.ts",
-    "context:check": "tsx scripts/update-ai-context.ts --check"
+    "context:check": "tsx scripts/update-ai-context.ts --check",
+    "design:check": "tsx scripts/design-check.ts"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

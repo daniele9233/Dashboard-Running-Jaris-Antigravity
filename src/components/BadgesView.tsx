@@ -76,8 +76,8 @@ function ProgressBar({ p }: { p: BadgeProgress }) {
           style={{ width: `${pct}%`, background: pct >= 80 ? LIME : pct >= 45 ? CYAN : "#4B5563" }} />
       </div>
       <div className="mt-1 flex items-baseline justify-between gap-2">
-        <span className="text-[9px] text-gray-500 truncate" style={{ fontFamily: MONO }}>{p.label}</span>
-        <span className="text-[9px] font-black tabular-nums shrink-0"
+        <span className="text-xs text-gray-500 truncate" style={{ fontFamily: MONO }}>{p.label}</span>
+        <span className="text-xs font-black tabular-nums shrink-0"
           style={{ fontFamily: MONO, color: pct >= 80 ? LIME : "#6B7280" }}>{pct}%</span>
       </div>
     </div>
@@ -151,26 +151,26 @@ export function BadgesView() {
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter text-white uppercase italic">
               {t("badges.title1")} <span className="text-[#C0FF00]">{t("badges.title2")}</span>
             </h1>
-            <p className="text-gray-600 text-[10px] font-black tracking-[0.3em] uppercase mt-2">
+            <p className="text-gray-600 text-xs font-black tracking-[0.3em] uppercase mt-2">
               {t("badges.subtitle")}
             </p>
           </div>
           <div className="flex items-center gap-3">
             {checkedAt && (
-              <span className="text-[10px] text-gray-600 tabular-nums hidden md:inline" style={{ fontFamily: MONO }}>
+              <span className="text-xs text-gray-600 tabular-nums hidden md:inline" style={{ fontFamily: MONO }}>
                 {t("badges.checkedAt", { time: fmtTime(checkedAt, locale) })}
               </span>
             )}
             <button
               type="button" onClick={onCheck} disabled={checking}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/10 bg-white/[0.03] text-[10px] font-black tracking-[0.2em] uppercase text-gray-300 hover:border-[#C0FF00]/40 hover:text-white transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/10 bg-white/[0.03] text-xs font-black tracking-[0.2em] uppercase text-gray-300 hover:border-[#C0FF00]/40 hover:text-white transition-colors disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${checking ? "animate-spin text-[#C0FF00]" : ""}`} />
               {checking ? t("badges.checking") : t("badges.recheck")}
             </button>
             <div className="flex items-center gap-2 text-gray-500">
               <Medal className="w-5 h-5 text-[#C0FF00]" />
-              <span className="text-[10px] font-black tracking-[0.25em] uppercase hidden sm:inline">{t("badges.hallOfFame")}</span>
+              <span className="text-xs font-black tracking-[0.25em] uppercase hidden sm:inline">{t("badges.hallOfFame")}</span>
             </div>
           </div>
         </div>
@@ -185,18 +185,18 @@ export function BadgesView() {
                 <span className="text-5xl md:text-6xl font-black text-[#C0FF00] tabular-nums" style={{ fontFamily: MONO }}>{got}</span>
                 <span className="text-2xl font-black text-gray-600">/ {total}</span>
               </div>
-              <div className="text-[10px] font-black tracking-[0.3em] uppercase text-gray-500 mt-1">{t("badges.unlockedCount")}</div>
+              <div className="text-xs font-black tracking-[0.3em] uppercase text-gray-500 mt-1">{t("badges.unlockedCount")}</div>
               {backfilled != null && backfilled > 0 && (
-                <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10.5px]"
+                <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs"
                   style={{ borderColor: `${LIME}33`, background: `${LIME}0f`, color: LIME }}>
                   <Sparkles className="w-3.5 h-3.5" />
                   {t("badges.backfilled", { count: backfilled })}
                 </div>
               )}
               {got === 0 && (
-                <p className="text-[11px] text-gray-500 mt-3 leading-relaxed max-w-md">{t("badges.emptyState")}</p>
+                <p className="text-xs text-gray-500 mt-3 leading-relaxed max-w-md">{t("badges.emptyState")}</p>
               )}
-              <p className="text-[10.5px] text-gray-600 mt-3 flex items-center gap-1.5 leading-relaxed max-w-md">
+              <p className="text-xs text-gray-600 mt-3 flex items-center gap-1.5 leading-relaxed max-w-md">
                 <Play className="w-3 h-3 text-[#C0FF00] shrink-0" aria-hidden />
                 {t("badges.previewHint")}
               </p>
@@ -204,16 +204,16 @@ export function BadgesView() {
 
             {latest.length > 0 && (
               <div className="rounded-2xl border border-white/[0.06] bg-black/30 p-4">
-                <div className="text-[9px] font-black tracking-[0.22em] uppercase text-gray-500 mb-3">{t("badges.latest")}</div>
+                <div className="text-xs font-black tracking-[0.22em] uppercase text-gray-500 mb-3">{t("badges.latest")}</div>
                 <div className="space-y-2">
                   {latest.map(({ def, at }) => (
                     <button key={def.id} type="button" onClick={() => replay(def)}
                       className="w-full flex items-center gap-2.5 text-left group">
                       <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: def.accent, boxShadow: `0 0 8px ${def.accent}` }} />
-                      <span className="text-[11.5px] font-bold truncate group-hover:text-white transition-colors" style={{ color: def.accent }}>
+                      <span className="text-xs font-bold truncate group-hover:text-white transition-colors" style={{ color: def.accent }}>
                         {def.title}
                       </span>
-                      <span className="ml-auto text-[9.5px] text-gray-600 shrink-0 tabular-nums" style={{ fontFamily: MONO }}>
+                      <span className="ml-auto text-xs text-gray-600 shrink-0 tabular-nums" style={{ fontFamily: MONO }}>
                         {fmtDate(at, locale)}
                       </span>
                     </button>
@@ -234,8 +234,8 @@ export function BadgesView() {
                   className="text-left group/g"
                   aria-pressed={group === g}>
                   <div className="flex items-baseline justify-between mb-1">
-                    <span className={`text-[9px] font-black tracking-[0.18em] uppercase transition-colors ${group === g ? "text-[#C0FF00]" : "text-gray-500 group-hover/g:text-gray-300"}`}>{g}</span>
-                    <span className="text-[9.5px] font-black text-gray-500 tabular-nums" style={{ fontFamily: MONO }}>{n}/{defs.length}</span>
+                    <span className={`text-xs font-black tracking-[0.18em] uppercase transition-colors ${group === g ? "text-[#C0FF00]" : "text-gray-500 group-hover/g:text-gray-300"}`}>{g}</span>
+                    <span className="text-xs font-black text-gray-500 tabular-nums" style={{ fontFamily: MONO }}>{n}/{defs.length}</span>
                   </div>
                   <div className="h-[3px] rounded-full bg-white/[0.07] overflow-hidden">
                     <div className="h-full rounded-full transition-[width] duration-700"
@@ -273,8 +273,8 @@ export function BadgesView() {
                       <div className="h-full rounded-full transition-[width] duration-700"
                         style={{ width: `${pc}%`, background: `linear-gradient(90deg, ${def.accent}, ${def.accent2})` }} />
                     </div>
-                    <div className="mt-2 text-[10px] text-gray-400" style={{ fontFamily: MONO }}>{p.label}</div>
-                    {p.remaining && <div className="text-[10px] text-gray-600 mt-0.5">{p.remaining}</div>}
+                    <div className="mt-2 text-xs text-gray-400" style={{ fontFamily: MONO }}>{p.label}</div>
+                    {p.remaining && <div className="text-xs text-gray-600 mt-0.5">{p.remaining}</div>}
                   </button>
                 );
               })}
@@ -287,7 +287,7 @@ export function BadgesView() {
           {([["all", t("badges.filterAll")], ["unlocked", t("badges.filterUnlocked")], ["locked", t("badges.filterLocked")]] as [Filter, string][])
             .map(([id, label]) => (
               <button key={id} type="button" onClick={() => setFilter(id)}
-                className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-[0.18em] uppercase border transition-colors"
+                className="px-3 py-1.5 rounded-lg text-xs font-black tracking-[0.18em] uppercase border transition-colors"
                 style={{
                   borderColor: filter === id ? `${LIME}55` : "#ffffff12",
                   background: filter === id ? `${LIME}14` : "transparent",
@@ -298,7 +298,7 @@ export function BadgesView() {
             ))}
           {group && (
             <button type="button" onClick={() => setGroup(null)}
-              className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-[0.18em] uppercase border border-white/10 text-gray-400 hover:text-white transition-colors">
+              className="px-3 py-1.5 rounded-lg text-xs font-black tracking-[0.18em] uppercase border border-white/10 text-gray-400 hover:text-white transition-colors">
               {group} ✕
             </button>
           )}
@@ -327,7 +327,7 @@ export function BadgesView() {
             <section key={g} className="rounded-3xl border border-white/[0.07] bg-gradient-to-b from-white/[0.02] to-black/30 p-5 md:p-6">
               <div className="flex items-center gap-2 mb-4">
                 <h2 className="text-sm font-black tracking-[0.25em] uppercase text-white">{g}</h2>
-                <span className="text-[10px] font-black text-gray-600" style={{ fontFamily: MONO }}>
+                <span className="text-xs font-black text-gray-600" style={{ fontFamily: MONO }}>
                   {gotInGroup}/{all.length}
                 </span>
               </div>
@@ -356,7 +356,7 @@ export function BadgesView() {
                         <div className="text-[12px] font-black uppercase tracking-wide leading-tight" style={{ color: def.accent }}>
                           {def.title}
                         </div>
-                        <div className="text-[9px] text-gray-500 mt-1.5">
+                        <div className="text-xs text-gray-500 mt-1.5">
                           {at ? t("badges.unlockedOn", { date: fmtDate(at, locale) }) : t("badges.unlocked")}
                         </div>
                       </button>
@@ -379,14 +379,14 @@ export function BadgesView() {
                       <div className="text-[12px] font-black uppercase tracking-wide text-gray-400 leading-tight">
                         {def.title}
                       </div>
-                      <div className="text-[9px] text-[#8A8A8A] mt-1.5 leading-snug">{def.mechanic}</div>
+                      <div className="text-xs text-[#8A8A8A] mt-1.5 leading-snug">{def.mechanic}</div>
                       {p?.pct != null ? <ProgressBar p={p} /> : p?.label ? (
                         // i record non hanno una percentuale: si mostra il numero da battere
-                        <div className="mt-2 text-[9px] text-gray-500 leading-snug" style={{ fontFamily: MONO }}>
+                        <div className="mt-2 text-xs text-gray-500 leading-snug" style={{ fontFamily: MONO }}>
                           {p.label}
                         </div>
                       ) : (
-                        <div className="mt-2 flex items-center gap-1 text-[9px] font-black tracking-[0.18em] uppercase text-gray-600 group-hover:text-white transition-colors">
+                        <div className="mt-2 flex items-center gap-1 text-xs font-black tracking-[0.18em] uppercase text-gray-600 group-hover:text-white transition-colors">
                           <Play className="w-2.5 h-2.5" />
                           {t("badges.preview")}
                         </div>

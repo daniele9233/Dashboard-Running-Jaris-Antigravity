@@ -14,6 +14,7 @@ import {
 } from '../utils/detrainingModel';
 import { formatDuration } from '../utils/paceFormat';
 
+import { CHART_TEXT } from "./charts";
 interface Props {
   profile: Profile | null | undefined;
   runs: Run[];
@@ -73,7 +74,7 @@ export function DetrainingWidget({ profile, runs, bikes = NO_BIKES, vdot, base5k
   const rode = (bike?.sessions.length ?? 0) > 0;
   const needed = bike ? `~${formatDuration(Math.round(bike.maintenanceMinPerWeek / 5) * 5)} a settimana` : '';
   const bikeVerdict = !bike || !rode
-    ? { color: '#666', line: `Per tenere il VO2max: ${needed}` }
+    ? { color: CHART_TEXT.faint, line: `Per tenere il VO2max: ${needed}` }
     : bike.counted === 0
       ? { color: ORANGE, line: 'Troppo corte o troppo piano: non contano' }
       : bike.coverage >= 1
@@ -122,14 +123,14 @@ export function DetrainingWidget({ profile, runs, bikes = NO_BIKES, vdot, base5k
   const fullPct = Math.max(0, fVo2Loss);
 
   return (
-    <div className="h-full rounded-[24px] p-6 flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+    <div className="h-full rounded-2xl p-5 flex flex-col overflow-hidden border border-ea-hairline shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-ea-surface-1">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Icon className="w-3.5 h-3.5" style={{ color: state.color }} />
-          <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest">DETRAINING</span>
+          <span className="text-ea-text-muted text-xs font-black tracking-widest">DETRAINING</span>
         </div>
         <span
-          className="px-2 py-1 rounded-[12px] text-[9px] font-black tracking-widest uppercase"
+          className="px-2 py-1 rounded-[12px] text-xs font-black tracking-widest uppercase"
           style={{ background: `${state.color}22`, color: state.color }}
         >
           {state.label}
@@ -145,14 +146,14 @@ export function DetrainingWidget({ profile, runs, bikes = NO_BIKES, vdot, base5k
         >
           {days}
         </motion.span>
-        <span className="text-[#A0A0A0] text-sm font-semibold">gg dall'ultima corsa</span>
+        <span className="text-ea-text-muted text-sm font-semibold">gg dall'ultima corsa</span>
       </div>
-      <div className="text-[#666] text-[10px] font-bold uppercase tracking-widest mb-4">{state.sub}</div>
+      <div className="text-ea-text-axis text-xs font-bold uppercase tracking-widest mb-4">{state.sub}</div>
 
       {/* Two-bar comparison: taper vs full stop */}
       <div className="space-y-3 mb-4">
         <div>
-          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest mb-1.5">
+          <div className="flex items-center justify-between text-xs font-black uppercase tracking-widest mb-1.5">
             <span style={{ color: GREEN }}>SCENARIO TAPER</span>
             <span className="text-white font-mono">
               VO2 {lossLabel(tPoint.vo2Pct)}% · perf {perfLabel(tPoint.performancePct)}%
@@ -169,7 +170,7 @@ export function DetrainingWidget({ profile, runs, bikes = NO_BIKES, vdot, base5k
           </div>
         </div>
         <div>
-          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest mb-1.5">
+          <div className="flex items-center justify-between text-xs font-black uppercase tracking-widest mb-1.5">
             <span style={{ color: RED }}>SCENARIO FERMO TOTALE</span>
             <span className="text-white font-mono">
               VO2 {lossLabel(fPoint.vo2Pct)}% · perf {perfLabel(fPoint.performancePct)}%
@@ -193,7 +194,7 @@ export function DetrainingWidget({ profile, runs, bikes = NO_BIKES, vdot, base5k
           className="rounded-[16px] border px-3 py-2 mb-2"
           style={{ background: `${bikeVerdict.color}0D`, borderColor: `${bikeVerdict.color}33` }}
         >
-          <div className="flex items-center justify-between gap-2 text-[10px] font-black uppercase tracking-widest mb-1.5">
+          <div className="flex items-center justify-between gap-2 text-xs font-black uppercase tracking-widest mb-1.5">
             <span className="flex items-center gap-1.5" style={{ color: bikeVerdict.color }}>
               <Bike className="w-3 h-3" /> CON LA BICI
             </span>
@@ -214,8 +215,8 @@ export function DetrainingWidget({ profile, runs, bikes = NO_BIKES, vdot, base5k
               />
             </div>
           )}
-          <div className="flex items-center justify-between gap-2 text-[10px] mt-1.5" title={bikeDetail}>
-            <span className="text-[#A0A0A0] font-bold">
+          <div className="flex items-center justify-between gap-2 text-xs mt-1.5" title={bikeDetail}>
+            <span className="text-ea-text-muted font-bold">
               {rode
                 ? `${bike.sessions.length} ${bike.sessions.length === 1 ? 'uscita' : 'uscite'} · ${formatDuration(bike.minutes)}`
                 : "nessuna uscita dall'ultima corsa"}
@@ -227,7 +228,7 @@ export function DetrainingWidget({ profile, runs, bikes = NO_BIKES, vdot, base5k
             )}
           </div>
           <div
-            className="text-[#666] text-[10px] font-bold mt-1"
+            className="text-ea-text-axis text-xs font-bold mt-1"
             title="Minuti di bici a settimana, all'intensità delle tue uscite (almeno il 45% della riserva), per arrivare a un terzo del carico di corsa di prima: lì il VO2max regge (Hickson). Più forte, ne bastano meno."
           >
             {bikeVerdict.line}
@@ -237,27 +238,27 @@ export function DetrainingWidget({ profile, runs, bikes = NO_BIKES, vdot, base5k
 
       {/* 5K pace comparison */}
       <div className="grid grid-cols-3 gap-2 mt-auto">
-        <div className="rounded-[16px] bg-white/[0.025] border border-white/[0.06] p-3">
-          <div className="text-[9px] font-black tracking-widest uppercase text-gray-500">5K base</div>
+        <div className="rounded-[16px] bg-white/[0.025] border border-ea-hairline p-3">
+          <div className="text-xs font-black tracking-widest uppercase text-gray-500">5K base</div>
           <div className="text-white text-lg font-black font-mono mt-1">{formatSec(base5kSec)}</div>
         </div>
         <div className="rounded-[16px] border p-3" style={{ background: `${GREEN}10`, borderColor: `${GREEN}33` }}>
-          <div className="text-[9px] font-black tracking-widest uppercase" style={{ color: GREEN }}>5K taper</div>
+          <div className="text-xs font-black tracking-widest uppercase" style={{ color: GREEN }}>5K taper</div>
           <div className="text-white text-lg font-black font-mono mt-1">{formatSec(t5k)}</div>
-          <div className="text-[9px] font-bold mt-0.5" style={{ color: tDeltaSec < 0 ? GREEN : '#666' }}>
+          <div className="text-xs font-bold mt-0.5" style={{ color: tDeltaSec < 0 ? GREEN : '#666' }}>
             {tDeltaSec < 0 ? '↓' : '+'}{Math.abs(Math.round(tDeltaSec))}s
           </div>
         </div>
         <div className="rounded-[16px] border p-3" style={{ background: `${RED}10`, borderColor: `${RED}33` }}>
-          <div className="text-[9px] font-black tracking-widest uppercase" style={{ color: RED }}>5K fermo</div>
+          <div className="text-xs font-black tracking-widest uppercase" style={{ color: RED }}>5K fermo</div>
           <div className="text-white text-lg font-black font-mono mt-1">{formatSec(f5k)}</div>
-          <div className="text-[9px] font-bold mt-0.5" style={{ color: fDeltaSec > 5 ? RED : '#666' }}>
+          <div className="text-xs font-bold mt-0.5" style={{ color: fDeltaSec > 5 ? RED : '#666' }}>
             +{Math.round(fDeltaSec)}s
           </div>
         </div>
       </div>
 
-      <div className="text-[#555] text-[9px] tracking-wider mt-3 text-center">
+      <div className="text-ea-text-axis text-xs tracking-wider mt-3 text-center">
         Coyle 1984 · Mujika 2018 · Bosquet 2007/2013
       </div>
     </div>

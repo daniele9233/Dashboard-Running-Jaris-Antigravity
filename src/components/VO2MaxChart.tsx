@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import type { Run } from "../types/api";
 
+import { CHART_TEXT, chartGrid, chartMargin, chartXAxis, chartYAxis } from "./charts";
 interface VO2MaxChartProps {
   runs: Run[];
   vdot: number | null;
@@ -145,7 +146,7 @@ function VdotGauge({ value, color }: { value: number; color: string }) {
       <text x={cx} y={cy - 8} textAnchor="middle" fill="white" fontSize={26} fontWeight={900} fontFamily="sans-serif">
         {value}
       </text>
-      <text x={cx} y={cy + 8} textAnchor="middle" fill="#64748B" fontSize={9} fontFamily="sans-serif" fontWeight={600} letterSpacing={1}>
+      <text x={cx} y={cy + 8} textAnchor="middle" fill={CHART_TEXT.axis} fontSize={12} fontFamily="sans-serif" fontWeight={600} letterSpacing={1}>
         VO2MAX
       </text>
     </svg>
@@ -159,13 +160,13 @@ const ChartTooltip = ({ active, payload, label }: any) => {
   if (!v) return null;
   const pace = calcTPace(v);
   return (
-    <div className="bg-[#1E293B] border border-[#334155] px-3 py-2 rounded-xl shadow-xl text-xs min-w-[150px]">
-      <p className="text-[#C0FF00] font-bold mb-1">{label}</p>
+    <div className="ea-tooltip text-xs">
+      <p className="text-ea-lime font-bold mb-1">{label}</p>
       <p className="text-white font-black text-base">VDOT {v}</p>
-      <p className="text-text-muted text-[10px]">{vdotLabel(v)}</p>
+      <p className="text-text-muted text-xs">{vdotLabel(v)}</p>
       <div className="border-t border-[#334155] mt-1.5 pt-1.5 flex justify-between gap-3">
         <span className="text-text-muted">T-Pace</span>
-        <span className="text-[#C0FF00] font-black">{pace}/km</span>
+        <span className="text-ea-lime font-black">{pace}/km</span>
       </div>
     </div>
   );
@@ -208,16 +209,16 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
 
   return (
     <div
-      className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex flex-col"
+      className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-5 flex flex-col"
       style={{ minHeight: 220, borderLeft: "3px solid #3B82F6" }}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-[10px] text-text-muted font-semibold tracking-wider uppercase">
+        <h3 className="text-xs text-text-muted font-semibold tracking-wider uppercase">
           VO2 Max / VDOT
         </h3>
         {trend !== null && (
-          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${trend >= 0 ? "text-[#14B8A6] bg-[#14B8A6]/10" : "text-[#F43F5E] bg-[#F43F5E]/10"}`}>
+          <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${trend >= 0 ? "text-ea-cyan bg-[#14B8A6]/10" : "text-ea-rose bg-ea-rose/10"}`}>
             {trend >= 0 ? "+" : ""}{trend} (3M)
           </span>
         )}
@@ -231,10 +232,10 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
             <>
               <VdotGauge value={displayVdot} color={color} />
               <div className="text-sm font-black uppercase tracking-widest" style={{ color }}>{label}</div>
-              <div className="text-[9px] text-text-muted">ml/kg/min · Jack Daniels</div>
+              <div className="text-xs text-text-muted">ml/kg/min · Jack Daniels</div>
               {tPace && (
                 <div className="flex flex-col items-center mt-1">
-                  <div className="text-[9px] text-text-muted uppercase tracking-wider mb-0.5">Pace Soglia (T)</div>
+                  <div className="text-xs text-text-muted uppercase tracking-wider mb-0.5">Pace Soglia (T)</div>
                   <div className="flex items-baseline gap-1">
                     <span className="text-4xl font-black text-white">{tPace}</span>
                     <span className="text-base text-text-muted">/km</span>
@@ -246,11 +247,11 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
             <div className="text-center py-4 px-3">
               <div className="text-3xl mb-2">🏃</div>
               <div className="text-sm font-black text-white mb-1">VDOT non disponibile</div>
-              <div className="text-[10px] text-text-muted leading-relaxed">
+              <div className="text-xs text-text-muted leading-relaxed">
                 Servono almeno {runs.length === 0 ? "5 corse" : `${5 - runs.length} corse in più`} di ≥5 km
                 {runs.length > 0 ? " a sforzo costante (HR ≥ 80%)" : ""}.
                 <br />
-                <span className="text-[#C0FF00]/80">Sincronizza più attività per attivare il calcolo.</span>
+                <span className="text-ea-lime/80">Sincronizza più attività per attivare il calcolo.</span>
               </div>
             </div>
           )}
@@ -258,28 +259,21 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
 
         {/* Right — history chart */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="text-[9px] text-text-muted font-semibold tracking-wider uppercase mb-2">
+          <div className="text-xs text-text-muted font-semibold tracking-wider uppercase mb-2">
             Storico 12 mesi
           </div>
           <div className="flex-1" style={{ minHeight: 140 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={filledWithCurrent} margin={{ top: 8, right: 8, left: -28, bottom: 0 }}>
+              <AreaChart data={filledWithCurrent} margin={chartMargin}>
                 <defs>
                   <linearGradient id="vo2Grad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={color} stopOpacity={0.3} />
                     <stop offset="95%" stopColor={color} stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#1E293B" />
-                <XAxis
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#475569", fontSize: 9 }}
-                  dy={4}
-                  interval={0}
-                />
-                <YAxis hide domain={["auto", "auto"]} />
+                <CartesianGrid {...chartGrid} />
+                <XAxis {...chartXAxis} dataKey="name" dy={4} interval={0} />
+                <YAxis {...chartYAxis} hide width={0} domain={["auto", "auto"]} />
                 <Tooltip content={<ChartTooltip />} cursor={{ stroke: "rgba(255,255,255,0.08)" }} />
                 <Area
                   type="monotone"
@@ -288,7 +282,7 @@ export function VO2MaxChart({ runs, vdot }: VO2MaxChartProps) {
                   strokeWidth={2}
                   fill="url(#vo2Grad)"
                   dot={{ r: 3, fill: color, strokeWidth: 0 }}
-                  activeDot={{ r: 5, fill: color, stroke: "#fff", strokeWidth: 1.5 }}
+                  activeDot={{ r: 5, fill: color, stroke: CHART_TEXT.primary, strokeWidth: 1.5 }}
                   connectNulls={false}
                 />
               </AreaChart>

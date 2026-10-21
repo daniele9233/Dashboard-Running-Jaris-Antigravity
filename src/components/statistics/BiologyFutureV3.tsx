@@ -1,8 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-  Area, AreaChart, Bar, CartesianGrid, Cell, ComposedChart, Line, LineChart,
-  ReferenceArea, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
-} from "recharts";
+import { Area, AreaChart, Bar, CartesianGrid, Cell, ComposedChart, Line, LineChart, ReferenceArea, ReferenceDot, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { Dna, Hourglass, Microscope, Snowflake, Sun, Thermometer, Timer } from "lucide-react";
 import type { Profile, Run } from "../../types/api";
 import { usePhysio } from "../gamification/usePhysio";
@@ -11,8 +8,8 @@ import {
   zeroLevels, type RecipeId, type SystemLevels, type WeeklyPlan,
 } from "../gamification/physioEngine";
 import { fmtClock, heatSlowdownFrac as heatPenaltyFrac, predictSec } from "../gamification/gamiCore";
-import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from "./chartTheme";
 
+import { AREA_FILL, CHART_SERIES, CHART_SURFACE, CHART_TEXT, ChartPanel, ChartPlot, ChartTip, chartGrid, chartMargin, chartReferenceLine, chartXAxis, chartYAxis, seriesStroke } from "../charts";
 /**
  * BIOLOGIA E FUTURO · V2
  * ════════════════════════════════════════════════════════════════════════════
@@ -38,32 +35,14 @@ import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from "./chartTheme";
 
 const PANEL = CHART_SURFACE.panel;
 const BORDER = CHART_SURFACE.border;
-const GRID = CHART_SURFACE.grid;
 const LIME = CHART_SERIES.primary;
 const CYAN = CHART_SERIES.compare;
 const MONO = "'JetBrains Mono', monospace";
 
 const MESI = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"];
 
-const box = {
-  background: "#0A0A0AF5", border: `1px solid ${CHART_SURFACE.borderStrong}`,
-  borderRadius: 10, padding: "8px 10px", fontSize: 11,
-};
 
-function Panel({ icon: Icon, title, hint, children }: {
-  icon: typeof Dna; title: string; hint?: string; children: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-2xl border overflow-hidden" style={{ borderColor: BORDER, background: PANEL }}>
-      <div className="flex items-baseline gap-2 px-5 pt-4 pb-3">
-        <Icon className="w-4 h-4 self-center" style={{ color: LIME }} />
-        <h3 className="text-[11px] font-black tracking-[0.2em] uppercase text-white">{title}</h3>
-        {hint && <span className="ml-auto text-[10px] truncate" style={{ color: CHART_TEXT.faint }}>{hint}</span>}
-      </div>
-      <div className="px-5 pb-5">{children}</div>
-    </section>
-  );
-}
+const Panel = ChartPanel;
 
 const RECIPES: { id: RecipeId; label: string; color: string; what: string }[] = [
   { id: "soglia", label: "Una soglia in più", color: SYSTEMS.soglia.color, what: "26′ di lavoro in soglia a settimana" },
@@ -244,39 +223,26 @@ export function BiologyFutureV3({ runs, profile }: { runs: Run[]; profile: Profi
       >
         <div className="grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
           <div>
-            <div className="h-[260px] w-full">
+            <ChartPlot size="standard">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={decay} margin={{ top: 8, right: 14, left: -20, bottom: 0 }}>
-                  <CartesianGrid stroke={GRID} strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="week" tick={{ fill: CHART_TEXT.axis, fontSize: 10, fontFamily: MONO }}
-                    tickFormatter={(w: number) => (w === 0 ? "oggi" : `${w}s`)}
-                    stroke={CHART_SURFACE.borderStrong}
-                  />
-                  <YAxis
-                    domain={[0, Math.max(40, Math.ceil(decayTop / 10) * 10)]} width={44} unit="%"
-                    tick={{ fill: CHART_TEXT.axis, fontSize: 10, fontFamily: MONO }}
-                    stroke={CHART_SURFACE.borderStrong}
-                  />
-                  <Tooltip
-                    contentStyle={box}
-                    labelFormatter={(w) => (w === 0 ? "oggi" : `dopo ${w} settimane di stop`)}
-                    formatter={(v: number, n) => [`${v}%`, SYSTEMS[n as keyof typeof SYSTEMS]?.name ?? String(n)]}
-                  />
+                <LineChart data={decay} margin={chartMargin}>
+                  <CartesianGrid {...chartGrid} />
+                  <XAxis {...chartXAxis} dataKey="week" tickFormatter={(w: number) => (w === 0 ? "oggi" : `${w}s`)} />
+                  <YAxis {...chartYAxis} domain={[0, Math.max(40, Math.ceil(decayTop / 10) * 10)]} width={44} unit="%" />
+                  <ChartTip labelFormatter={(w) => (w === 0 ? "oggi" : `dopo ${w} settimane di stop`)} formatter={(v: number, n) => [`${v}%`, SYSTEMS[n as keyof typeof SYSTEMS]?.name ?? String(n)]} />
                   <ReferenceArea x1={0} x2={stopWeeks} fill={LIME} fillOpacity={0.05} />
-                  <ReferenceLine x={stopWeeks} stroke={LIME} strokeDasharray="4 3" />
+                  <ReferenceLine x={stopWeeks} {...chartReferenceLine} stroke={LIME} />
                   {SYSTEM_ORDER.map((id) => (
                     <Line
-                      key={id} type="monotone" dataKey={id} stroke={SYSTEMS[id].color}
-                      strokeWidth={2} dot={false}
+                      key={id} type="monotone" dataKey={id} {...seriesStroke(SYSTEMS[id].color, "derived")}
                     />
                   ))}
                 </LineChart>
               </ResponsiveContainer>
-            </div>
+            </ChartPlot>
             <div className="mt-2">
               <div className="flex items-baseline justify-between mb-1">
-                <span className="text-[10.5px]" style={{ color: CHART_TEXT.muted }}>Settimane di stop</span>
+                <span className="text-xs" style={{ color: CHART_TEXT.muted }}>Settimane di stop</span>
                 <span className="text-[13px] font-black tabular-nums" style={{ fontFamily: MONO, color: LIME }}>
                   {stopWeeks}
                 </span>
@@ -284,23 +250,23 @@ export function BiologyFutureV3({ runs, profile }: { runs: Run[]; profile: Profi
               <input
                 type="range" min={1} max={12} step={1} value={stopWeeks}
                 onChange={(e) => setStopWeeks(+e.target.value)}
-                className="w-full accent-[#C0FF00] cursor-pointer"
+                className="w-full accent-ea-lime cursor-pointer"
               />
             </div>
           </div>
 
           <div className="space-y-2.5">
             <div className="rounded-xl border p-3.5" style={{ borderColor: `${CHART_SERIES.risk}44`, background: `${CHART_SERIES.risk}0d` }}>
-              <div className="text-[9px] font-black tracking-[0.2em] uppercase mb-1" style={{ color: CHART_SERIES.risk }}>
+              <div className="text-xs font-black tracking-[0.2em] uppercase mb-1" style={{ color: CHART_SERIES.risk }}>
                 Dopo {stopWeeks} {stopWeeks === 1 ? "settimana" : "settimane"}
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-[26px] font-black tabular-nums leading-none" style={{ fontFamily: MONO, color: CHART_SERIES.risk }}>
                   −{decayVdotLoss.toFixed(1)}
                 </span>
-                <span className="text-[10px]" style={{ color: CHART_TEXT.muted }}>punti VDOT</span>
+                <span className="text-xs" style={{ color: CHART_TEXT.muted }}>punti VDOT</span>
               </div>
-              <div className="mt-1.5 text-[11px]" style={{ color: CHART_TEXT.muted }}>
+              <div className="mt-1.5 text-xs" style={{ color: CHART_TEXT.muted }}>
                 Il 5 km passerebbe da{" "}
                 <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>{fmtClock(decay[0]?.sec ?? 0)}</b>{" "}
                 a <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>{fmtClock(decayAt?.sec ?? 0)}</b>.
@@ -314,17 +280,17 @@ export function BiologyFutureV3({ runs, profile }: { runs: Run[]; profile: Profi
               return (
                 <div key={id} className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full shrink-0" style={{ background: SYSTEMS[id].color }} />
-                  <span className="text-[11px] text-white/80 flex-1 min-w-0 truncate">{SYSTEMS[id].name}</span>
-                  <div className="w-20 h-[4px] rounded-full overflow-hidden shrink-0" style={{ background: "#1A1A1A" }}>
+                  <span className="text-xs text-white/80 flex-1 min-w-0 truncate">{SYSTEMS[id].name}</span>
+                  <div className="w-20 h-[4px] rounded-full overflow-hidden shrink-0" style={{ background: CHART_SURFACE.raised }}>
                     <div className="h-full rounded-full" style={{ width: `${lost}%`, background: SYSTEMS[id].color }} />
                   </div>
-                  <span className="text-[10px] tabular-nums w-12 text-right shrink-0" style={{ fontFamily: MONO, color: CHART_TEXT.muted }}>
+                  <span className="text-xs tabular-nums w-12 text-right shrink-0" style={{ fontFamily: MONO, color: CHART_TEXT.muted }}>
                     −{lost}%
                   </span>
                 </div>
               );
             })}
-            <p className="text-[10.5px] leading-relaxed pt-1" style={{ color: CHART_TEXT.faint }}>
+            <p className="text-xs leading-relaxed pt-1" style={{ color: CHART_TEXT.faint }}>
               Le ripetute svaniscono in tre settimane (τ {SYSTEMS.vo2.tau} giorni), il motore aerobico regge
               mesi (τ {SYSTEMS.mito.tau}). È per questo che dopo una pausa torna prima il fondo e poi la
               velocità — e perché non si recupera una stagione in dieci giorni.
@@ -339,35 +305,23 @@ export function BiologyFutureV3({ runs, profile }: { runs: Run[]; profile: Profi
         hint="dodici settimane, una ricetta alla volta, sopra il carico di adesso"
       >
         <div className="grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
-          <div className="h-[280px] w-full">
+          <ChartPlot size="tall">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={recipes.rows} margin={{ top: 8, right: 14, left: -16, bottom: 0 }}>
-                <CartesianGrid stroke={GRID} strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="week" tick={{ fill: CHART_TEXT.axis, fontSize: 10, fontFamily: MONO }}
-                  tickFormatter={(w: number) => `${w}s`}
-                  stroke={CHART_SURFACE.borderStrong}
-                />
-                <YAxis
-                  domain={["auto", "auto"]} width={44}
-                  tick={{ fill: CHART_TEXT.axis, fontSize: 10, fontFamily: MONO }}
-                  stroke={CHART_SURFACE.borderStrong}
-                />
-                <Tooltip
-                  contentStyle={box}
-                  labelFormatter={(w) => `fra ${w} settimane`}
-                  formatter={(v: number, n) => [
+              <LineChart data={recipes.rows} margin={chartMargin}>
+                <CartesianGrid {...chartGrid} />
+                <XAxis {...chartXAxis} dataKey="week" tickFormatter={(w: number) => `${w}s`} />
+                <YAxis {...chartYAxis} domain={["auto", "auto"]} width={44} />
+                <ChartTip labelFormatter={(w) => `fra ${w} settimane`} formatter={(v: number, n) => [
                     v.toFixed(1),
                     n === "base" ? "Come adesso" : RECIPES.find((r) => r.id === n)?.label ?? String(n),
-                  ]}
-                />
-                <Line type="monotone" dataKey="base" stroke={CHART_TEXT.axis} strokeWidth={2} strokeDasharray="5 4" dot={false} />
+                  ]} />
+                <Line type="monotone" dataKey="base" {...seriesStroke(CHART_TEXT.axis, "projected")} />
                 {RECIPES.map((r) => (
-                  <Line key={r.id} type="monotone" dataKey={r.id} stroke={r.color} strokeWidth={2} dot={false} />
+                  <Line key={r.id} type="monotone" dataKey={r.id} {...seriesStroke(r.color, "derived")} />
                 ))}
               </LineChart>
             </ResponsiveContainer>
-          </div>
+          </ChartPlot>
 
           <div className="space-y-2">
             {recipes.summary.map((r, i) => (
@@ -375,7 +329,7 @@ export function BiologyFutureV3({ runs, profile }: { runs: Run[]; profile: Profi
                 key={r.id} className="rounded-xl border p-3"
                 style={{
                   borderColor: i === 0 ? `${r.color}66` : BORDER,
-                  background: i === 0 ? `${r.color}0f` : "#0A0A0A",
+                  background: i === 0 ? `${r.color}0f` : CHART_SURFACE.panel,
                 }}
               >
                 <div className="flex items-baseline gap-2">
@@ -386,16 +340,16 @@ export function BiologyFutureV3({ runs, profile }: { runs: Run[]; profile: Profi
                   </span>
                 </div>
                 <div className="mt-1 flex items-baseline justify-between gap-2">
-                  <span className="text-[10px]" style={{ color: CHART_TEXT.muted }}>{r.what}</span>
+                  <span className="text-xs" style={{ color: CHART_TEXT.muted }}>{r.what}</span>
                   {r.sec5k > 0 && (
-                    <span className="text-[10px] tabular-nums shrink-0" style={{ fontFamily: MONO, color: CHART_SERIES.positive }}>
+                    <span className="text-xs tabular-nums shrink-0" style={{ fontFamily: MONO, color: CHART_SERIES.positive }}>
                       −{fmtClock(r.sec5k)} sui 5 km
                     </span>
                   )}
                 </div>
               </div>
             ))}
-            <p className="text-[10.5px] leading-relaxed pt-1" style={{ color: CHART_TEXT.faint }}>
+            <p className="text-xs leading-relaxed pt-1" style={{ color: CHART_TEXT.faint }}>
               I punti sono pochi perché tre mesi sono pochi: la differenza fra la prima e l'ultima ricetta è
               quella fra allenare il sistema che ti frena e allenarne uno già pieno.
             </p>
@@ -406,28 +360,19 @@ export function BiologyFutureV3({ runs, profile }: { runs: Run[]; profile: Profi
       {/* ══ 3 · IL CALENDARIO DEL CLIMA ═════════════════════════════════════ */}
       <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
         <Panel icon={Thermometer} title="Quando corri forte" hint="clima dei tuoi percorsi, mese per mese">
-          <div className="h-[240px] w-full">
+          <ChartPlot size="standard">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={season} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-                <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="month" tick={{ fill: CHART_TEXT.axis, fontSize: 10, fontFamily: MONO }} stroke={CHART_SURFACE.borderStrong} />
-                <YAxis
-                  yAxisId="cost" width={46}
-                  tick={{ fill: CHART_TEXT.axis, fontSize: 10, fontFamily: MONO }}
-                  tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v}s`}
-                  stroke={CHART_SURFACE.borderStrong}
-                />
-                <YAxis yAxisId="t" orientation="right" width={34} hide />
-                <Tooltip
-                  contentStyle={box}
-                  labelFormatter={(m) => {
+              <ComposedChart data={season} margin={chartMargin}>
+                <CartesianGrid {...chartGrid} />
+                <XAxis {...chartXAxis} dataKey="month" />
+                <YAxis {...chartYAxis} yAxisId="cost" width={46} tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v}s`} />
+                <YAxis {...chartYAxis} yAxisId="t" orientation="right" width={0} hide />
+                <ChartTip labelFormatter={(m) => {
                     const row = season.find((x) => x.month === m);
                     return row ? `${m} · ${row.tempC}°C · ${fmtClock(row.sec)} sui 5 km` : String(m);
-                  }}
-                  formatter={(v: number, n) => n === "cost"
+                  }} formatter={(v: number, n) => n === "cost"
                     ? [`${v > 0 ? "+" : ""}${v}s`, "costo del clima"]
-                    : [`${v}°C`, "temperatura tipica"]}
-                />
+                    : [`${v}°C`, "temperatura tipica"]} />
                 <Bar yAxisId="cost" dataKey="cost" radius={[4, 4, 0, 0]} barSize={18}>
                   {season.map((s) => (
                     <Cell
@@ -437,30 +382,30 @@ export function BiologyFutureV3({ runs, profile }: { runs: Run[]; profile: Profi
                     />
                   ))}
                 </Bar>
-                <Line yAxisId="t" type="monotone" dataKey="tempC" stroke={CYAN} strokeWidth={1.8} dot={false} />
+                <Line yAxisId="t" type="monotone" dataKey="tempC" {...seriesStroke(CYAN, "derived")} />
               </ComposedChart>
             </ResponsiveContainer>
-          </div>
+          </ChartPlot>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <div className="rounded-xl border p-3" style={{ borderColor: BORDER, background: "#0A0A0A" }}>
+            <div className="rounded-xl border p-3" style={{ borderColor: BORDER, background: CHART_SURFACE.panel }}>
               <div className="flex items-center gap-1.5 mb-1">
                 <Snowflake className="w-3.5 h-3.5" style={{ color: CYAN }} />
-                <span className="text-[9px] font-black tracking-[0.2em] uppercase" style={{ color: CHART_TEXT.axis }}>Mese migliore</span>
+                <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: CHART_TEXT.axis }}>Mese migliore</span>
               </div>
               <div className="text-[18px] font-black uppercase" style={{ color: CYAN }}>{bestMonth.month}</div>
-              <div className="text-[10.5px]" style={{ color: CHART_TEXT.muted }}>
+              <div className="text-xs" style={{ color: CHART_TEXT.muted }}>
                 {fmtClock(bestMonth.sec)} sui 5 km, a forma costante.
               </div>
             </div>
-            <div className="rounded-xl border p-3" style={{ borderColor: BORDER, background: "#0A0A0A" }}>
+            <div className="rounded-xl border p-3" style={{ borderColor: BORDER, background: CHART_SURFACE.panel }}>
               <div className="flex items-center gap-1.5 mb-1">
                 <Sun className="w-3.5 h-3.5" style={{ color: CHART_SERIES.load }} />
-                <span className="text-[9px] font-black tracking-[0.2em] uppercase" style={{ color: CHART_TEXT.axis }}>Il caldo oggi</span>
+                <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: CHART_TEXT.axis }}>Il caldo oggi</span>
               </div>
               <div className="text-[18px] font-black tabular-nums" style={{ fontFamily: MONO, color: CHART_SERIES.load }}>
                 +{Math.round(physio.heatCost5kNow)}s
               </div>
-              <div className="text-[10.5px]" style={{ color: CHART_TEXT.muted }}>
+              <div className="text-xs" style={{ color: CHART_TEXT.muted }}>
                 Quando rinfresca l'adattamento te ne restituisce {Math.round(physio.heatCreditCool)}.
               </div>
             </div>
@@ -469,61 +414,50 @@ export function BiologyFutureV3({ runs, profile }: { runs: Run[]; profile: Profi
 
         {/* ══ 4 · ETÀ E TETTO BIOLOGICO ═════════════════════════════════════ */}
         <Panel icon={Dna} title="Il tetto biologico" hint={`${age} anni · declino modellato del VO2max`}>
-          <div className="h-[240px] w-full">
+          <ChartPlot size="standard">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={ageCurve} margin={{ top: 8, right: 10, left: -18, bottom: 0 }}>
+              <AreaChart data={ageCurve} margin={chartMargin}>
                 <defs>
                   <linearGradient id="bf3-age" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={CHART_SERIES.tertiary} stopOpacity={0.3} />
-                    <stop offset="100%" stopColor={CHART_SERIES.tertiary} stopOpacity={0.02} />
+                    <stop offset="0%" stopColor={CHART_SERIES.tertiary} stopOpacity={AREA_FILL.top} />
+                    <stop offset="100%" stopColor={CHART_SERIES.tertiary} stopOpacity={AREA_FILL.bottom} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid stroke={GRID} strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="age" tick={{ fill: CHART_TEXT.axis, fontSize: 10, fontFamily: MONO }}
-                  stroke={CHART_SURFACE.borderStrong}
-                />
-                <YAxis
-                  domain={["auto", "auto"]} width={44}
-                  tick={{ fill: CHART_TEXT.axis, fontSize: 10, fontFamily: MONO }}
-                  stroke={CHART_SURFACE.borderStrong}
-                />
-                <Tooltip
-                  contentStyle={box}
-                  labelFormatter={(a) => `${a} anni`}
-                  formatter={(v: number) => [v.toFixed(1), "tetto VDOT"]}
-                />
-                <Area type="monotone" dataKey="ceiling" stroke={CHART_SERIES.tertiary} strokeWidth={2} fill="url(#bf3-age)" dot={false} />
-                <ReferenceLine y={physio.vdot} stroke={LIME} strokeDasharray="5 4"
-                  label={{ value: `sei qui ${physio.vdot.toFixed(1)}`, position: "insideBottomLeft", fill: LIME, fontSize: 10, fontFamily: MONO }} />
+                <CartesianGrid {...chartGrid} />
+                <XAxis {...chartXAxis} dataKey="age" />
+                <YAxis {...chartYAxis} domain={["auto", "auto"]} width={44} />
+                <ChartTip labelFormatter={(a) => `${a} anni`} formatter={(v: number) => [v.toFixed(1), "tetto VDOT"]} />
+                <Area type="monotone" dataKey="ceiling" {...seriesStroke(CHART_SERIES.tertiary, "derived")} fill="url(#bf3-age)" />
+                <ReferenceLine y={physio.vdot} {...chartReferenceLine} stroke={LIME}
+                  label={{ value: `sei qui ${physio.vdot.toFixed(1)}`, position: "insideBottomLeft", fill: LIME, fontSize: 12, fontFamily: MONO }} />
                 <ReferenceDot x={age} y={ageCurve.find((p) => p.age === age)?.ceiling ?? physio.vdot}
-                  r={4.5} fill={CHART_SERIES.tertiary} stroke="#0A0A0A" strokeWidth={2} />
+                  r={4.5} fill={CHART_SERIES.tertiary} stroke={CHART_SURFACE.panel} strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
+          </ChartPlot>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <div className="rounded-xl border p-3" style={{ borderColor: BORDER, background: "#0A0A0A" }}>
+            <div className="rounded-xl border p-3" style={{ borderColor: BORDER, background: CHART_SURFACE.panel }}>
               <div className="flex items-center gap-1.5 mb-1">
                 <Timer className="w-3.5 h-3.5" style={{ color: CHART_SERIES.risk }} />
-                <span className="text-[9px] font-black tracking-[0.2em] uppercase" style={{ color: CHART_TEXT.axis }}>L'età si prende</span>
+                <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: CHART_TEXT.axis }}>L'età si prende</span>
               </div>
               <div className="text-[18px] font-black tabular-nums" style={{ fontFamily: MONO, color: CHART_SERIES.risk }}>
                 −{lossPerDecade.toFixed(1)}
               </div>
-              <div className="text-[10.5px]" style={{ color: CHART_TEXT.muted }}>punti VDOT nei prossimi dieci anni</div>
+              <div className="text-xs" style={{ color: CHART_TEXT.muted }}>punti VDOT nei prossimi dieci anni</div>
             </div>
             <div className="rounded-xl border p-3" style={{ borderColor: `${LIME}44`, background: `${LIME}0d` }}>
               <div className="flex items-center gap-1.5 mb-1">
                 <Microscope className="w-3.5 h-3.5" style={{ color: LIME }} />
-                <span className="text-[9px] font-black tracking-[0.2em] uppercase" style={{ color: CHART_TEXT.axis }}>L'allenamento ti dà</span>
+                <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: CHART_TEXT.axis }}>L'allenamento ti dà</span>
               </div>
               <div className="text-[18px] font-black tabular-nums" style={{ fontFamily: MONO, color: LIME }}>
                 +{headroom.toFixed(1)}
               </div>
-              <div className="text-[10.5px]" style={{ color: CHART_TEXT.muted }}>punti ancora liberi con questo carico</div>
+              <div className="text-xs" style={{ color: CHART_TEXT.muted }}>punti ancora liberi con questo carico</div>
             </div>
           </div>
-          <p className="mt-2 text-[10.5px] leading-relaxed" style={{ color: CHART_TEXT.faint }}>
+          <p className="mt-2 text-xs leading-relaxed" style={{ color: CHART_TEXT.faint }}>
             La curva è un modello: mezzo punto percentuale di VO2max all'anno fino ai cinquanta, poi circa uno
             (Tanaka & Seals). Il confronto che conta è fra i due numeri qui sopra — finché l'allenamento dà più
             di quanto l'età toglie, i tuoi primati sono ancora davanti.

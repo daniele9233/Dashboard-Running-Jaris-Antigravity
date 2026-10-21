@@ -72,7 +72,7 @@ export function FirstRunOnboarding({ onImportClick }: { onImportClick?: () => vo
               </div>
               <div>
                 <div className="font-black text-base">{t("onboarding.stravaTitle")}</div>
-                <div className="text-[10px] tracking-wider uppercase" style={{ color: "var(--app-text-muted)" }}>
+                <div className="text-xs tracking-wider uppercase" style={{ color: "var(--app-text-muted)" }}>
                   {t("onboarding.stravaSubtitle")}
                 </div>
               </div>
@@ -111,7 +111,7 @@ export function FirstRunOnboarding({ onImportClick }: { onImportClick?: () => vo
               </div>
               <div>
                 <div className="font-black text-base">{t("onboarding.garminTitle")}</div>
-                <div className="text-[10px] tracking-wider uppercase" style={{ color: "var(--app-text-muted)" }}>
+                <div className="text-xs tracking-wider uppercase" style={{ color: "var(--app-text-muted)" }}>
                   {t("onboarding.garminSubtitle")}
                 </div>
               </div>
@@ -127,7 +127,7 @@ export function FirstRunOnboarding({ onImportClick }: { onImportClick?: () => vo
 
         {/* Footer */}
         <p
-          className="text-center text-[10px] mt-8 tracking-wider uppercase"
+          className="text-center text-xs mt-8 tracking-wider uppercase"
           style={{ color: "var(--app-text-dim)" }}
         >
           {t("onboarding.privacyNote")}

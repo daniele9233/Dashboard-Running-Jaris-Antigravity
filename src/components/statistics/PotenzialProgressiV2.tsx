@@ -5,19 +5,15 @@
  * dove eri, dove stai andando. Glow, gradients, animazioni, milestone.
  */
 import React, { useMemo, useState, useEffect } from "react";
-import {
-  AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, ReferenceLine, RadarChart, Radar,
-  PolarGrid, PolarAngleAxis, BarChart, Bar, Cell,
-} from "recharts";
+import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, ReferenceLine, RadarChart, Radar, PolarGrid, PolarAngleAxis } from "recharts";
 import type { Run, FitnessFreshnessPoint, ProAnalyticsChart, Profile } from "../../types/api";
 import {
   Flame, TrendingUp, TrendingDown, Minus, Zap, Activity,
   Wind, Mountain, Heart, Sparkles, Award, ChevronRight, Crosshair,
   Rocket, Trophy, Timer, ArrowUpRight, Target,
 } from "lucide-react";
-import { CHART_SERIES } from "./chartTheme";
 
+import { CHART_SERIES, ChartTip, chartMargin, chartXAxis, chartYAxis } from "../charts";
 // ─── PROPS ───────────────────────────────────────────────────────────────────
 
 export interface PotenzialProgressiV2Props {
@@ -191,11 +187,11 @@ function VdotGauge({ vdot, level }: { vdot: number; level: RunnerLevel }) {
         })}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="text-[9px] font-black tracking-[0.25em] text-[#555]">VDOT</div>
+        <div className="text-xs font-black tracking-[0.25em] text-ea-text-axis">VDOT</div>
         <div className="text-[64px] font-black leading-none tabular-nums" style={{ color: level.color, textShadow: `0 0 24px ${level.color}55` }}>
           {animated.toFixed(1)}
         </div>
-        <div className="text-[9px] font-black tracking-widest mt-1" style={{ color: level.color }}>
+        <div className="text-xs font-black tracking-widest mt-1" style={{ color: level.color }}>
           {level.label}
         </div>
       </div>
@@ -212,7 +208,7 @@ function DeltaBadge({ delta, suffix = "", invert = false }: { delta: number | nu
   const color = positive ? CYAN : negative ? ROSE : "#666";
   const Icon = positive ? TrendingUp : negative ? TrendingDown : Minus;
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full"
+    <span className="inline-flex items-center gap-1 text-xs font-black px-2 py-0.5 rounded-full"
       style={{ background: `${color}18`, color, border: `1px solid ${color}30` }}>
       <Icon size={10} />
       {delta > 0 ? "+" : ""}{delta.toFixed(suffix === "s" ? 0 : 1)}{suffix}
@@ -226,27 +222,26 @@ function DnaBar({ icon: Icon, label, value, color, desc }: {
   icon: any; label: string; value: number; color: string; desc: string;
 }) {
   return (
-    <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 flex flex-col gap-2.5 hover:border-white/[0.2] transition-all group">
+    <div className="rounded-2xl border border-ea-hairline bg-ea-surface-1 p-4 flex flex-col gap-2.5 hover:border-white/[0.2] transition-all group">
       <div className="flex items-center gap-2">
         <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
           style={{ background: `${color}18`, border: `1px solid ${color}30` }}>
           <Icon size={13} style={{ color }} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[10px] font-black tracking-widest uppercase" style={{ color }}>{label}</div>
+          <div className="text-xs font-black tracking-widest uppercase" style={{ color }}>{label}</div>
         </div>
         <div className="text-xl font-black tabular-nums" style={{ color }}>{value}</div>
       </div>
-      <div className="w-full bg-[#1a1a1a] rounded-full h-1.5 overflow-hidden relative">
+      <div className="w-full bg-ea-surface-3 rounded-full h-1.5 overflow-hidden relative">
         <div className="absolute inset-y-0 left-0 rounded-full"
           style={{
             width: `${value}%`,
             background: `linear-gradient(90deg, ${color}AA, ${color})`,
-            boxShadow: `0 0 12px ${color}66`,
             transition: "width 1.4s cubic-bezier(0.25,0.1,0.25,1)",
           }} />
       </div>
-      <div className="text-[10px] text-[#666] font-bold leading-relaxed">{desc}</div>
+      <div className="text-xs text-ea-text-axis font-bold leading-relaxed">{desc}</div>
     </div>
   );
 }
@@ -539,7 +534,7 @@ export function PotenzialProgressiV2({
       {/* ═══════════════════════════════════════════════════════════
           HERO — VDOT gauge + identità runner + KPI 90gg
       ═══════════════════════════════════════════════════════════ */}
-      <div className="relative rounded-3xl p-6 lg:p-8 overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+      <div className="relative rounded-2xl p-5 lg:p-8 overflow-hidden border border-ea-hairline bg-ea-surface-1">
         {/* Glow background */}
         <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-[0.07] blur-3xl pointer-events-none"
           style={{ background: `radial-gradient(circle, ${level.color}, transparent)` }} />
@@ -556,7 +551,7 @@ export function PotenzialProgressiV2({
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <Crosshair size={12} style={{ color: level.color }} />
-              <span className="text-[10px] font-black tracking-[0.25em] uppercase" style={{ color: level.color }}>
+              <span className="text-xs font-black tracking-[0.25em] uppercase" style={{ color: level.color }}>
                 Profilo del runner
               </span>
             </div>
@@ -566,14 +561,14 @@ export function PotenzialProgressiV2({
                 {dominantTrait.title}
               </span>
             </div>
-            <div className="text-[#999] text-sm font-bold italic">"{dominantTrait.tagline}"</div>
-            <div className="text-[#666] text-xs leading-relaxed max-w-md">
+            <div className="text-ea-text-muted text-sm font-bold">"{dominantTrait.tagline}"</div>
+            <div className="text-ea-text-axis text-xs leading-relaxed max-w-md">
               {level.desc}. Da migliorare: <span className="font-black" style={{ color: dominantTrait.weakColor }}>{dominantTrait.weak}</span>.
             </div>
             {vdotDelta90 !== null && (
               <div className="flex items-center gap-3 mt-1">
                 <DeltaBadge delta={vdotDelta90} suffix=" VDOT" />
-                <span className="text-[10px] text-[#555] font-bold uppercase tracking-wider">ultimi 90 giorni</span>
+                <span className="text-xs text-ea-text-axis font-bold uppercase tracking-wider">ultimi 90 giorni</span>
               </div>
             )}
           </div>
@@ -586,8 +581,8 @@ export function PotenzialProgressiV2({
               { label: "Ore", value: stats90.hours, color: VIOLET },
               { label: "D+ metri", value: stats90.elevation, color: AMBER },
             ].map(s => (
-              <div key={s.label} className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 px-3 py-2.5 flex flex-col gap-0.5">
-                <div className="text-[9px] font-black tracking-widest uppercase" style={{ color: s.color }}>{s.label}</div>
+              <div key={s.label} className="rounded-2xl border border-ea-hairline bg-ea-surface-1 px-3 py-2.5 flex flex-col gap-0.5">
+                <div className="text-xs font-black tracking-widest uppercase" style={{ color: s.color }}>{s.label}</div>
                 <div className="text-xl font-black text-white tabular-nums leading-none">{s.value}</div>
               </div>
             ))}
@@ -598,17 +593,17 @@ export function PotenzialProgressiV2({
       {/* ═══════════════════════════════════════════════════════════
           DNA RUNNER — 4 sistemi fisiologici
       ═══════════════════════════════════════════════════════════ */}
-      <div className="rounded-3xl p-6 lg:p-8 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+      <div className="rounded-2xl p-5 lg:p-8 border border-ea-hairline bg-ea-surface-1">
         <div className="flex items-end justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Sparkles size={14} style={{ color: LIME }} />
-              <span className="text-[10px] font-black tracking-[0.25em] uppercase text-[#A0A0A0]">
+              <span className="text-xs font-black tracking-[0.25em] uppercase text-ea-text-muted">
                 DNA del Runner
               </span>
             </div>
             <h2 className="text-2xl font-black text-white tracking-tight">I tuoi quattro motori</h2>
-            <div className="text-[11px] text-[#666] font-bold mt-1">Sistemi energetici sviluppati negli ultimi 90 giorni</div>
+            <div className="text-xs text-ea-text-axis font-bold mt-1">Sistemi energetici sviluppati negli ultimi 90 giorni</div>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -619,17 +614,17 @@ export function PotenzialProgressiV2({
       {/* ═══════════════════════════════════════════════════════════
           PREVISIONI GARA — 4 cards con PB gap
       ═══════════════════════════════════════════════════════════ */}
-      <div className="rounded-3xl p-6 lg:p-8 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+      <div className="rounded-2xl p-5 lg:p-8 border border-ea-hairline bg-ea-surface-1">
         <div className="flex items-end justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Target size={14} style={{ color: LIME }} />
-              <span className="text-[10px] font-black tracking-[0.25em] uppercase text-[#A0A0A0]">
+              <span className="text-xs font-black tracking-[0.25em] uppercase text-ea-text-muted">
                 Previsioni gara
               </span>
             </div>
             <h2 className="text-2xl font-black text-white tracking-tight">Cosa puoi correre oggi</h2>
-            <div className="text-[11px] text-[#666] font-bold mt-1">Tempi predetti basati sul VDOT attuale · confronto con il tuo record personale</div>
+            <div className="text-xs text-ea-text-axis font-bold mt-1">Tempi predetti basati sul VDOT attuale · confronto con il tuo record personale</div>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -637,9 +632,8 @@ export function PotenzialProgressiV2({
             const beatsPb = r.gap !== null && r.gap > 5;
             const closeToPb = r.gap !== null && Math.abs(r.gap) <= 5;
             return (
-              <div key={r.key} className="relative rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 overflow-hidden hover:border-white/[0.2] transition-all group">
+              <div key={r.key} className="relative rounded-2xl border border-ea-hairline bg-ea-surface-1 p-5 overflow-hidden hover:border-white/[0.2] transition-all group">
                 {/* Top color stripe */}
-                <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: `linear-gradient(90deg, ${r.color}, ${r.color}33)` }} />
                 <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full opacity-10 blur-2xl group-hover:opacity-20 transition-opacity"
                   style={{ background: r.color }} />
 
@@ -651,8 +645,8 @@ export function PotenzialProgressiV2({
                         <r.icon size={13} style={{ color: r.color }} />
                       </div>
                       <div>
-                        <div className="text-[11px] font-black tracking-widest" style={{ color: r.color }}>{r.label}</div>
-                        <div className="text-[9px] text-[#555] font-bold uppercase">{r.sublabel}</div>
+                        <div className="text-xs font-black tracking-widest" style={{ color: r.color }}>{r.label}</div>
+                        <div className="text-xs text-ea-text-axis font-bold uppercase">{r.sublabel}</div>
                       </div>
                     </div>
                     <DeltaBadge delta={r.delta} suffix="s" invert />
@@ -661,7 +655,7 @@ export function PotenzialProgressiV2({
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-[36px] font-black text-white tabular-nums leading-none">{fmtTime(r.predSecs)}</span>
                   </div>
-                  <div className="text-[10px] text-[#666] font-bold">
+                  <div className="text-xs text-ea-text-axis font-bold">
                     {fmtPaceFromSec(r.predSecs, r.distKm)}/km · previsto
                   </div>
 
@@ -669,28 +663,28 @@ export function PotenzialProgressiV2({
                   {r.pbSecs !== null ? (
                     <div className="bg-[#080808] border border-white/[0.04] rounded-xl px-3 py-2 flex items-center justify-between mt-1">
                       <div className="flex flex-col">
-                        <div className="text-[8.5px] font-black text-[#555] tracking-widest uppercase">Tuo PB</div>
+                        <div className="text-[8.5px] font-black text-ea-text-axis tracking-widest uppercase">Tuo PB</div>
                         <div className="text-sm font-black text-white tabular-nums">{fmtTime(r.pbSecs)}</div>
                       </div>
                       <div className="text-right">
                         {beatsPb && (
-                          <div className="flex items-center gap-1 text-[10px] font-black text-[#06FFA5]">
+                          <div className="flex items-center gap-1 text-xs font-black text-[#06FFA5]">
                             <Rocket size={10} />
                             <span>Pronto a −{r.gap}s</span>
                           </div>
                         )}
                         {closeToPb && (
-                          <div className="text-[10px] font-black text-[#F59E0B]">PB in vista</div>
+                          <div className="text-xs font-black text-ea-amber">PB in vista</div>
                         )}
                         {!beatsPb && !closeToPb && r.gap !== null && r.gap < 0 && (
-                          <div className="text-[10px] font-black text-[#555]">{Math.abs(r.gap)}s sopra</div>
+                          <div className="text-xs font-black text-ea-text-axis">{Math.abs(r.gap)}s sopra</div>
                         )}
-                        <div className="text-[8.5px] text-[#444] font-bold">{r.pbDate}</div>
+                        <div className="text-[8.5px] text-ea-text-axis font-bold">{r.pbDate}</div>
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-[#080808] border border-dashed border-white/[0.06] rounded-xl px-3 py-2 text-center">
-                      <div className="text-[10px] font-black text-[#444] tracking-wider">Nessuna gara registrata</div>
+                    <div className="bg-[#080808] border border-dashed border-ea-hairline rounded-xl px-3 py-2 text-center">
+                      <div className="text-xs font-black text-ea-text-axis tracking-wider">Nessuna gara registrata</div>
                     </div>
                   )}
                 </div>
@@ -703,28 +697,28 @@ export function PotenzialProgressiV2({
       {/* ═══════════════════════════════════════════════════════════
           MOMENTUM — trend VDOT 12 mesi + proiezione futura
       ═══════════════════════════════════════════════════════════ */}
-      <div className="rounded-3xl p-6 lg:p-8 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+      <div className="rounded-2xl p-5 lg:p-8 border border-ea-hairline bg-ea-surface-1">
         <div className="flex items-end justify-between gap-4 mb-5 flex-wrap">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <ArrowUpRight size={14} style={{ color: LIME }} />
-              <span className="text-[10px] font-black tracking-[0.25em] uppercase text-[#A0A0A0]">
+              <span className="text-xs font-black tracking-[0.25em] uppercase text-ea-text-muted">
                 Momentum
               </span>
             </div>
             <h2 className="text-2xl font-black text-white tracking-tight">La tua traiettoria</h2>
-            <div className="text-[11px] text-[#666] font-bold mt-1">
+            <div className="text-xs text-ea-text-axis font-bold mt-1">
               Trend VDOT 12 mesi + proiezione 3 mesi futuri al ritmo attuale
             </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full" style={{ background: LIME, boxShadow: `0 0 8px ${LIME}` }} />
-              <span className="text-[10px] font-bold text-[#888]">Storico</span>
+              <div className="w-2 h-2 rounded-full" style={{ background: LIME }} />
+              <span className="text-xs font-bold text-ea-text-axis">Storico</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full border border-dashed" style={{ borderColor: VIOLET }} />
-              <span className="text-[10px] font-bold text-[#888]">Proiezione</span>
+              <span className="text-xs font-bold text-ea-text-axis">Proiezione</span>
             </div>
           </div>
         </div>
@@ -732,7 +726,7 @@ export function PotenzialProgressiV2({
         {vdotWithForecast.length >= 3 ? (
           <div style={{ height: 260 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={vdotWithForecast} margin={{ top: 10, right: 20, bottom: 5, left: -10 }}>
+              <AreaChart data={vdotWithForecast} margin={chartMargin}>
                 <defs>
                   <linearGradient id="momentumHist" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={LIME} stopOpacity={0.4} />
@@ -743,16 +737,12 @@ export function PotenzialProgressiV2({
                     <stop offset="100%" stopColor={VIOLET} stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="month" stroke="#444" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="#444" fontSize={10} tickLine={false} axisLine={false} width={32} />
-                <Tooltip
-                  contentStyle={{ background: "#0E0E0E", border: "1px solid #2A2A2A", borderRadius: 10, color: "#fff", fontSize: 11 }}
-                  formatter={(value: any, name: string) => {
+                <XAxis {...chartXAxis} dataKey="month" />
+                <YAxis {...chartYAxis} width={32} />
+                <ChartTip formatter={(value: any, name: string) => {
                     if (value === null || value === undefined) return ["—", name];
                     return [Number(value).toFixed(1), name === "vdot" ? "VDOT" : "Proiezione"];
-                  }}
-                  cursor={{ stroke: "rgba(255,255,255,0.08)" }}
-                />
+                  }} />
                 <Area type="monotone" dataKey="vdot" stroke={LIME} strokeWidth={2.5}
                   fill="url(#momentumHist)" dot={{ r: 3, fill: LIME, strokeWidth: 0 }}
                   activeDot={{ r: 5, stroke: LIME, strokeWidth: 2, fill: "#000" }} />
@@ -765,24 +755,24 @@ export function PotenzialProgressiV2({
             </ResponsiveContainer>
           </div>
         ) : (
-          <div className="h-40 flex items-center justify-center text-[#444] text-xs font-bold">Almeno 3 mesi di dati richiesti</div>
+          <div className="h-40 flex items-center justify-center text-ea-text-axis text-xs font-bold">Almeno 3 mesi di dati richiesti</div>
         )}
 
         <div className="grid grid-cols-3 gap-3 mt-5">
-          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 px-4 py-3 flex flex-col gap-1">
-            <div className="text-[9px] font-black text-[#555] tracking-widest uppercase">Crescita 90gg</div>
+          <div className="rounded-2xl border border-ea-hairline bg-ea-surface-1 px-4 py-3 flex flex-col gap-1">
+            <div className="text-xs font-black text-ea-text-axis tracking-widest uppercase">Crescita 90gg</div>
             <div className="text-xl font-black tabular-nums" style={{ color: vdotDelta90 && vdotDelta90 > 0 ? CYAN : ROSE }}>
               {vdotDelta90 !== null ? `${vdotDelta90 > 0 ? "+" : ""}${vdotDelta90}` : "—"}
             </div>
           </div>
-          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 px-4 py-3 flex flex-col gap-1">
-            <div className="text-[9px] font-black text-[#555] tracking-widest uppercase">Prossimo livello</div>
+          <div className="rounded-2xl border border-ea-hairline bg-ea-surface-1 px-4 py-3 flex flex-col gap-1">
+            <div className="text-xs font-black text-ea-text-axis tracking-widest uppercase">Prossimo livello</div>
             <div className="text-xl font-black tabular-nums" style={{ color: vdotLevel(level.nextThreshold).color }}>
               VDOT {level.nextThreshold}
             </div>
           </div>
-          <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 px-4 py-3 flex flex-col gap-1">
-            <div className="text-[9px] font-black text-[#555] tracking-widest uppercase">Stima sblocco</div>
+          <div className="rounded-2xl border border-ea-hairline bg-ea-surface-1 px-4 py-3 flex flex-col gap-1">
+            <div className="text-xs font-black text-ea-text-axis tracking-widest uppercase">Stima sblocco</div>
             <div className="text-xl font-black tabular-nums text-white">
               {(() => {
                 const gap = level.nextThreshold - currentVdot;
@@ -804,18 +794,18 @@ export function PotenzialProgressiV2({
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
 
         {/* Radar */}
-        <div className="lg:col-span-2 rounded-3xl p-6 flex flex-col gap-4 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+        <div className="lg:col-span-2 rounded-2xl p-5 flex flex-col gap-4 border border-ea-hairline bg-ea-surface-1">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Heart size={14} style={{ color: LIME }} />
-              <span className="text-[10px] font-black tracking-[0.25em] uppercase text-[#A0A0A0]">
+              <span className="text-xs font-black tracking-[0.25em] uppercase text-ea-text-muted">
                 Prontezza gara
               </span>
             </div>
             <div className="flex items-baseline gap-3">
               <span className="text-4xl font-black text-white tabular-nums">{readiness.overall}</span>
-              <span className="text-xs text-[#666] font-bold">/100</span>
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full ml-auto"
+              <span className="text-xs text-ea-text-axis font-bold">/100</span>
+              <span className="text-xs font-black px-2 py-0.5 rounded-full ml-auto"
                 style={{ background: `${LIME}18`, color: LIME, border: `1px solid ${LIME}30` }}>
                 Limita · {readiness.limiter}
               </span>
@@ -831,7 +821,7 @@ export function PotenzialProgressiV2({
                   </linearGradient>
                 </defs>
                 <PolarGrid stroke="rgba(255,255,255,0.08)" />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: "#888", fontSize: 10, fontWeight: 700 }} />
+                <PolarAngleAxis dataKey="subject" tick={{ fill: "#888", fontSize: 12, fontWeight: 700 }} />
                 <Radar dataKey="value" stroke={LIME} strokeWidth={2} fill="url(#ppRadarGrad)" />
               </RadarChart>
             </ResponsiveContainer>
@@ -839,32 +829,32 @@ export function PotenzialProgressiV2({
           <div className="grid grid-cols-5 gap-1">
             {readiness.axes.map(a => (
               <div key={a.label} className="flex flex-col items-center gap-1">
-                <div className="text-[11px] font-black text-white tabular-nums">{a.value}</div>
-                <div className="text-[8px] text-[#555] font-bold">{a.label.slice(0, 5)}</div>
+                <div className="text-xs font-black text-white tabular-nums">{a.value}</div>
+                <div className="text-xs text-ea-text-axis font-bold">{a.label.slice(0, 5)}</div>
               </div>
             ))}
           </div>
         </div>
 
         {/* Milestones */}
-        <div className="lg:col-span-3 rounded-3xl p-6 flex flex-col gap-4 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+        <div className="lg:col-span-3 rounded-2xl p-5 flex flex-col gap-4 border border-ea-hairline bg-ea-surface-1">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Award size={14} style={{ color: LIME }} />
-              <span className="text-[10px] font-black tracking-[0.25em] uppercase text-[#A0A0A0]">
+              <span className="text-xs font-black tracking-[0.25em] uppercase text-ea-text-muted">
                 Prossimi traguardi
               </span>
             </div>
             <h2 className="text-xl font-black text-white tracking-tight">Cosa puoi sbloccare</h2>
           </div>
           {milestones.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center text-[#444] text-xs font-bold py-12">
+            <div className="flex-1 flex items-center justify-center text-ea-text-axis text-xs font-bold py-12">
               Continua a correre per sbloccare traguardi
             </div>
           ) : (
             <div className="flex flex-col gap-3">
               {milestones.map((m, i) => (
-                <div key={i} className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 flex items-center gap-4 hover:border-white/[0.2] transition-all group">
+                <div key={i} className="rounded-2xl border border-ea-hairline bg-ea-surface-1 p-4 flex items-center gap-4 hover:border-white/[0.2] transition-all group">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                     style={{ background: `${m.color}18`, border: `1px solid ${m.color}30` }}>
                     <m.icon size={16} style={{ color: m.color }} />
@@ -872,21 +862,20 @@ export function PotenzialProgressiV2({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline justify-between gap-2 mb-1">
                       <div className="text-sm font-black text-white truncate">{m.label}</div>
-                      <div className="text-[10px] font-black tabular-nums" style={{ color: m.color }}>{m.eta}</div>
+                      <div className="text-xs font-black tabular-nums" style={{ color: m.color }}>{m.eta}</div>
                     </div>
                     <div className="flex items-baseline gap-2 mb-1.5">
-                      <span className="text-[10px] text-[#666] font-bold">Ora</span>
-                      <span className="text-[11px] font-black text-[#999] tabular-nums">{m.current}</span>
-                      <ChevronRight size={10} className="text-[#444]" />
-                      <span className="text-[10px] text-[#666] font-bold">Target</span>
-                      <span className="text-[11px] font-black tabular-nums" style={{ color: m.color }}>{m.target}</span>
+                      <span className="text-xs text-ea-text-axis font-bold">Ora</span>
+                      <span className="text-xs font-black text-ea-text-muted tabular-nums">{m.current}</span>
+                      <ChevronRight size={10} className="text-ea-text-axis" />
+                      <span className="text-xs text-ea-text-axis font-bold">Target</span>
+                      <span className="text-xs font-black tabular-nums" style={{ color: m.color }}>{m.target}</span>
                     </div>
-                    <div className="w-full bg-[#1a1a1a] rounded-full h-1.5 overflow-hidden">
+                    <div className="w-full bg-ea-surface-3 rounded-full h-1.5 overflow-hidden">
                       <div className="h-full rounded-full"
                         style={{
                           width: `${m.pct}%`,
                           background: `linear-gradient(90deg, ${m.color}AA, ${m.color})`,
-                          boxShadow: `0 0 10px ${m.color}55`,
                           transition: "width 1.4s ease-out",
                         }} />
                     </div>
@@ -901,17 +890,17 @@ export function PotenzialProgressiV2({
       {/* ═══════════════════════════════════════════════════════════
           PACE EVOLUTION — passo medio mensile
       ═══════════════════════════════════════════════════════════ */}
-      <div className="rounded-3xl p-6 lg:p-8 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+      <div className="rounded-2xl p-5 lg:p-8 border border-ea-hairline bg-ea-surface-1">
         <div className="flex items-end justify-between gap-4 mb-5 flex-wrap">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Timer size={14} style={{ color: LIME }} />
-              <span className="text-[10px] font-black tracking-[0.25em] uppercase text-[#A0A0A0]">
+              <span className="text-xs font-black tracking-[0.25em] uppercase text-ea-text-muted">
                 Evoluzione passo
               </span>
             </div>
             <h2 className="text-2xl font-black text-white tracking-tight">Quanto sei diventato veloce</h2>
-            <div className="text-[11px] text-[#666] font-bold mt-1">Passo medio mensile · ultimi 12 mesi</div>
+            <div className="text-xs text-ea-text-axis font-bold mt-1">Passo medio mensile · ultimi 12 mesi</div>
           </div>
           {paceTrend.length >= 2 && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-2xl"
@@ -920,7 +909,7 @@ export function PotenzialProgressiV2({
                 ? <TrendingUp size={14} style={{ color: CYAN }} />
                 : <TrendingDown size={14} style={{ color: ROSE }} />}
               <div className="flex flex-col">
-                <span className="text-[9px] font-black tracking-wider uppercase" style={{ color: paceImprovement > 0 ? CYAN : ROSE }}>
+                <span className="text-xs font-black tracking-wider uppercase" style={{ color: paceImprovement > 0 ? CYAN : ROSE }}>
                   {paceImprovement > 0 ? "Più veloce di" : "Più lento di"}
                 </span>
                 <span className="text-base font-black tabular-nums" style={{ color: paceImprovement > 0 ? CYAN : ROSE }}>
@@ -933,21 +922,16 @@ export function PotenzialProgressiV2({
         {paceTrend.length >= 2 ? (
           <div style={{ height: 220 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={paceTrend} margin={{ top: 10, right: 10, bottom: 5, left: -10 }}>
+              <AreaChart data={paceTrend} margin={chartMargin}>
                 <defs>
                   <linearGradient id="paceEvo" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={SKY} stopOpacity={0.4} />
                     <stop offset="100%" stopColor={SKY} stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="month" stroke="#444" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="#444" fontSize={10} tickLine={false} axisLine={false} domain={[paceMin, paceMax]}
-                  tickFormatter={fmtPaceSec} reversed width={40} />
-                <Tooltip
-                  contentStyle={{ background: "#0E0E0E", border: "1px solid #2A2A2A", borderRadius: 10, color: "#fff", fontSize: 11 }}
-                  formatter={(v: number) => [fmtPaceSec(v) + "/km", "Passo"]}
-                  cursor={{ stroke: "rgba(255,255,255,0.08)" }}
-                />
+                <XAxis {...chartXAxis} dataKey="month" />
+                <YAxis {...chartYAxis} domain={[paceMin, paceMax]} tickFormatter={fmtPaceSec} reversed width={40} />
+                <ChartTip formatter={(v: number) => [fmtPaceSec(v) + "/km", "Passo"]} />
                 <Area type="monotone" dataKey="paceSec" stroke={SKY} strokeWidth={2.5}
                   fill="url(#paceEvo)" dot={{ r: 3, fill: SKY, strokeWidth: 0 }}
                   activeDot={{ r: 5, stroke: SKY, strokeWidth: 2, fill: "#000" }} />
@@ -955,7 +939,7 @@ export function PotenzialProgressiV2({
             </ResponsiveContainer>
           </div>
         ) : (
-          <div className="h-40 flex items-center justify-center text-[#444] text-xs font-bold">Dati insufficienti</div>
+          <div className="h-40 flex items-center justify-center text-ea-text-axis text-xs font-bold">Dati insufficienti</div>
         )}
       </div>
 

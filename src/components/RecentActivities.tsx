@@ -79,7 +79,7 @@ export function RecentActivities({ runs }: RecentActivitiesProps) {
         <div className="flex-1 overflow-y-auto pr-2 space-y-6">
           {groups.map(({ group, items }) => (
             <div key={group}>
-              <h4 className="text-[10px] font-semibold text-text-muted tracking-wider mb-3 uppercase">
+              <h4 className="text-xs font-semibold text-text-muted tracking-wider mb-3 uppercase">
                 {group}
               </h4>
               <div className="space-y-3">

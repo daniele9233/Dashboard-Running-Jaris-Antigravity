@@ -1,18 +1,7 @@
 import React from 'react';
 import type { Run } from '../../types/api';
-import {
-  ResponsiveContainer,
-  ComposedChart,
-  Line,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Cell,
-} from 'recharts';
+import { ResponsiveContainer, ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { CloudSun, Droplets, ThermometerSun, Wind, Gauge, Sparkles, MapPin } from 'lucide-react';
-import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from './chartTheme';
 // Meteo, penalità climatica e parsing passo vivono in un modulo condiviso: il
 // widget dashboard "Impatto Meteo" usa gli stessi identici calcoli, così la
 // stessa corsa non mostra due numeri diversi in due schermate.
@@ -25,6 +14,7 @@ import {
   type WeatherSnapshot,
 } from '../../utils/weather';
 
+import { CHART_SERIES, CHART_SURFACE, CHART_TEXT, ChartTip, chartGrid, chartXAxis, chartYAxis } from "../charts";
 // Alias sul tema condiviso (chartTheme.ts).
 const NEON = CHART_SERIES.primary;
 const CYAN = CHART_SERIES.compare;
@@ -200,11 +190,10 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
     return (
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <div
-          className="rounded-[28px] border p-8"
+          className="rounded-2xl border p-8"
           style={{
-            background: 'radial-gradient(circle at top left, rgba(192,255,0,0.10), transparent 28%), radial-gradient(circle at bottom right, rgba(34,211,238,0.08), transparent 34%), #0B0B0B',
+            background: CHART_SURFACE.panel,
             borderColor: BORDER,
-            borderLeft: `3px solid ${NEON}`,
           }}
         >
           <div className="flex items-center gap-3 mb-4">
@@ -212,11 +201,11 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
               <CloudSun className="w-5 h-5" style={{ color: NEON }} />
             </div>
             <div>
-              <h2 className="text-2xl font-black uppercase tracking-wide text-white italic">Normalizzatore Ambientale</h2>
-              <p className="text-[11px] uppercase tracking-[0.25em]" style={{ color: MUTED }}>ritmo reale standardizzato · STP 5–10°C</p>
+              <h2 className="ea-title">Normalizzatore Ambientale</h2>
+              <p className="text-xs uppercase tracking-[0.25em]" style={{ color: MUTED }}>ritmo reale standardizzato · STP 5–10°C</p>
             </div>
           </div>
-          <p className="text-sm leading-7 max-w-3xl" style={{ color: '#A2ACB7' }}>
+          <p className="text-sm leading-7 max-w-3xl" style={{ color: CHART_TEXT.muted }}>
             Qui leggiamo le corse outdoor con GPS dai 3 km in su, sotto 5:00/km e oltre 20°C, e ne standardizziamo il passo a condizioni ideali 5–10°C.
             Al momento il campione non e ancora sufficiente.
           </p>
@@ -229,11 +218,10 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
     return (
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <div
-          className="rounded-[28px] border p-8"
+          className="rounded-2xl border p-8"
           style={{
-            background: 'radial-gradient(circle at top left, rgba(192,255,0,0.10), transparent 28%), radial-gradient(circle at bottom right, rgba(34,211,238,0.08), transparent 34%), #0B0B0B',
+            background: CHART_SURFACE.panel,
             borderColor: BORDER,
-            borderLeft: `3px solid ${NEON}`,
           }}
         >
           <div className="flex items-center gap-3 mb-4">
@@ -241,11 +229,11 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
               <CloudSun className="w-5 h-5" style={{ color: NEON }} />
             </div>
             <div>
-              <h2 className="text-2xl font-black uppercase tracking-wide text-white italic">Normalizzatore Ambientale</h2>
-              <p className="text-[11px] uppercase tracking-[0.25em]" style={{ color: MUTED }}>corse ≥3 km, sotto 5:00/km e oltre 20°C</p>
+              <h2 className="ea-title">Normalizzatore Ambientale</h2>
+              <p className="text-xs uppercase tracking-[0.25em]" style={{ color: MUTED }}>corse ≥3 km, sotto 5:00/km e oltre 20°C</p>
             </div>
           </div>
-          <p className="text-sm leading-7 max-w-3xl" style={{ color: '#A2ACB7' }}>
+          <p className="text-sm leading-7 max-w-3xl" style={{ color: CHART_TEXT.muted }}>
             {pendingWeatherCount > 0
               ? `Sto leggendo il meteo storico delle ultime ${weatherWindowRuns.length} corse veloci: appena finisce il fetch, qui restano le uscite sopra i 20°C.`
               : `Nel campione recente non ho trovato corse outdoor sotto 5:00/km con temperatura superiore a 20°C. Appena compaiono, questo tab le usera come riferimenti.`}
@@ -258,13 +246,11 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <section
-        className="rounded-[30px] border overflow-hidden"
+        className="rounded-2xl border overflow-hidden"
         style={{
-          background: 'radial-gradient(circle at top left, rgba(192,255,0,0.12), transparent 24%), radial-gradient(circle at bottom right, rgba(34,211,238,0.10), transparent 34%), #0A0A0A',
+          background: CHART_SURFACE.panel,
           borderColor: BORDER,
-          borderLeft: `3px solid ${NEON}`,
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02), 0 0 0 1px rgba(192,255,0,0.03)',
-        }}
+          }}
       >
         <div className="p-8 border-b border-white/[0.05]">
           <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6">
@@ -274,7 +260,7 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
                   <CloudSun className="w-5 h-5" style={{ color: NEON }} />
                 </div>
                 <div>
-                  <div className="text-[10px] font-black tracking-[0.3em] uppercase" style={{ color: '#8A9562' }}>Clima, GPS e ritmo reale</div>
+                  <div className="text-xs font-black tracking-[0.3em] uppercase" style={{ color: CHART_TEXT.muted }}>Clima, GPS e ritmo reale</div>
                   <h2 className="text-[34px] leading-none font-black tracking-tight text-white">Normalizzatore Ambientale</h2>
                 </div>
               </div>
@@ -292,25 +278,25 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
                 ].map((item) => (
                   <span
                     key={item}
-                    className="px-3 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.22em]"
-                    style={{ color: '#D7FF76', background: 'rgba(192,255,0,0.08)', border: '1px solid rgba(192,255,0,0.16)' }}
+                    className="px-3 py-2 rounded-full text-xs font-black uppercase tracking-[0.22em]"
+                    style={{ color: CHART_SERIES.primary, background: 'rgba(192,255,0,0.08)', border: '1px solid rgba(192,255,0,0.16)' }}
                   >
                     {item}
                   </span>
                 ))}
               </div>
             </div>
-            <div className="shrink-0 flex items-center gap-2 bg-[#0E0E0E] border border-white/[0.06] rounded-2xl p-1.5">
+            <div className="shrink-0 flex items-center gap-2 bg-ea-surface-1 border border-ea-hairline rounded-2xl p-1.5">
               {[{ key: 10, label: 'Recenti' }, { key: 30, label: 'Estese' }].map((opt) => (
                 <button
                   key={opt.key}
                   type="button"
                   onClick={() => setLimit(opt.key as 10 | 30)}
                   title={opt.key === 10 ? 'Legge il meteo delle ultime 120 corse veloci' : 'Legge il meteo delle ultime 300 corse veloci'}
-                  className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.22em] transition-all"
+                  className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-[0.22em] transition-all"
                   style={{
                     background: limit === opt.key ? NEON : 'transparent',
-                    color: limit === opt.key ? '#0A0A0A' : '#7D8590',
+                    color: limit === opt.key ? CHART_SURFACE.panel : '#7D8590',
                   }}
                 >
                   {opt.label}
@@ -329,7 +315,7 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
                     label: 'Ritmo medio reale',
                     value: `${formatPace(summary.avgActual)} /km`,
                     sub: `${enrichedRuns.length} corse calde lette`,
-                    color: '#FFFFFF',
+                    color: CHART_TEXT.primary,
                   },
                   {
                     label: 'Ritmo medio STP',
@@ -350,22 +336,22 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
                     color: PINK,
                   },
                 ].map((card) => (
-                  <div key={card.label} className="rounded-2xl border p-5" style={{ background: PANEL, borderColor: '#232323' }}>
-                    <div className="text-[10px] uppercase tracking-[0.22em] font-black mb-3" style={{ color: MUTED }}>{card.label}</div>
+                  <div key={card.label} className="rounded-2xl border p-5" style={{ background: PANEL, borderColor: CHART_SURFACE.border }}>
+                    <div className="text-xs uppercase tracking-[0.22em] font-black mb-3" style={{ color: MUTED }}>{card.label}</div>
                     <div className="text-[28px] leading-none font-black" style={{ color: card.color }}>{card.value}</div>
                     <div className="text-sm mt-3 leading-6" style={{ color: '#8C96A0' }}>{card.sub}</div>
                   </div>
                 ))}
               </div>
 
-              <div className="rounded-[26px] border p-6" style={{ background: '#0D0D0D', borderColor: '#202020' }}>
+              <div className="rounded-2xl border p-6" style={{ background: '#0D0D0D', borderColor: '#202020' }}>
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div>
-                    <div className="text-[10px] uppercase tracking-[0.26em] font-black" style={{ color: '#8A9562' }}>Actual vs STP</div>
+                    <div className="text-xs uppercase tracking-[0.26em] font-black" style={{ color: CHART_TEXT.muted }}>Actual vs STP</div>
                     <h3 className="text-2xl font-black text-white">Quanto clima stavi trascinando addosso</h3>
                   </div>
                   <div className="text-right">
-                    <div className="text-[10px] uppercase tracking-[0.24em] font-black" style={{ color: MUTED }}>assetto ideale</div>
+                    <div className="text-xs uppercase tracking-[0.24em] font-black" style={{ color: MUTED }}>assetto ideale</div>
                     <div className="text-sm font-bold" style={{ color: '#B9C1CA' }}>5–10°C · 45–60% RH · vento contenuto</div>
                   </div>
                 </div>
@@ -378,31 +364,14 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
                           <stop offset="100%" stopColor={CYAN} stopOpacity={0.04} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 6" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                      <XAxis dataKey="label" tick={{ fill: '#67707A', fontSize: 10, fontWeight: 800 }} axisLine={false} tickLine={false} />
-                      <YAxis
-                        yAxisId="pace"
-                        reversed
-                        tick={{ fill: '#67707A', fontSize: 10, fontWeight: 800 }}
-                        axisLine={false}
-                        tickLine={false}
-                        domain={PACE_Y_DOMAIN}
-                        tickFormatter={(value) => formatPace(value)}
-                      />
-                      <YAxis yAxisId="delta" hide domain={DELTA_Y_DOMAIN} />
-                      <Tooltip
-                        contentStyle={{
-                          background: '#090909',
-                          border: '1px solid #273510',
-                          borderRadius: 18,
-                          boxShadow: '0 18px 42px rgba(0,0,0,0.35)',
-                        }}
-                        labelStyle={{ color: '#FFFFFF', fontWeight: 800 }}
-                        formatter={(value: number, name: string) => {
+                      <CartesianGrid {...chartGrid} />
+                      <XAxis {...chartXAxis} dataKey="label" />
+                      <YAxis {...chartYAxis} yAxisId="pace" reversed domain={PACE_Y_DOMAIN} tickFormatter={(value) => formatPace(value)} />
+                      <YAxis {...chartYAxis} yAxisId="delta" hide width={0} domain={DELTA_Y_DOMAIN} />
+                      <ChartTip formatter={(value: number, name: string) => {
                           if (name === 'delta') return [`-${Math.round(value)} sec/km`, 'boost climatico'];
                           return [`${formatPace(value)} /km`, name === 'actual' ? 'passo reale' : 'ritmo STP'];
-                        }}
-                      />
+                        }} />
                       <Bar yAxisId="delta" dataKey="delta" barSize={18} radius={[8, 8, 0, 0]} fill="url(#env-boost-fill)" />
                       <Line yAxisId="pace" type="monotone" dataKey="actual" name="actual" stroke={AMBER} strokeWidth={2.5} dot={{ r: 4, fill: AMBER }} activeDot={{ r: 6, fill: AMBER }} connectNulls />
                       <Line yAxisId="pace" type="monotone" dataKey="ideal" name="ideal" stroke={NEON} strokeWidth={3} dot={{ r: 4, fill: NEON }} activeDot={{ r: 6, fill: NEON }} connectNulls />
@@ -414,7 +383,7 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
 
             <div className="space-y-6">
               <div
-                className="rounded-[28px] border p-6"
+                className="rounded-2xl border p-6"
                 style={{
                   background: 'linear-gradient(180deg, rgba(192,255,0,0.08), rgba(34,211,238,0.04)), #0E0E0E',
                   borderColor: '#273510',
@@ -422,14 +391,14 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
               >
                 <div className="flex items-center gap-3 mb-4">
                   <Sparkles className="w-5 h-5" style={{ color: NEON }} />
-                  <div className="text-[10px] uppercase tracking-[0.24em] font-black" style={{ color: '#8A9562' }}>la corsa piu sottovalutata</div>
+                  <div className="text-xs uppercase tracking-[0.24em] font-black" style={{ color: CHART_TEXT.muted }}>la corsa piu sottovalutata</div>
                 </div>
                 <div className="text-[14px] font-black uppercase tracking-[0.14em] text-white">{summary.biggestBoost.run.name ?? 'Run veloce'}</div>
-                <div className="text-[34px] leading-none font-black mt-3" style={{ color: '#FFFFFF' }}>
+                <div className="text-[34px] leading-none font-black mt-3" style={{ color: CHART_TEXT.primary }}>
                   {formatPace(summary.biggestBoost.actualPaceSec)} <span className="text-base" style={{ color: MUTED }}>/km reale</span>
                 </div>
                 <div className="text-[34px] leading-none font-black mt-2" style={{ color: NEON }}>
-                  {formatPace(summary.biggestBoost.normalizedPaceSec)} <span className="text-base" style={{ color: '#7EA533' }}>/km STP</span>
+                  {formatPace(summary.biggestBoost.normalizedPaceSec)} <span className="text-base" style={{ color: CHART_SERIES.primary }}>/km STP</span>
                 </div>
                 <p className="text-base leading-7 mt-5" style={{ color: '#B8C2CC' }}>
                   {summary.biggestBoost.idealNarrative}
@@ -441,17 +410,17 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
                     { icon: Wind, label: 'vento', value: summary.biggestBoost.weather?.wind != null ? `${Math.round(summary.biggestBoost.weather.wind)} km/h` : '—' },
                     { icon: Gauge, label: 'ora letta', value: summary.biggestBoost.weather?.estimatedLabel ?? 'n/d' },
                   ].map((item) => (
-                    <div key={item.label} className="rounded-2xl border p-4" style={{ background: '#101010', borderColor: '#232323' }}>
+                    <div key={item.label} className="rounded-2xl border p-4" style={{ background: CHART_SURFACE.panel, borderColor: CHART_SURFACE.border }}>
                       <item.icon className="w-4 h-4 mb-3" style={{ color: item.label === 'umidita' ? CYAN : item.label === 'temperatura' ? AMBER : NEON }} />
-                      <div className="text-[9px] uppercase tracking-[0.24em] font-black" style={{ color: MUTED }}>{item.label}</div>
+                      <div className="text-xs uppercase tracking-[0.24em] font-black" style={{ color: MUTED }}>{item.label}</div>
                       <div className="text-sm font-black mt-2 text-white">{item.value}</div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="rounded-[28px] border p-6" style={{ background: PANEL, borderColor: '#232323' }}>
-                <div className="text-[10px] uppercase tracking-[0.24em] font-black mb-4" style={{ color: '#8A9562' }}>come leggere il booster</div>
+              <div className="rounded-2xl border p-6" style={{ background: PANEL, borderColor: CHART_SURFACE.border }}>
+                <div className="text-xs uppercase tracking-[0.24em] font-black mb-4" style={{ color: CHART_TEXT.muted }}>come leggere il booster</div>
                 <div className="space-y-4">
                   {[
                     'Il modello non cambia la tua corsa: cambia solo il contesto attorno alla corsa.',
@@ -471,10 +440,10 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
         )}
       </section>
 
-      <section className="rounded-[28px] border overflow-hidden" style={{ background: '#0B0B0B', borderColor: '#1E1E1E', borderLeft: `3px solid ${CYAN}` }}>
+      <section className="rounded-2xl border overflow-hidden" style={{ background: '#0B0B0B', borderColor: CHART_SURFACE.border }}>
         <div className="p-7 border-b border-white/[0.05] flex flex-col lg:flex-row lg:items-end justify-between gap-5">
           <div>
-            <div className="text-[10px] font-black uppercase tracking-[0.28em]" style={{ color: '#4D9EAE' }}>ultime corse lette</div>
+            <div className="text-xs font-black uppercase tracking-[0.28em]" style={{ color: '#4D9EAE' }}>ultime corse lette</div>
             <h3 className="text-2xl font-black text-white">Le tue uscite sotto 5:00/km, ripulite dal meteo</h3>
           </div>
             <div className="text-sm leading-7 max-w-2xl" style={{ color: '#94A0AA' }}>
@@ -484,78 +453,78 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
         </div>
         <div className="p-7 grid grid-cols-1 xl:grid-cols-2 gap-4">
           {enrichedRuns.map((item) => (
-            <article key={item.run.id} className="rounded-[24px] border p-5" style={{ background: '#101010', borderColor: '#232323' }}>
+            <article key={item.run.id} className="rounded-2xl border p-5" style={{ background: CHART_SURFACE.panel, borderColor: CHART_SURFACE.border }}>
               <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-3 flex-wrap">
-                    <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.22em]" style={{ background: 'rgba(192,255,0,0.08)', color: '#D7FF76' }}>
+                    <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-[0.22em]" style={{ background: 'rgba(192,255,0,0.08)', color: CHART_SERIES.primary }}>
                       {item.label}
                     </span>
-                    <span className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: MUTED }}>
+                    <span className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: MUTED }}>
                       {(item.run.distance_km ?? 0).toFixed(1).replace('.', ',')} km
                     </span>
-                    <span className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: '#6D7781' }}>
+                    <span className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: '#6D7781' }}>
                       {item.weather?.estimatedLabel ?? 'ora non leggibile'}
                     </span>
                   </div>
                   <h4 className="text-lg font-black text-white mt-3">{item.run.name ?? 'Run veloce'}</h4>
                 </div>
                 <div className="text-right">
-                  <div className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: '#79828B' }}>boost stimato</div>
+                  <div className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: '#79828B' }}>boost stimato</div>
                   <div className="text-[26px] leading-none font-black" style={{ color: PINK }}>-{Math.round(item.deltaSec)} sec/km</div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-5">
-                <div className="rounded-2xl border p-4" style={{ background: '#0C0C0C', borderColor: '#1F1F1F' }}>
-                  <div className="text-[9px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>passo reale</div>
+                <div className="rounded-2xl border p-4" style={{ background: CHART_SURFACE.panel, borderColor: CHART_SURFACE.border }}>
+                  <div className="text-xs uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>passo reale</div>
                   <div className="text-[26px] font-black mt-2 text-white">{formatPace(item.actualPaceSec)}</div>
                   <div className="text-xs mt-1" style={{ color: '#7A838D' }}>/km</div>
                 </div>
-                <div className="rounded-2xl border p-4" style={{ background: '#0C0C0C', borderColor: '#1F1F1F' }}>
-                  <div className="text-[9px] uppercase tracking-[0.22em] font-black" style={{ color: '#8A9562' }}>ritmo STP</div>
+                <div className="rounded-2xl border p-4" style={{ background: CHART_SURFACE.panel, borderColor: CHART_SURFACE.border }}>
+                  <div className="text-xs uppercase tracking-[0.22em] font-black" style={{ color: CHART_TEXT.muted }}>ritmo STP</div>
                   <div className="text-[26px] font-black mt-2" style={{ color: NEON }}>{formatPace(item.normalizedPaceSec)}</div>
-                  <div className="text-xs mt-1" style={{ color: '#7EA533' }}>/km</div>
+                  <div className="text-xs mt-1" style={{ color: CHART_SERIES.primary }}>/km</div>
                 </div>
-                <div className="rounded-2xl border p-4" style={{ background: '#0C0C0C', borderColor: '#1F1F1F' }}>
+                <div className="rounded-2xl border p-4" style={{ background: CHART_SURFACE.panel, borderColor: CHART_SURFACE.border }}>
                   <div className="flex items-center gap-2">
                     <ThermometerSun className="w-4 h-4" style={{ color: AMBER }} />
-                    <div className="text-[9px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>temperatura</div>
+                    <div className="text-xs uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>temperatura</div>
                   </div>
                   <div className="text-[24px] font-black mt-2 text-white">{formatTemperature(item.weather?.temperature)}</div>
                 </div>
-                <div className="rounded-2xl border p-4" style={{ background: '#0C0C0C', borderColor: '#1F1F1F' }}>
+                <div className="rounded-2xl border p-4" style={{ background: CHART_SURFACE.panel, borderColor: CHART_SURFACE.border }}>
                   <div className="flex items-center gap-2">
                     <Droplets className="w-4 h-4" style={{ color: CYAN }} />
-                    <div className="text-[9px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>umidita</div>
+                    <div className="text-xs uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>umidita</div>
                   </div>
                   <div className="text-[24px] font-black mt-2 text-white">{formatHumidity(item.weather?.humidity)}</div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
-                <div className="rounded-2xl border p-4" style={{ background: '#0C0C0C', borderColor: '#1F1F1F' }}>
+                <div className="rounded-2xl border p-4" style={{ background: CHART_SURFACE.panel, borderColor: CHART_SURFACE.border }}>
                   <div className="flex items-center gap-2">
                     <Wind className="w-4 h-4" style={{ color: '#7ED6FF' }} />
-                    <div className="text-[9px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>vento</div>
+                    <div className="text-xs uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>vento</div>
                   </div>
                   <div className="text-lg font-black mt-2 text-white">
                     {item.weather?.wind != null ? `${Math.round(item.weather.wind)} km/h` : '—'}
                   </div>
                 </div>
-                <div className="rounded-2xl border p-4" style={{ background: '#0C0C0C', borderColor: '#1F1F1F' }}>
+                <div className="rounded-2xl border p-4" style={{ background: CHART_SURFACE.panel, borderColor: CHART_SURFACE.border }}>
                   <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4" style={{ color: '#9CA3AF' }} />
-                    <div className="text-[9px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>dislivello</div>
+                    <div className="text-xs uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>dislivello</div>
                   </div>
                   <div className="text-lg font-black mt-2 text-white">
                     {Math.round(item.run.elevation_gain ?? 0)} m
                   </div>
                 </div>
-                <div className="rounded-2xl border p-4" style={{ background: '#0C0C0C', borderColor: '#1F1F1F' }}>
+                <div className="rounded-2xl border p-4" style={{ background: CHART_SURFACE.panel, borderColor: CHART_SURFACE.border }}>
                   <div className="flex items-center gap-2">
                     <Gauge className="w-4 h-4" style={{ color: NEON }} />
-                    <div className="text-[9px] uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>lettura</div>
+                    <div className="text-xs uppercase tracking-[0.22em] font-black" style={{ color: MUTED }}>lettura</div>
                   </div>
                   <div className="text-sm font-black mt-2 text-white">
                     {item.weather?.source === 'archive'
@@ -570,7 +539,7 @@ export function EnvironmentalNormalizerView({ runs }: { runs: Run[] }) {
               </div>
 
               <div className="mt-4 rounded-2xl border p-4" style={{ background: 'linear-gradient(90deg, rgba(34,211,238,0.08), rgba(192,255,0,0.06))', borderColor: 'rgba(34,211,238,0.18)' }}>
-                <p className="text-sm leading-7" style={{ color: '#C7D0D8' }}>{item.idealNarrative}</p>
+                <p className="text-sm leading-7" style={{ color: CHART_TEXT.muted }}>{item.idealNarrative}</p>
               </div>
             </article>
           ))}

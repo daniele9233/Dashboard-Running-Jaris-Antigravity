@@ -4,7 +4,7 @@ import { fmtClock } from "./gamiCore";
 import { humanDays, type PhysioState } from "./physioEngine";
 import { buildGoalCone, coneGoals, type ConeEta, type ConePoint, type GoalCone as Cone } from "./goalConeEngine";
 import { levelFromXp } from "./evolutionEngine";
-import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from "../statistics/chartTheme";
+import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from "../charts";
 
 const MONO = "'JetBrains Mono', monospace";
 const LIME = CHART_SERIES.primary;
@@ -61,7 +61,7 @@ export function GoalCone({ physio, mine, xp }: Props) {
             const sel = g.id === goal.id;
             return (
               <button key={g.id} type="button" role="radio" aria-checked={sel} onClick={() => setGoalId(g.id)}
-                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black tracking-wide border transition-colors ${sel ? "bg-[#C0FF00]/12 border-[#C0FF00]/50 text-white" : "border-white/10 text-gray-400 hover:text-white hover:border-white/25"}`}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-black tracking-wide border transition-colors ${sel ? "bg-[#C0FF00]/12 border-[#C0FF00]/50 text-white" : "border-white/10 text-gray-400 hover:text-white hover:border-white/25"}`}
                 style={{ fontFamily: MONO }}>
                 {g.mine && <span className="mr-1" style={{ color: LIME }}>★</span>}
                 {g.mine ? `Il tuo · ${g.label}` : g.label}
@@ -79,18 +79,18 @@ export function GoalCone({ physio, mine, xp }: Props) {
           <EtaTile label="Probabile" chance="80%" eta={cone.likely} empty="non a questo carico" note="la data su cui prenotare" />
           {cone.race ? (
             <div className="rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 min-w-0">
-              <div className="text-[9px] font-black tracking-[0.2em] uppercase text-gray-500">Gara · {shortDate(cone.race.iso)}</div>
+              <div className="text-xs font-black tracking-[0.2em] uppercase text-gray-500">Gara · {shortDate(cone.race.iso)}</div>
               <div className="mt-1 flex items-baseline gap-1.5">
                 <span className="text-xl font-black text-white" style={{ fontFamily: MONO }}>{fmtClock(cone.race.sec)}</span>
-                <span className="text-[11px] font-black text-gray-300" style={{ fontFamily: MONO }}>{pct(cone.race.p)}</span>
+                <span className="text-xs font-black text-gray-300" style={{ fontFamily: MONO }}>{pct(cone.race.p)}</span>
               </div>
-              <div className="text-[9px] text-gray-500 truncate">previsto · circa {cone.race.tempC}° quel mese</div>
+              <div className="text-xs text-gray-500 truncate">previsto · circa {cone.race.tempC}° quel mese</div>
             </div>
           ) : (
             <div className="rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 min-w-0">
-              <div className="text-[9px] font-black tracking-[0.2em] uppercase text-gray-500">Il meglio previsto</div>
+              <div className="text-xs font-black tracking-[0.2em] uppercase text-gray-500">Il meglio previsto</div>
               <div className="mt-1 text-xl font-black text-white" style={{ fontFamily: MONO }}>{fmtClock(best.sec)}</div>
-              <div className="text-[9px] text-gray-500 truncate">intorno al {shortDate(best.iso)}</div>
+              <div className="text-xs text-gray-500 truncate">intorno al {shortDate(best.iso)}</div>
             </div>
           )}
         </div>
@@ -100,7 +100,7 @@ export function GoalCone({ physio, mine, xp }: Props) {
         </div>
 
         {/* legenda: due serie, ognuna con la sua chiave di linea */}
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px] text-gray-400">
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-gray-400">
           <LineKey color={LIME}>previsione se continui così</LineKey>
           <span className="inline-flex items-center gap-1.5">
             <span className="w-4 h-2.5 rounded-sm" style={{ background: `${LIME}26` }} />forchetta 20-80%
@@ -108,7 +108,7 @@ export function GoalCone({ physio, mine, xp }: Props) {
           {cone.boost && <LineKey color={CYAN} dashed>con {cone.boost.label}</LineKey>}
           <LineKey color={CHART_TEXT.muted} dashed>obiettivo {fmtClock(goal.targetSec)}</LineKey>
           <button type="button" onClick={() => setTable((v) => !v)} aria-expanded={table}
-            className="ml-auto inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-gray-500 hover:text-white">
+            className="ml-auto inline-flex items-center gap-1 text-xs font-black uppercase tracking-wider text-gray-500 hover:text-white">
             <Table2 className="w-3 h-3" />{table ? "nascondi tabella" : "vedi come tabella"}
           </button>
         </div>
@@ -118,7 +118,7 @@ export function GoalCone({ physio, mine, xp }: Props) {
         {(cone.boost || (anchor && sessionsPerDay > 0)) && (
           <div className="mt-4 pt-3.5 border-t border-white/10 grid gap-2 md:grid-cols-2">
             {cone.boost && cone.boost.even && (
-              <div className="flex items-start gap-2.5 text-[11px] leading-snug text-gray-400">
+              <div className="flex items-start gap-2.5 text-xs leading-snug text-gray-400">
                 <span className="mt-1.5 w-4 border-t-2 border-dashed shrink-0" style={{ borderColor: CYAN }} />
                 <span>
                   Con <b className="text-white">{cone.boost.label}</b> sei alla pari il{" "}
@@ -130,7 +130,7 @@ export function GoalCone({ physio, mine, xp }: Props) {
               </div>
             )}
             {anchor && sessionsPerDay > 0 && xp && (
-              <div className="flex items-start gap-2.5 text-[11px] leading-snug text-gray-400">
+              <div className="flex items-start gap-2.5 text-xs leading-snug text-gray-400">
                 <CalendarClock className="mt-0.5 w-3.5 h-3.5 shrink-0 text-gray-500" />
                 <span>
                   Da qui {cone.race ? "alla gara" : "al giorno alla pari"}, al tuo ritmo:{" "}
@@ -174,11 +174,11 @@ function EtaTile({ label, chance, eta, empty, note, strong }: {
   return (
     <div className={`rounded-xl border px-3 py-2.5 min-w-0 ${strong ? "border-[#C0FF00]/35 bg-[#C0FF00]/[0.05]" : "border-white/10 bg-black/25"}`}>
       <div className="flex items-baseline justify-between gap-1">
-        <span className="text-[9px] font-black tracking-[0.2em] uppercase text-gray-500">{label}</span>
-        <span className="text-[9px] font-black text-gray-500" style={{ fontFamily: MONO }}>{chance}</span>
+        <span className="text-xs font-black tracking-[0.2em] uppercase text-gray-500">{label}</span>
+        <span className="text-xs font-black text-gray-500" style={{ fontFamily: MONO }}>{chance}</span>
       </div>
       <div className="mt-1 text-xl font-black text-white truncate" style={{ fontFamily: MONO }}>{eta ? shortDate(eta.iso) : "—"}</div>
-      <div className="text-[9px] text-gray-500 truncate">{eta ? note : empty}</div>
+      <div className="text-xs text-gray-500 truncate">{eta ? note : empty}</div>
     </div>
   );
 }
@@ -194,8 +194,8 @@ function LineKey({ color, dashed, children }: { color: string; dashed?: boolean;
 function Title({ icon: Icon, children, hint }: { icon: LucideIcon; children: React.ReactNode; hint?: string }) {
   return (
     <div className="flex items-center justify-between gap-3 mb-3 px-0.5">
-      <div className="flex items-center gap-2 min-w-0"><Icon className="w-4 h-4 text-[#C0FF00] shrink-0" /><h2 className="text-[11px] font-black tracking-[0.28em] uppercase text-white/90 truncate">{children}</h2></div>
-      {hint && <span className="hidden sm:inline text-[9px] tracking-widest uppercase text-gray-600 shrink-0 truncate">{hint}</span>}
+      <div className="flex items-center gap-2 min-w-0"><Icon className="w-4 h-4 text-[#C0FF00] shrink-0" /><h2 className="text-xs font-black tracking-[0.28em] uppercase text-white/90 truncate">{children}</h2></div>
+      {hint && <span className="hidden sm:inline text-xs tracking-widest uppercase text-gray-600 shrink-0 truncate">{hint}</span>}
     </div>
   );
 }
@@ -290,13 +290,13 @@ function ConeChart({ cone }: { cone: Cone }) {
         {yTicks.map((s) => (
           <g key={s}>
             <line x1={L} x2={W - R} y1={Y(s)} y2={Y(s)} stroke={CHART_SURFACE.grid} strokeWidth={1} />
-            <text x={L - 8} y={Y(s) + 3} textAnchor="end" fill={CHART_TEXT.axis} style={{ fontFamily: MONO, fontSize: 9 }}>{fmtClock(s)}</text>
+            <text x={L - 8} y={Y(s) + 3} textAnchor="end" fill={CHART_TEXT.axis} style={{ fontFamily: MONO, fontSize: 12 }}>{fmtClock(s)}</text>
           </g>
         ))}
         {months.map((m, i) => i % monthStep === 0 && (
           <g key={`${m.label}${i}`}>
             <line x1={m.x} x2={m.x} y1={H - B} y2={H - B + 4} stroke={CHART_SURFACE.borderStrong} />
-            <text x={m.x} y={H - B + 15} textAnchor="middle" fill={CHART_TEXT.axis} style={{ fontFamily: MONO, fontSize: 9 }}>{m.label}</text>
+            <text x={m.x} y={H - B + 15} textAnchor="middle" fill={CHART_TEXT.axis} style={{ fontFamily: MONO, fontSize: 12 }}>{m.label}</text>
           </g>
         ))}
         <line x1={L} x2={W - R} y1={H - B} y2={H - B} stroke={CHART_SURFACE.borderStrong} />
@@ -306,7 +306,7 @@ function ConeChart({ cone }: { cone: Cone }) {
 
         {/* l'obiettivo */}
         <line x1={L} x2={W - R} y1={Y(target)} y2={Y(target)} stroke={CHART_TEXT.muted} strokeWidth={1} strokeDasharray="5 4" />
-        <text x={W - R} y={Y(target) - 6} textAnchor="end" fill={CHART_TEXT.muted} style={{ fontFamily: MONO, fontSize: 9, fontWeight: 800 }}>
+        <text x={W - R} y={Y(target) - 6} textAnchor="end" fill={CHART_TEXT.muted} style={{ fontFamily: MONO, fontSize: 12, fontWeight: 800 }}>
           obiettivo {fmtClock(target)}
         </text>
 
@@ -314,7 +314,7 @@ function ConeChart({ cone }: { cone: Cone }) {
         {race && race.days <= cone.horizon && (
           <g>
             <line x1={X(race.days)} x2={X(race.days)} y1={T - 12} y2={H - B} stroke={CHART_TEXT.faint} strokeWidth={1} />
-            <text x={X(race.days)} y={T - 16} textAnchor="middle" fill={CHART_TEXT.primary} style={{ fontFamily: MONO, fontSize: 9, fontWeight: 800, letterSpacing: "0.12em" }}>GARA</text>
+            <text x={X(race.days)} y={T - 16} textAnchor="middle" fill={CHART_TEXT.primary} style={{ fontFamily: MONO, fontSize: 12, fontWeight: 800, letterSpacing: "0.12em" }}>GARA</text>
           </g>
         )}
 
@@ -326,14 +326,14 @@ function ConeChart({ cone }: { cone: Cone }) {
         {labeled.map(({ k, x, show }) => (
           <g key={k}>
             <circle cx={x} cy={Y(target)} r={4.5} fill={k === "50%" ? LIME : CHART_SURFACE.panel} stroke={k === "50%" ? CHART_SURFACE.panel : LIME} strokeWidth={2} />
-            {show && <text x={x} y={Y(target) + 16} textAnchor="middle" fill={CHART_TEXT.primary} style={{ fontFamily: MONO, fontSize: 9, fontWeight: 800 }}>{k}</text>}
+            {show && <text x={x} y={Y(target) + 16} textAnchor="middle" fill={CHART_TEXT.primary} style={{ fontFamily: MONO, fontSize: 12, fontWeight: 800 }}>{k}</text>}
           </g>
         ))}
 
         {/* oggi */}
         <circle cx={X(0)} cy={Y(pts[0].sec)} r={4.5} fill={LIME} stroke={CHART_SURFACE.panel} strokeWidth={2} />
         {!info && (
-          <text x={X(0) + 8} y={Y(pts[0].sec) + (Y(pts[0].sec) > (H - B) - 20 ? -8 : 14)} fill={CHART_TEXT.primary} style={{ fontFamily: MONO, fontSize: 9, fontWeight: 800 }}>
+          <text x={X(0) + 8} y={Y(pts[0].sec) + (Y(pts[0].sec) > (H - B) - 20 ? -8 : 14)} fill={CHART_TEXT.primary} style={{ fontFamily: MONO, fontSize: 12, fontWeight: 800 }}>
             oggi {fmtClock(pts[0].sec)}
           </text>
         )}
@@ -342,7 +342,7 @@ function ConeChart({ cone }: { cone: Cone }) {
           <g>
             <circle cx={X(race.days)} cy={Y(race.sec)} r={4.5} fill={LIME} stroke={CHART_SURFACE.panel} strokeWidth={2} />
             <text x={X(race.days) + (X(race.days) > W - 110 ? -8 : 8)} y={Y(race.sec) - 8} textAnchor={X(race.days) > W - 110 ? "end" : "start"}
-              fill={CHART_TEXT.primary} style={{ fontFamily: MONO, fontSize: 9, fontWeight: 800 }}>
+              fill={CHART_TEXT.primary} style={{ fontFamily: MONO, fontSize: 12, fontWeight: 800 }}>
               {fmtClock(race.sec)} · {pct(race.p)}
             </text>
           </g>
@@ -376,14 +376,14 @@ function Crosshair({ info, boostSec, boostLabel, x, yMain, yBoost, W, T, H, B, t
       {yBoost != null && <circle cx={x} cy={yBoost} r={4} fill={CYAN} stroke={CHART_SURFACE.panel} strokeWidth={2} />}
       <circle cx={x} cy={yMain} r={4.5} fill={LIME} stroke={CHART_SURFACE.panel} strokeWidth={2} />
       <rect x={bx} y={by} width={bw} height={bh} rx={8} fill="#0A0A0AF0" stroke={CHART_SURFACE.borderStrong} />
-      <text x={bx + 10} y={by + 15} fill={CHART_TEXT.muted} style={{ fontFamily: MONO, fontSize: 9, fontWeight: 800 }}>
+      <text x={bx + 10} y={by + 15} fill={CHART_TEXT.muted} style={{ fontFamily: MONO, fontSize: 12, fontWeight: 800 }}>
         {shortDate(info.iso)} · {info.day === 0 ? "oggi" : humanDays(info.day)}
       </text>
       {rows.map((r, i) => (
         <g key={r.key}>
           {r.color && <line x1={bx + 10} x2={bx + 20} y1={by + 26 + i * 14} y2={by + 26 + i * 14} stroke={r.color} strokeWidth={2} strokeDasharray={r.dashed ? "3 2" : undefined} />}
-          <text x={bx + (r.color ? 25 : 10)} y={by + 29 + i * 14} fill={CHART_TEXT.axis} style={{ fontFamily: MONO, fontSize: 9 }}>{r.key}</text>
-          <text x={bx + bw - 10} y={by + 29 + i * 14} textAnchor="end" fill={CHART_TEXT.primary} style={{ fontFamily: MONO, fontSize: 10, fontWeight: 800 }}>{r.value}</text>
+          <text x={bx + (r.color ? 25 : 10)} y={by + 29 + i * 14} fill={CHART_TEXT.axis} style={{ fontFamily: MONO, fontSize: 12 }}>{r.key}</text>
+          <text x={bx + bw - 10} y={by + 29 + i * 14} textAnchor="end" fill={CHART_TEXT.primary} style={{ fontFamily: MONO, fontSize: 12, fontWeight: 800 }}>{r.value}</text>
         </g>
       ))}
     </g>
@@ -396,9 +396,9 @@ function ConeTable({ cone }: { cone: Cone }) {
   const rows = cone.points.filter((p, i) => i % 5 === 0 || (cone.race && p.day === Math.round(cone.race.days / 3) * 3));
   return (
     <div className="mt-3 overflow-x-auto rounded-xl border border-white/10">
-      <table className="w-full text-[11px]" style={{ fontFamily: MONO }}>
+      <table className="w-full text-xs" style={{ fontFamily: MONO }}>
         <thead>
-          <tr className="text-left text-[9px] uppercase tracking-wider text-gray-500 border-b border-white/10">
+          <tr className="text-left text-xs uppercase tracking-wider text-gray-500 border-b border-white/10">
             <th className="px-3 py-2 font-black">Data</th>
             <th className="px-3 py-2 font-black text-right">Previsto</th>
             <th className="px-3 py-2 font-black text-right">Forchetta 20-80%</th>

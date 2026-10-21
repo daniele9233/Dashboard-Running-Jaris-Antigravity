@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from "react";
 import type { FitnessFreshnessPoint } from "../../../types/api";
 
+import { CHART_SERIES, CHART_TEXT, ChartRangeSelector } from "../../charts";
 /**
  * FitnessChart — CTL (Chronic Training Load) over time, Strava-style.
  *
@@ -99,46 +100,39 @@ export function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }
   const hov = hoverIdx !== null ? data[hoverIdx] : null;
 
   return (
-    <div className="h-full rounded-[24px] p-6 flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+    <div className="h-full rounded-2xl p-5 flex flex-col overflow-hidden border border-ea-hairline shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-ea-surface-1">
       {/* Header */}
       <div className="flex items-start justify-between mb-4 flex-wrap gap-4">
         <div>
           <h3 className="text-white text-lg font-black tracking-tight">Condizione fisica</h3>
-          <p className="text-[#A0A0A0] text-[11px] tracking-wide">Allenamento e recupero sommati nel tempo (CTL)</p>
+          <p className="text-ea-text-muted text-xs tracking-wide">Allenamento e recupero sommati nel tempo (CTL)</p>
         </div>
-        <div className="flex gap-1 bg-[#111] border border-white/[0.06] rounded-full p-1">
-          {(Object.keys(FF_TAB_LABELS) as FFRange[]).map((k) => (
-            <button
-              key={k}
-              onClick={() => { setRange(k); setHoverIdx(null); }}
-              className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase transition-colors ${
-                range === k ? "bg-[#F97316] text-white" : "text-[#A0A0A0] hover:text-white"
-              }`}
-            >
-              {FF_TAB_LABELS[k]}
-            </button>
-          ))}
-        </div>
+        <ChartRangeSelector<FFRange>
+          value={range}
+          options={(Object.keys(FF_TAB_LABELS) as FFRange[]).map((k) => ({ value: k, label: k.toUpperCase(), title: FF_TAB_LABELS[k] }))}
+          onChange={(k) => { setRange(k); setHoverIdx(null); }}
+          aria-label="Intervallo della condizione fisica"
+        />
       </div>
 
       {/* Current value + delta */}
       <div className="mb-2">
         <div className="flex items-baseline gap-3">
           <span className="text-white text-4xl font-black">{current !== null ? current.toFixed(0) : "—"}</span>
-          <span className="text-[#A0A0A0] text-xs tracking-widest">CTL</span>
+          <span className="text-ea-text-muted text-xs tracking-widest">CTL</span>
           {delta !== null && (
-            <span className={`text-xs font-black ${delta >= 0 ? "text-[#F97316]" : "text-[#60A5FA]"}`}>
+            <span className={`text-xs font-black ${delta >= 0 ? "text-ea-amber" : "text-ea-cyan"}`}>
               {delta >= 0 ? "+" : ""}{delta.toFixed(0)} punti
             </span>
           )}
         </div>
-        <p className="text-[#666] text-[10px] tracking-wider">{rangeLabel}</p>
+        <p className="text-ea-text-axis text-xs tracking-wider">{rangeLabel}</p>
       </div>
 
       {/* Chart */}
       <div className="relative flex-1 min-h-[260px]">
         {data.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center text-[#666] text-xs font-black tracking-widest uppercase">
+          <div className="absolute inset-0 flex items-center justify-center text-ea-text-axis text-xs font-black tracking-widest uppercase">
             nessun dato in questo periodo
           </div>
         ) : (
@@ -157,8 +151,8 @@ export function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }
             <desc>Grafico ad area che mostra l'andamento del Chronic Training Load nel periodo selezionato</desc>
             <defs>
               <linearGradient id="ffGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#F97316" stopOpacity="0.55" />
-                <stop offset="100%" stopColor="#F97316" stopOpacity="0.02" />
+                <stop offset="0%" stopColor={CHART_SERIES.load} stopOpacity="0.55" />
+                <stop offset="100%" stopColor={CHART_SERIES.load} stopOpacity="0.02" />
               </linearGradient>
             </defs>
 
@@ -166,7 +160,7 @@ export function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }
             {yTicks.map((v) => (
               <g key={v}>
                 <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke="#26262b" strokeWidth={1} vectorEffect="non-scaling-stroke" />
-                <text x={padL - 8} y={y(v) + 3} textAnchor="end" fontSize="10" fill="#666" style={{ fontFamily: "JetBrains Mono" }}>
+                <text x={padL - 8} y={y(v) + 3} textAnchor="end" fontSize="12" fill={CHART_TEXT.faint} style={{ fontFamily: "JetBrains Mono" }}>
                   {v}
                 </text>
               </g>
@@ -174,7 +168,7 @@ export function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }
 
             {/* Area + line */}
             <path d={areaPath} fill="url(#ffGrad)" />
-            <path d={linePath} fill="none" stroke="#F97316" strokeWidth={2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+            <path d={linePath} fill="none" stroke={CHART_SERIES.load} strokeWidth={2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
 
             {/* X labels */}
             {xLabels.map((l, k) => (
@@ -183,8 +177,8 @@ export function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }
                 x={x(l.i)}
                 y={H - 8}
                 textAnchor="middle"
-                fontSize="10"
-                fill="#888"
+                fontSize="12"
+                fill={CHART_TEXT.axis}
                 style={{ fontFamily: "JetBrains Mono" }}
               >
                 {l.label}
@@ -199,12 +193,12 @@ export function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }
                   x2={x(hoverIdx)}
                   y1={padT}
                   y2={padT + plotH}
-                  stroke="#F97316"
+                  stroke={CHART_SERIES.load}
                   strokeWidth={1.5}
                   vectorEffect="non-scaling-stroke"
                 />
-                <circle cx={x(hoverIdx)} cy={y(hov.ctl)} r={12} fill="#F97316" fillOpacity={0.25} />
-                <circle cx={x(hoverIdx)} cy={y(hov.ctl)} r={5} fill="#F97316" stroke="#fff" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+                <circle cx={x(hoverIdx)} cy={y(hov.ctl)} r={12} fill={CHART_SERIES.load} fillOpacity={0.25} />
+                <circle cx={x(hoverIdx)} cy={y(hov.ctl)} r={5} fill={CHART_SERIES.load} stroke={CHART_TEXT.primary} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
               </g>
             )}
           </svg>
@@ -224,7 +218,7 @@ export function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }
             >
               <div
                 style={{
-                  background: '#F97316',
+                  background: CHART_SERIES.load,
                   borderRadius: 12,
                   width: 44,
                   height: 28,
@@ -233,7 +227,7 @@ export function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }
                   justifyContent: 'center',
                 }}
               >
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: 14, fontWeight: 900, color: '#fff', lineHeight: 1 }}>
+                <span style={{ fontFamily: 'JetBrains Mono', fontSize: 14, fontWeight: 900, color: CHART_TEXT.primary, lineHeight: 1 }}>
                   {hov.ctl.toFixed(0)}
                 </span>
               </div>
@@ -243,8 +237,8 @@ export function FitnessChart({ ff }: { ff: FitnessFreshnessPoint[] | undefined }
 
         {/* Hover date overlay (HTML, not scaled) */}
         {hov && (
-          <div className="absolute top-0 right-0 bg-[#111] border border-white/[0.08] rounded-[12px] px-3 py-1.5 pointer-events-none">
-            <div className="text-[10px] tracking-widest uppercase text-[#A0A0A0] font-black">
+          <div className="absolute top-0 right-0 bg-ea-surface-2 border border-ea-hairline rounded-[12px] px-3 py-1.5 pointer-events-none">
+            <div className="text-xs tracking-widest uppercase text-ea-text-muted font-black">
               {new Date(hov.date).toLocaleDateString("it", { day: "numeric", month: "short", year: "numeric" })}
             </div>
             <div className="text-sm font-black text-white" style={{ fontFamily: "JetBrains Mono" }}>

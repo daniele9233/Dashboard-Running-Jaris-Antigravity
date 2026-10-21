@@ -5,11 +5,7 @@
 import React, { useState, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, ComposedChart, Line, LineChart, Cell, ReferenceLine, ReferenceArea, Legend,
-  ScatterChart, Scatter, ZAxis,
-} from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, ComposedChart, Line, LineChart, Cell, ReferenceLine, ReferenceArea, ScatterChart, Scatter, ZAxis } from "recharts";
 import type { GctAnalysisResponse } from '../../api';
 import type { Run, FitnessFreshnessPoint, ProAnalyticsChart } from '../../types/api';
 import {
@@ -20,8 +16,8 @@ import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal'
 import { cadenceSpmFromRun } from '../../utils/cadence';
 import { computeDrift } from '../../utils/cardiacDrift';
 import { AthletePotentialVector } from './AthletePotentialVector';
-import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from './chartTheme';
 
+import { CHART_SERIES, CHART_SURFACE, CHART_TEXT, ChartCard, ChartHeader, ChartPlot, ChartTip, ChartTooltipContent, chartGrid, chartGridBoth, chartMargin, chartXAxis, chartYAxis, entryColor } from "../charts";
 /** Soglia anaerobica HR utente — verdict 2026-05 da analisi corsa 4km
  *  (FC ultimo km 162 bpm = 89% maxHr 182, stabilizzata 164 bpm ultimi 200m).
  *  Range LTHR plausibile 162-164. Hardcoded mid-range = 163.
@@ -37,7 +33,6 @@ const NEON = CHART_SERIES.primary;
 const NEON_DIM = 'rgba(192,255,0,0.15)';
 const CARD_BG = CHART_SURFACE.panel;
 const CARD_BORDER = CHART_SURFACE.border;
-const GRID_COLOR = CHART_SURFACE.grid;
 const LABEL_COLOR = CHART_TEXT.axis;      // era #8E8E93 → ora contrasto verificato
 const BG_DARK = CHART_SURFACE.panelSoft;
 const RACE_ORANGE = CHART_SERIES.load;    // era #FF5B00 → un solo arancione
@@ -56,9 +51,9 @@ function deriveDriftStartKm(distanceKm: number | undefined): string {
 // Zone Data
 const zonesV2 = [
   { zone: 'Z1', name: 'Recovery', pct: 15, min: 82, color: '#4A4A4A' },
-  { zone: 'Z2', name: 'Aerobic',  pct: 42, min: 228, color: '#6366F1' },
-  { zone: 'Z3', name: 'Tempo',    pct: 22, min: 120, color: '#8B5CF6' },
-  { zone: 'Z4', name: 'Threshold',pct: 14, min: 76,  color: '#A78BFA' },
+  { zone: 'Z2', name: 'Aerobic',  pct: 42, min: 228, color: CHART_SERIES.projected },
+  { zone: 'Z3', name: 'Tempo',    pct: 22, min: 120, color: CHART_SERIES.tertiary },
+  { zone: 'Z4', name: 'Threshold',pct: 14, min: 76,  color: CHART_SERIES.tertiary },
   { zone: 'Z5', name: 'VO₂max',  pct: 7,  min: 38,  color: NEON },
 ];
 
@@ -98,17 +93,17 @@ function V2Info({ title, lines }: { title: string; lines: string[] }) {
       <button
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
-        className="text-[#3A3A3A] hover:text-[#666] transition-colors focus:outline-none"
+        className="text-ea-text-axis hover:text-ea-text-axis transition-colors focus:outline-none"
       >
-        <Info size={14} />
+        <Info size={16} aria-hidden="true" />
       </button>
       {open && (
-        <div className="absolute z-50 top-full right-0 mt-2 w-72 bg-[#141414] border border-[#2A2A2A] rounded-2xl p-4 shadow-2xl pointer-events-none">
-          <div className="text-[10px] font-black tracking-widest mb-2" style={{ color: NEON }}>{title}</div>
+        <div className="absolute z-50 top-full right-0 mt-2 w-72 bg-ea-surface-1 border border-ea-hairline-strong rounded-2xl p-4 shadow-2xl pointer-events-none">
+          <div className="text-xs font-black tracking-widest mb-2" style={{ color: NEON }}>{title}</div>
           <ul className="space-y-1.5">
             {lines.map((l, i) => (
-              <li key={i} className="text-[#777] text-[10px] leading-relaxed flex gap-1.5">
-                <span className="text-[#444] shrink-0">›</span>{l}
+              <li key={i} className="text-ea-text-axis text-xs leading-relaxed flex gap-1.5">
+                <span className="text-ea-text-axis shrink-0">›</span>{l}
               </li>
             ))}
           </ul>
@@ -142,7 +137,7 @@ function SemiGauge({
     <div className="flex flex-col items-center">
       <svg width="160" height="95" viewBox="0 0 160 95" overflow="visible">
         {/* Background arc */}
-        <path d={path} fill="none" stroke="#1E1E1E" strokeWidth="10" strokeLinecap="round" />
+        <path d={path} fill="none" stroke={CHART_SURFACE.border} strokeWidth="10" strokeLinecap="round" />
         {/* Value arc */}
         <path
           d={path}
@@ -152,21 +147,20 @@ function SemiGauge({
           strokeLinecap="round"
           strokeDasharray={CIRC}
           strokeDashoffset={offset}
-          filter="url(#v2-glow)"
           className="transition-all duration-1000"
         />
         {/* Center value */}
-        <text x="80" y="58" textAnchor="middle" className="fill-white text-[28px] font-black italic" fontWeight="900" fontStyle="italic">
+        <text x="80" y="58" textAnchor="middle" className="fill-white text-[28px] font-black" fontWeight="900">
           {value}
         </text>
-        <text x="80" y="73" textAnchor="middle" fill={LABEL_COLOR} fontSize="9" fontWeight="700" letterSpacing="0.1em">
+        <text x="80" y="73" textAnchor="middle" fill={LABEL_COLOR} fontSize="12" fontWeight="700" letterSpacing="0.1em">
           {unit}
         </text>
       </svg>
       <div className="text-center -mt-1">
-        <div className="text-[10px] font-black text-[#555] uppercase tracking-[0.2em]">{label}</div>
+        <div className="text-xs font-black text-ea-text-axis uppercase tracking-[0.2em]">{label}</div>
         {trend !== undefined && (
-          <div className={`text-xs font-black mt-0.5 ${trend >= 0 ? 'text-[#C0FF00]' : 'text-[#F43F5E]'}`}>
+          <div className={`text-xs font-black mt-0.5 ${trend >= 0 ? 'text-ea-lime' : 'text-ea-rose'}`}>
             {trend >= 0 ? '▲' : '▼'} {Math.abs(trend)}
           </div>
         )}
@@ -179,18 +173,13 @@ function SemiGauge({
 // CUSTOM TOOLTIP
 // ─────────────────────────────────────────────────────────────
 function V2Tooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl backdrop-blur-sm">
-      <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>{label}</p>
-      {payload.map((p: any, i: number) => (
-        <div key={i} className="flex items-center gap-2 text-xs mb-0.5">
-          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.color || p.stroke }} />
-          <span className="text-[#777]">{p.name}:</span>
-          <span className="text-white font-bold">{typeof p.value === 'number' ? p.value.toFixed(1) : p.value}</span>
-        </div>
-      ))}
-    </div>
+    <ChartTooltipContent
+      active={active}
+      payload={payload}
+      label={label}
+      row={(p) => ({ label: String(p.name ?? ''), value: typeof p.value === 'number' ? p.value.toFixed(1) : String(p.value), color: entryColor(p) })}
+    />
   );
 }
 
@@ -200,22 +189,13 @@ function V2Tooltip({ active, payload, label }: any) {
 function V2Card({
   children,
   className = '',
-  accent = NEON,
 }: {
   children: React.ReactNode;
   className?: string;
+  /** Mantenuto per compatibilità: il filo laterale colorato non fa più parte del sistema. */
   accent?: string;
 }) {
-  return (
-    <div
-      className={`rounded-2xl p-4 md:p-7 relative group backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 ${className}`}
-      style={{
-        borderLeft: `3px solid ${accent}`,
-      }}
-    >
-      {children}
-    </div>
-  );
+  return <ChartCard className={`relative group ${className}`}>{children}</ChartCard>;
 }
 
 type RacePredictionCardData = {
@@ -267,24 +247,24 @@ function RacePredictionsBox({
   });
 
   return (
-    <div className="rounded-3xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 xl:p-8 flex flex-col gap-5 h-full">
+    <div className="rounded-2xl border border-ea-hairline bg-ea-surface-1 p-6 xl:p-8 flex flex-col gap-5 h-full">
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="font-mono text-[10px] tracking-[0.25em] text-[#555] mb-1">PREVISIONI GARA</p>
+          <p className="font-mono text-xs tracking-[0.25em] text-ea-text-axis mb-1">PREVISIONI GARA</p>
           <h2 className="text-white text-xl font-bold tracking-tight leading-tight">Tempi Stimati</h2>
-          <p className="text-[#444] text-[11px] mt-1 leading-relaxed">
+          <p className="text-ea-text-axis text-xs mt-1 leading-relaxed">
             Calcolati dal VDOT attuale · Daniels Running Formula
           </p>
         </div>
         <div className="text-right shrink-0">
-          <p className="font-mono text-[9px] tracking-widest text-[#555] mb-1 uppercase">Prontezza</p>
+          <p className="font-mono text-xs tracking-widest text-ea-text-axis mb-1 uppercase">Prontezza</p>
           <div className="flex items-end gap-0.5 justify-end">
-            <span className="text-[#C0FF00] font-light text-4xl tabular-nums leading-none">{confidence}</span>
-            <span className="text-[#555] text-sm mb-1">/100</span>
+            <span className="text-ea-lime font-light text-4xl tabular-nums leading-none">{confidence}</span>
+            <span className="text-ea-text-axis text-sm mb-1">/100</span>
           </div>
-          <div className="mt-1.5 h-1 w-16 ml-auto bg-[#1a1a1a] rounded-full overflow-hidden">
-            <div className="h-full rounded-full bg-[#C0FF00]" style={{ width: `${confidence}%` }} />
+          <div className="mt-1.5 h-1 w-16 ml-auto bg-ea-surface-3 rounded-full overflow-hidden">
+            <div className="h-full rounded-full bg-ea-lime" style={{ width: `${confidence}%` }} />
           </div>
         </div>
       </div>
@@ -301,19 +281,19 @@ function RacePredictionsBox({
               key={m.distance}
               className={`rounded-2xl p-4 flex items-center gap-4 relative overflow-hidden transition-colors ${
                 isBest
-                  ? 'border border-[#C0FF00]/25 bg-[#C0FF00]/[0.04]'
-                  : 'border border-[#1E1E1E] bg-[#111111]'
+                  ? 'border border-ea-lime/25 bg-ea-lime/[0.04]'
+                  : 'border border-ea-hairline bg-ea-surface-2'
               }`}
             >
               {/* Distance + note */}
               <div className="min-w-[52px] shrink-0">
                 <div
-                  className="font-mono text-[11px] font-black tracking-widest"
+                  className="font-mono text-xs font-black tracking-widest"
                   style={{ color: m.color }}
                 >
                   {m.distance}
                 </div>
-                <div className="text-[#3a3a3a] text-[9px] mt-0.5 uppercase tracking-wider font-mono">
+                <div className="text-ea-text-axis text-xs mt-0.5 uppercase tracking-wider font-mono">
                   {m.note}
                 </div>
               </div>
@@ -323,18 +303,18 @@ function RacePredictionsBox({
                 <div className="font-mono text-[22px] font-light tabular-nums text-white leading-none">
                   {m.time}
                 </div>
-                <div className="text-[#444] text-[10px] mt-1 font-mono tabular-nums">{paceKm}</div>
+                <div className="text-ea-text-axis text-xs mt-1 font-mono tabular-nums">{paceKm}</div>
               </div>
 
               {/* Score bar + trend */}
               <div className="text-right shrink-0 min-w-[64px]">
                 <div
-                  className="font-mono text-[11px] font-black leading-none"
+                  className="font-mono text-xs font-black leading-none"
                   style={{ color: m.trendColor }}
                 >
                   {m.trend}
                 </div>
-                <div className="mt-2 h-1 bg-[#1a1a1a] rounded-full overflow-hidden w-16 ml-auto">
+                <div className="mt-2 h-1 bg-ea-surface-3 rounded-full overflow-hidden w-16 ml-auto">
                   <div
                     className="h-full rounded-full"
                     style={{
@@ -344,14 +324,14 @@ function RacePredictionsBox({
                     }}
                   />
                 </div>
-                <div className="font-mono text-[9px] mt-1 text-[#444] tabular-nums">
+                <div className="font-mono text-xs mt-1 text-ea-text-axis tabular-nums">
                   {m.score}% pronto
                 </div>
               </div>
 
               {/* BEST badge */}
               {isBest && (
-                <span className="absolute top-2 right-2 bg-[#C0FF00] text-black font-mono text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest">
+                <span className="absolute top-2 right-2 bg-ea-lime text-black font-mono text-xs font-black px-1.5 py-0.5 rounded uppercase tracking-widest">
                   BEST
                 </span>
               )}
@@ -362,29 +342,29 @@ function RacePredictionsBox({
 
       {/* ── Readiness Axes ─────────────────────────────────── */}
       <div>
-        <p className="font-mono text-[9px] tracking-[0.22em] text-[#444] mb-3 uppercase">
+        <p className="font-mono text-xs tracking-[0.22em] text-ea-text-axis mb-3 uppercase">
           Fattori di Prontezza
         </p>
         <div className="flex flex-col gap-2">
           {readiness.axes.map((axis) => {
             const barColor =
-              axis.value >= 75 ? '#C0FF00'
-              : axis.value >= 55 ? '#38BDF8'
-              : axis.value >= 40 ? '#F59E0B'
+              axis.value >= 75 ? CHART_SERIES.primary
+              : axis.value >= 55 ? CHART_SERIES.compare
+              : axis.value >= 40 ? CHART_SERIES.load
               : '#F43F5E';
             return (
               <div key={axis.label} className="flex items-center gap-3">
-                <div className="w-[80px] text-[#555] text-[10px] font-mono uppercase tracking-wide shrink-0 truncate">
+                <div className="w-[80px] text-ea-text-axis text-xs font-mono uppercase tracking-wide shrink-0 truncate">
                   {axis.label}
                 </div>
-                <div className="flex-1 h-1 bg-[#1a1a1a] rounded-full overflow-hidden">
+                <div className="flex-1 h-1 bg-ea-surface-3 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full"
                     style={{ width: `${axis.value}%`, backgroundColor: barColor }}
                   />
                 </div>
                 <div
-                  className="font-mono text-[10px] w-7 text-right tabular-nums shrink-0"
+                  className="font-mono text-xs w-7 text-right tabular-nums shrink-0"
                   style={{ color: barColor }}
                 >
                   {axis.value}
@@ -396,17 +376,17 @@ function RacePredictionsBox({
       </div>
 
       {/* ── Limiter + Advice ───────────────────────────────── */}
-      <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+      <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
         <div className="flex items-center gap-2 mb-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] shrink-0" />
-          <span className="font-mono text-[9px] text-[#555] uppercase tracking-widest">
+          <div className="w-1.5 h-1.5 rounded-full bg-ea-amber shrink-0" />
+          <span className="font-mono text-xs text-ea-text-axis uppercase tracking-widest">
             Fattore Limitante
           </span>
-          <span className="ml-auto font-mono text-[11px] text-[#F59E0B] font-black uppercase">
+          <span className="ml-auto font-mono text-xs text-ea-amber font-black uppercase">
             {readiness.limiter}
           </span>
         </div>
-        <p className="text-[#666] text-[12px] leading-relaxed">{readiness.advice}</p>
+        <p className="text-ea-text-axis text-[12px] leading-relaxed">{readiness.advice}</p>
       </div>
     </div>
   );
@@ -480,23 +460,22 @@ function RacePredictionCard({
   trendColor,
 }: RacePredictionCardData) {
   return (
-    <div className="rounded-2xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 relative flex flex-col overflow-hidden hover:border-white/[0.2] transition-colors group aspect-square min-h-0">
-      <div className="absolute top-0 left-0 right-0 h-1 transition-all group-hover:h-1.5" style={{ backgroundColor: color }} />
+    <div className="rounded-2xl border border-ea-hairline bg-ea-surface-1 p-5 relative flex flex-col overflow-hidden hover:border-white/[0.2] transition-colors group aspect-square min-h-0">
 
       <div className="flex justify-between items-start mb-5">
-        <h3 className="text-2xl font-black italic text-white tracking-tighter">{distance}</h3>
+        <h3 className="ea-title">{distance}</h3>
         <Target size={18} className="opacity-40 transition-opacity group-hover:opacity-100" style={{ color }} />
       </div>
 
       <div className="mb-4">
-        <div className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-1">Projected Time</div>
+        <div className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-1">Projected Time</div>
         <div
           className="text-3xl font-black font-mono tracking-tighter -ml-0.5"
           style={{ color, textShadow: `0 0 15px ${color}40` }}
         >
           {time}
         </div>
-        <div className="text-[10px] mt-2 font-mono tracking-wide font-medium" style={{ color: trendColor }}>
+        <div className="text-xs mt-2 font-mono tracking-wide font-medium" style={{ color: trendColor }}>
           {trend}
         </div>
       </div>
@@ -509,14 +488,14 @@ function RacePredictionCard({
         )}
       </div>
 
-      <div className="mt-auto border-t border-[#1E1E1E] pt-4 flex justify-between items-end">
+      <div className="mt-auto border-t border-ea-hairline pt-4 flex justify-between items-end">
         <div>
-          <div className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mb-1">Target Pace</div>
+          <div className="text-xs text-gray-600 font-bold uppercase tracking-widest mb-1">Target Pace</div>
           <div className="text-sm font-black font-mono text-gray-200">
-            {pace} <span className="text-[10px] text-gray-500 font-sans tracking-wide">/km</span>
+            {pace} <span className="text-xs text-gray-500 font-sans tracking-wide">/km</span>
           </div>
         </div>
-        <div className="text-[9px] uppercase tracking-widest font-black flex items-center gap-1" style={{ color }}>
+        <div className="text-xs uppercase tracking-widest font-black flex items-center gap-1" style={{ color }}>
           Analyze
         </div>
       </div>
@@ -537,7 +516,7 @@ function RaceGauge({ value, color, target }: { value: number; color: string; tar
 
   return (
     <div className="w-full h-full flex items-center justify-center">
-      <svg viewBox="0 0 100 60" className="w-[85%] max-w-[150px] drop-shadow-lg overflow-visible">
+      <svg viewBox="0 0 100 60" className="w-[85%] max-w-[150px] overflow-visible">
         <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke="#222" strokeWidth="6" strokeLinecap="round" />
         <circle cx={tx} cy={ty} r="3.5" fill={RACE_ORANGE} />
         <path
@@ -547,10 +526,10 @@ function RaceGauge({ value, color, target }: { value: number; color: string; tar
           strokeWidth="6"
           strokeLinecap="round"
           strokeDasharray={`${strokeVal} ${arcLength}`}
-          className="transition-all duration-1000 ease-out drop-shadow-[0_0_6px_currentColor]"
+          className="transition-all duration-1000 ease-out drop-"
         />
         <line x1="50" y1="55" x2={nx} y2={ny} stroke="white" strokeWidth="2.5" strokeLinecap="round" className="transition-all duration-1000 ease-out" />
-        <circle cx="50" cy="55" r="5" fill="white" className="drop-shadow-md" />
+        <circle cx="50" cy="55" r="5" fill="white" className="" />
       </svg>
     </div>
   );
@@ -562,15 +541,15 @@ function RaceLinearBar({ value, color, target }: { value: number; color: string;
       <div className="relative w-full h-2 bg-[#222] rounded-full">
         <div
           className="absolute top-0 left-0 bottom-0 rounded-full transition-all duration-1000 ease-out"
-          style={{ width: `${clamp01(value) * 100}%`, backgroundColor: color, boxShadow: `0 0 10px ${color}80` }}
+          style={{ width: `${clamp01(value) * 100}%`, backgroundColor: color }}
         />
         <div
           className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full"
-          style={{ left: `calc(${clamp01(target) * 100}% - 6px)`, backgroundColor: RACE_ORANGE, boxShadow: `0 0 8px ${RACE_ORANGE}` }}
+          style={{ left: `calc(${clamp01(target) * 100}% - 6px)`, backgroundColor: RACE_ORANGE }}
         />
-        <div className="absolute top-5 left-0 text-[9px] text-gray-600 uppercase font-black tracking-widest">Base</div>
-        <div className="absolute top-5 left-1/2 -translate-x-1/2 text-[9px] text-gray-600 uppercase font-black tracking-widest">Threshold</div>
-        <div className="absolute top-5 right-0 text-[9px] text-gray-600 uppercase font-black tracking-widest" style={{ color: `${RACE_ORANGE}AA` }}>Max</div>
+        <div className="absolute top-5 left-0 text-xs text-gray-600 uppercase font-black tracking-widest">Base</div>
+        <div className="absolute top-5 left-1/2 -translate-x-1/2 text-xs text-gray-600 uppercase font-black tracking-widest">Threshold</div>
+        <div className="absolute top-5 right-0 text-xs text-gray-600 uppercase font-black tracking-widest" style={{ color: `${RACE_ORANGE}AA` }}>Max</div>
       </div>
     </div>
   );
@@ -635,7 +614,7 @@ function RaceReadinessRadarCard({
       />
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-center">
         <div className="lg:col-span-3 min-h-[250px] flex items-center justify-center">
-          <svg viewBox="0 0 210 210" className="w-full max-w-[300px] overflow-visible">
+          <svg viewBox="-44 0 298 210" className="w-full max-w-[380px] overflow-visible">
             {[0.25, 0.5, 0.75, 1].map((level) => {
               const ring = axes.map((_, index) => {
                 const p = pointFor(index, level * 100);
@@ -655,7 +634,7 @@ function RaceReadinessRadarCard({
                     y={p.labelY}
                     textAnchor={p.labelX < center - 5 ? 'end' : p.labelX > center + 5 ? 'start' : 'middle'}
                     fill={LABEL_COLOR}
-                    fontSize="9"
+                    fontSize="12"
                     fontWeight="900"
                   >
                     {axis.label}
@@ -663,41 +642,41 @@ function RaceReadinessRadarCard({
                 </g>
               );
             })}
-            <polygon points={polygon} fill={NEON_DIM} stroke={NEON} strokeWidth="3" filter="url(#v2-glow-sm)" />
+            <polygon points={polygon} fill={NEON_DIM} stroke={NEON} strokeWidth="3" />
             {axes.map((axis, index) => {
               const p = pointFor(index, axis.value);
-              return <circle key={axis.label} cx={p.x} cy={p.y} r="4" fill={NEON} stroke="#050505" strokeWidth="2" />;
+              return <circle key={axis.label} cx={p.x} cy={p.y} r="4" fill={NEON} stroke={CHART_SURFACE.ink} strokeWidth="2" />;
             })}
-            <text x={center} y={center - 2} textAnchor="middle" fill="white" fontSize="28" fontWeight="900" fontStyle="italic">
+            <text x={center} y={center - 2} textAnchor="middle" fill="white" fontSize="28" fontWeight="900">
               {overall}
             </text>
-            <text x={center} y={center + 14} textAnchor="middle" fill={LABEL_COLOR} fontSize="9" fontWeight="900">
+            <text x={center} y={center + 14} textAnchor="middle" fill={LABEL_COLOR} fontSize="12" fontWeight="900">
               READY
             </text>
           </svg>
         </div>
         <div className="lg:col-span-2 space-y-3">
           {axes.map((axis) => (
-            <div key={axis.label} className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+            <div key={axis.label} className="rounded-lg border border-ea-hairline bg-ea-surface-2 p-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] text-[#777] font-black uppercase tracking-widest">{axis.label}</span>
+                <span className="text-xs text-ea-text-axis font-black uppercase tracking-widest">{axis.label}</span>
                 <span className="text-sm font-mono font-black text-white">{axis.value}%</span>
               </div>
-              <div className="h-1.5 bg-[#1A1A1A] rounded-full overflow-hidden">
+              <div className="h-1.5 bg-ea-surface-3 rounded-full overflow-hidden">
                 <div className="h-full rounded-full" style={{ width: `${axis.value}%`, backgroundColor: NEON }} />
               </div>
-              <div className="text-[9px] text-[#555] font-bold mt-2 uppercase tracking-widest">{axis.hint}</div>
+              <div className="text-xs text-ea-text-axis font-bold mt-2 uppercase tracking-widest">{axis.hint}</div>
             </div>
           ))}
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-5">
-        <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-          <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Fattore limitante</div>
-          <div className="text-white font-black uppercase italic">{limiter}</div>
+        <div className="rounded-lg border border-ea-hairline bg-ea-surface-2 p-4">
+          <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Fattore limitante</div>
+          <div className="text-white font-black uppercase">{limiter}</div>
         </div>
-        <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-          <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Mossa pratica</div>
+        <div className="rounded-lg border border-ea-hairline bg-ea-surface-2 p-4">
+          <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Mossa pratica</div>
           <div className="text-white text-xs font-bold leading-relaxed">{advice}</div>
         </div>
       </div>
@@ -735,49 +714,49 @@ function RaceForecastLab({
         }}
       />
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-        <div className="xl:col-span-4 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-5 flex flex-col justify-between min-h-[220px]">
+        <div className="xl:col-span-4 rounded-xl border border-ea-hairline bg-ea-surface-2 p-5 flex flex-col justify-between min-h-[220px]">
           <div>
-            <div className="text-[10px] text-[#555] uppercase tracking-widest font-black">Distanza piu pronta oggi</div>
-            <div className="text-5xl font-black italic mt-4" style={{ color: NEON }}>{bestDistance}</div>
-            <div className="text-[11px] text-[#777] font-bold uppercase tracking-widest mt-3">Confidenza previsione</div>
+            <div className="text-xs text-ea-text-axis uppercase tracking-widest font-black">Distanza piu pronta oggi</div>
+            <div className="text-5xl font-black mt-4" style={{ color: NEON }}>{bestDistance}</div>
+            <div className="text-xs text-ea-text-axis font-bold uppercase tracking-widest mt-3">Confidenza previsione</div>
           </div>
           <div>
             <div className="flex items-end gap-2">
               <span className="text-4xl font-mono font-black text-white">{confidence}</span>
               <span className="text-sm font-black pb-1" style={{ color: NEON }}>%</span>
             </div>
-            <div className="h-2 bg-[#1A1A1A] rounded-full overflow-hidden mt-3">
+            <div className="h-2 bg-ea-surface-3 rounded-full overflow-hidden mt-3">
               <div className="h-full rounded-full" style={{ width: `${confidence}%`, backgroundColor: NEON }} />
             </div>
           </div>
         </div>
         <div className="xl:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
           {rows.map((row) => (
-            <div key={row.distance} className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
+            <div key={row.distance} className="rounded-lg border border-ea-hairline bg-ea-surface-2 p-4">
               <div className="flex justify-between items-start gap-3 mb-3">
                 <div>
-                  <div className="text-white text-lg font-black italic">{row.distance}</div>
-                  <div className="text-[10px] text-[#666] uppercase tracking-widest font-bold">{row.note}</div>
+                  <div className="text-white text-lg font-black">{row.distance}</div>
+                  <div className="text-xs text-ea-text-axis uppercase tracking-widest font-bold">{row.note}</div>
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-mono font-black" style={{ color: row.color }}>{row.time}</div>
-                  <div className="text-[9px] text-[#666] font-bold">{row.pace}/km</div>
+                  <div className="text-xs text-ea-text-axis font-bold">{row.pace}/km</div>
                 </div>
               </div>
-              <div className="h-1.5 bg-[#1A1A1A] rounded-full overflow-hidden">
+              <div className="h-1.5 bg-ea-surface-3 rounded-full overflow-hidden">
                 <div className="h-full rounded-full" style={{ width: `${row.score}%`, backgroundColor: row.color }} />
               </div>
             </div>
           ))}
         </div>
         <div className="xl:col-span-3 space-y-3">
-          <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-            <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-2">Limitante</div>
-            <div className="text-white font-black uppercase italic">{limiter}</div>
+          <div className="rounded-lg border border-ea-hairline bg-ea-surface-2 p-4">
+            <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-2">Limitante</div>
+            <div className="text-white font-black uppercase">{limiter}</div>
           </div>
-          <div className="rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-            <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-2">Prossimo focus</div>
-            <div className="text-[#BDBDBD] text-xs font-bold leading-relaxed">{advice}</div>
+          <div className="rounded-lg border border-ea-hairline bg-ea-surface-2 p-4">
+            <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-2">Prossimo focus</div>
+            <div className="text-ea-text-muted text-xs font-bold leading-relaxed">{advice}</div>
           </div>
         </div>
       </div>
@@ -851,14 +830,14 @@ const EvolutionTooltip = ({ active, payload, color }: any) => {
   const data = payload[0].payload;
 
   return (
-    <div className="bg-[#111] border border-[#2A2A2A] p-2.5 rounded-lg shadow-xl whitespace-nowrap z-50 flex flex-col gap-1.5 min-w-[120px]">
-      <span className="text-[9px] text-gray-400 font-bold tracking-widest uppercase mb-0.5">{data.label}</span>
+    <div className="ea-tooltip whitespace-nowrap z-50 flex flex-col gap-1.5">
+      <span className="text-xs text-gray-400 font-bold tracking-widest uppercase mb-0.5">{data.label}</span>
       <div className="flex items-center justify-between gap-4">
-        <span className="text-gray-500 text-[9px] uppercase font-bold tracking-wider">Tempo</span>
+        <span className="text-gray-500 text-xs uppercase font-bold tracking-wider">Tempo</span>
         <span className="font-mono font-black text-xs" style={{ color }}>{data.time}</span>
       </div>
       <div className="flex items-center justify-between gap-4">
-        <span className="text-gray-500 text-[9px] uppercase font-bold tracking-wider">Pace</span>
+        <span className="text-gray-500 text-xs uppercase font-bold tracking-wider">Pace</span>
         <span className="font-mono font-bold text-xs text-gray-200">{data.pace}</span>
       </div>
     </div>
@@ -883,18 +862,17 @@ function FitnessEvolutionCard({
   const gradientId = `fitness-evolution-${title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`;
 
   return (
-    <div className={`rounded-lg backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4 relative flex flex-col overflow-hidden hover:border-white/[0.2] transition-colors group min-h-0 ${fullscreen ? 'h-full' : 'aspect-square'}`}>
-      <div className="absolute top-0 left-0 right-0 h-1 transition-all group-hover:h-1.5" style={{ backgroundColor: color }} />
+    <div className={`rounded-lg border border-ea-hairline bg-ea-surface-2 p-4 relative flex flex-col overflow-hidden hover:border-white/[0.2] transition-colors group min-h-0 ${fullscreen ? 'h-full' : 'aspect-square'}`}>
 
       <div className="flex justify-between items-start mb-2 relative z-10">
         <div className="min-w-0">
-          <span className="text-[10px] text-gray-300 font-bold tracking-[0.15em] uppercase mb-1 block truncate">{title}</span>
+          <span className="text-xs text-gray-300 font-bold tracking-[0.15em] uppercase mb-1 block truncate">{title}</span>
           <div className="flex items-baseline gap-1">
             <span className="text-2xl xl:text-3xl font-black text-white tracking-tight font-mono">{value}</span>
-            <span className="text-[10px] xl:text-xs font-bold ml-1" style={{ color }}>{unit}</span>
+            <span className="text-xs xl:text-xs font-bold ml-1" style={{ color }}>{unit}</span>
           </div>
         </div>
-        <div className="w-8 h-8 rounded-lg bg-[#1A1A1A] flex items-center justify-center border border-[#2A2A2A] transition-transform group-hover:scale-105 shrink-0">
+        <div className="w-8 h-8 rounded-lg bg-ea-surface-3 flex items-center justify-center border border-ea-hairline-strong transition-transform group-hover:scale-105 shrink-0">
           <TrendingUp size={14} style={{ color }} />
         </div>
       </div>
@@ -918,24 +896,24 @@ function FitnessEvolutionCard({
               stroke={color}
               strokeWidth={3}
               fill={`url(#${gradientId})`}
-              activeDot={{ r: 5, fill: color, stroke: '#111', strokeWidth: 2 }}
-              dot={{ r: 3.5, fill: '#111', stroke: color, strokeWidth: 2.5 }}
+              activeDot={{ r: 5, fill: color, stroke: CHART_SURFACE.panelSoft, strokeWidth: 2 }}
+              dot={{ r: 3.5, fill: CHART_SURFACE.panelSoft, stroke: color, strokeWidth: 2.5 }}
             />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="flex justify-between items-center text-[8px] text-gray-500 font-bold tracking-[0.1em] mt-2 px-1">
+      <div className="flex justify-between items-center text-xs text-gray-500 font-bold tracking-[0.1em] mt-2 px-1">
         {data.map((d, i) => <span key={`${d.label}-${i}`}>{d.label}</span>)}
       </div>
 
-      <div className="flex bg-[#1A1A1A] rounded-lg p-1 mt-4 border border-[#1E1E1E] select-none shadow-inner">
+      <div className="flex bg-ea-surface-3 rounded-lg p-1 mt-4 border border-ea-hairline select-none shadow-inner">
         {EVOLUTION_RANGES.map(range => (
           <button
             key={range}
             type="button"
             onClick={() => onTimeRangeChange(range)}
-            className={`flex-1 text-center py-1.5 text-[9px] font-bold rounded-md transition-all cursor-pointer ${
+            className={`flex-1 text-center py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
               range === timeRange ? 'bg-[#333] text-gray-200 shadow-md' : 'text-gray-500 hover:text-gray-300'
             }`}
           >
@@ -998,23 +976,26 @@ function V2Header({
   onExpand?: () => void;
 }) {
   return (
-    <div className="flex items-start justify-between mb-6 gap-3">
-      <div className="flex items-center gap-3">
-        <Icon className="w-4 h-4 shrink-0" style={{ color: NEON }} />
-        <div>
-          <h3 className="text-sm font-black tracking-widest uppercase italic leading-none text-white">{title}</h3>
-          {subtitle && <p className="text-[9px] font-bold uppercase tracking-widest mt-1" style={{ color: LABEL_COLOR }}>{subtitle}</p>}
-        </div>
-      </div>
-      <div className="flex items-center gap-1 shrink-0">
-        {onExpand && (
-          <button onClick={onExpand} className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#2A2A2A] text-[#555] hover:text-[#C0FF00]">
-            <Maximize2 size={15} />
-          </button>
-        )}
-        {tooltip && <V2Info title={tooltip.title} lines={tooltip.lines} />}
-      </div>
-    </div>
+    <ChartHeader
+      icon={<Icon className="w-4 h-4" />}
+      title={title}
+      description={subtitle}
+      actions={
+        <>
+          {onExpand && (
+            <button
+              type="button"
+              onClick={onExpand}
+              aria-label={`Espandi: ${title}`}
+              className="p-1.5 rounded-lg text-ea-text-axis hover:text-ea-lime hover:bg-ea-surface-3 transition-colors"
+            >
+              <Maximize2 size={16} />
+            </button>
+          )}
+          {tooltip && <V2Info title={tooltip.title} lines={tooltip.lines} />}
+        </>
+      }
+    />
   );
 }
 
@@ -1051,12 +1032,12 @@ function WeeklyDetailTable({
   if (!visibleRows.length) return null;
 
   return (
-    <div className="rounded-[6px] border border-[#242424] bg-[#101010] p-3">
+    <div className="rounded-[6px] border border-ea-hairline-strong bg-ea-surface-1 p-3">
       <div className="flex items-center justify-between gap-4 mb-3">
-        <div className="text-[10px] uppercase tracking-widest font-black" style={{ color: NEON }}>
+        <div className="text-xs uppercase tracking-widest font-black" style={{ color: NEON }}>
           Dettaglio settimana per settimana
         </div>
-        <div className="text-[9px] uppercase tracking-widest font-black text-[#555]">
+        <div className="text-xs uppercase tracking-widest font-black text-ea-text-axis">
           ultime {visibleRows.length}
         </div>
       </div>
@@ -1065,22 +1046,22 @@ function WeeklyDetailTable({
           className="grid gap-x-4 gap-y-2 min-w-[560px]"
           style={{ gridTemplateColumns: `1.2fr repeat(${columns.length}, minmax(90px, 1fr))` }}
         >
-          <div className="text-[9px] uppercase tracking-widest font-black text-[#555]">Settimana</div>
+          <div className="text-xs uppercase tracking-widest font-black text-ea-text-axis">Settimana</div>
           {columns.map((column) => (
-            <div key={column.key} className="text-[9px] uppercase tracking-widest font-black text-[#555]">
+            <div key={column.key} className="text-xs uppercase tracking-widest font-black text-ea-text-axis">
               {column.label}
             </div>
           ))}
 
           {visibleRows.map((row, index) => (
             <React.Fragment key={`${row.month ?? row.name ?? row.date ?? index}-${index}`}>
-              <div className="text-[11px] font-mono font-black text-white">
+              <div className="text-xs font-mono font-black text-white">
                 {formatWeekBucketLabel(String(row.month ?? row.name ?? row.date ?? ''))}
               </div>
               {columns.map((column) => (
                 <div
                   key={`${column.key}-${index}`}
-                  className="text-[11px] font-mono font-black"
+                  className="text-xs font-mono font-black"
                   style={{ color: column.color ?? '#DADADA' }}
                 >
                   {column.render ? column.render(row) : row[column.key] ?? '--'}
@@ -1792,39 +1773,39 @@ export function AnalyticsV2({
             ],
           }}
         />
-        <div className="flex gap-6 text-[9px] font-black uppercase tracking-widest mb-6">
-          <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#6366F1]" /> Fitness (CTL)</span>
-          <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#F43F5E]" /> Fatigue (ATL)</span>
+        <div className="flex gap-6 text-xs font-black uppercase tracking-widest mb-6">
+          <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-ea-indigo" /> Fitness (CTL)</span>
+          <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-ea-rose" /> Fatigue (ATL)</span>
           <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: NEON }} /> Form (TSB)</span>
         </div>
-        <div className="h-[360px] w-full">
+        <ChartPlot size="hero">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={pmcChartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
+            <ComposedChart data={pmcChartData} margin={chartMargin}>
               <defs>
                 <linearGradient id="v2-ctl-grad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6366F1" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#6366F1" stopOpacity={0} />
+                  <stop offset="0%" stopColor={CHART_SERIES.projected} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={CHART_SERIES.projected} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} vertical={false} />
-              <XAxis dataKey="day" stroke="#333" fontSize={9} tickLine={false} axisLine={false} interval={14} />
-              <YAxis yAxisId="left" stroke="#333" fontSize={9} tickLine={false} axisLine={false} />
-              <YAxis yAxisId="right" orientation="right" stroke="#333" fontSize={9} tickLine={false} axisLine={false} domain={[-30, 30]} />
+              <CartesianGrid {...chartGrid} />
+              <XAxis {...chartXAxis} dataKey="day" interval={14} />
+              <YAxis {...chartYAxis} yAxisId="left" />
+              <YAxis {...chartYAxis} yAxisId="right" orientation="right" domain={[-30, 30]} />
               <Tooltip content={<V2Tooltip />} />
-              <ReferenceLine yAxisId="right" y={0} stroke="#333" strokeDasharray="4 4" />
+              <ReferenceLine yAxisId="right" y={0} stroke={CHART_SURFACE.borderStrong} strokeDasharray="4 4" />
               {/* TSB Bars */}
               <Bar yAxisId="right" dataKey="tsb" name="Form (TSB)" radius={[2, 2, 0, 0]} maxBarSize={6} opacity={0.7}>
                 {pmcChartData.map((e, i) => (
-                  <Cell key={i} fill={e.tsb >= 0 ? NEON : '#F43F5E'} />
+                  <Cell key={i} fill={e.tsb >= 0 ? NEON : CHART_SERIES.risk} />
                 ))}
               </Bar>
               {/* CTL Area */}
-              <Area yAxisId="left" type="monotone" dataKey="ctl" name="Fitness (CTL)" stroke="#6366F1" strokeWidth={2.5} fillOpacity={1} fill="url(#v2-ctl-grad)" />
+              <Area yAxisId="left" type="monotone" dataKey="ctl" name="Fitness (CTL)" stroke={CHART_SERIES.projected} strokeWidth={2.5} fillOpacity={1} fill="url(#v2-ctl-grad)" />
               {/* ATL Line */}
-              <Line yAxisId="left" type="monotone" dataKey="atl" name="Fatigue (ATL)" stroke="#F43F5E" strokeWidth={1.5} dot={false} strokeDasharray="5 3" />
+              <Line yAxisId="left" type="monotone" dataKey="atl" name="Fatigue (ATL)" stroke={CHART_SERIES.risk} strokeWidth={1.5} dot={false} strokeDasharray="5 3" />
             </ComposedChart>
           </ResponsiveContainer>
-        </div>
+        </ChartPlot>
       </V2Card>
       )}
 
@@ -1846,34 +1827,33 @@ export function AnalyticsV2({
              ],
            }}
          />
-         <div className="h-[260px] w-full">
+         <ChartPlot size="standard">
            <ResponsiveContainer width="100%" height="100%">
-             <LineChart data={vdotChartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
-               <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} vertical={false} />
-               <XAxis dataKey="name" stroke="#333" fontSize={9} tickLine={false} axisLine={false} />
-               <YAxis stroke="#333" fontSize={9} tickLine={false} axisLine={false}
-                 domain={['dataMin - 2', 'dataMax + 2']} tickFormatter={(v) => v.toFixed(0)} />
+             <LineChart data={vdotChartData} margin={chartMargin}>
+               <CartesianGrid {...chartGrid} />
+               <XAxis {...chartXAxis} dataKey="name" />
+               <YAxis {...chartYAxis} domain={['dataMin - 2', 'dataMax + 2']} tickFormatter={(v) => v.toFixed(0)} />
                <Tooltip
                  content={({ active, payload }) => {
                    if (!active || !payload?.length) return null;
                    const d = payload[0]?.payload;
                    if (!d) return null;
                    return (
-                     <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
-                       <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>{d.name}</p>
+                     <div className="ea-tooltip">
+                       <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>{d.name}</p>
                        <div className="flex items-center gap-2 text-xs mb-0.5">
-                         <span className="text-[#777]">VDOT:</span>
+                         <span className="text-ea-text-axis">VDOT:</span>
                          <span className="text-white font-bold">{d.vdot}</span>
                        </div>
                        {d.vdot && (
                          <div className="flex items-center gap-2 text-xs">
-                           <span className="text-[#777]">Passo soglia:</span>
+                           <span className="text-ea-text-axis">Passo soglia:</span>
                            <span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span>
                          </div>
                        )}
                        {d.vdot && (
                          <div className="flex items-center gap-2 text-xs">
-                           <span className="text-[#777]">Soglia teorica:</span>
+                           <span className="text-ea-text-axis">Soglia teorica:</span>
                            <span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span>
                          </div>
                        )}
@@ -1887,7 +1867,7 @@ export function AnalyticsV2({
                  activeDot={{ r: 6, fill: NEON, stroke: '#000', strokeWidth: 2 }} />
              </LineChart>
            </ResponsiveContainer>
-         </div>
+         </ChartPlot>
          {/* KPI strip */}
          <div className="flex gap-4 mt-5">
            {(() => {
@@ -1898,18 +1878,18 @@ export function AnalyticsV2({
               const tPace = getThresholdDisplay(currentVdot);
              return (
                <>
-                 <div className="flex-1 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                   <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">VDOT Attuale</div>
+                 <div className="flex-1 rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                   <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">VDOT Attuale</div>
                    <div className="text-xl font-mono font-black" style={{ color: NEON }}>{currentVdot ?? '—'}</div>
                  </div>
-                 <div className="flex-1 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                   <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Trend 3M</div>
-                   <div className="text-xl font-mono font-black" style={{ color: trend3m == null ? '#555' : trend3m >= 0 ? NEON : '#F43F5E' }}>
+                 <div className="flex-1 rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                   <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Trend 3M</div>
+                   <div className="text-xl font-mono font-black" style={{ color: trend3m == null ? '#555' : trend3m >= 0 ? NEON : CHART_SERIES.risk }}>
                      {trend3m == null ? '—' : `${trend3m >= 0 ? '+' : ''}${trend3m.toFixed(1)}`}
                    </div>
                  </div>
-                 <div className="flex-1 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                    <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo soglia (Daniels)</div>
+                 <div className="flex-1 rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                    <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Passo soglia (Daniels)</div>
                    <div className="text-xl font-mono font-black text-white">{tPace ?? '—'} {tPace ? '/km' : ''}</div>
                  </div>
                </>
@@ -1942,89 +1922,79 @@ export function AnalyticsV2({
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
            {/* Anaerobic Threshold Trend — left column */}
            <div
-              className="xl:col-span-2 rounded-2xl p-6 flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_246px] gap-6 relative group overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50"
+              className="xl:col-span-2 rounded-2xl p-5 flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_246px] gap-6 relative group overflow-hidden border border-ea-hairline bg-ea-surface-1"
               style={{
                 minHeight: 402,
-                borderLeft: `3px solid ${NEON}`,
               }}
            >
                 <div className="min-w-0 flex flex-col">
                 <div className="flex items-start justify-between gap-4 mb-5">
                   <div>
-                     <h3 className="text-[15px] md:text-base font-black tracking-wider uppercase italic text-[#E7E7E7] leading-none">{t('statsCards.progressioneTemporale')}</h3>
-                     <p className="text-[9px] font-black uppercase tracking-widest mt-2 text-[#787878]">
+                     <h3 className="ea-title">{t('statsCards.progressioneTemporale')}</h3>
+                     <p className="text-xs font-black uppercase tracking-widest mt-2 text-ea-text-axis">
                        {t('statsCards.progressioneTemporaleSub')}
                     </p>
                   </div>
-                  <div className="hidden sm:flex items-center gap-5 pr-8 text-[9px] font-black uppercase tracking-widest text-[#3A3A3A]">
+                  <div className="hidden sm:flex items-center gap-5 pr-8 text-xs font-black uppercase tracking-widest text-ea-text-axis">
                     <span className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full" style={{ backgroundColor: NEON }} />
                       Passo
                     </span>
                     <span className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#FF4B93]" />
+                      <span className="w-2 h-2 rounded-full bg-ea-rose" />
                       Drift %
                     </span>
                     <button
                       onClick={() => openExpandedChart('threshold_progression', setAtExpanded)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-[#2A2A2A] text-[#555] hover:text-[#C0FF00]"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-ea-hairline-strong text-ea-text-axis hover:text-ea-lime"
                       title={t('statsCards.expand')}
                     >
                       <Maximize2 size={15} />
                     </button>
                   </div>
                 </div>
-              <div className="h-[312px] w-full">
+              <ChartPlot size="tall">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={atTrendData} margin={{ top: 12, right: 10, left: -12, bottom: 2 }}>
+                  <ComposedChart data={atTrendData} margin={chartMargin}>
                     <defs>
                       <linearGradient id="v2-at-panel-area" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={NEON} stopOpacity={0.16} />
                         <stop offset="100%" stopColor={NEON} stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid stroke="#1A1A1A" strokeDasharray="1 0" vertical horizontal />
-                    <XAxis dataKey="month" stroke="#2F2F2F" fontSize={10} fontWeight={900} tickLine={false} axisLine={false} interval={2} dy={5} />
-                    <YAxis yAxisId="pace" reversed stroke="#525252" fontSize={10} fontWeight={900} tickLine={false} axisLine={false}
-                      tickFormatter={formatPaceSecs} domain={atPanel.paceDomain} ticks={atPanel.paceTicks} width={42} />
-                    <YAxis yAxisId="drift" orientation="right" stroke="#525252" fontSize={10} fontWeight={900} tickLine={false} axisLine={false}
-                      domain={atPanel.driftDomain} ticks={atPanel.driftTicks}
-                      tickFormatter={(v) => `${v}%`}
-                      width={36} />
-                   <Tooltip
-                      contentStyle={{ backgroundColor: '#151515', borderColor: '#2A2A2A', borderRadius: '4px' }}
-                      itemStyle={{ color: '#fff' }}
-                      labelStyle={{ color: NEON, fontWeight: 900, textTransform: 'uppercase' }}
-                     formatter={(val: number, name: string) =>
+                    <CartesianGrid {...chartGrid} />
+                    <XAxis {...chartXAxis} dataKey="month" fontWeight={900} interval={2} dy={5} />
+                    <YAxis {...chartYAxis} yAxisId="pace" reversed fontWeight={900} tickFormatter={formatPaceSecs} domain={atPanel.paceDomain} ticks={atPanel.paceTicks} width={42} />
+                    <YAxis {...chartYAxis} yAxisId="drift" orientation="right" fontWeight={900} domain={atPanel.driftDomain} ticks={atPanel.driftTicks} tickFormatter={(v) => `${v}%`} width={36} />
+                   <ChartTip formatter={(val: number, name: string) =>
                        name === 'Threshold Pace' ? [formatPaceSecs(val) + ' /km', name]
                        : name === 'Cardiac Drift' ? [`${val.toFixed(1)}%`, name]
                        : [`${val} bpm`, name]
-                     }
-                   />
+                     } />
                     <Area yAxisId="pace" type="monotone" dataKey="pace" name="Threshold Pace"
                       stroke={NEON} strokeWidth={2} fill="url(#v2-at-panel-area)" fillOpacity={1}
-                      dot={{ r: 3.5, fill: '#111111', stroke: NEON, strokeWidth: 2 }}
-                      activeDot={{ r: 5, fill: NEON, stroke: '#111111', strokeWidth: 2 }} />
+                      dot={{ r: 3.5, fill: CHART_SURFACE.panelSoft, stroke: NEON, strokeWidth: 2 }}
+                      activeDot={{ r: 5, fill: NEON, stroke: CHART_SURFACE.panelSoft, strokeWidth: 2 }} />
                     <Line yAxisId="drift" type="monotone" dataKey="drift" name="Cardiac Drift"
-                      stroke="#FF4B93" strokeWidth={2} strokeDasharray="4 5"
+                      stroke={CHART_SERIES.risk} strokeWidth={2} strokeDasharray="4 5"
                       dot={false} connectNulls
-                      activeDot={{ r: 5, fill: '#FF4B93', stroke: '#111111', strokeWidth: 2 }} />
+                      activeDot={{ r: 5, fill: CHART_SERIES.risk, stroke: CHART_SURFACE.panelSoft, strokeWidth: 2 }} />
                     {atPanel.latest && (
                       <ReferenceLine
                         x={atPanel.latest.month}
                         yAxisId="pace"
                         stroke="transparent"
-                        label={{ value: 'CURRENT', position: 'insideBottomRight', fill: NEON, fontSize: 10, fontWeight: 900 }}
+                        label={{ value: 'CURRENT', position: 'insideBottomRight', fill: NEON, fontSize: 12, fontWeight: 900 }}
                       />
                     )}
                   </ComposedChart>
                 </ResponsiveContainer>
-              </div>
+              </ChartPlot>
               </div>
 
               <div className="grid grid-rows-2 gap-5 min-h-[312px]">
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] border-l-2 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex flex-col justify-center relative" style={{ borderLeftColor: NEON }}>
-                  <div className="absolute right-4 top-4 w-9 h-9 rounded-[8px] bg-[#2D350A] flex items-center justify-center">
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-6 flex flex-col justify-center relative">
+                  <div className="absolute right-4 top-4 w-9 h-9 rounded-[8px] bg-ea-lime/10 flex items-center justify-center">
                     <Timer className="w-4 h-4" style={{ color: NEON }} />
                   </div>
                   {/* Passo di soglia REALE (da VDOT), non l'ultimo punto della
@@ -2032,36 +2002,36 @@ export function AnalyticsV2({
                       larga parte corse lente — e mostrarlo qui contraddiceva la
                       FC soglia del pannello accanto (a ~163 bpm il passo è
                       ~4:14, non ~4:43). */}
-                  <div className="text-[10px] uppercase tracking-widest font-black text-[#A6A6A6]">
+                  <div className="text-xs uppercase tracking-widest font-black text-ea-text-muted">
                     {t('statsCards.thresholdPaceLatest')}
                   </div>
                   <div className="flex items-baseline mt-3">
-                    <span className="text-[52px] leading-none italic font-black" style={{ color: NEON }}>
+                    <span className="text-[52px] leading-none font-black" style={{ color: NEON }}>
                       {atPace}
                     </span>
-                    <span className="text-[18px] italic font-black text-[#DADADA] ml-2">/km</span>
+                    <span className="text-[18px] font-black text-white ml-2">/km</span>
                   </div>
-                  <div className="text-[10px] uppercase tracking-widest font-black mt-4 text-[#A6A6A6]">
+                  <div className="text-xs uppercase tracking-widest font-black mt-4 text-ea-text-muted">
                     <span style={{ color: NEON }}>@ ~{atHr} bpm</span>
                     <span className="ml-2">{t('statsCards.thresholdHrRef')}</span>
                   </div>
                 </div>
 
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] border-l-2 shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex flex-col justify-center relative" style={{ borderLeftColor: '#FF4B93' }}>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-6 flex flex-col justify-center relative">
                   <div className="absolute right-4 top-4 w-9 h-9 rounded-[8px] bg-[#3A202D] flex items-center justify-center">
-                    <Heart className="w-4 h-4 fill-[#FF4B93]" style={{ color: '#FF4B93' }} />
+                    <Heart className="w-4 h-4 fill-[#FF4B93]" style={{ color: CHART_SERIES.risk }} />
                   </div>
-                  <div className="text-[10px] uppercase tracking-widest font-black text-[#A6A6A6]">
-                    {t('statsCards.thresholdHrRef')} <span className="ml-2 text-[#FF4B93]">Riferimento</span>
+                  <div className="text-xs uppercase tracking-widest font-black text-ea-text-muted">
+                    {t('statsCards.thresholdHrRef')} <span className="ml-2 text-ea-rose">Riferimento</span>
                   </div>
                   <div className="flex items-baseline mt-3">
-                    <span className="text-[52px] leading-none italic font-black text-[#FF4B93]">
+                    <span className="text-[52px] leading-none font-black text-ea-rose">
                       {USER_THRESHOLD_HR}
                     </span>
-                    <span className="text-[18px] italic font-black text-[#DADADA] ml-2">bpm</span>
+                    <span className="text-[18px] font-black text-white ml-2">bpm</span>
                   </div>
-                  <div className="text-[10px] uppercase tracking-widest font-black mt-4 text-[#A6A6A6]">
-                    <span className="text-[#FF4B93]">
+                  <div className="text-xs uppercase tracking-widest font-black mt-4 text-ea-text-muted">
+                    <span className="text-ea-rose">
                       DRIFT {atPanel.latest?.drift !== null && atPanel.latest?.drift !== undefined
                         ? `${atPanel.latest.drift.toFixed(1)}%`
                         : '—'}
@@ -2090,34 +2060,33 @@ export function AnalyticsV2({
                  ],
                }}
              />
-             <div className="h-[260px] w-full">
+             <ChartPlot size="standard">
                <ResponsiveContainer width="100%" height="100%">
-                 <AreaChart data={vdotChartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
+                 <AreaChart data={vdotChartData} margin={chartMargin}>
                    <defs>
                      <linearGradient id="v2-vdot-grad" x1="0" y1="0" x2="0" y2="1">
                        <stop offset="0%" stopColor={NEON} stopOpacity={0.35} />
                        <stop offset="100%" stopColor={NEON} stopOpacity={0} />
                      </linearGradient>
                    </defs>
-                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} vertical={false} />
-                   <XAxis dataKey="name" stroke="#333" fontSize={9} tickLine={false} axisLine={false} />
-                   <YAxis stroke="#333" fontSize={9} tickLine={false} axisLine={false}
-                     domain={['dataMin - 2', 'dataMax + 2']} tickFormatter={(v) => v.toFixed(0)} />
+                   <CartesianGrid {...chartGrid} />
+                   <XAxis {...chartXAxis} dataKey="name" />
+                   <YAxis {...chartYAxis} domain={['dataMin - 2', 'dataMax + 2']} tickFormatter={(v) => v.toFixed(0)} />
                    <Tooltip
                      content={({ active, payload }) => {
                        if (!active || !payload?.length) return null;
                        const d = payload[0]?.payload;
                        if (!d) return null;
                        return (
-                         <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
-                           <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>{d.name}</p>
+                         <div className="ea-tooltip">
+                           <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>{d.name}</p>
                            <div className="flex items-center gap-2 text-xs mb-0.5">
-                             <span className="text-[#777]">VDOT:</span>
+                             <span className="text-ea-text-axis">VDOT:</span>
                              <span className="text-white font-bold">{d.vdot}</span>
                            </div>
                            {d.vdot && (
                              <div className="flex items-center gap-2 text-xs">
-                               <span className="text-[#777]">Passo soglia:</span>
+                               <span className="text-ea-text-axis">Passo soglia:</span>
                                <span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span>
                              </div>
                            )}
@@ -2131,7 +2100,7 @@ export function AnalyticsV2({
                      activeDot={{ r: 6, fill: NEON, stroke: '#000', strokeWidth: 2 }} />
                  </AreaChart>
                </ResponsiveContainer>
-             </div>
+             </ChartPlot>
              {/* KPI strip */}
              <div className="flex gap-4 mt-5">
                {(() => {
@@ -2142,18 +2111,18 @@ export function AnalyticsV2({
                  const tPace = getThresholdDisplay(currentVdot);
                  return (
                    <>
-                     <div className="flex-1 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                       <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">VDOT Attuale</div>
+                     <div className="flex-1 rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                       <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">VDOT Attuale</div>
                        <div className="text-xl font-mono font-black" style={{ color: NEON }}>{currentVdot ?? '—'}</div>
                      </div>
-                     <div className="flex-1 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                       <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Trend 3M</div>
-                       <div className="text-xl font-mono font-black" style={{ color: trend3m == null ? '#555' : trend3m >= 0 ? NEON : '#F43F5E' }}>
+                     <div className="flex-1 rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                       <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Trend 3M</div>
+                       <div className="text-xl font-mono font-black" style={{ color: trend3m == null ? '#555' : trend3m >= 0 ? NEON : CHART_SERIES.risk }}>
                          {trend3m == null ? '—' : `${trend3m >= 0 ? '+' : ''}${trend3m.toFixed(1)}`}
                        </div>
                      </div>
-                     <div className="flex-1 rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                       <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo soglia</div>
+                     <div className="flex-1 rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                       <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Passo soglia</div>
                        <div className="text-xl font-mono font-black text-white">{tPace ?? '—'} {tPace ? '/km' : ''}</div>
                      </div>
                    </>
@@ -2174,9 +2143,9 @@ export function AnalyticsV2({
           2. GAUGES + PACE TREND
       ════════════════════════════════════════════════════ */}
       {showCore && (
-      <div className="grid grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-6">
         {/* VDOT Gauge */}
-        <V2Card className="col-span-3 flex flex-col items-center justify-center">
+        <V2Card className="lg:col-span-3 flex flex-col items-center justify-center">
           <V2Header
             icon={Zap}
             title="VDOT"
@@ -2200,7 +2169,7 @@ export function AnalyticsV2({
         </V2Card>
 
         {/* AT Gauge */}
-        <V2Card className="col-span-3 flex flex-col items-center justify-center">
+        <V2Card className="lg:col-span-3 flex flex-col items-center justify-center">
           <V2Header
             icon={Heart}
             title={t('statsCards.thresholdAT')}
@@ -2218,11 +2187,11 @@ export function AnalyticsV2({
             max={maxHr ?? 200}
             label="Threshold HR"
             unit="bpm"
-            color="#A78BFA"
+            color={CHART_SERIES.tertiary}
           />
           <div className="mt-3 text-center">
-            <span className="text-lg font-black italic text-white">{atPace}</span>
-            <span className="text-[10px] text-[#666] ml-1">/km</span>
+            <span className="text-lg font-black text-white">{atPace}</span>
+            <span className="text-xs text-ea-text-axis ml-1">/km</span>
           </div>
         </V2Card>
 
@@ -2233,10 +2202,10 @@ export function AnalyticsV2({
           3. CARDIAC DRIFT + TIME IN ZONES
       ════════════════════════════════════════════════════ */}
       {(showSection('drift') || showSection('zones')) && (
-      <div className="grid grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Cardiac Drift */}
         {showSection('drift') && (
-        <V2Card className={showSection('zones') ? 'col-span-7' : 'col-span-12'}>
+        <V2Card className={showSection('zones') ? 'lg:col-span-7' : 'lg:col-span-12'}>
           <V2Header
             icon={Heart}
             title={t("statistics.cardiacDrift")}
@@ -2253,53 +2222,35 @@ export function AnalyticsV2({
               ],
             }}
           />
-          <div className="h-[280px] w-full">
+          <ChartPlot size="tall">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={driftChartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
+              <ComposedChart data={driftChartData} margin={chartMargin}>
                 <defs>
                   <linearGradient id="v2-drift-area" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#F43F5E" stopOpacity={0} />
-                    <stop offset="50%" stopColor="#F43F5E" stopOpacity={0.08} />
-                    <stop offset="100%" stopColor="#F43F5E" stopOpacity={0.2} />
+                    <stop offset="0%" stopColor={CHART_SERIES.risk} stopOpacity={0} />
+                    <stop offset="50%" stopColor={CHART_SERIES.risk} stopOpacity={0.08} />
+                    <stop offset="100%" stopColor={CHART_SERIES.risk} stopOpacity={0.2} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} vertical={false} />
-                <XAxis dataKey="km" stroke="#333" fontSize={9} tickLine={false} axisLine={false} label={{ value: 'km', position: 'insideBottomRight', offset: -5, fill: '#555', fontSize: 9 }} />
-                <YAxis
-                  yAxisId="pace"
-                  stroke="#555"
-                  fontSize={9}
-                  tickLine={false}
-                  axisLine={false}
-                  domain={['dataMin - 0.2', 'dataMax + 0.2']}
-                  reversed
-                  tickFormatter={(v) => formatPaceStr(v)}
-                />
-                <YAxis
-                  yAxisId="hr"
-                  orientation="right"
-                  stroke="#555"
-                  fontSize={9}
-                  tickLine={false}
-                  axisLine={false}
-                  domain={['dataMin - 5', 'dataMax + 5']}
-                  tickFormatter={(v) => `${v} bpm`}
-                />
+                <CartesianGrid {...chartGrid} />
+                <XAxis {...chartXAxis} dataKey="km" label={{ value: 'km', position: 'insideBottomRight', offset: -5, fill: '#555', fontSize: 12 }} />
+                <YAxis {...chartYAxis} yAxisId="pace" domain={['dataMin - 0.2', 'dataMax + 0.2']} reversed tickFormatter={(v) => formatPaceStr(v)} />
+                <YAxis {...chartYAxis} yAxisId="hr" orientation="right" domain={['dataMin - 5', 'dataMax + 5']} tickFormatter={(v) => `${v} bpm`} />
                 <Tooltip content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   const d = payload[0]?.payload;
                   if (!d) return null;
                   return (
-                    <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
-                      <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>KM {d.km}</p>
+                    <div className="ea-tooltip">
+                      <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>KM {d.km}</p>
                       <div className="flex items-center gap-2 text-xs mb-0.5">
                         <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: NEON }} />
-                        <span className="text-[#777]">Pace:</span>
+                        <span className="text-ea-text-axis">Pace:</span>
                         <span className="text-white font-bold">{formatPaceStr(d.pace)} /km</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#F43F5E]" />
-                        <span className="text-[#777]">HR:</span>
+                        <div className="w-1.5 h-1.5 rounded-full bg-ea-rose" />
+                        <span className="text-ea-text-axis">HR:</span>
                         <span className="text-white font-bold">{d.hr} bpm</span>
                       </div>
                     </div>
@@ -2307,7 +2258,7 @@ export function AnalyticsV2({
                 }} />
                 {/* Divergence zone highlight */}
                 <ReferenceArea yAxisId="pace" x1={driftStartKm} x2={driftChartData[driftChartData.length - 1]?.km ?? '14'} fill="url(#v2-drift-area)" />
-                <ReferenceLine yAxisId="pace" x={driftStartKm} stroke="#F43F5E" strokeDasharray="4 4" strokeOpacity={0.5} />
+                <ReferenceLine yAxisId="pace" x={driftStartKm} stroke={CHART_SERIES.risk} strokeDasharray="4 4" strokeOpacity={0.5} />
                 {/* Pace line */}
                 <Line
                   yAxisId="pace"
@@ -2325,25 +2276,25 @@ export function AnalyticsV2({
                   type="monotone"
                   dataKey="hr"
                   name="HR"
-                  stroke="#F43F5E"
+                  stroke={CHART_SERIES.risk}
                   strokeWidth={2.5}
-                  dot={{ r: 3, fill: '#F43F5E', strokeWidth: 0 }}
-                  activeDot={{ r: 5, fill: '#F43F5E' }}
+                  dot={{ r: 3, fill: CHART_SERIES.risk, strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: CHART_SERIES.risk }}
                 />
               </ComposedChart>
             </ResponsiveContainer>
-          </div>
-          <div className="flex items-center gap-6 mt-4 text-[9px] font-black uppercase tracking-widest">
+          </ChartPlot>
+          <div className="flex items-center gap-6 mt-4 text-xs font-black uppercase tracking-widest">
             <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: NEON }} /> Pace</span>
-            <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#F43F5E]" /> Heart Rate</span>
-            <span className="flex items-center gap-2 text-[#F43F5E]/60"><div className="w-6 h-2 bg-[#F43F5E]/10 rounded" /> Zona Drift</span>
+            <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-ea-rose" /> Heart Rate</span>
+            <span className="flex items-center gap-2 text-ea-rose/60"><div className="w-6 h-2 bg-ea-rose/10 rounded" /> Zona Drift</span>
           </div>
         </V2Card>
         )}
 
         {/* Time in Zones — thin donut-style bars */}
         {showSection('zones') && (
-        <V2Card className={showSection('drift') ? 'col-span-5' : 'col-span-12'}>
+        <V2Card className={showSection('drift') ? 'lg:col-span-5' : 'lg:col-span-12'}>
           <V2Header
             icon={Timer}
             title={t("statistics.timeInZones")}
@@ -2394,8 +2345,8 @@ export function AnalyticsV2({
                 })()}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-black italic text-white">{totalZoneMin}</span>
-                <span className="text-[9px] font-black text-[#555] uppercase tracking-widest">min totali</span>
+                <span className="text-2xl font-black text-white">{totalZoneMin}</span>
+                <span className="text-xs font-black text-ea-text-axis uppercase tracking-widest">min totali</span>
               </div>
             </div>
           </div>
@@ -2404,14 +2355,14 @@ export function AnalyticsV2({
           <div className="space-y-3">
             {zonesChartData.map((z) => (
               <div key={z.zone}>
-                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-1">
-                  <span className="text-[#888]">{z.zone} <span className="text-[#555]">{z.name}</span></span>
+                <div className="flex justify-between text-xs font-black uppercase tracking-widest mb-1">
+                  <span className="text-ea-text-axis">{z.zone} <span className="text-ea-text-axis">{z.name}</span></span>
                   <div className="flex items-center gap-3">
-                    <span className="text-[#555]">{z.min} min</span>
+                    <span className="text-ea-text-axis">{z.min} min</span>
                     <span className="text-white w-8 text-right">{z.pct}%</span>
                   </div>
                 </div>
-                <div className="h-1 w-full bg-[#1A1A1A] rounded-full overflow-hidden">
+                <div className="h-1 w-full bg-ea-surface-3 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-700"
                     style={{ width: `${z.pct}%`, backgroundColor: z.color }}
@@ -2447,7 +2398,7 @@ export function AnalyticsV2({
           }}
         />
 
-        <div className="flex items-center gap-6 mb-4 text-[9px] font-black uppercase tracking-widest">
+        <div className="flex items-center gap-6 mb-4 text-xs font-black uppercase tracking-widest">
           <span className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: NEON }} />
             Zona Ottimale (cadenza &gt; 175 · GCT &lt; 240)
@@ -2456,37 +2407,17 @@ export function AnalyticsV2({
             <div className="w-2 h-2 rounded-full bg-[#555]" />
             Fuori zona
           </span>
-          <span className="text-[#333] ml-auto">
+          <span className="text-ea-text-axis ml-auto">
             {scatterData.filter(d => d.cadence > 175 && d.gct < 240).length} / {scatterData.length} ottimali
           </span>
         </div>
 
-        <div className="h-[300px] w-full">
+        <ChartPlot size="tall">
           <ResponsiveContainer width="100%" height="100%">
-            <ScatterChart margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-              <XAxis
-                type="number"
-                dataKey="cadence"
-                name="Cadence"
-                stroke={LABEL_COLOR}
-                fontSize={10}
-                tickLine={false}
-                axisLine={false}
-                domain={['dataMin - 5', 'dataMax + 5']}
-                unit=" spm"
-              />
-              <YAxis
-                type="number"
-                dataKey="gct"
-                name="GCT"
-                stroke={LABEL_COLOR}
-                fontSize={10}
-                tickLine={false}
-                axisLine={false}
-                domain={['dataMin - 10', 'dataMax + 10']}
-                unit=" ms"
-              />
+            <ScatterChart margin={chartMargin}>
+              <CartesianGrid {...chartGridBoth} />
+              <XAxis {...chartXAxis} type="number" dataKey="cadence" name="Cadence" domain={['dataMin - 5', 'dataMax + 5']} unit=" spm" />
+              <YAxis {...chartYAxis} width={64} type="number" dataKey="gct" name="GCT" domain={['dataMin - 10', 'dataMax + 10']} unit=" ms" />
               <ZAxis range={[20, 20]} />
               <Tooltip
                 cursor={{ strokeDasharray: '3 3' }}
@@ -2496,16 +2427,16 @@ export function AnalyticsV2({
                   if (!d) return null;
                   const optimal = d.cadence > 175 && d.gct < 240;
                   return (
-                    <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
-                      <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: optimal ? NEON : '#888' }}>
+                    <div className="ea-tooltip">
+                      <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: optimal ? NEON : '#888' }}>
                         {optimal ? 'ZONA OTTIMALE' : 'FUORI ZONA'}
                       </p>
                       <div className="flex items-center gap-2 text-xs mb-0.5">
-                        <span className="text-[#777]">Cadenza:</span>
+                        <span className="text-ea-text-axis">Cadenza:</span>
                         <span className="text-white font-bold">{d.cadence} spm</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs">
-                        <span className="text-[#777]">GCT:</span>
+                        <span className="text-ea-text-axis">GCT:</span>
                         <span className="text-white font-bold">{d.gct} ms</span>
                       </div>
                     </div>
@@ -2518,7 +2449,7 @@ export function AnalyticsV2({
                   return (
                     <Cell
                       key={`cell-${index}`}
-                      fill={isOptimal ? NEON : '#555555'}
+                      fill={isOptimal ? NEON : CHART_TEXT.axis}
                       fillOpacity={isOptimal ? 0.8 : 0.4}
                     />
                   );
@@ -2526,7 +2457,7 @@ export function AnalyticsV2({
               </Scatter>
             </ScatterChart>
           </ResponsiveContainer>
-        </div>
+        </ChartPlot>
       </V2Card>
       )}
 
@@ -2537,23 +2468,23 @@ export function AnalyticsV2({
         const last = expandedAtData[expandedAtData.length - 1];
         const improvement = first && last ? first.pace - last.pace : 0;
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 ">
+            <div className="bg-ea-surface-1 border border-ea-hairline rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]">
 
               {/* Modal header */}
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
+                  <div className="p-3 bg-[#222] rounded-xl border border-ea-hairline-strong">
                     <Zap className="w-6 h-6" style={{ color: NEON }} />
                   </div>
                   <div>
-                    <h2 className="text-white font-black text-xl tracking-widest uppercase italic">Anaerobic Threshold Trend</h2>
-                    <p className="text-[11px] mt-0.5" style={{ color: LABEL_COLOR }}>Dettaglio settimanale passo e FC di soglia anaerobica</p>
+                    <h2 className="ea-title">Anaerobic Threshold Trend</h2>
+                    <p className="text-xs mt-0.5" style={{ color: LABEL_COLOR }}>Dettaglio settimanale passo e FC di soglia anaerobica</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setAtExpanded(false)}
-                  className="p-2 bg-[#222] hover:bg-[#2A2A2A] rounded-full text-white transition-colors border border-[#333]"
+                  className="p-2 bg-[#222] hover:bg-ea-hairline-strong rounded-full text-white transition-colors border border-ea-hairline-strong"
                 >
                   <X size={22} />
                 </button>
@@ -2569,28 +2500,19 @@ export function AnalyticsV2({
                         <stop offset="95%" stopColor={NEON} stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-                    <XAxis dataKey="month" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} interval="preserveStartEnd" minTickGap={22} tickFormatter={(value) => formatWeekBucketLabel(String(value))} />
-                    <YAxis yAxisId="pace" reversed stroke="#555" fontSize={12} tickLine={false} axisLine={false}
-                      tickFormatter={formatPaceSecs} domain={['dataMin - 15', 'dataMax + 15']}
-                      label={{ value: 'Pace (min/km)', angle: -90, position: 'insideLeft', fill: '#555', dy: 55, fontSize: 10 }} />
-                    <YAxis yAxisId="hr" orientation="right" stroke="#555" fontSize={12} tickLine={false} axisLine={false}
-                      domain={['dataMin - 10', 'dataMax + 10']} tickFormatter={(v) => `${v} bpm`}
-                      label={{ value: 'Heart Rate (bpm)', angle: 90, position: 'insideRight', fill: '#555', dy: -60, fontSize: 10 }} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#151515', borderColor: '#2A2A2A', borderRadius: '4px' }}
-                      itemStyle={{ color: '#fff' }}
-                      labelStyle={{ color: NEON, fontWeight: 900, textTransform: 'uppercase' }}
-                      formatter={(val: number, name: string) =>
+                    <CartesianGrid {...chartGrid} />
+                    <XAxis {...chartXAxis} dataKey="month" dy={10} interval="preserveStartEnd" minTickGap={22} tickFormatter={(value) => formatWeekBucketLabel(String(value))} />
+                    <YAxis {...chartYAxis} yAxisId="pace" reversed tickFormatter={formatPaceSecs} domain={['dataMin - 15', 'dataMax + 15']} label={{ value: 'Pace (min/km)', angle: -90, position: 'insideLeft', fill: '#555', dy: 55, fontSize: 12 }} />
+                    <YAxis {...chartYAxis} yAxisId="hr" orientation="right" domain={['dataMin - 10', 'dataMax + 10']} tickFormatter={(v) => `${v} bpm`} label={{ value: 'Heart Rate (bpm)', angle: 90, position: 'insideRight', fill: '#555', dy: -60, fontSize: 12 }} />
+                    <ChartTip formatter={(val: number, name: string) =>
                         name === 'Threshold Pace' ? [formatPaceSecs(val) + ' /km', name] : [`${val} bpm`, name]
-                      }
-                    />
+                      } />
                     <Area yAxisId="pace" type="monotone" dataKey="pace" name="Threshold Pace"
                       stroke={NEON} strokeWidth={3} fillOpacity={1} fill="url(#v2-at-grad-exp)" />
                     <Line yAxisId="hr" type="monotone" dataKey="hr" name="Threshold HR"
-                      stroke="#EC4899" strokeWidth={3}
-                      dot={{ r: 5, fill: CARD_BG, stroke: '#EC4899', strokeWidth: 2 }}
-                      activeDot={{ r: 8, fill: '#EC4899', stroke: '#fff' }} />
+                      stroke={CHART_SERIES.risk} strokeWidth={3}
+                      dot={{ r: 5, fill: CARD_BG, stroke: CHART_SERIES.risk, strokeWidth: 2 }}
+                      activeDot={{ r: 8, fill: CHART_SERIES.risk, stroke: CHART_TEXT.primary }} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
@@ -2598,17 +2520,17 @@ export function AnalyticsV2({
               {/* Info panels */}
               <div className="space-y-4 mt-6 shrink-0">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-                  <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                    <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo Iniziale</div>
+                  <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                    <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Passo Iniziale</div>
                     <div className="text-xl font-mono font-black text-white">{first ? formatPaceSecs(first.pace) : '--'}</div>
                   </div>
-                  <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                    <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo Attuale</div>
+                  <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                    <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Passo Attuale</div>
                     <div className="text-xl font-mono font-black" style={{ color: NEON }}>{last ? formatPaceSecs(last.pace) : '--'}</div>
                   </div>
-                  <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                    <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Miglioramento</div>
-                    <div className="text-xl font-mono font-black" style={{ color: improvement > 0 ? NEON : '#F43F5E' }}>
+                  <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                    <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Miglioramento</div>
+                    <div className="text-xl font-mono font-black" style={{ color: improvement > 0 ? NEON : CHART_SERIES.risk }}>
                       {improvement > 0 ? '-' : '+'}{formatPaceSecs(Math.abs(improvement))} /km
                     </div>
                   </div>
@@ -2617,7 +2539,7 @@ export function AnalyticsV2({
                   rows={expandedAtData}
                   columns={[
                     { key: 'pace', label: 'Passo soglia', color: NEON, render: (row) => `${formatPaceSecs(Number(row.pace))} /km` },
-                    { key: 'hr', label: 'FC soglia', color: '#EC4899', render: (row) => row.hr ? `${Math.round(Number(row.hr))} bpm` : '--' },
+                    { key: 'hr', label: 'FC soglia', color: CHART_SERIES.risk, render: (row) => row.hr ? `${Math.round(Number(row.hr))} bpm` : '--' },
                     { key: 'samples', label: 'Campioni', render: (row) => Number(row.samples ?? 0) > 0 ? Number(row.samples ?? 0) : '--' },
                   ]}
                 />
@@ -2632,19 +2554,19 @@ export function AnalyticsV2({
       {showSection('pmc') && pmcExpanded && (() => {
         const lastPmc = pmcChartData[pmcChartData.length - 1];
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 ">
+            <div className="bg-ea-surface-1 border border-ea-hairline rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]">
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
+                  <div className="p-3 bg-[#222] rounded-xl border border-ea-hairline-strong">
                     <Activity className="w-6 h-6" style={{ color: NEON }} />
                   </div>
                   <div>
-                    <h2 className="text-white font-black text-xl tracking-widest uppercase italic">Performance Management Chart</h2>
-                    <p className="text-[11px] mt-0.5" style={{ color: LABEL_COLOR }}>Fitness (CTL) · Fatigue (ATL) · Form (TSB) — 90 giorni</p>
+                    <h2 className="ea-title">Performance Management Chart</h2>
+                    <p className="text-xs mt-0.5" style={{ color: LABEL_COLOR }}>Fitness (CTL) · Fatigue (ATL) · Form (TSB) — 90 giorni</p>
                   </div>
                 </div>
-                <button onClick={() => setPmcExpanded(false)} className="p-2 bg-[#222] hover:bg-[#2A2A2A] rounded-full text-white transition-colors border border-[#333]">
+                <button onClick={() => setPmcExpanded(false)} className="p-2 bg-[#222] hover:bg-ea-hairline-strong rounded-full text-white transition-colors border border-ea-hairline-strong">
                   <X size={22} />
                 </button>
               </div>
@@ -2653,36 +2575,36 @@ export function AnalyticsV2({
                   <ComposedChart data={pmcChartData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
                     <defs>
                       <linearGradient id="v2-ctl-grad-exp" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#6366F1" stopOpacity={0.35} />
-                        <stop offset="100%" stopColor="#6366F1" stopOpacity={0} />
+                        <stop offset="0%" stopColor={CHART_SERIES.projected} stopOpacity={0.35} />
+                        <stop offset="100%" stopColor={CHART_SERIES.projected} stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-                    <XAxis dataKey="day" stroke="#555" fontSize={11} tickLine={false} axisLine={false} interval={14} dy={10} />
-                    <YAxis yAxisId="left" stroke="#555" fontSize={11} tickLine={false} axisLine={false} />
-                    <YAxis yAxisId="right" orientation="right" stroke="#555" fontSize={11} tickLine={false} axisLine={false} domain={[-30, 30]} />
+                    <CartesianGrid {...chartGrid} />
+                    <XAxis {...chartXAxis} dataKey="day" interval={14} dy={10} />
+                    <YAxis {...chartYAxis} yAxisId="left" />
+                    <YAxis {...chartYAxis} yAxisId="right" orientation="right" domain={[-30, 30]} />
                     <Tooltip content={<V2Tooltip />} />
-                    <ReferenceLine yAxisId="right" y={0} stroke="#333" strokeDasharray="4 4" />
+                    <ReferenceLine yAxisId="right" y={0} stroke={CHART_SURFACE.borderStrong} strokeDasharray="4 4" />
                     <Bar yAxisId="right" dataKey="tsb" name="Form (TSB)" radius={[2, 2, 0, 0]} maxBarSize={6} opacity={0.7}>
-                      {pmcChartData.map((e, i) => (<Cell key={i} fill={e.tsb >= 0 ? NEON : '#F43F5E'} />))}
+                      {pmcChartData.map((e, i) => (<Cell key={i} fill={e.tsb >= 0 ? NEON : CHART_SERIES.risk} />))}
                     </Bar>
-                    <Area yAxisId="left" type="monotone" dataKey="ctl" name="Fitness (CTL)" stroke="#6366F1" strokeWidth={2.5} fillOpacity={1} fill="url(#v2-ctl-grad-exp)" />
-                    <Line yAxisId="left" type="monotone" dataKey="atl" name="Fatigue (ATL)" stroke="#F43F5E" strokeWidth={1.5} dot={false} strokeDasharray="5 3" />
+                    <Area yAxisId="left" type="monotone" dataKey="ctl" name="Fitness (CTL)" stroke={CHART_SERIES.projected} strokeWidth={2.5} fillOpacity={1} fill="url(#v2-ctl-grad-exp)" />
+                    <Line yAxisId="left" type="monotone" dataKey="atl" name="Fatigue (ATL)" stroke={CHART_SERIES.risk} strokeWidth={1.5} dot={false} strokeDasharray="5 3" />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">CTL Attuale</div>
-                  <div className="text-xl font-mono font-black" style={{ color: '#6366F1' }}>{lastPmc?.ctl ?? '--'}</div>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                  <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">CTL Attuale</div>
+                  <div className="text-xl font-mono font-black" style={{ color: CHART_SERIES.projected }}>{lastPmc?.ctl ?? '--'}</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">ATL Attuale</div>
-                  <div className="text-xl font-mono font-black" style={{ color: '#F43F5E' }}>{lastPmc?.atl ?? '--'}</div>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                  <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">ATL Attuale</div>
+                  <div className="text-xl font-mono font-black" style={{ color: CHART_SERIES.risk }}>{lastPmc?.atl ?? '--'}</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">TSB (Form)</div>
-                  <div className="text-xl font-mono font-black" style={{ color: lastPmc && lastPmc.tsb >= 0 ? NEON : '#F43F5E' }}>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                  <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">TSB (Form)</div>
+                  <div className="text-xl font-mono font-black" style={{ color: lastPmc && lastPmc.tsb >= 0 ? NEON : CHART_SERIES.risk }}>
                     {lastPmc?.tsb ?? '--'}
                   </div>
                 </div>
@@ -2700,19 +2622,19 @@ export function AnalyticsV2({
         const slowestPace = paces.length > 0 ? Math.max(...paces) : null;
         const trendSecs = paces.length >= 2 ? Math.round((paces[0] - paces[paces.length - 1]) * 60) : null;
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 ">
+            <div className="bg-ea-surface-1 border border-ea-hairline rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]">
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
+                  <div className="p-3 bg-[#222] rounded-xl border border-ea-hairline-strong">
                     <TrendingUp className="w-6 h-6" style={{ color: NEON }} />
                   </div>
                   <div>
-                    <h2 className="text-white font-black text-xl tracking-widest uppercase italic">Pace Trend</h2>
-                    <p className="text-[11px] mt-0.5" style={{ color: LABEL_COLOR }}>Passo medio settimanale negli ultimi 12 mesi</p>
+                    <h2 className="ea-title">Pace Trend</h2>
+                    <p className="text-xs mt-0.5" style={{ color: LABEL_COLOR }}>Passo medio settimanale negli ultimi 12 mesi</p>
                   </div>
                 </div>
-                <button onClick={() => setPaceExpanded(false)} className="p-2 bg-[#222] hover:bg-[#2A2A2A] rounded-full text-white transition-colors border border-[#333]">
+                <button onClick={() => setPaceExpanded(false)} className="p-2 bg-[#222] hover:bg-ea-hairline-strong rounded-full text-white transition-colors border border-ea-hairline-strong">
                   <X size={22} />
                 </button>
               </div>
@@ -2725,17 +2647,15 @@ export function AnalyticsV2({
                         <stop offset="100%" stopColor={NEON} stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-                    <XAxis dataKey="month" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} interval="preserveStartEnd" minTickGap={22} tickFormatter={(value) => formatWeekBucketLabel(String(value))} />
-                    <YAxis stroke="#555" fontSize={12} tickLine={false} axisLine={false} reversed
-                      domain={['dataMin - 0.2', 'dataMax + 0.2']}
-                      tickFormatter={(v) => formatPaceStr(v)} />
+                    <CartesianGrid {...chartGrid} />
+                    <XAxis {...chartXAxis} dataKey="month" dy={10} interval="preserveStartEnd" minTickGap={22} tickFormatter={(value) => formatWeekBucketLabel(String(value))} />
+                    <YAxis {...chartYAxis} reversed domain={['dataMin - 0.2', 'dataMax + 0.2']} tickFormatter={(v) => formatPaceStr(v)} />
                     <Tooltip content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
                       const { month, pace } = payload[0].payload;
                       return (
-                        <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
-                          <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: NEON }}>{month}</p>
+                        <div className="ea-tooltip">
+                          <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: NEON }}>{month}</p>
                           <p className="text-white font-black text-sm">{formatPaceStr(pace)} /km</p>
                         </div>
                       );
@@ -2746,17 +2666,17 @@ export function AnalyticsV2({
                 </ResponsiveContainer>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo Più Veloce</div>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                  <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Passo Più Veloce</div>
                   <div className="text-xl font-mono font-black" style={{ color: NEON }}>{fastestPace ? formatPaceStr(fastestPace) : '--'} /km</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo Più Lento</div>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                  <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Passo Più Lento</div>
                   <div className="text-xl font-mono font-black text-white">{slowestPace ? formatPaceStr(slowestPace) : '--'} /km</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Trend (secs)</div>
-                  <div className="text-xl font-mono font-black" style={{ color: trendSecs == null ? '#555' : trendSecs > 0 ? NEON : '#F43F5E' }}>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                  <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Trend (secs)</div>
+                  <div className="text-xl font-mono font-black" style={{ color: trendSecs == null ? '#555' : trendSecs > 0 ? NEON : CHART_SERIES.risk }}>
                     {trendSecs == null ? '—' : `${trendSecs > 0 ? '-' : '+'}${Math.abs(trendSecs)}s`}
                   </div>
                 </div>
@@ -2785,19 +2705,19 @@ export function AnalyticsV2({
           ? driftChartData.slice(-3).reduce((s, d) => s + d.hr, 0) / 3 : 0;
         const driftPct = first3Hr > 0 ? ((last3Hr - first3Hr) / first3Hr * 100) : 0;
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 ">
+            <div className="bg-ea-surface-1 border border-ea-hairline rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]">
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
+                  <div className="p-3 bg-[#222] rounded-xl border border-ea-hairline-strong">
                     <Heart className="w-6 h-6" style={{ color: NEON }} />
                   </div>
                   <div>
-                    <h2 className="text-white font-black text-xl tracking-widest uppercase italic">Deriva Cardiaca</h2>
-                    <p className="text-[11px] mt-0.5" style={{ color: LABEL_COLOR }}>{driftRunLabel} — Passo vs FC per km split</p>
+                    <h2 className="ea-title">Deriva Cardiaca</h2>
+                    <p className="text-xs mt-0.5" style={{ color: LABEL_COLOR }}>{driftRunLabel} — Passo vs FC per km split</p>
                   </div>
                 </div>
-                <button onClick={() => setDriftExpanded(false)} className="p-2 bg-[#222] hover:bg-[#2A2A2A] rounded-full text-white transition-colors border border-[#333]">
+                <button onClick={() => setDriftExpanded(false)} className="p-2 bg-[#222] hover:bg-ea-hairline-strong rounded-full text-white transition-colors border border-ea-hairline-strong">
                   <X size={22} />
                 </button>
               </div>
@@ -2806,51 +2726,48 @@ export function AnalyticsV2({
                   <ComposedChart data={driftChartData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
                     <defs>
                       <linearGradient id="v2-drift-area-exp" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#F43F5E" stopOpacity={0} />
-                        <stop offset="50%" stopColor="#F43F5E" stopOpacity={0.08} />
-                        <stop offset="100%" stopColor="#F43F5E" stopOpacity={0.2} />
+                        <stop offset="0%" stopColor={CHART_SERIES.risk} stopOpacity={0} />
+                        <stop offset="50%" stopColor={CHART_SERIES.risk} stopOpacity={0.08} />
+                        <stop offset="100%" stopColor={CHART_SERIES.risk} stopOpacity={0.2} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-                    <XAxis dataKey="km" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} />
-                    <YAxis yAxisId="pace" stroke="#555" fontSize={11} tickLine={false} axisLine={false} reversed
-                      domain={['dataMin - 0.2', 'dataMax + 0.2']}
-                      tickFormatter={(v) => formatPaceStr(v)} />
-                    <YAxis yAxisId="hr" orientation="right" stroke="#555" fontSize={11} tickLine={false} axisLine={false}
-                      domain={['dataMin - 5', 'dataMax + 5']} tickFormatter={(v) => `${v} bpm`} />
+                    <CartesianGrid {...chartGrid} />
+                    <XAxis {...chartXAxis} dataKey="km" dy={10} />
+                    <YAxis {...chartYAxis} yAxisId="pace" reversed domain={['dataMin - 0.2', 'dataMax + 0.2']} tickFormatter={(v) => formatPaceStr(v)} />
+                    <YAxis {...chartYAxis} yAxisId="hr" orientation="right" domain={['dataMin - 5', 'dataMax + 5']} tickFormatter={(v) => `${v} bpm`} />
                     <Tooltip content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
                       const d = payload[0]?.payload;
                       if (!d) return null;
                       return (
-                        <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
-                          <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>KM {d.km}</p>
-                          <div className="flex items-center gap-2 text-xs mb-0.5"><span className="text-[#777]">Pace:</span><span className="text-white font-bold">{formatPaceStr(d.pace)} /km</span></div>
-                          <div className="flex items-center gap-2 text-xs"><span className="text-[#777]">HR:</span><span className="text-white font-bold">{d.hr} bpm</span></div>
+                        <div className="ea-tooltip">
+                          <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>KM {d.km}</p>
+                          <div className="flex items-center gap-2 text-xs mb-0.5"><span className="text-ea-text-axis">Pace:</span><span className="text-white font-bold">{formatPaceStr(d.pace)} /km</span></div>
+                          <div className="flex items-center gap-2 text-xs"><span className="text-ea-text-axis">HR:</span><span className="text-white font-bold">{d.hr} bpm</span></div>
                         </div>
                       );
                     }} />
                     <ReferenceArea yAxisId="pace" x1={driftStartKm} x2={driftChartData[driftChartData.length - 1]?.km ?? '14'} fill="url(#v2-drift-area-exp)" />
-                    <ReferenceLine yAxisId="pace" x={driftStartKm} stroke="#F43F5E" strokeDasharray="4 4" strokeOpacity={0.5} />
+                    <ReferenceLine yAxisId="pace" x={driftStartKm} stroke={CHART_SERIES.risk} strokeDasharray="4 4" strokeOpacity={0.5} />
                     <Line yAxisId="pace" type="monotone" dataKey="pace" name="Pace" stroke={NEON} strokeWidth={3}
                       dot={{ r: 4, fill: NEON, strokeWidth: 0 }} activeDot={{ r: 6, fill: NEON }} />
-                    <Line yAxisId="hr" type="monotone" dataKey="hr" name="HR" stroke="#F43F5E" strokeWidth={3}
-                      dot={{ r: 4, fill: '#F43F5E', strokeWidth: 0 }} activeDot={{ r: 6, fill: '#F43F5E' }} />
+                    <Line yAxisId="hr" type="monotone" dataKey="hr" name="HR" stroke={CHART_SERIES.risk} strokeWidth={3}
+                      dot={{ r: 4, fill: CHART_SERIES.risk, strokeWidth: 0 }} activeDot={{ r: 6, fill: CHART_SERIES.risk }} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo Medio</div>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                  <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Passo Medio</div>
                   <div className="text-xl font-mono font-black text-white">{formatPaceStr(avgPace)} /km</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">FC Primi 3km</div>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                  <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">FC Primi 3km</div>
                   <div className="text-xl font-mono font-black text-white">{first3Hr > 0 ? Math.round(first3Hr) : '--'} bpm</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">FC Ultimi 3km + Drift</div>
-                  <div className="text-xl font-mono font-black" style={{ color: driftPct > 10 ? '#F43F5E' : driftPct > 5 ? '#F59E0B' : NEON }}>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                  <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">FC Ultimi 3km + Drift</div>
+                  <div className="text-xl font-mono font-black" style={{ color: driftPct > 10 ? CHART_SERIES.risk : driftPct > 5 ? CHART_SERIES.load : NEON }}>
                     {last3Hr > 0 ? Math.round(last3Hr) : '--'} bpm
                     {driftPct !== 0 && <span className="text-sm ml-2">(+{driftPct.toFixed(1)}%)</span>}
                   </div>
@@ -2866,36 +2783,36 @@ export function AnalyticsV2({
         const dominantZone = [...zonesChartData].sort((a, b) => b.pct - a.pct)[0];
         const z2 = zonesChartData.find(z => z.zone === 'Z2');
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 ">
+            <div className="bg-ea-surface-1 border border-ea-hairline rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]">
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
+                  <div className="p-3 bg-[#222] rounded-xl border border-ea-hairline-strong">
                     <Timer className="w-6 h-6" style={{ color: NEON }} />
                   </div>
                   <div>
-                    <h2 className="text-white font-black text-xl tracking-widest uppercase italic">Time in Zones</h2>
-                    <p className="text-[11px] mt-0.5" style={{ color: LABEL_COLOR }}>Distribuzione tempo per zona frequenza cardiaca</p>
+                    <h2 className="ea-title">Time in Zones</h2>
+                    <p className="text-xs mt-0.5" style={{ color: LABEL_COLOR }}>Distribuzione tempo per zona frequenza cardiaca</p>
                   </div>
                 </div>
-                <button onClick={() => setZonesExpanded(false)} className="p-2 bg-[#222] hover:bg-[#2A2A2A] rounded-full text-white transition-colors border border-[#333]">
+                <button onClick={() => setZonesExpanded(false)} className="p-2 bg-[#222] hover:bg-ea-hairline-strong rounded-full text-white transition-colors border border-ea-hairline-strong">
                   <X size={22} />
                 </button>
               </div>
               <div className="flex-1 w-full" style={{ minHeight: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={zonesChartData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" horizontal={false} />
-                    <XAxis type="number" stroke="#555" fontSize={12} tickLine={false} axisLine={false} unit="%" />
-                    <YAxis type="category" dataKey="zone" stroke="#555" fontSize={12} tickLine={false} axisLine={false} width={30} />
+                    <CartesianGrid {...chartGridBoth} horizontal={false} />
+                    <XAxis {...chartXAxis} type="number" unit="%" />
+                    <YAxis {...chartYAxis} type="category" dataKey="zone" width={30} />
                     <Tooltip content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
                       const d = payload[0]?.payload;
                       return (
-                        <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
-                          <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: d.color }}>{d.zone} — {d.name}</p>
-                          <div className="text-xs"><span className="text-[#777]">Percentuale: </span><span className="text-white font-bold">{d.pct}%</span></div>
-                          <div className="text-xs"><span className="text-[#777]">Minuti: </span><span className="text-white font-bold">{d.min}</span></div>
+                        <div className="ea-tooltip">
+                          <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: d.color }}>{d.zone} — {d.name}</p>
+                          <div className="text-xs"><span className="text-ea-text-axis">Percentuale: </span><span className="text-white font-bold">{d.pct}%</span></div>
+                          <div className="text-xs"><span className="text-ea-text-axis">Minuti: </span><span className="text-white font-bold">{d.min}</span></div>
                         </div>
                       );
                     }} />
@@ -2906,19 +2823,19 @@ export function AnalyticsV2({
                 </ResponsiveContainer>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Minuti Totali</div>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                  <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Minuti Totali</div>
                   <div className="text-xl font-mono font-black text-white">{totalZoneMin}</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Zona Dominante</div>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                  <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Zona Dominante</div>
                   <div className="text-xl font-mono font-black" style={{ color: dominantZone?.color ?? NEON }}>
                     {dominantZone ? `${dominantZone.zone} ${dominantZone.name}` : '--'}
                   </div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Z2 Aerobic %</div>
-                  <div className="text-xl font-mono font-black" style={{ color: (z2?.pct ?? 0) >= 70 ? NEON : (z2?.pct ?? 0) >= 50 ? '#F59E0B' : '#F43F5E' }}>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                  <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Z2 Aerobic %</div>
+                  <div className="text-xl font-mono font-black" style={{ color: (z2?.pct ?? 0) >= 70 ? NEON : (z2?.pct ?? 0) >= 50 ? CHART_SERIES.load : CHART_SERIES.risk }}>
                     {z2?.pct ?? '--'}%
                   </div>
                 </div>
@@ -2936,30 +2853,28 @@ export function AnalyticsV2({
         const avgGct = scatterData.length > 0
           ? Math.round(scatterData.reduce((s, d) => s + d.gct, 0) / scatterData.length) : 0;
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 ">
+            <div className="bg-ea-surface-1 border border-ea-hairline rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]">
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
+                  <div className="p-3 bg-[#222] rounded-xl border border-ea-hairline-strong">
                     <Footprints className="w-6 h-6" style={{ color: NEON }} />
                   </div>
                   <div>
-                    <h2 className="text-white font-black text-xl tracking-widest uppercase italic">GCT vs Cadence</h2>
-                    <p className="text-[11px] mt-0.5" style={{ color: LABEL_COLOR }}>Tempo Contatto Suolo vs Cadenza — {scatterData.length} corse</p>
+                    <h2 className="ea-title">GCT vs Cadence</h2>
+                    <p className="text-xs mt-0.5" style={{ color: LABEL_COLOR }}>Tempo Contatto Suolo vs Cadenza — {scatterData.length} corse</p>
                   </div>
                 </div>
-                <button onClick={() => setGctExpanded(false)} className="p-2 bg-[#222] hover:bg-[#2A2A2A] rounded-full text-white transition-colors border border-[#333]">
+                <button onClick={() => setGctExpanded(false)} className="p-2 bg-[#222] hover:bg-ea-hairline-strong rounded-full text-white transition-colors border border-ea-hairline-strong">
                   <X size={22} />
                 </button>
               </div>
               <div className="flex-1 w-full" style={{ minHeight: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <ScatterChart margin={{ top: 20, right: 20, left: -10, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-                    <XAxis type="number" dataKey="cadence" name="Cadence" stroke={LABEL_COLOR} fontSize={12}
-                      tickLine={false} axisLine={false} domain={['dataMin - 5', 'dataMax + 5']} unit=" spm" />
-                    <YAxis type="number" dataKey="gct" name="GCT" stroke={LABEL_COLOR} fontSize={12}
-                      tickLine={false} axisLine={false} domain={['dataMin - 10', 'dataMax + 10']} unit=" ms" />
+                  <ScatterChart margin={chartMargin}>
+                    <CartesianGrid {...chartGridBoth} />
+                    <XAxis {...chartXAxis} type="number" dataKey="cadence" name="Cadence" domain={['dataMin - 5', 'dataMax + 5']} unit=" spm" />
+                    <YAxis {...chartYAxis} width={64} type="number" dataKey="gct" name="GCT" domain={['dataMin - 10', 'dataMax + 10']} unit=" ms" />
                     <ZAxis range={[25, 25]} />
                     <Tooltip cursor={{ strokeDasharray: '3 3' }}
                       content={({ active, payload }) => {
@@ -2968,35 +2883,35 @@ export function AnalyticsV2({
                         if (!d) return null;
                         const optimal = d.cadence > 175 && d.gct < 240;
                         return (
-                          <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
-                            <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: optimal ? NEON : '#888' }}>
+                          <div className="ea-tooltip">
+                            <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: optimal ? NEON : '#888' }}>
                               {optimal ? 'ZONA OTTIMALE' : 'FUORI ZONA'}
                             </p>
-                            <div className="text-xs mb-0.5"><span className="text-[#777]">Cadenza: </span><span className="text-white font-bold">{d.cadence} spm</span></div>
-                            <div className="text-xs"><span className="text-[#777]">GCT: </span><span className="text-white font-bold">{d.gct} ms</span></div>
+                            <div className="text-xs mb-0.5"><span className="text-ea-text-axis">Cadenza: </span><span className="text-white font-bold">{d.cadence} spm</span></div>
+                            <div className="text-xs"><span className="text-ea-text-axis">GCT: </span><span className="text-white font-bold">{d.gct} ms</span></div>
                           </div>
                         );
                       }} />
                     <Scatter name="Metrics" data={scatterData}>
                       {scatterData.map((entry, index) => {
                         const isOptimal = entry.cadence > 175 && entry.gct < 240;
-                        return (<Cell key={`gct-exp-${index}`} fill={isOptimal ? NEON : '#555555'} fillOpacity={isOptimal ? 0.8 : 0.4} />);
+                        return (<Cell key={`gct-exp-${index}`} fill={isOptimal ? NEON : CHART_TEXT.axis} fillOpacity={isOptimal ? 0.8 : 0.4} />);
                       })}
                     </Scatter>
                   </ScatterChart>
                 </ResponsiveContainer>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Zona Ottimale</div>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                  <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Zona Ottimale</div>
                   <div className="text-xl font-mono font-black" style={{ color: NEON }}>{optimalCount} / {scatterData.length}</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Cadenza Media</div>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                  <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Cadenza Media</div>
                   <div className="text-xl font-mono font-black text-white">{avgCadence > 0 ? `${avgCadence} spm` : '--'}</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">GCT Medio</div>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                  <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">GCT Medio</div>
                   <div className="text-xl font-mono font-black text-white">{avgGct > 0 ? `${avgGct} ms` : '--'}</div>
                 </div>
               </div>
@@ -3014,19 +2929,19 @@ export function AnalyticsV2({
         const trend3m = (recentVdot != null && olderVdot != null) ? (recentVdot - olderVdot) : null;
         const tPace = getThresholdDisplay(currentVdot);
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 backdrop-blur-md">
-            <div className="bg-[#0E0E0E] border border-[#1E1E1E] rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]" style={{ borderLeft: `3px solid ${NEON}` }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/70 ">
+            <div className="bg-ea-surface-1 border border-ea-hairline rounded-2xl p-4 md:p-6 lg:p-8 w-[96vw] md:w-[92vw] max-w-[1500px] shadow-2xl flex flex-col h-[88vh] md:h-[80vh] lg:h-[68vh]">
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-[#222] rounded-xl border border-[#2A2A2A]">
+                  <div className="p-3 bg-[#222] rounded-xl border border-ea-hairline-strong">
                     <Zap className="w-6 h-6" style={{ color: NEON }} />
                   </div>
                   <div>
-                    <h2 className="text-white font-black text-xl tracking-widest uppercase italic">VO₂ Max / VDOT Trend</h2>
-                    <p className="text-[11px] mt-0.5" style={{ color: LABEL_COLOR }}>Dettaglio settimanale — stima Jack Daniels</p>
+                    <h2 className="ea-title">VO₂ Max / VDOT Trend</h2>
+                    <p className="text-xs mt-0.5" style={{ color: LABEL_COLOR }}>Dettaglio settimanale — stima Jack Daniels</p>
                   </div>
                 </div>
-                <button onClick={() => setVdotV2Expanded(false)} className="p-2 bg-[#222] hover:bg-[#2A2A2A] rounded-full text-white transition-colors border border-[#333]">
+                <button onClick={() => setVdotV2Expanded(false)} className="p-2 bg-[#222] hover:bg-ea-hairline-strong rounded-full text-white transition-colors border border-ea-hairline-strong">
                   <X size={22} />
                 </button>
               </div>
@@ -3039,19 +2954,18 @@ export function AnalyticsV2({
                         <stop offset="100%" stopColor={NEON} stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-                    <XAxis dataKey="name" stroke="#555" fontSize={12} tickLine={false} axisLine={false} dy={10} interval="preserveStartEnd" minTickGap={22} tickFormatter={(value) => formatWeekBucketLabel(String(value))} />
-                    <YAxis stroke="#555" fontSize={12} tickLine={false} axisLine={false}
-                      domain={['dataMin - 2', 'dataMax + 2']} tickFormatter={(v) => v.toFixed(0)} />
+                    <CartesianGrid {...chartGrid} />
+                    <XAxis {...chartXAxis} dataKey="name" dy={10} interval="preserveStartEnd" minTickGap={22} tickFormatter={(value) => formatWeekBucketLabel(String(value))} />
+                    <YAxis {...chartYAxis} domain={['dataMin - 2', 'dataMax + 2']} tickFormatter={(v) => v.toFixed(0)} />
                     <Tooltip content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
                       const d = payload[0]?.payload;
                       if (!d) return null;
                       return (
-                        <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 shadow-2xl">
-                          <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>{d.name}</p>
-                          <div className="flex items-center gap-2 text-xs mb-0.5"><span className="text-[#777]">VDOT:</span><span className="text-white font-bold">{d.vdot}</span></div>
-                          {d.vdot && <div className="flex items-center gap-2 text-xs"><span className="text-[#777]">Passo soglia:</span><span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span></div>}
+                        <div className="ea-tooltip">
+                          <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>{d.name}</p>
+                          <div className="flex items-center gap-2 text-xs mb-0.5"><span className="text-ea-text-axis">VDOT:</span><span className="text-white font-bold">{d.vdot}</span></div>
+                          {d.vdot && <div className="flex items-center gap-2 text-xs"><span className="text-ea-text-axis">Passo soglia:</span><span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span></div>}
                         </div>
                       );
                     }} />
@@ -3062,18 +2976,18 @@ export function AnalyticsV2({
                 </ResponsiveContainer>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">VDOT Attuale</div>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                  <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">VDOT Attuale</div>
                   <div className="text-xl font-mono font-black" style={{ color: NEON }}>{currentVdot ?? '—'}</div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Trend 3M</div>
-                  <div className="text-xl font-mono font-black" style={{ color: trend3m == null ? '#555' : trend3m >= 0 ? NEON : '#F43F5E' }}>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                  <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Trend 3M</div>
+                  <div className="text-xl font-mono font-black" style={{ color: trend3m == null ? '#555' : trend3m >= 0 ? NEON : CHART_SERIES.risk }}>
                     {trend3m == null ? '—' : `${trend3m >= 0 ? '+' : ''}${trend3m.toFixed(1)}`}
                   </div>
                 </div>
-                <div className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-4">
-                  <div className="text-[#555] text-[10px] uppercase tracking-widest font-black mb-1">Passo soglia</div>
+                <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
+                  <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Passo soglia</div>
                   <div className="text-xl font-mono font-black text-white">{tPace ?? '—'} {tPace ? '/km' : ''}</div>
                 </div>
               </div>

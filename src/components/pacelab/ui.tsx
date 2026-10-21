@@ -1,23 +1,24 @@
 import type { ReactNode } from "react";
 import { Minus, Plus } from "lucide-react";
+import { CHART_SERIES, CHART_SURFACE, CHART_TEXT, ChartCard } from "../charts";
 
 /** I pezzi comuni del Pace Lab: gli stessi del Banco di prova, più i controlli fini. */
 
 export const MONO = "'JetBrains Mono', monospace";
-export const LIT = "#C0FF00";
-export const CYAN = "#22D3EE";
-export const RISK = "#F43F5E";
-export const LOAD = "#F59E0B";
-export const GOOD = "#22C55E";
-export const MUTED = "#9CA3AF";
-export const REF = "#6B7280";
-export const SURFACE = "#0A0A0A";
+export const LIT = CHART_SERIES.primary;
+export const CYAN = CHART_SERIES.compare;
+export const RISK = CHART_SERIES.risk;
+export const LOAD = CHART_SERIES.load;
+export const GOOD = CHART_SERIES.positive;
+export const MUTED = CHART_TEXT.muted;
+export const REF = CHART_TEXT.axis;
+export const SURFACE = CHART_SURFACE.panel;
 
 export function Card({ children, className = "", id }: { children: ReactNode; className?: string; id?: string }) {
   return (
-    <section id={id} className={`rounded-2xl border border-white/10 bg-white/[0.03] scroll-mt-40 ${className}`}>
+    <ChartCard flush id={id} className={`scroll-mt-40 gap-0 ${className}`}>
       {children}
-    </section>
+    </ChartCard>
   );
 }
 
@@ -27,8 +28,8 @@ export function SectionHead({ n, title, question, right }: { n: string; title: s
     <div className="flex flex-wrap items-end gap-x-4 gap-y-2 px-5 pt-5 pb-4">
       <div className="min-w-0">
         <div className="flex items-baseline gap-2">
-          <span className="text-[11px] font-black tabular-nums" style={{ fontFamily: MONO, color: LIT }}>{n}</span>
-          <h2 className="text-[11px] font-black tracking-[0.22em] uppercase text-white/90">{title}</h2>
+          <span className="text-xs font-black tabular-nums" style={{ fontFamily: MONO, color: LIT }}>{n}</span>
+          <h2 className="text-xs font-black tracking-[0.22em] uppercase text-white/90">{title}</h2>
         </div>
         <p className="mt-1 text-[17px] md:text-[20px] font-black italic tracking-tight text-white leading-tight">{question}</p>
       </div>
@@ -39,7 +40,7 @@ export function SectionHead({ n, title, question, right }: { n: string; title: s
 
 export function Label({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`text-[9px] font-black tracking-[0.22em] uppercase text-gray-500 ${className}`}>{children}</div>
+    <div className={`text-xs font-black tracking-[0.22em] uppercase text-gray-500 ${className}`}>{children}</div>
   );
 }
 
@@ -59,7 +60,7 @@ export function Segmented<T extends string | number>({ value, options, onChange,
         return (
           <button key={String(o.value)} type="button" role="radio" aria-checked={on} title={o.title}
             onClick={() => onChange(o.value)}
-            className={`${size === "sm" ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5 text-[12px]"} rounded-[10px] font-black transition-colors`}
+            className={`${size === "sm" ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-[12px]"} rounded-[10px] font-black transition-colors`}
             style={{
               background: on ? LIT : "transparent",
               color: on ? "#000" : "#9CA3AF",
@@ -85,7 +86,7 @@ export function Stepper({ value, onDec, onInc, label, sub, width = "w-[4.6rem]",
       </button>
       <div className={`${width} flex flex-col items-center justify-center border-x border-white/10 px-1`}>
         <span className="text-[15px] font-black text-white tabular-nums leading-none" style={{ fontFamily: MONO }}>{value}</span>
-        {sub != null && <span className="mt-0.5 text-[9px] text-gray-500 tabular-nums leading-none" style={{ fontFamily: MONO }}>{sub}</span>}
+        {sub != null && <span className="mt-0.5 text-xs text-gray-500 tabular-nums leading-none" style={{ fontFamily: MONO }}>{sub}</span>}
       </div>
       <button type="button" onClick={onInc} disabled={disabledInc} className={btn} aria-label={label ? `${label}: più` : "più"}>
         <Plus className="w-3.5 h-3.5" />
@@ -104,7 +105,7 @@ export function Stat({ label, value, sub, color = "#fff", mark }: {
       <div className="mt-1.5 text-[24px] md:text-[26px] font-black leading-none whitespace-nowrap" style={{ fontFamily: MONO, color }}>
         {value}
       </div>
-      {sub != null && <div className="mt-1.5 text-[11px] text-gray-400 leading-snug">{sub}</div>}
+      {sub != null && <div className="mt-1.5 text-xs text-gray-400 leading-snug">{sub}</div>}
     </div>
   );
 }

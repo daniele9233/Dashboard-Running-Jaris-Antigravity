@@ -16,10 +16,11 @@ import { Target, Trophy, Zap, Award, RefreshCw, BarChart2, TrendingUp, Users } f
 import { getProfile, getBestEfforts } from "../api";
 import type { Profile, BestEffort } from "../types/api";
 
+import { CHART_SERIES, CHART_TEXT, ChartTip, chartXAxis, chartYAxis } from "./charts";
 const MONO = "JetBrains Mono, monospace";
 
 const CARD =
-  "rounded-3xl p-6 backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50";
+  "rounded-2xl p-5 border border-ea-hairline bg-ea-surface-1";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA CONSTANTS
@@ -40,13 +41,13 @@ interface TierDef {
 const TIERS: TierDef[] = [
   { id: "fuoriclasse", label: "FUORICLASSE",              sublabel: "Top 0.5%",       color: "#F5F5F4", textColor: "#000", minPct: 99.5 },
   { id: "podio",       label: "PODIO CATEGORIA",          sublabel: "Top 1%",         color: "#FFD700", textColor: "#000", minPct: 99 },
-  { id: "elite",       label: "ELITE AMATORIALE",         sublabel: "Top 3%",         color: "#C0FF00", textColor: "#000", minPct: 97 },
-  { id: "cacciatore",  label: "CACCIATORE DI PODI",       sublabel: "Top 5%",         color: "#00FFAA", textColor: "#000", minPct: 95 },
-  { id: "competitive", label: "COMPETITIVO NAZIONALE",    sublabel: "Top 10%",        color: "#22D3EE", textColor: "#000", minPct: 90 },
+  { id: "elite",       label: "ELITE AMATORIALE",         sublabel: "Top 3%",         color: CHART_SERIES.primary, textColor: "#000", minPct: 97 },
+  { id: "cacciatore",  label: "CACCIATORE DI PODI",       sublabel: "Top 5%",         color: CHART_SERIES.positive, textColor: "#000", minPct: 95 },
+  { id: "competitive", label: "COMPETITIVO NAZIONALE",    sublabel: "Top 10%",        color: CHART_SERIES.compare, textColor: "#000", minPct: 90 },
   { id: "regionale",   label: "COMPETITIVO REGIONALE",    sublabel: "Top 15%",        color: "#60A5FA", textColor: "#000", minPct: 85 },
-  { id: "advanced",    label: "AVANZATO",                 sublabel: "Top 25%",        color: "#A78BFA", textColor: "#fff", minPct: 75 },
+  { id: "advanced",    label: "AVANZATO",                 sublabel: "Top 25%",        color: CHART_SERIES.tertiary, textColor: "#fff", minPct: 75 },
   { id: "macinatore",  label: "MACINATORE DI KM",         sublabel: "Top 40%",        color: "#F472B6", textColor: "#000", minPct: 60 },
-  { id: "warrior",     label: "GUERRIERO DELLA DOMENICA", sublabel: "Top 60%",        color: "#FB923C", textColor: "#fff", minPct: 40 },
+  { id: "warrior",     label: "GUERRIERO DELLA DOMENICA", sublabel: "Top 60%",        color: CHART_SERIES.load, textColor: "#fff", minPct: 40 },
   { id: "finisher",    label: "FINISHER",                 sublabel: "Resto del campo",color: "#9CA3AF", textColor: "#000", minPct: 0  },
 ];
 
@@ -88,10 +89,10 @@ const ALL_PARTICIPANTS_PARAMS: Record<Sex, Record<DistKey, { mu: number; sigma: 
 
 const ALL_POP_TIERS = [
   { minPct: 98, label: "ÉLITE ASSOLUTA",     color: "#FFD700" },
-  { minPct: 93, label: "ATLETA COMPETITIVO", color: "#C0FF00" },
-  { minPct: 80, label: "RUNNER AVANZATO",    color: "#22D3EE" },
-  { minPct: 60, label: "RUNNER ATTIVO",      color: "#A78BFA" },
-  { minPct: 35, label: "RUN CARD RUNNER",    color: "#FB923C" },
+  { minPct: 93, label: "ATLETA COMPETITIVO", color: CHART_SERIES.primary },
+  { minPct: 80, label: "RUNNER AVANZATO",    color: CHART_SERIES.compare },
+  { minPct: 60, label: "RUNNER ATTIVO",      color: CHART_SERIES.tertiary },
+  { minPct: 35, label: "RUN CARD RUNNER",    color: CHART_SERIES.load },
   { minPct: 0,  label: "FINISHER",           color: "#6B7280" },
 ];
 
@@ -333,10 +334,10 @@ function CardHeader({
     <div className="flex items-start justify-between gap-4 mb-5">
       <div>
         <h3 className="text-white text-base font-black tracking-tight flex items-center gap-2">
-          {Icon && <Icon className="w-4 h-4 text-[#C0FF00]" />}
+          {Icon && <Icon className="w-4 h-4 text-ea-lime" />}
           {title}
         </h3>
-        <p className="text-[#A0A0A0] text-[10px] tracking-widest uppercase mt-1">{subtitle}</p>
+        <p className="text-ea-text-muted text-xs tracking-widest uppercase mt-1">{subtitle}</p>
       </div>
       {right}
     </div>
@@ -350,7 +351,7 @@ function PillBadge({ label, color = "#C0FF00" }: { label: string; color?: string
       style={{ background: `${color}10`, border: `1px solid ${color}20` }}
     >
       <div className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
-      <span className="text-[10px] font-black tracking-widest uppercase" style={{ color }}>
+      <span className="text-xs font-black tracking-widest uppercase" style={{ color }}>
         {label}
       </span>
     </div>
@@ -372,14 +373,14 @@ function RankStatRow({ dist, pct, time, color, delay }: {
       <span className="w-11 text-2xl font-black tabular-nums leading-none" style={{ fontFamily: MONO, color }}>
         {Math.round(pct)}
       </span>
-      <span className="w-9 text-[10px] font-black tracking-[0.15em] text-gray-400">{dist}</span>
+      <span className="w-9 text-xs font-black tracking-[0.15em] text-gray-400">{dist}</span>
       <div className="flex-1 h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-700 ease-out"
           style={{ width: filled ? `${pct}%` : "0%", background: color }}
         />
       </div>
-      <span className="w-16 text-right text-[11px] font-bold tabular-nums text-gray-400" style={{ fontFamily: MONO }}>
+      <span className="w-16 text-right text-xs font-bold tabular-nums text-gray-400" style={{ fontFamily: MONO }}>
         {time}
       </span>
     </div>
@@ -394,10 +395,10 @@ function PopBars({ compPct, allPct }: { compPct: number; allPct: number }) {
     <div className="space-y-3">
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[9px] font-black tracking-[0.14em] uppercase text-gray-500">
+          <span className="text-xs font-black tracking-[0.14em] uppercase text-gray-500">
             Campo competitivo · FIDAL
           </span>
-          <span className="text-[10px] font-black tabular-nums" style={{ fontFamily: MONO, color: compTier.color }}>
+          <span className="text-xs font-black tabular-nums" style={{ fontFamily: MONO, color: compTier.color }}>
             TOP {Math.max(1, Math.round(100 - compPct))}%
           </span>
         </div>
@@ -408,10 +409,10 @@ function PopBars({ compPct, allPct }: { compPct: number; allPct: number }) {
       </div>
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[9px] font-black tracking-[0.14em] uppercase text-gray-500">
+          <span className="text-xs font-black tracking-[0.14em] uppercase text-gray-500">
             Tutti i runner · ENDU/Parkrun
           </span>
-          <span className="text-[10px] font-black tabular-nums" style={{ fontFamily: MONO, color: allTier.color }}>
+          <span className="text-xs font-black tabular-nums" style={{ fontFamily: MONO, color: allTier.color }}>
             TOP {Math.max(1, Math.round(100 - allPct))}%
           </span>
         </div>
@@ -442,14 +443,14 @@ function DistanceRankCard({ dist, userSec, sex, age }: {
     <div className={CARD}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-[10px] font-black tracking-[0.2em] uppercase text-gray-500">
+          <div className="text-xs font-black tracking-[0.2em] uppercase text-gray-500">
             {distInfo.label}
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-3xl font-black tabular-nums leading-none text-white" style={{ fontFamily: MONO }}>
               {formatTime(userSec)}
             </span>
-            <span className="text-[10px] font-bold text-gray-500" style={{ fontFamily: MONO }}>{pace}</span>
+            <span className="text-xs font-bold text-gray-500" style={{ fontFamily: MONO }}>{pace}</span>
           </div>
           <div className="mt-3">
             <PillBadge label={tier.label} color={tier.color} />
@@ -457,30 +458,30 @@ function DistanceRankCard({ dist, userSec, sex, age }: {
         </div>
         <div className="text-right shrink-0">
           <div
-            className="text-5xl font-black italic tabular-nums leading-none"
+            className="text-5xl font-black tabular-nums leading-none"
             style={{ fontFamily: MONO, color: tier.color, textShadow: `0 0 24px ${tier.color}50` }}
           >
             {Math.round(compPct)}
           </div>
-          <div className="mt-1 text-[9px] font-black tracking-[0.2em] uppercase text-gray-600">
+          <div className="mt-1 text-xs font-black tracking-[0.2em] uppercase text-gray-600">
             Percentile
           </div>
         </div>
       </div>
 
-      <div className="pt-4 mt-4 border-t border-white/[0.06]">
+      <div className="pt-4 mt-4 border-t border-ea-hairline">
         <PopBars compPct={compPct} allPct={allPct} />
       </div>
 
-      <div className="grid grid-cols-3 gap-3 pt-4 mt-4 border-t border-white/[0.06]">
+      <div className="grid grid-cols-3 gap-3 pt-4 mt-4 border-t border-ea-hairline">
         <div>
-          <div className="text-[#555] text-[9px] font-black tracking-widest uppercase">Age-graded</div>
+          <div className="text-ea-text-axis text-xs font-black tracking-widest uppercase">Age-graded</div>
           <div className="mt-1 text-lg font-black tabular-nums leading-none" style={{ fontFamily: MONO, color: wavaColor }}>
             {wava.toFixed(0)}%
           </div>
         </div>
         <div>
-          <div className="text-[#555] text-[9px] font-black tracking-widest uppercase">Prossimo tier</div>
+          <div className="text-ea-text-axis text-xs font-black tracking-widest uppercase">Prossimo tier</div>
           {nextTier ? (
             <div className="mt-1 text-lg font-black tabular-nums leading-none" style={{ fontFamily: MONO, color: nextTier.tier.color }}>
               -{formatTime(Math.round(Math.max(gapSec, 0)))}
@@ -492,7 +493,7 @@ function DistanceRankCard({ dist, userSec, sex, age }: {
           )}
         </div>
         <div>
-          <div className="text-[#555] text-[9px] font-black tracking-widest uppercase">Categoria</div>
+          <div className="text-ea-text-axis text-xs font-black tracking-widest uppercase">Categoria</div>
           <div className="mt-1 text-lg font-black leading-none text-white" style={{ fontFamily: MONO }}>
             {getFidalCategory(sex, age)}
           </div>
@@ -508,7 +509,7 @@ function DistanceRankCard({ dist, userSec, sex, age }: {
                 background: `linear-gradient(90deg, ${tier.color}, ${nextTier.tier.color})`,
               }} />
           </div>
-          <div className="mt-1.5 flex justify-between text-[9px] font-black tracking-[0.12em] uppercase">
+          <div className="mt-1.5 flex justify-between text-xs font-black tracking-[0.12em] uppercase">
             <span style={{ color: tier.color }}>{tier.label}</span>
             <span style={{ color: nextTier.tier.color }}>{nextTier.tier.label}</span>
           </div>
@@ -547,40 +548,33 @@ function MultiDistRadar({ userTimes, sex }: {
           <PolarGrid stroke="rgba(255,255,255,0.08)" />
           <PolarAngleAxis
             dataKey="dist"
-            tick={{ fill: "rgba(255,255,255,0.55)", fontSize: 11, fontFamily: "JetBrains Mono", fontWeight: 700 }}
+            tick={{ fill: "rgba(255,255,255,0.55)", fontSize: 12, fontFamily: "JetBrains Mono", fontWeight: 700 }}
           />
           <PolarRadiusAxis
-            domain={[0, 100]} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 8 }}
+            domain={[0, 100]} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 12 }}
             tickCount={5}
           />
           <Radar
             name="Campo Competitivo"
             dataKey="Campo Competitivo"
-            stroke="#C0FF00"
-            fill="#C0FF00"
+            stroke={CHART_SERIES.primary}
+            fill={CHART_SERIES.primary}
             fillOpacity={0.15}
             strokeWidth={2}
           />
           <Radar
             name="Tutti i Runner"
             dataKey="Tutti i Runner"
-            stroke="#22D3EE"
-            fill="#22D3EE"
+            stroke={CHART_SERIES.compare}
+            fill={CHART_SERIES.compare}
             fillOpacity={0.10}
             strokeWidth={1.5}
             strokeDasharray="4 3"
           />
           <Legend
-            wrapperStyle={{ fontSize: 9, fontFamily: "JetBrains Mono", color: "rgba(255,255,255,0.5)", paddingTop: 8 }}
+            wrapperStyle={{ fontSize: 12, fontFamily: "JetBrains Mono", color: "rgba(255,255,255,0.5)", paddingTop: 8 }}
           />
-          <RechartTooltip
-            contentStyle={{
-              background: "#0A0A0A", border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 12, fontSize: 10, fontFamily: "JetBrains Mono",
-            }}
-            labelStyle={{ color: "#C0FF00", fontWeight: 700 }}
-            formatter={(v: number, name: string) => [`${v}° percentile`, name]}
-          />
+          <ChartTip formatter={(v: number, name: string) => [`${v}° percentile`, name]} />
         </RadarChart>
       </ResponsiveContainer>
     </div>
@@ -610,19 +604,19 @@ function ComparativeTierTable({ userTimes, sex }: {
       <div className="overflow-x-auto">
         <table className="w-full" style={{ fontFamily: MONO }}>
           <thead>
-            <tr className="border-y border-white/[0.06] bg-white/[0.02]">
-              <th className="px-6 py-2.5 text-left text-[9px] font-black tracking-[0.18em] text-gray-500 uppercase">Tier</th>
+            <tr className="border-y border-ea-hairline bg-white/[0.02]">
+              <th className="px-6 py-2.5 text-left text-xs font-black tracking-[0.18em] text-gray-500 uppercase">Tier</th>
               {activeDists.map(d => (
-                <th key={d.key} className="px-4 py-2.5 text-center text-[9px] font-black tracking-[0.14em] text-gray-500 uppercase">
+                <th key={d.key} className="px-4 py-2.5 text-center text-xs font-black tracking-[0.14em] text-gray-500 uppercase">
                   {d.key}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-[#C0FF00]/15 bg-[#C0FF00]/[0.04]">
+            <tr className="border-b border-ea-lime/15 bg-ea-lime/[0.04]">
               <td className="px-6 py-3">
-                <span className="text-[10px] font-black tracking-[0.14em] text-[#C0FF00] uppercase">I miei PB</span>
+                <span className="text-xs font-black tracking-[0.14em] text-ea-lime uppercase">I miei PB</span>
               </td>
               {activeDists.map(d => {
                 const sec = userTimes[d.key]!;
@@ -632,7 +626,7 @@ function ComparativeTierTable({ userTimes, sex }: {
                     <div className="text-sm font-black tabular-nums" style={{ color: tier.color }}>
                       {formatTime(sec)}
                     </div>
-                    <div className="text-[8px] text-gray-600 mt-0.5">
+                    <div className="text-xs text-gray-600 mt-0.5">
                       {formatPace(sec, DISTANCES.find(dd => dd.key === d.key)!.meters)}
                     </div>
                   </td>
@@ -647,10 +641,10 @@ function ComparativeTierTable({ userTimes, sex }: {
                     <div className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: tier.color }} />
                       <div>
-                        <div className="text-[9px] font-black tracking-[0.1em] uppercase" style={{ color: tier.color }}>
+                        <div className="text-xs font-black tracking-[0.1em] uppercase" style={{ color: tier.color }}>
                           {tier.label}
                         </div>
-                        <div className="text-[8px] text-gray-600">{tier.sublabel}</div>
+                        <div className="text-xs text-gray-600">{tier.sublabel}</div>
                       </div>
                     </div>
                   </td>
@@ -665,11 +659,11 @@ function ComparativeTierTable({ userTimes, sex }: {
                     return (
                       <td key={d.key} className="px-4 py-3 text-center"
                         style={{ background: isCurrentTier ? `${tier.color}10` : "transparent" }}>
-                        <div className="text-[11px] font-black tabular-nums"
+                        <div className="text-xs font-black tabular-nums"
                           style={{ color: isCurrentTier ? tier.color : "rgba(255,255,255,0.55)" }}>
                           {isFinisher ? `>${formatTime(benchmark)}` : formatTime(benchmark)}
                         </div>
-                        <div className="text-[8px] mt-0.5 font-bold"
+                        <div className="text-xs mt-0.5 font-bold"
                           style={{ color: isCurrentTier ? tier.color : beaten ? "#22D3EE" : "rgba(255,255,255,0.25)" }}>
                           {isCurrentTier ? "SEI QUI" : isFinisher ? "·" : beaten ? `+${formatTime(Math.abs(gap))}` : `-${formatTime(Math.abs(gap))}`}
                         </div>
@@ -722,19 +716,19 @@ function RiegelScouting({ userTimes, sex, fidalCat }: {
 
       <div className="space-y-2.5">
         {strengths.map(s => (
-          <div key={s.dist} className="flex gap-3 items-start text-xs leading-5 text-[#A0A0A0]">
-            <span className="w-4 shrink-0 text-center font-bold text-[#C0FF00]" style={{ fontFamily: MONO }}>+</span>
+          <div key={s.dist} className="flex gap-3 items-start text-xs leading-5 text-ea-text-muted">
+            <span className="w-4 shrink-0 text-center font-bold text-ea-lime" style={{ fontFamily: MONO }}>+</span>
             <span>
-              <span className="text-[#C0FF00] font-black">{s.label}</span> — sopra la tua media di{" "}
+              <span className="text-ea-lime font-black">{s.label}</span> — sopra la tua media di{" "}
               <span className="font-black text-white">+{Math.round(s.pctDiff)} percentili</span>: qui sei più forte del tuo profilo.
             </span>
           </div>
         ))}
         {deficits.map(d => (
-          <div key={d.dist} className="flex gap-3 items-start text-xs leading-5 text-[#A0A0A0]">
-            <span className="w-4 shrink-0 text-center font-bold text-[#F43F5E]" style={{ fontFamily: MONO }}>−</span>
+          <div key={d.dist} className="flex gap-3 items-start text-xs leading-5 text-ea-text-muted">
+            <span className="w-4 shrink-0 text-center font-bold text-ea-rose" style={{ fontFamily: MONO }}>−</span>
             <span>
-              <span className="text-[#F43F5E] font-black">{d.label}</span> — il Riegel prevede{" "}
+              <span className="text-ea-rose font-black">{d.label}</span> — il Riegel prevede{" "}
               <span className="font-black text-white" style={{ fontFamily: MONO }}>{formatTime(Math.round(d.predictedSec))}</span>,
               hai <span className="font-black text-white" style={{ fontFamily: MONO }}>{formatTime(d.actualSec)}</span>.{" "}
               {d.dist === "M" || d.dist === "HM" ? "Deficit di resistenza aerobica." : "Deficit di velocità/lattacido."}
@@ -742,24 +736,24 @@ function RiegelScouting({ userTimes, sex, fidalCat }: {
           </div>
         ))}
         {balanced.map(b => (
-          <div key={b.dist} className="flex gap-3 items-start text-xs leading-5 text-[#A0A0A0]">
-            <span className="w-4 shrink-0 text-center font-bold text-[#22D3EE]" style={{ fontFamily: MONO }}>=</span>
+          <div key={b.dist} className="flex gap-3 items-start text-xs leading-5 text-ea-text-muted">
+            <span className="w-4 shrink-0 text-center font-bold text-ea-cyan" style={{ fontFamily: MONO }}>=</span>
             <span>
-              <span className="text-[#22D3EE] font-black">{b.label}</span> — coerente con il tuo profilo.
+              <span className="text-ea-cyan font-black">{b.label}</span> — coerente con il tuo profilo.
             </span>
           </div>
         ))}
       </div>
 
       {(deficits.some(d => d.dist === "M" || d.dist === "HM") || deficits.some(d => d.dist === "3K" || d.dist === "5K")) && (
-        <div className="pt-4 mt-4 border-t border-white/[0.06] space-y-2">
+        <div className="pt-4 mt-4 border-t border-ea-hairline space-y-2">
           {deficits.some(d => d.dist === "M" || d.dist === "HM") && (
-            <p className="text-[11px] leading-5 text-gray-400">
+            <p className="text-xs leading-5 text-gray-400">
               La distanza lunga è sbilanciata rispetto ai tuoi numeri brevi: aumenta il volume delle long run al 65-70% LTHR.
             </p>
           )}
           {deficits.some(d => d.dist === "3K" || d.dist === "5K") && (
-            <p className="text-[11px] leading-5 text-gray-400">
+            <p className="text-xs leading-5 text-gray-400">
               La velocità soffre rispetto alla resistenza: aggiungi 1 sessione/settimana di ripetute brevi (200-400m) al 95-100% VMA.
             </p>
           )}
@@ -814,11 +808,11 @@ function FieldCurve({ dist, userSec, sex }: { dist: DistKey; userSec: number; se
     const pct = Math.round((1 - normCDF((Math.log(t) - mu) / sigma)) * 1000) / 10;
     const tier = getTierFromPct(pct);
     return (
-      <div className="rounded-xl border border-white/10 bg-[#0A0A0A]/95 px-3 py-2">
+      <div className="ea-tooltip">
         <div className="text-sm font-black text-white tabular-nums" style={{ fontFamily: MONO }}>
           {formatTime(Math.round(t))}
         </div>
-        <div className="text-[9px] font-black tracking-widest uppercase mt-0.5" style={{ color: tier.color }}>
+        <div className="text-xs font-black tracking-widest uppercase mt-0.5" style={{ color: tier.color }}>
           {pct}° percentile · {tier.label}
         </div>
       </div>
@@ -842,32 +836,27 @@ function FieldCurve({ dist, userSec, sex }: { dist: DistKey; userSec: number; se
                 ))}
               </linearGradient>
             </defs>
-            <XAxis
-              dataKey="t" type="number" domain={[tMin, tMax]} ticks={ticks}
-              tickFormatter={(v: number) => formatTime(Math.round(v))}
-              tick={{ fontSize: 9, fontFamily: MONO, fill: "#666" }}
-              axisLine={false} tickLine={false}
-            />
-            <YAxis hide />
+            <XAxis {...chartXAxis} dataKey="t" type="number" domain={[tMin, tMax]} ticks={ticks} tickFormatter={(v: number) => formatTime(Math.round(v))} />
+            <YAxis {...chartYAxis} hide width={0} />
             <RechartTooltip content={<CurveTooltip />} cursor={{ stroke: "rgba(255,255,255,0.2)" }} />
             <Area type="monotone" dataKey="y" stroke="rgba(255,255,255,0.4)" strokeWidth={1.5}
               fill={`url(#field-grad-${dist})`} isAnimationActive={false} />
             <ReferenceLine
-              x={userSec} stroke="#C0FF00" strokeWidth={2} strokeDasharray="5 3"
-              label={{ value: "SEI QUI", position: "top", fill: "#C0FF00", fontSize: 9, fontFamily: MONO, fontWeight: 900 }}
+              x={userSec} stroke={CHART_SERIES.primary} strokeWidth={2} strokeDasharray="5 3"
+              label={{ value: "SEI QUI", position: "top", fill: CHART_SERIES.primary, fontSize: 12, fontFamily: MONO, fontWeight: 900 }}
             />
           </AreaChart>
         </ResponsiveContainer>
       </div>
-      <div className="grid grid-cols-3 gap-2 pt-4 mt-2 border-t border-white/[0.06] text-center">
+      <div className="grid grid-cols-3 gap-2 pt-4 mt-2 border-t border-ea-hairline text-center">
         {[
-          { label: "Il tuo tempo", value: formatTime(userSec), color: "#C0FF00" },
-          { label: "Mediana campo", value: formatTime(Math.round(Math.exp(mu))), color: "#fff" },
+          { label: "Il tuo tempo", value: formatTime(userSec), color: CHART_SERIES.primary },
+          { label: "Mediana campo", value: formatTime(Math.round(Math.exp(mu))), color: CHART_TEXT.primary },
           { label: "Più veloce di", value: `${Math.round(userPct)}%`, color: getTierFromPct(userPct).color },
         ].map(({ label, value, color }) => (
           <div key={label}>
             <div className="text-base font-black tabular-nums" style={{ fontFamily: MONO, color }}>{value}</div>
-            <div className="text-[8px] font-black tracking-[0.2em] uppercase text-gray-600 mt-0.5">{label}</div>
+            <div className="text-xs font-black tracking-[0.2em] uppercase text-gray-600 mt-0.5">{label}</div>
           </div>
         ))}
       </div>
@@ -902,7 +891,7 @@ function RaceSimulator({ dist, pct }: { dist: DistKey; pct: number }) {
           const active = n === field;
           return (
             <button key={n} onClick={() => setField(n)}
-              className="px-3 py-1.5 rounded-xl border text-[10px] font-black tracking-wider transition-all tabular-nums"
+              className="px-3 py-1.5 rounded-xl border text-xs font-black tracking-wider transition-all tabular-nums"
               style={{
                 fontFamily: MONO,
                 borderColor: active ? "rgba(192,255,0,0.4)" : "rgba(255,255,255,0.08)",
@@ -916,14 +905,14 @@ function RaceSimulator({ dist, pct }: { dist: DistKey; pct: number }) {
       </div>
 
       <div className="mt-4 flex items-baseline gap-2">
-        <span className="text-4xl font-black tabular-nums leading-none text-[#C0FF00]" style={{ fontFamily: MONO }}>
+        <span className="text-4xl font-black tabular-nums leading-none text-ea-lime" style={{ fontFamily: MONO }}>
           ≈{position}°
         </span>
-        <span className="text-[10px] font-black tracking-[0.16em] uppercase text-gray-500">
+        <span className="text-xs font-black tracking-[0.16em] uppercase text-gray-500">
           su {field} al traguardo
         </span>
       </div>
-      <div className="mt-1.5 text-[11px] text-gray-400">
+      <div className="mt-1.5 text-xs text-gray-400">
         Ne batti <span className="font-black text-white tabular-nums" style={{ fontFamily: MONO }}>{beaten}</span> —
         davanti a te solo il <span className="font-black text-white tabular-nums" style={{ fontFamily: MONO }}>{Math.round((position / field) * 100)}%</span> del campo.
       </div>
@@ -941,7 +930,7 @@ function RaceSimulator({ dist, pct }: { dist: DistKey; pct: number }) {
           );
         })}
       </div>
-      <div className="mt-3 flex justify-between text-[8px] font-black tracking-[0.2em] uppercase text-gray-600">
+      <div className="mt-3 flex justify-between text-xs font-black tracking-[0.2em] uppercase text-gray-600">
         <span>← Testa della gara</span>
         <span>Coda →</span>
       </div>
@@ -975,14 +964,14 @@ function PaceRoadmap({ heroStats, userTimes, sex }: {
 
   const MILESTONE_DEFS: Array<{ pct: number; label: string; color: string; sublabel?: string }> = [
     { pct: 60,   label: "MACINATORE DI KM",      color: "#F472B6", sublabel: "Top 40%" },
-    { pct: 75,   label: "AVANZATO",              color: "#A78BFA", sublabel: "Top 25%" },
+    { pct: 75,   label: "AVANZATO",              color: CHART_SERIES.tertiary, sublabel: "Top 25%" },
     { pct: 85,   label: "COMPETITIVO REGIONALE", color: "#60A5FA", sublabel: "Top 15%" },
-    { pct: 90,   label: "COMPETITIVO NAZIONALE", color: "#22D3EE", sublabel: "Top 10%" },
-    { pct: 92,   label: "92° Percentile",        color: "#22D3EE" },
-    { pct: 93,   label: "93° Percentile",        color: "#22D3EE" },
-    { pct: 94,   label: "94° Percentile",        color: "#22D3EE" },
-    { pct: 95,   label: "CACCIATORE DI PODI",    color: "#00FFAA", sublabel: "Top 5%" },
-    { pct: 97,   label: "ELITE AMATORIALE",      color: "#C0FF00", sublabel: "Top 3%" },
+    { pct: 90,   label: "COMPETITIVO NAZIONALE", color: CHART_SERIES.compare, sublabel: "Top 10%" },
+    { pct: 92,   label: "92° Percentile",        color: CHART_SERIES.compare },
+    { pct: 93,   label: "93° Percentile",        color: CHART_SERIES.compare },
+    { pct: 94,   label: "94° Percentile",        color: CHART_SERIES.compare },
+    { pct: 95,   label: "CACCIATORE DI PODI",    color: CHART_SERIES.positive, sublabel: "Top 5%" },
+    { pct: 97,   label: "ELITE AMATORIALE",      color: CHART_SERIES.primary, sublabel: "Top 3%" },
     { pct: 99,   label: "PODIO CATEGORIA",       color: "#FFD700", sublabel: "Top 1%" },
     { pct: 99.5, label: "FUORICLASSE",           color: "#F5F5F4", sublabel: "Top 0.5%" },
   ];
@@ -1036,17 +1025,17 @@ function PaceRoadmap({ heroStats, userTimes, sex }: {
       {/* Current baseline */}
       <div className="mb-5 pb-4 border-b border-white/[0.07] flex items-center gap-3">
         <div className="w-[92px] flex-shrink-0">
-          <div className="text-[8px] font-black tracking-[0.18em] uppercase text-[#C0FF00]">SEI QUI</div>
-          <div className="text-[9px] text-gray-500 mt-0.5">{Math.round(currentPct)}° percentile</div>
+          <div className="text-xs font-black tracking-[0.18em] uppercase text-ea-lime">SEI QUI</div>
+          <div className="text-xs text-gray-500 mt-0.5">{Math.round(currentPct)}° percentile</div>
         </div>
         <div className="flex-1 relative h-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#C0FF00] shadow-[0_0_10px_#C0FF00] absolute -top-0.5 left-0 animate-pulse" />
+          <div className="w-2.5 h-2.5 rounded-full bg-ea-lime absolute -top-0.5 left-0 animate-pulse" />
         </div>
         <div className="w-[88px] text-right flex-shrink-0">
-          <div className="text-[11px] font-black tabular-nums text-[#C0FF00]" style={{ fontFamily: MONO }}>
+          <div className="text-xs font-black tabular-nums text-ea-lime" style={{ fontFamily: MONO }}>
             {fmtPace(currentPaceSec)}
           </div>
-          <div className="text-[9px] text-gray-600 mt-0.5">pace attuale</div>
+          <div className="text-xs text-gray-600 mt-0.5">pace attuale</div>
         </div>
       </div>
 
@@ -1059,25 +1048,25 @@ function PaceRoadmap({ heroStats, userTimes, sex }: {
               <div className="w-[92px] flex-shrink-0">
                 {m.sublabel ? (
                   <>
-                    <div className="text-[8px] font-black tracking-[0.1em] uppercase leading-tight"
+                    <div className="text-xs font-black tracking-[0.1em] uppercase leading-tight"
                       style={{ color: m.color }}>
                       {m.label.split(" ").slice(0, 2).join(" ")}
                     </div>
                     {m.label.split(" ").length > 2 && (
-                      <div className="text-[8px] font-black tracking-[0.1em] uppercase leading-tight"
+                      <div className="text-xs font-black tracking-[0.1em] uppercase leading-tight"
                         style={{ color: m.color }}>
                         {m.label.split(" ").slice(2).join(" ")}
                       </div>
                     )}
-                    <div className="text-[8px] text-gray-600 mt-0.5">{m.sublabel}</div>
+                    <div className="text-xs text-gray-600 mt-0.5">{m.sublabel}</div>
                   </>
                 ) : (
                   <>
                     <div className="text-[13px] font-black tabular-nums leading-none"
                       style={{ fontFamily: MONO, color: m.color }}>
-                      {m.pct}<span className="text-[9px] text-gray-500 ml-0.5">°</span>
+                      {m.pct}<span className="text-xs text-gray-500 ml-0.5">°</span>
                     </div>
-                    <div className="text-[8px] text-gray-600 mt-0.5">percentile</div>
+                    <div className="text-xs text-gray-600 mt-0.5">percentile</div>
                   </>
                 )}
               </div>
@@ -1095,10 +1084,10 @@ function PaceRoadmap({ heroStats, userTimes, sex }: {
               </div>
 
               <div className="w-[88px] text-right flex-shrink-0">
-                <div className="text-[11px] font-black tabular-nums" style={{ fontFamily: MONO, color: m.color }}>
+                <div className="text-xs font-black tabular-nums" style={{ fontFamily: MONO, color: m.color }}>
                   {fmtDelta(m.paceGapPerKm)}
                 </div>
-                <div className="text-[9px] text-gray-600 tabular-nums mt-0.5" style={{ fontFamily: MONO }}>
+                <div className="text-xs text-gray-600 tabular-nums mt-0.5" style={{ fontFamily: MONO }}>
                   {fmtPace(m.targetPaceSec)}
                 </div>
               </div>
@@ -1109,7 +1098,7 @@ function PaceRoadmap({ heroStats, userTimes, sex }: {
 
       <div className="mt-5 pt-4 border-t border-white/[0.05] flex gap-2.5 items-start">
         <div className="w-1 h-1 rounded-full bg-gray-700 mt-1.5 flex-shrink-0" />
-        <p className="text-[9px] leading-relaxed text-gray-600">
+        <p className="text-xs leading-relaxed text-gray-600">
           Delta cumulativo dal PB attuale · log-normale campo competitivo FIDAL · σ=0.22 · {dist}
         </p>
       </div>
@@ -1223,8 +1212,8 @@ export function RankingView() {
 
   if (loading) {
     return (
-      <main className="flex-1 flex items-center justify-center bg-[#0A0A0A] gap-3">
-        <RefreshCw className="w-5 h-5 animate-spin text-[#C0FF00]" />
+      <main className="flex-1 flex items-center justify-center bg-ea-surface-1 gap-3">
+        <RefreshCw className="w-5 h-5 animate-spin text-ea-lime" />
         <span className="text-sm font-black uppercase tracking-widest text-gray-500">
           Carico profilo e PB...
         </span>
@@ -1233,16 +1222,16 @@ export function RankingView() {
   }
 
   return (
-    <main className="flex-1 overflow-y-auto bg-[#0A0A0A] text-white p-4 md:p-6 lg:p-10 min-h-0 custom-scrollbar">
+    <main className="flex-1 overflow-y-auto bg-ea-surface-1 text-white p-4 md:p-6 lg:p-10 min-h-0 custom-scrollbar">
       <div className="max-w-[1500px] mx-auto space-y-5 md:space-y-6">
 
         {/* ── HEADER ── */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter text-white uppercase italic">
-              La Mia <span className="text-[#C0FF00]">Classifica</span>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter text-white uppercase">
+              La Mia <span className="text-ea-lime">Classifica</span>
             </h1>
-            <p className="text-gray-600 text-[10px] font-black tracking-[0.3em] uppercase mt-2">
+            <p className="text-gray-600 text-xs font-black tracking-[0.3em] uppercase mt-2">
               Posizionamento reale · FIDAL · ENDU · WAVA age-graded
             </p>
           </div>
@@ -1258,7 +1247,7 @@ export function RankingView() {
               <p className="text-sm font-black uppercase tracking-widest text-gray-400">
                 Nessun Personal Best trovato
               </p>
-              <p className="text-[11px] text-gray-600 mt-2">
+              <p className="text-xs text-gray-600 mt-2">
                 Sincronizza Strava o inserisci i tuoi PB nella sezione Profilo per sbloccare la classifica.
               </p>
             </div>
@@ -1268,36 +1257,36 @@ export function RankingView() {
 
             {/* ── COLONNA SINISTRA: RANK CARD ── */}
             <div className="space-y-5">
-              <div className="rounded-3xl p-[1.5px] bg-gradient-to-b from-[#C0FF00]/70 via-[#22D3EE]/25 to-transparent shadow-[0_8px_40px_rgba(192,255,0,0.12)]">
+              <div className="rounded-2xl p-[1.5px] bg-gradient-to-b from-[#C0FF00]/70 via-[#22D3EE]/25 to-transparent shadow-[0_8px_40px_rgba(192,255,0,0.12)]">
                 <div className="rounded-[22px] bg-gradient-to-b from-[#10130A] via-[#0B0D08] to-[#080808] p-6 relative overflow-hidden">
-                  <div aria-hidden className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-[#C0FF00]/[0.07] blur-3xl" />
+                  <div aria-hidden className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-ea-lime/[0.07] blur-3xl" />
 
                   {/* Percentile hero */}
                   <div className="relative flex items-start justify-between">
                     <div>
                       <span
-                        className="text-7xl font-black italic leading-none tabular-nums"
+                        className="text-7xl font-black leading-none tabular-nums"
                         style={{ fontFamily: MONO, color: heroTier?.color ?? "#C0FF00" }}
                       >
                         {heroStats ? Math.round(heroStats.pct) : "—"}
                       </span>
-                      <div className="mt-1 text-[10px] font-black tracking-[0.3em] uppercase text-gray-500">
+                      <div className="mt-1 text-xs font-black tracking-[0.3em] uppercase text-gray-500">
                         Percentile · {heroStats?.dist ?? ""}
                       </div>
                     </div>
                     <div className="text-right">
                       <Trophy className="w-7 h-7 ml-auto" style={{ color: `${heroTier?.color ?? "#C0FF00"}B0` }} />
-                      <div className="mt-2 text-[9px] font-black tracking-[0.2em] uppercase" style={{ color: heroTier?.color }}>
+                      <div className="mt-2 text-xs font-black tracking-[0.2em] uppercase" style={{ color: heroTier?.color }}>
                         {heroTier?.sublabel}
                       </div>
                     </div>
                   </div>
 
-                  <div className="relative mt-4 pb-4 border-b border-white/[0.08]">
+                  <div className="relative mt-4 pb-4 border-b border-ea-hairline">
                     <div className="text-xl font-black uppercase tracking-tight text-white">
                       {heroTier?.label ?? "—"}
                     </div>
-                    <div className="text-[10px] font-black tracking-[0.18em] uppercase text-gray-500 mt-1">
+                    <div className="text-xs font-black tracking-[0.18em] uppercase text-gray-500 mt-1">
                       {profile?.name ?? "Atleta"} · {fidalCat} · {age} anni
                     </div>
                   </div>
@@ -1322,15 +1311,15 @@ export function RankingView() {
                   </div>
 
                   {/* Footer card */}
-                  <div className="relative mt-6 pt-4 border-t border-white/[0.08] grid grid-cols-3 gap-2 text-center">
+                  <div className="relative mt-6 pt-4 border-t border-ea-hairline grid grid-cols-3 gap-2 text-center">
                     {[
                       { label: "WAVA max", value: bestWava > 0 ? `${bestWava.toFixed(0)}%` : "—", color: bestWava >= 70 ? "#C0FF00" : "#22D3EE" },
-                      { label: "PB attivi", value: String(activeDists.length), color: "#fff" },
-                      { label: "Categoria", value: fidalCat, color: "#A78BFA" },
+                      { label: "PB attivi", value: String(activeDists.length), color: CHART_TEXT.primary },
+                      { label: "Categoria", value: fidalCat, color: CHART_SERIES.tertiary },
                     ].map(({ label, value, color }) => (
                       <div key={label}>
                         <div className="text-base font-black tabular-nums" style={{ fontFamily: MONO, color }}>{value}</div>
-                        <div className="text-[8px] font-black tracking-[0.2em] uppercase text-gray-600 mt-0.5">{label}</div>
+                        <div className="text-xs font-black tracking-[0.2em] uppercase text-gray-600 mt-0.5">{label}</div>
                       </div>
                     ))}
                   </div>
@@ -1349,7 +1338,7 @@ export function RankingView() {
                     <span className="text-3xl font-black tabular-nums" style={{ fontFamily: MONO, color: heroNextTier.tier.color }}>
                       -{formatTime(Math.round(Math.max(computeTimeGapForNextTier(userTimes[heroStats.dist]!, heroStats.dist, sex, heroNextTier.tier.minPct), 0)))}
                     </span>
-                    <span className="text-[10px] font-black tracking-[0.16em] uppercase text-gray-500">
+                    <span className="text-xs font-black tracking-[0.16em] uppercase text-gray-500">
                       da togliere
                     </span>
                   </div>
@@ -1358,10 +1347,9 @@ export function RankingView() {
                       style={{
                         width: `${Math.min(100, (heroStats.pct / heroNextTier.tier.minPct) * 100)}%`,
                         background: `linear-gradient(90deg, ${heroTier.color}, ${heroNextTier.tier.color})`,
-                        boxShadow: `0 0 10px ${heroTier.color}50`,
                       }} />
                   </div>
-                  <div className="mt-2 flex justify-between text-[9px] font-black tracking-[0.12em] uppercase">
+                  <div className="mt-2 flex justify-between text-xs font-black tracking-[0.12em] uppercase">
                     <span style={{ color: heroTier.color }}>{heroTier.label}</span>
                     <span style={{ color: heroNextTier.tier.color }}>{heroNextTier.tier.label}</span>
                   </div>
@@ -1401,7 +1389,7 @@ export function RankingView() {
                       <button key={d.key}
                         onClick={() => hasPb && toggleDist(d.key)}
                         disabled={!hasPb}
-                        className="px-4 py-2.5 rounded-2xl border text-[10px] font-black tracking-wider transition-all disabled:cursor-not-allowed"
+                        className="px-4 py-2.5 rounded-2xl border text-xs font-black tracking-wider transition-all disabled:cursor-not-allowed"
                         style={{
                           borderColor: active ? "rgba(192,255,0,0.4)" : "rgba(255,255,255,0.08)",
                           background: active ? "rgba(192,255,0,0.1)" : "rgba(255,255,255,0.02)",
@@ -1409,7 +1397,7 @@ export function RankingView() {
                           opacity: hasPb ? 1 : 0.45,
                         }}>
                         {d.key}
-                        <span className="ml-2 text-[9px] font-bold tabular-nums" style={{ fontFamily: MONO, color: active ? "#C0FF00" : "rgba(255,255,255,0.35)" }}>
+                        <span className="ml-2 text-xs font-bold tabular-nums" style={{ fontFamily: MONO, color: active ? "#C0FF00" : "rgba(255,255,255,0.35)" }}>
                           {hasPb ? formatTime(userTimes[d.key]!) : "no PB"}
                         </span>
                       </button>
@@ -1459,10 +1447,10 @@ export function RankingView() {
 
         {/* ── FOOTER FONTI ── */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-1 pb-4">
-          <span className="text-[9px] font-black tracking-widest uppercase text-[#444] max-w-3xl leading-4">
+          <span className="text-xs font-black tracking-widest uppercase text-ea-text-axis max-w-3xl leading-4">
             Fonti: FIDAL 2022-2024 · ENDU · MySDAM · Parkrun Italy · Run Card · age-grading WMA 2015 · Riegel T₂ = T₁ × (D₂/D₁)^1.06
           </span>
-          <span className="text-[9px] font-black tracking-widest uppercase text-[#444] shrink-0">
+          <span className="text-xs font-black tracking-widest uppercase text-ea-text-axis shrink-0">
             Metic Lab · Ranking
           </span>
         </div>

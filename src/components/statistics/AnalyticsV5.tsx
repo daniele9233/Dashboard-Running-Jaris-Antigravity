@@ -4,16 +4,11 @@
  * 12 unique running charts â€” completely distinct from V1â€“V4
  */
 import React, { useMemo, useState } from 'react';
-import {
-  LineChart, Line, AreaChart, Area, BarChart, Bar,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  ScatterChart, Scatter, ZAxis, Cell, ReferenceLine,
-  ComposedChart, Legend, LabelList,
-} from 'recharts';
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, ZAxis, Cell, ReferenceLine, ComposedChart } from "recharts";
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 import type { ProAnalyticsChart } from '../../types/api';
-import { CHART_SERIES, CHART_SURFACE, CHART_TEXT } from './chartTheme';
 
+import { CHART_SERIES, CHART_SURFACE, CHART_TEXT, ChartCard, ChartTooltip, chartGrid, chartGridBoth, chartMargin, chartXAxis, chartYAxis } from "../charts";
 // â”€â”€â”€ Palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Alias sul tema condiviso (chartTheme.ts).
 const N   = CHART_SERIES.primary;
@@ -39,7 +34,7 @@ const MID = CHART_SURFACE.borderStrong; // era #333
 const mono: React.CSSProperties = { fontFamily: 'monospace' };
 const chartMono = { fontFamily: 'monospace' } as const;
 const tag  = (txt: string, c = DM) => (
-  <span style={{ ...mono, fontSize: 8, fontWeight: 900, letterSpacing: '0.25em', textTransform: 'uppercase', color: c }}>{txt}</span>
+  <span style={{ ...mono, fontSize: 12, fontWeight: 900, letterSpacing: '0.25em', textTransform: 'uppercase', color: c }}>{txt}</span>
 );
 
 function periodLabel(value: string): string {
@@ -51,22 +46,13 @@ function periodLabel(value: string): string {
 }
 
 /** Left-border accent panel */
-function LBPanel({ children, accent = N, className = '', style = {} }: {
+function LBPanel({ children, className = '', style = {} }: {
   children: React.ReactNode; accent?: string; className?: string; style?: React.CSSProperties;
 }) {
   return (
-    <div
-      className={className}
-      style={{
-        background: P1,
-        borderLeft: `3px solid ${accent}`,
-        padding: '20px 24px',
-        position: 'relative',
-        ...style,
-      }}
-    >
+    <ChartCard className={className} style={style}>
       {children}
-    </div>
+    </ChartCard>
   );
 }
 
@@ -74,10 +60,10 @@ function LBPanel({ children, accent = N, className = '', style = {} }: {
 function Chapter({ n, title, sub }: { n: string; title: string; sub?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 20 }}>
-      <span style={{ ...mono, fontSize: 11, fontWeight: 900, color: N40, letterSpacing: '0.1em' }}>{n} /</span>
+      <span style={{ ...mono, fontSize: 12, fontWeight: 900, color: N40, letterSpacing: '0.1em' }}>{n} /</span>
       <div>
-        <p style={{ ...mono, fontSize: 11, fontWeight: 900, letterSpacing: '0.25em', textTransform: 'uppercase', color: '#fff', margin: 0 }}>{title}</p>
-        {sub && <p style={{ ...mono, fontSize: 8, color: DM, letterSpacing: '0.2em', textTransform: 'uppercase', marginTop: 2 }}>{sub}</p>}
+        <p style={{ ...mono, fontSize: 12, fontWeight: 900, letterSpacing: '0.25em', textTransform: 'uppercase', color: CHART_TEXT.primary, margin: 0 }}>{title}</p>
+        {sub && <p style={{ ...mono, fontSize: 12, color: DM, letterSpacing: '0.2em', textTransform: 'uppercase', marginTop: 2 }}>{sub}</p>}
       </div>
     </div>
   );
@@ -87,8 +73,8 @@ function Chapter({ n, title, sub }: { n: string; title: string; sub?: string }) 
 function Callout({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
     <div style={{ background: N, padding: '10px 16px', display: 'inline-flex', flexDirection: 'column', gap: 2 }}>
-      <span style={{ ...mono, fontSize: 7, fontWeight: 900, color: '#000', letterSpacing: '0.25em', textTransform: 'uppercase' }}>{label}</span>
-      <span style={{ ...mono, fontSize: 22, fontWeight: 900, color: '#000', lineHeight: 1 }}>{value}<span style={{ fontSize: 11, marginLeft: 3 }}>{unit}</span></span>
+      <span style={{ ...mono, fontSize: 12, fontWeight: 900, color: '#000', letterSpacing: '0.25em', textTransform: 'uppercase' }}>{label}</span>
+      <span style={{ ...mono, fontSize: 22, fontWeight: 900, color: '#000', lineHeight: 1 }}>{value}<span style={{ fontSize: 12, marginLeft: 3 }}>{unit}</span></span>
     </div>
   );
 }
@@ -110,15 +96,14 @@ function Stat({ label, val, c = '#fff' }: { label: string; val: string; c?: stri
 function TT({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: '#040404', border: `1px solid ${MT}`, padding: '8px 14px', ...mono }}>
-      <p style={{ color: DM, fontSize: 9, fontWeight: 900, letterSpacing: '0.2em', marginBottom: 4 }}>{label}</p>
-      {payload.map((p, i) => (
-        <p key={i} style={{ fontSize: 11, fontWeight: 900, margin: 0 }}>
-          <span style={{ color: p.color }}>{p.name}</span>
-          <span style={{ color: '#fff', marginLeft: 8 }}>{typeof p.value === 'number' ? p.value.toFixed(2) : p.value}</span>
-        </p>
-      ))}
-    </div>
+    <ChartTooltip
+      title={label}
+      rows={payload.map((p) => ({
+        label: p.name,
+        value: typeof p.value === 'number' ? p.value.toFixed(2) : p.value,
+        color: p.color,
+      }))}
+    />
   );
 }
 
@@ -226,18 +211,18 @@ function CPCurve() {
       <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start' }}>
         <div style={{ flex: 1 }}>
           <ResponsiveContainer width="100%" height={180}>
-            <AreaChart data={cpCurve} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
+            <AreaChart data={cpCurve} margin={chartMargin}>
               <defs>
                 <linearGradient id="cpGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%"   stopColor={N}  stopOpacity={0.3} />
                   <stop offset="100%" stopColor={N}  stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-              <XAxis dataKey="t" tick={{ fill: DM, fontSize: 9, ...chartMono, fontWeight: 900 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: DM, fontSize: 9, ...chartMono, fontWeight: 900 }} axisLine={false} tickLine={false} domain={[140,440]} />
+              <CartesianGrid {...chartGrid} />
+              <XAxis {...chartXAxis} dataKey="t" tick={{ fill: DM, fontSize: 12, ...chartMono, fontWeight: 900 }} />
+              <YAxis {...chartYAxis} tick={{ fill: DM, fontSize: 12, ...chartMono, fontWeight: 900 }} domain={[140,440]} />
               <Tooltip content={<TT />} />
-              <ReferenceLine y={182} stroke={OR} strokeDasharray="5 3" strokeWidth={1.5} label={{ value: 'CP', fill: OR, fontSize: 9, fontWeight: 900 }} />
+              <ReferenceLine y={182} stroke={OR} strokeDasharray="5 3" strokeWidth={1.5} label={{ value: 'CP', fill: OR, fontSize: 12, fontWeight: 900 }} />
               <Area type="monotone" dataKey="p" name="Power (W)" stroke={N} strokeWidth={2.5} fill="url(#cpGrad)" dot={{ r:3, fill:N, stroke:BG, strokeWidth:1.5 }} />
             </AreaChart>
           </ResponsiveContainer>
@@ -265,12 +250,12 @@ function HRVTrend() {
     <LBPanel accent={CY}>
       <Chapter n="02" title="HRV â€” RMSSD Trend" sub="Autonomic nervous system readiness (42 days)" />
       <ResponsiveContainer width="100%" height={160}>
-        <ComposedChart data={hrv} margin={{ top:4, right:8, bottom:0, left:-20 }}>
-          <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-          <XAxis dataKey="day" tick={{ fill:DM, fontSize:8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} interval={6} />
-          <YAxis tick={{ fill:DM, fontSize:9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} domain={[20,70]} />
+        <ComposedChart data={hrv} margin={chartMargin}>
+          <CartesianGrid {...chartGrid} />
+          <XAxis {...chartXAxis} dataKey="day" tick={{ fill:DM, fontSize:12, ...chartMono, fontWeight:900 }} interval={6} />
+          <YAxis {...chartYAxis} tick={{ fill:DM, fontSize:12, ...chartMono, fontWeight:900 }} domain={[20,70]} />
           <Tooltip content={<TT />} />
-          <ReferenceLine y={44} stroke={CY} strokeDasharray="5 3" strokeWidth={1} label={{ value:'BASELINE', fill:CY, fontSize:8, fontWeight:900, position:'right' }} />
+          <ReferenceLine y={44} stroke={CY} strokeDasharray="5 3" strokeWidth={1} label={{ value:'BASELINE', fill:CY, fontSize:12, fontWeight:900, position:'right' }} />
           <Area type="monotone" dataKey="rmssd" name="RMSSD (ms)" stroke={CY} strokeWidth={2} fill="rgba(34,211,238,0.08)" dot={false} />
           <Line type="monotone" dataKey="baseline" stroke={DM} strokeDasharray="4 4" strokeWidth={1} dot={false} />
         </ComposedChart>
@@ -292,10 +277,10 @@ function TRIMPChart() {
     <LBPanel accent={OR} style={{ gridColumn: 'span 2' }}>
       <Chapter n="03" title="Training Impulse (TRIMP)" sub="Weekly aerobic + anaerobic training load â€” 16 weeks" />
       <ResponsiveContainer width="100%" height={180}>
-        <BarChart data={trimp} margin={{ top:4, right:8, bottom:0, left:-20 }} barCategoryGap="30%">
-          <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-          <XAxis dataKey="w" tick={{ fill:DM, fontSize:8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} interval={1} />
-          <YAxis tick={{ fill:DM, fontSize:9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
+        <BarChart data={trimp} margin={chartMargin} barCategoryGap="30%">
+          <CartesianGrid {...chartGrid} />
+          <XAxis {...chartXAxis} dataKey="w" tick={{ fill:DM, fontSize:12, ...chartMono, fontWeight:900 }} interval={1} />
+          <YAxis {...chartYAxis} tick={{ fill:DM, fontSize:12, ...chartMono, fontWeight:900 }} />
           <Tooltip content={<TT />} />
           <Bar dataKey="aerobic"   name="Aerobic"   stackId="t" fill={N}  fillOpacity={0.85} radius={[0,0,0,0]} />
           <Bar dataKey="anaerobic" name="Anaerobic" stackId="t" fill={OR} fillOpacity={0.90} radius={[3,3,0,0]} />
@@ -319,12 +304,12 @@ function DecouplingChart() {
     <LBPanel accent={PU}>
       <Chapter n="04" title="Aerobic Decoupling" sub="Cardiac drift % per long run â€” optimal < 5%" />
       <ResponsiveContainer width="100%" height={160}>
-        <BarChart data={decouple} margin={{ top:4, right:8, bottom:0, left:-20 }}>
-          <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-          <XAxis dataKey="run" tick={{ fill:DM, fontSize:8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fill:DM, fontSize:9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} domain={[0,10]} />
+        <BarChart data={decouple} margin={chartMargin}>
+          <CartesianGrid {...chartGrid} />
+          <XAxis {...chartXAxis} dataKey="run" tick={{ fill:DM, fontSize:12, ...chartMono, fontWeight:900 }} />
+          <YAxis {...chartYAxis} tick={{ fill:DM, fontSize:12, ...chartMono, fontWeight:900 }} domain={[0,10]} />
           <Tooltip content={<TT />} />
-          <ReferenceLine y={5} stroke={OR} strokeDasharray="5 3" strokeWidth={1.5} label={{ value:'THRESHOLD 5%', fill:OR, fontSize:8, fontWeight:900, position:'right' }} />
+          <ReferenceLine y={5} stroke={OR} strokeDasharray="5 3" strokeWidth={1.5} label={{ value:'THRESHOLD 5%', fill:OR, fontSize:12, fontWeight:900, position:'right' }} />
           <Bar dataKey="pdc" name="Decoupling %">
             {decouple.map((d,i)=>(
               <Cell key={i} fill={d.pdc > 5 ? OR : PU} fillOpacity={0.85} />
@@ -349,7 +334,7 @@ function ElevProfileChart() {
     <LBPanel accent={YL} style={{ gridColumn: 'span 2' }}>
       <Chapter n="05" title="Elevation Profile Composite" sub="Overlay: 3 key workouts this cycle" />
       <ResponsiveContainer width="100%" height={180}>
-        <AreaChart data={elevProfile} margin={{ top:4, right:8, bottom:0, left:-16 }}>
+        <AreaChart data={elevProfile} margin={chartMargin}>
           <defs>
             {[['cGrad',YL],['bGrad',CY],['aGrad',PU]].map(([id,c])=>(
               <linearGradient key={id as string} id={id as string} x1="0" y1="0" x2="0" y2="1">
@@ -358,9 +343,9 @@ function ElevProfileChart() {
               </linearGradient>
             ))}
           </defs>
-          <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-          <XAxis dataKey="km" tick={{ fill:DM, fontSize:8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} interval={9} label={{ value:'KM', position:'insideBottom', fill:DM, fontSize:8, fontWeight:900, offset:-2 }} />
-          <YAxis tick={{ fill:DM, fontSize:9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} label={{ value:'m', angle:-90, fill:DM, fontSize:8, fontWeight:900 }} />
+          <CartesianGrid {...chartGrid} />
+          <XAxis {...chartXAxis} dataKey="km" tick={{ fill:DM, fontSize:12, ...chartMono, fontWeight:900 }} interval={9} label={{ value:'KM', position:'insideBottom', fill:DM, fontSize:12, fontWeight:900, offset:-2 }} />
+          <YAxis {...chartYAxis} tick={{ fill:DM, fontSize:12, ...chartMono, fontWeight:900 }} label={{ value:'m', angle:-90, fill:DM, fontSize:12, fontWeight:900 }} />
           <Tooltip content={<TT />} />
           <Area type="monotone" dataKey="runC" name="Trail 28k"    stroke={YL} strokeWidth={1.5} fill="url(#cGrad)" dot={false} />
           <Area type="monotone" dataKey="runB" name="Road 15k"     stroke={CY} strokeWidth={1.5} fill="url(#bGrad)" dot={false} />
@@ -386,22 +371,22 @@ export function AnalyticsV5EffortMatrix({ chart, onRequestDetail }: { chart?: Pr
   const renderChart = (isExpanded = false) => {
     const data = isExpanded ? detailData : cardData;
     if (!data.length) {
-      return <div style={{ height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:DM, fontSize:11, fontWeight:900, letterSpacing:'0.2em', ...mono }}>DATI REALI INSUFFICIENTI</div>;
+      return <div style={{ height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:DM, fontSize:12, fontWeight:900, letterSpacing:'0.2em', ...mono }}>DATI REALI INSUFFICIENTI</div>;
     }
     return (
     <ResponsiveContainer width="100%" height="100%">
-      <ScatterChart margin={{ top: isExpanded ? 20 : 4, right: isExpanded ? 20 : 8, bottom: isExpanded ? 24 : 8, left: isExpanded ? -4 : -16 }}>
-        <CartesianGrid strokeDasharray="2 6" stroke={MT} />
-        <XAxis type="number" dataKey="dist" name="Distanza" domain={[0,40]} tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} label={{ value:'KM', position:'insideBottom', fill:DM, fontSize:8, fontWeight:900, offset:-4 }} />
-        <YAxis type="number" dataKey="pace" name="Passo" domain={[3.5,6.5]} tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} label={{ value:'MIN/KM', angle:-90, fill:DM, fontSize:8, fontWeight:900 }} />
+      <ScatterChart margin={{ top: isExpanded ? 20 : 4, right: isExpanded ? 20 : 8, bottom: isExpanded ? 24 : 8, left: 0 }}>
+        <CartesianGrid {...chartGridBoth} />
+        <XAxis {...chartXAxis} type="number" dataKey="dist" name="Distanza" domain={[0,40]} tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...chartMono, fontWeight:900 }} label={{ value:'KM', position:'insideBottom', fill:DM, fontSize:12, fontWeight:900, offset:-4 }} />
+        <YAxis {...chartYAxis} type="number" dataKey="pace" name="Passo" domain={[3.5,6.5]} tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...chartMono, fontWeight:900 }} label={{ value:'MIN/KM', angle:-90, fill:DM, fontSize:12, fontWeight:900 }} />
         <ZAxis type="number" dataKey="z" range={isExpanded ? [50,260] : [30,200]} />
         <Tooltip cursor={{ stroke:MT }} content={({ active, payload }) => {
           if (!active || !payload?.length) return null;
           const d = payload[0].payload;
           return (
             <div style={{ background:'#040404', border:`1px solid ${MT}`, padding:'8px 12px', ...mono }}>
-              <p style={{ color:N, fontSize:10, fontWeight:900 }}>{d.dist.toFixed(1)} km @ {d.pace.toFixed(2)} min/km</p>
-              <p style={{ color:DM, fontSize:9, fontWeight:900 }}>FC: {d.hr ? d.hr.toFixed(0) : 'N/D'} bpm</p>
+              <p style={{ color:N, fontSize:12, fontWeight:900 }}>{d.dist.toFixed(1)} km @ {d.pace.toFixed(2)} min/km</p>
+              <p style={{ color:DM, fontSize:12, fontWeight:900 }}>FC: {d.hr ? d.hr.toFixed(0) : 'N/D'} bpm</p>
             </div>
           );
         }} />
@@ -443,17 +428,17 @@ function RunningEconomy() {
       <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:16 }}>
         <Callout label="Current RE" value="203" unit="ml/kg/km" />
         <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-          <span style={{ ...mono, fontSize:9, fontWeight:900, color:N, letterSpacing:'0.2em' }}>â–¼ -3.4% vs 3 months ago</span>
-          <span style={{ ...mono, fontSize:9, fontWeight:900, color:DM, letterSpacing:'0.2em' }}>ELITE TARGET: &lt; 195 ml/kg/km</span>
+          <span style={{ ...mono, fontSize:12, fontWeight:900, color:N, letterSpacing:'0.2em' }}>â–¼ -3.4% vs 3 months ago</span>
+          <span style={{ ...mono, fontSize:12, fontWeight:900, color:DM, letterSpacing:'0.2em' }}>ELITE TARGET: &lt; 195 ml/kg/km</span>
         </div>
       </div>
       <ResponsiveContainer width="100%" height={120}>
-        <ComposedChart data={reIndex} margin={{ top:4, right:8, bottom:0, left:-20 }}>
-          <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-          <XAxis dataKey="s" tick={{ fill:DM, fontSize:8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
-          <YAxis domain={[185,230]} tick={{ fill:DM, fontSize:8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
+        <ComposedChart data={reIndex} margin={chartMargin}>
+          <CartesianGrid {...chartGrid} />
+          <XAxis {...chartXAxis} dataKey="s" tick={{ fill:DM, fontSize:12, ...chartMono, fontWeight:900 }} />
+          <YAxis {...chartYAxis} domain={[185,230]} tick={{ fill:DM, fontSize:12, ...chartMono, fontWeight:900 }} />
           <Tooltip content={<TT />} />
-          <ReferenceLine y={200} stroke={N} strokeDasharray="4 3" strokeWidth={1} label={{ value:'TARGET', fill:N, fontSize:8, fontWeight:900, position:'right' }} />
+          <ReferenceLine y={200} stroke={N} strokeDasharray="4 3" strokeWidth={1} label={{ value:'TARGET', fill:N, fontSize:12, fontWeight:900, position:'right' }} />
           <Line type="monotone" dataKey="re" name="RE" stroke={N} strokeWidth={2.5} dot={{ r:3, fill:N, stroke:BG, strokeWidth:1.5 }} />
         </ComposedChart>
       </ResponsiveContainer>
@@ -467,12 +452,12 @@ function RecoveryHistogram() {
     <LBPanel accent={CY}>
       <Chapter n="08" title="Recovery Window Distribution" sub="Hours between consecutive sessions" />
       <ResponsiveContainer width="100%" height={160}>
-        <BarChart data={recovBins} margin={{ top:4, right:8, bottom:0, left:-20 }} barCategoryGap="15%">
-          <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-          <XAxis dataKey="bin" tick={{ fill:DM, fontSize:8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fill:DM, fontSize:9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
+        <BarChart data={recovBins} margin={chartMargin} barCategoryGap="15%">
+          <CartesianGrid {...chartGrid} />
+          <XAxis {...chartXAxis} dataKey="bin" tick={{ fill:DM, fontSize:12, ...chartMono, fontWeight:900 }} />
+          <YAxis {...chartYAxis} tick={{ fill:DM, fontSize:12, ...chartMono, fontWeight:900 }} />
           <Tooltip content={<TT />} />
-          <ReferenceLine x="24-36" stroke={N} strokeDasharray="4 3" strokeWidth={1} label={{ value:'OPTIMAL', fill:N, fontSize:8, fontWeight:900 }} />
+          <ReferenceLine x="24-36" stroke={N} strokeDasharray="4 3" strokeWidth={1} label={{ value:'OPTIMAL', fill:N, fontSize:12, fontWeight:900 }} />
           <Bar dataKey="count" name="Sessions" radius={[3,3,0,0]}>
             {recovBins.map((b,i) => (
               <Cell key={i} fill={b.bin === '24-36' ? N : b.bin === '18-24' ? CY : b.bin === '36-48' ? CY : b.bin === '<12h' ? RD : MT} fillOpacity={0.85} />
@@ -499,16 +484,16 @@ function SeasonalMatrix() {
         <table style={{ borderCollapse:'separate', borderSpacing:3, ...mono }}>
           <thead>
             <tr>
-              <th style={{ width:90, textAlign:'left', paddingBottom:6, color:DM, fontSize:8, fontWeight:900, letterSpacing:'0.2em' }}>METRIC</th>
+              <th style={{ width:90, textAlign:'left', paddingBottom:6, color:DM, fontSize:12, fontWeight:900, letterSpacing:'0.2em' }}>METRIC</th>
               {MONTHS_SHORT.map(m => (
-                <th key={m} style={{ width:46, textAlign:'center', paddingBottom:6, color:DM, fontSize:8, fontWeight:900, letterSpacing:'0.15em' }}>{m.toUpperCase()}</th>
+                <th key={m} style={{ width:46, textAlign:'center', paddingBottom:6, color:DM, fontSize:12, fontWeight:900, letterSpacing:'0.15em' }}>{m.toUpperCase()}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {METRICS.map((metric, mi) => (
               <tr key={metric}>
-                <td style={{ fontSize:9, fontWeight:900, color:'#fff', paddingRight:12, paddingBottom:3, letterSpacing:'0.15em' }}>{metric.toUpperCase()}</td>
+                <td style={{ fontSize:12, fontWeight:900, color: CHART_TEXT.primary, paddingRight:12, paddingBottom:3, letterSpacing:'0.15em' }}>{metric.toUpperCase()}</td>
                 {seasonal[mi].map((cell, ci) => (
                   <td key={ci} style={{ padding:0, paddingBottom:3 }}>
                     <div
@@ -519,7 +504,7 @@ function SeasonalMatrix() {
                       }}
                       title={`${cell.month} â€” ${cell.value}`}
                     >
-                      <span style={{ fontSize:8, fontWeight:900, color:cell.value>70 ? '#000' : '#fff', ...mono }}>{cell.value}</span>
+                      <span style={{ fontSize:12, fontWeight:900, color:cell.value>70 ? '#000' : '#fff', ...mono }}>{cell.value}</span>
                     </div>
                   </td>
                 ))}
@@ -569,22 +554,22 @@ export function AnalyticsV5BestEffortsProgression({ chart, onRequestDetail }: { 
         <Stat label="Campioni" val={`${chart?.quality?.sample_size ?? 0}`} c={N} />
       </div>
       {weeklyRows.length > 0 && (
-        <div style={{ border: `1px solid ${MT}`, background: '#101010', padding: '12px 14px' }}>
+        <div style={{ border: `1px solid ${MT}`, background: CHART_SURFACE.panel, padding: '12px 14px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 10 }}>
-            <span style={{ ...mono, fontSize: 9, fontWeight: 900, letterSpacing: '0.22em', textTransform: 'uppercase', color: PU }}>Dettaglio settimana per settimana</span>
-            <span style={{ ...mono, fontSize: 8, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', color: DM }}>ultime {weeklyRows.length}</span>
+            <span style={{ ...mono, fontSize: 12, fontWeight: 900, letterSpacing: '0.22em', textTransform: 'uppercase', color: PU }}>Dettaglio settimana per settimana</span>
+            <span style={{ ...mono, fontSize: 12, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', color: DM }}>ultime {weeklyRows.length}</span>
           </div>
           <div style={{ overflowX: 'auto' }}>
             <div style={{ minWidth: 560, display: 'grid', gridTemplateColumns: '1.3fr repeat(3, minmax(90px, 1fr))', columnGap: 18, rowGap: 8 }}>
               {['Settimana', '5K', '10K', 'Half'].map((label) => (
-                <div key={label} style={{ ...mono, fontSize: 8, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', color: DM }}>{label}</div>
+                <div key={label} style={{ ...mono, fontSize: 12, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', color: DM }}>{label}</div>
               ))}
               {weeklyRows.map((row, index) => (
                 <React.Fragment key={`${row.mo}-${index}`}>
-                  <div style={{ ...mono, fontSize: 11, fontWeight: 900, color: '#fff' }}>{row.periodLabel}</div>
-                  <div style={{ ...mono, fontSize: 11, fontWeight: 900, color: N }}>{fmt(Number(row.k5))}</div>
-                  <div style={{ ...mono, fontSize: 11, fontWeight: 900, color: CY }}>{fmt(Number(row.k10))}</div>
-                  <div style={{ ...mono, fontSize: 11, fontWeight: 900, color: PU }}>{fmt(Number(row.hm))}</div>
+                  <div style={{ ...mono, fontSize: 12, fontWeight: 900, color: CHART_TEXT.primary }}>{row.periodLabel}</div>
+                  <div style={{ ...mono, fontSize: 12, fontWeight: 900, color: N }}>{fmt(Number(row.k5))}</div>
+                  <div style={{ ...mono, fontSize: 12, fontWeight: 900, color: CY }}>{fmt(Number(row.k10))}</div>
+                  <div style={{ ...mono, fontSize: 12, fontWeight: 900, color: PU }}>{fmt(Number(row.hm))}</div>
                 </React.Fragment>
               ))}
             </div>
@@ -596,32 +581,24 @@ export function AnalyticsV5BestEffortsProgression({ chart, onRequestDetail }: { 
   const renderChart = (isExpanded = false) => {
     const data = isExpanded ? detailData : cardData;
     if (!data.length) {
-      return <div style={{ height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:DM, fontSize:11, fontWeight:900, letterSpacing:'0.2em', ...mono }}>DATI REALI INSUFFICIENTI</div>;
+      return <div style={{ height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:DM, fontSize:12, fontWeight:900, letterSpacing:'0.2em', ...mono }}>DATI REALI INSUFFICIENTI</div>;
     }
     return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={data} margin={{ top:isExpanded ? 20 : 4, right:isExpanded ? 20 : 8, bottom:isExpanded ? 20 : 0, left:isExpanded ? 0 : -8 }}>
-        <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-        <XAxis
-          dataKey="mo"
-          tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...chartMono, fontWeight:900 }}
-          axisLine={false}
-          tickLine={false}
-          interval="preserveStartEnd"
-          minTickGap={18}
-          tickFormatter={(value) => isExpanded ? formatAxisMonth(String(value)) : formatAxisMonth(String(value))}
-        />
-        <YAxis yAxisId="left"  tick={{ fill:DM, fontSize:isExpanded ? 11 : 8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} domain={['dataMin - 60', 'dataMax + 60']} />
-        <YAxis yAxisId="right" orientation="right" tick={{ fill:DM, fontSize:isExpanded ? 11 : 8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} domain={['dataMin - 120', 'dataMax + 120']} />
+      <LineChart data={data} margin={{ top:isExpanded ? 20 : 4, right:isExpanded ? 20 : 8, bottom:isExpanded ? 20 : 0, left:0 }}>
+        <CartesianGrid {...chartGrid} />
+        <XAxis {...chartXAxis} dataKey="mo" tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...chartMono, fontWeight:900 }} interval="preserveStartEnd" minTickGap={18} tickFormatter={(value) => isExpanded ? formatAxisMonth(String(value)) : formatAxisMonth(String(value))} />
+        <YAxis {...chartYAxis} yAxisId="left" tick={{ fill:DM, fontSize:isExpanded ? 11 : 8, ...chartMono, fontWeight:900 }} domain={['dataMin - 60', 'dataMax + 60']} />
+        <YAxis {...chartYAxis} yAxisId="right" orientation="right" tick={{ fill:DM, fontSize:isExpanded ? 11 : 8, ...chartMono, fontWeight:900 }} domain={['dataMin - 120', 'dataMax + 120']} />
         <Tooltip content={({ active, payload, label }) => {
           if (!active || !payload?.length) return null;
           return (
             <div style={{ background:'#040404', border:`1px solid ${MT}`, padding:'8px 12px', ...mono }}>
-              <p style={{ color:DM, fontSize:9, fontWeight:900, letterSpacing:'0.2em', marginBottom:4 }}>{label}</p>
+              <p style={{ color:DM, fontSize:12, fontWeight:900, letterSpacing:'0.2em', marginBottom:4 }}>{label}</p>
               {payload.map((p,i) => (
-                <p key={i} style={{ fontSize:11, fontWeight:900, margin:0 }}>
+                <p key={i} style={{ fontSize:12, fontWeight:900, margin:0 }}>
                   <span style={{ color:p.color as string }}>{p.name}</span>
-                  <span style={{ color:'#fff', marginLeft:8 }}>{fmt(p.value as number)}</span>
+                  <span style={{ color: CHART_TEXT.primary, marginLeft:8 }}>{fmt(p.value as number)}</span>
                 </p>
               ))}
             </div>
@@ -673,14 +650,14 @@ export function AnalyticsV5PaceDistributionBell({ chart, onRequestDetail }: { ch
   const renderChart = (isExpanded = false) => {
     const data = isExpanded ? detailData : cardData;
     if (!data.length) {
-      return <div style={{ height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:DM, fontSize:11, fontWeight:900, letterSpacing:'0.2em', ...mono }}>DATI REALI INSUFFICIENTI</div>;
+      return <div style={{ height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:DM, fontSize:12, fontWeight:900, letterSpacing:'0.2em', ...mono }}>DATI REALI INSUFFICIENTI</div>;
     }
     return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data} margin={{ top:isExpanded ? 20 : 4, right:isExpanded ? 20 : 8, bottom:isExpanded ? 20 : 0, left:isExpanded ? -4 : -20 }} barCategoryGap="12%">
-        <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-        <XAxis dataKey="pace" tick={{ fill:DM, fontSize:isExpanded ? 12 : 8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
+      <BarChart data={data} margin={{ top:isExpanded ? 20 : 4, right:isExpanded ? 20 : 8, bottom:isExpanded ? 20 : 0, left:0 }} barCategoryGap="12%">
+        <CartesianGrid {...chartGrid} />
+        <XAxis {...chartXAxis} dataKey="pace" tick={{ fill:DM, fontSize:isExpanded ? 12 : 8, ...chartMono, fontWeight:900 }} />
+        <YAxis {...chartYAxis} tick={{ fill:DM, fontSize:isExpanded ? 12 : 9, ...chartMono, fontWeight:900 }} />
         <Tooltip content={<TT />} />
         <Bar dataKey="runs" name="Corse" radius={[4,4,0,0]}>
           {data.map((_,i) => (
@@ -726,16 +703,16 @@ function LSBChart() {
     <LBPanel accent={BL} style={{ gridColumn:'span 2' }}>
       <Chapter n="12" title="Load Stress Balance â€” 4 Month PMC" sub="CTL (fitness) Â· ATL (fatigue) Â· TSB (form)" />
       <ResponsiveContainer width="100%" height={200}>
-        <ComposedChart data={lsb} margin={{ top:4, right:12, bottom:0, left:-16 }}>
+        <ComposedChart data={lsb} margin={chartMargin}>
           <defs>
             <linearGradient id="tsbGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={N} stopOpacity={0.22} />
               <stop offset="100%" stopColor={N} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="2 6" stroke={MT} vertical={false} />
-          <XAxis dataKey="d" tick={{ fill:DM, fontSize:8, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} interval={19} />
-          <YAxis tick={{ fill:DM, fontSize:9, ...chartMono, fontWeight:900 }} axisLine={false} tickLine={false} />
+          <CartesianGrid {...chartGrid} />
+          <XAxis {...chartXAxis} dataKey="d" tick={{ fill:DM, fontSize:12, ...chartMono, fontWeight:900 }} interval={19} />
+          <YAxis {...chartYAxis} tick={{ fill:DM, fontSize:12, ...chartMono, fontWeight:900 }} />
           <Tooltip content={<TT />} />
           <ReferenceLine y={0} stroke={MT} strokeWidth={1} />
           <Area type="monotone" dataKey="tsb" name="TSB (Form)" stroke={N} strokeWidth={1.5} fill="url(#tsbGrad)" dot={false} />
@@ -766,11 +743,11 @@ export function AnalyticsV5() {
       {/* â”€â”€ Banner â”€â”€ */}
       <div style={{ background:`linear-gradient(135deg, #0A0A0A 60%, ${N10})`, borderBottom:`3px solid ${N}`, padding:'18px 28px', display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
         <div>
-          <p style={{ ...mono, fontSize:9, color:DM, letterSpacing:'0.3em', marginBottom:4 }}>METIC LAB â€” INTELLIGENCE REPORT</p>
-          <h2 style={{ ...mono, fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'-0.02em', margin:0 }}>
+          <p style={{ ...mono, fontSize:12, color:DM, letterSpacing:'0.3em', marginBottom:4 }}>METIC LAB â€” INTELLIGENCE REPORT</p>
+          <h2 style={{ ...mono, fontSize:28, fontWeight:900, color: CHART_TEXT.primary, letterSpacing:'-0.02em', margin:0 }}>
             ANALYTICS <span style={{ color:N }}>PRO V5</span>
           </h2>
-          <p style={{ ...mono, fontSize:8, color:DM, letterSpacing:'0.25em', marginTop:4 }}>12 MODULES Â· RUNNING SCIENCE Â· ATHLETE #00312</p>
+          <p style={{ ...mono, fontSize:12, color:DM, letterSpacing:'0.25em', marginTop:4 }}>12 MODULES Â· RUNNING SCIENCE Â· ATHLETE #00312</p>
         </div>
         <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:6 }}>
           <div style={{ display:'flex', gap:12 }}>
@@ -781,7 +758,7 @@ export function AnalyticsV5() {
               </div>
             ))}
           </div>
-          <p style={{ ...mono, fontSize:8, color:DM, letterSpacing:'0.2em' }}>LAST SYNC: 2026-04-15 Â· 08:32</p>
+          <p style={{ ...mono, fontSize:12, color:DM, letterSpacing:'0.2em' }}>LAST SYNC: 2026-04-15 Â· 08:32</p>
         </div>
       </div>
 

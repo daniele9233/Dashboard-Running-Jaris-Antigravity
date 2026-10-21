@@ -50,3 +50,6 @@ runs.json
 runs-*.json
 resp.json
 ivids.txt
+
+# Screenshot di audit design: contengono dati personali reali (repo pubblico) — non versionare.
+docs/design-system/screenshots/

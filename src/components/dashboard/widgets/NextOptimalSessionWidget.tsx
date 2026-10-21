@@ -113,11 +113,11 @@ export function NextOptimalSessionWidget({
   const arcLen = Math.PI * 85;
 
   return (
-    <div className="rounded-[24px] p-6 h-full flex flex-col overflow-hidden backdrop-blur-2xl border border-white/[0.12] shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50">
+    <div className="rounded-2xl p-5 h-full flex flex-col overflow-hidden border border-ea-hairline shadow-[0_4px_24px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] bg-ea-surface-1">
       {/* Header */}
       <div className="flex items-center gap-2 mb-3">
-        <Timer className="text-[#C0FF00]" size={14} />
-        <span className="text-[#A0A0A0] text-[10px] font-black tracking-widest">NEXT OPTIMAL SESSION</span>
+        <Timer className="text-ea-lime" size={14} />
+        <span className="text-ea-text-muted text-xs font-black tracking-widest">NEXT OPTIMAL SESSION</span>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center">
@@ -155,13 +155,13 @@ export function NextOptimalSessionWidget({
           <div className="absolute inset-x-0 bottom-0 flex flex-col items-center">
             {isReady ? (
               <>
-                <Zap size={30} className="text-[#C0FF00] mb-1" />
-                <span className="text-[#C0FF00] text-[10px] font-black tracking-widest">READY NOW</span>
+                <Zap size={30} className="text-ea-lime mb-1" />
+                <span className="text-ea-lime text-xs font-black tracking-widest">READY NOW</span>
               </>
             ) : (
               <>
                 <span className="text-white font-black font-mono text-[40px] leading-none">{h}</span>
-                <span className="text-[#666] text-[9px] font-black tracking-widest mt-1">ORE AL RECUPERO</span>
+                <span className="text-ea-text-axis text-xs font-black tracking-widest mt-1">ORE AL RECUPERO</span>
               </>
             )}
           </div>
@@ -173,13 +173,13 @@ export function NextOptimalSessionWidget({
           style={{ background: `${recColor}14`, border: `1px solid ${recColor}44` }}
         >
           <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: recColor, boxShadow: `0 0 6px ${recColor}` }} />
-            <span className="text-[10px] font-black tracking-widest uppercase" style={{ color: recColor }}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: recColor }} />
+            <span className="text-xs font-black tracking-widest uppercase" style={{ color: recColor }}>
               {recLabel}
             </span>
           </div>
           {readyAtLabel && (
-            <div className="text-[10px] tracking-wider font-black" style={{ color: `${recColor}BB` }}>
+            <div className="text-xs tracking-wider font-black" style={{ color: `${recColor}BB` }}>
               {readyAtLabel}
             </div>
           )}

@@ -67,23 +67,23 @@ function HeatPanel({
   return (
     <div className="mb-6 rounded-xl border overflow-hidden" style={{ borderColor: `${col}44`, background: `${col}0d` }}>
       <div className="px-3.5 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: col }}>
+        <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: col }}>
           Indice T + DP {info.index}
         </span>
-        <span className="text-[11px] text-gray-400" style={mono}>
+        <span className="text-xs text-gray-400" style={mono}>
           ~{info.tempC}°C + DP {info.dpC}° · fascia {info.band.label}
           {info.pace && ` · penalità ${info.pace.penLabel}`}
         </span>
         {info.pace && info.base && (
-          <span className="text-[11px] text-gray-400" style={mono}>
+          <span className="text-xs text-gray-400" style={mono}>
             base {info.base} → <span className="font-bold" style={{ color: col }}>{info.pace.range}</span>
           </span>
         )}
         {info.vdot != null && (
-          <span className="text-[11px] text-gray-500" style={mono}>VDOT {info.vdot.toFixed(1)}</span>
+          <span className="text-xs text-gray-500" style={mono}>VDOT {info.vdot.toFixed(1)}</span>
         )}
         {info.band.skip && (
-          <span className="text-[11px] font-bold text-[#EF4444] basis-full">
+          <span className="text-xs font-bold text-[#EF4444] basis-full">
             Oltre 59: seduta da spostare all'alba o da rimandare.
           </span>
         )}
@@ -91,7 +91,7 @@ function HeatPanel({
 
       {rows.length > 0 && (
         <div className="overflow-x-auto border-t" style={{ borderColor: `${col}22` }}>
-          <table className="w-full text-[11px]" style={mono}>
+          <table className="w-full text-xs" style={mono}>
             <thead>
               <tr className="text-gray-500">
                 <th className="text-left font-bold px-3.5 py-1.5">Esempio</th>
@@ -158,10 +158,10 @@ function OddsPanel({
   return (
     <div className="mb-6 rounded-xl border border-[#2A2A2A] bg-[#0F0F0F] overflow-hidden">
       <div className="px-3.5 py-2.5 border-b border-[#2A2A2A]">
-        <span className="text-[10px] font-black tracking-[0.2em] uppercase text-gray-400">
+        <span className="text-xs font-black tracking-[0.2em] uppercase text-gray-400">
           Se la chiudi a target
         </span>
-        <span className="ml-2 text-[11px] text-gray-600" style={mono}>
+        <span className="ml-2 text-xs text-gray-600" style={mono}>
           VDOT {vdot.toFixed(1)} · gara fra {Math.round(odds[0].o.weeksLeft)} settimane
         </span>
       </div>
@@ -171,7 +171,7 @@ function OddsPanel({
           const col = colorOf(o.p);
           return (
             <div key={label} className="px-3.5 py-2.5 flex items-center gap-3">
-              <span className="text-[11px] font-bold text-gray-300 w-16 shrink-0">{label}</span>
+              <span className="text-xs font-bold text-gray-300 w-16 shrink-0">{label}</span>
               <div className="flex-1 h-1.5 rounded-full bg-[#1E1E1E] overflow-hidden">
                 <div className="h-full rounded-full transition-all"
                   style={{ width: `${Math.round(o.p * 100)}%`, background: col }} />
@@ -185,7 +185,7 @@ function OddsPanel({
         })}
       </div>
 
-      <div className="px-3.5 py-2 border-t border-[#2A2A2A] text-[10px] text-gray-600 leading-snug">
+      <div className="px-3.5 py-2 border-t border-[#2A2A2A] text-xs text-gray-600 leading-snug">
         Previsione con l'aria attesa il giorno di gara:{" "}
         <span className="text-gray-400" style={mono}>
           {odds.map((x) => fmtRaceTime(x.o.predictedSec)).filter((v, i, a) => a.indexOf(v) === i).join(" · ")}
@@ -220,7 +220,7 @@ function EvidencePanel({ evidence }: { evidence: EvidenceKey }) {
       >
         <BookOpen className="w-3.5 h-3.5 shrink-0 mt-0.5 text-gray-500" />
         <span className="min-w-0 flex-1">
-          <span className="block text-[10px] font-black tracking-[0.2em] uppercase text-gray-400">
+          <span className="block text-xs font-black tracking-[0.2em] uppercase text-gray-400">
             Cosa allena
           </span>
           <span className="block text-[12px] text-gray-300 leading-snug mt-0.5">{e.what}</span>
@@ -232,14 +232,14 @@ function EvidencePanel({ evidence }: { evidence: EvidenceKey }) {
 
       {open && (
         <div className="px-3.5 pb-3.5 space-y-3">
-          <p className="text-[11.5px] text-gray-400 leading-relaxed">{e.why}</p>
+          <p className="text-xs text-gray-400 leading-relaxed">{e.why}</p>
           <div className="space-y-2.5">
             {e.studies.map((st) => (
               <div key={st.ref} className="border-l-2 border-[#2A2A2A] pl-3">
-                <div className="text-[11px] font-bold text-gray-300 leading-snug">{st.ref}</div>
-                <div className="text-[11px] text-gray-500 leading-snug mt-0.5">{st.says}</div>
+                <div className="text-xs font-bold text-gray-300 leading-snug">{st.ref}</div>
+                <div className="text-xs text-gray-500 leading-snug mt-0.5">{st.says}</div>
                 {st.caveat && (
-                  <div className="text-[10.5px] text-amber-300/70 leading-snug mt-1">⚠ {st.caveat}</div>
+                  <div className="text-xs text-amber-300/70 leading-snug mt-1">⚠ {st.caveat}</div>
                 )}
               </div>
             ))}
@@ -331,16 +331,16 @@ function VdotGainPanel({
     <div className="mt-8 rounded-xl border border-[#2A2A2A] bg-[#0F0F0F] overflow-hidden">
       <div className="px-4 py-3 border-b border-[#2A2A2A] flex flex-wrap items-center gap-x-3 gap-y-1">
         <TrendingUp className="w-4 h-4 shrink-0" style={{ color: "var(--app-accent)" }} />
-        <span className="text-[10px] font-black tracking-[0.2em] uppercase text-gray-300">
+        <span className="text-xs font-black tracking-[0.2em] uppercase text-gray-300">
           Quanto VDOT puoi guadagnare
         </span>
-        <span className="text-[11px] text-gray-500" style={mono}>
+        <span className="text-xs text-gray-500" style={mono}>
           parti da {dec(startVdot)} · {weeks} settimane
         </span>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-[11.5px]" style={mono}>
+        <table className="w-full text-xs" style={mono}>
           <thead>
             <tr className="text-gray-500 border-b border-[#1E1E1E]">
               <th className="text-left font-bold px-4 py-2">Guadagno</th>
@@ -381,7 +381,7 @@ function VdotGainPanel({
         </table>
       </div>
 
-      <div className="px-4 py-3 border-t border-[#2A2A2A] space-y-1.5 text-[11px] leading-snug">
+      <div className="px-4 py-3 border-t border-[#2A2A2A] space-y-1.5 text-xs leading-snug">
         <p className="text-gray-400">
           In <span className="text-gray-200 font-bold">{weeks} settimane</span> fatte per intero la
           letteratura misura circa{" "}
@@ -719,9 +719,9 @@ export function TrainingGrid() {
                     style={{ borderLeftColor: failed ? '#EF4444' : display.color }}
                   >
                     <span className="text-xs font-bold text-gray-200">{display.title}</span>
-                    <span className="text-[10px] text-gray-400 line-clamp-2 leading-tight">{display.details.join(' · ')}</span>
-                    {done && <span className="text-[10px] text-[#10B981]">✓ Effettuata</span>}
-                    {failed && <span className="text-[10px] text-[#EF4444]">✗ Fallita</span>}
+                    <span className="text-xs text-gray-400 line-clamp-2 leading-tight">{display.details.join(' · ')}</span>
+                    {done && <span className="text-xs text-[#10B981]">✓ Effettuata</span>}
+                    {failed && <span className="text-xs text-[#EF4444]">✗ Fallita</span>}
                   </div>
                 )}
               </div>
@@ -871,7 +871,7 @@ export function TrainingGrid() {
                     <XCircle className="w-4 h-4" /> Fallito
                   </button>
                 </div>
-                <p className="text-[11px] text-gray-600 mt-2.5">
+                <p className="text-xs text-gray-600 mt-2.5">
                   Salvato sul database, permanente. Ritocca lo stesso pulsante per annullare.
                 </p>
               </div>
@@ -900,7 +900,7 @@ export function TrainingGrid() {
               {session?.strength_exercises && session.strength_exercises.length > 0 && (
                 <div className="mt-6 pt-6 border-t border-[#2A2A2A]">
                   <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <span className="w-5 h-5 rounded bg-[#8B5CF6]/15 flex items-center justify-center text-[#8B5CF6] text-[10px]">💪</span>
+                    <span className="w-5 h-5 rounded bg-[#8B5CF6]/15 flex items-center justify-center text-[#8B5CF6] text-xs">💪</span>
                     Forza & Prevenzione
                   </h4>
                   <div className="grid gap-2">
@@ -908,7 +908,7 @@ export function TrainingGrid() {
                       <div key={i} className="flex items-center justify-between bg-[#1E1E1E] px-4 py-2.5 rounded-lg border border-[#2A2A2A]">
                         <div className="flex-1 min-w-0">
                           <span className="text-sm text-gray-200 font-medium">{ex.name}</span>
-                          {ex.note && <span className="text-[10px] text-gray-600 ml-2">{ex.note}</span>}
+                          {ex.note && <span className="text-xs text-gray-600 ml-2">{ex.note}</span>}
                         </div>
                         <span className="text-xs text-gray-500 font-mono ml-3 shrink-0">
                           {ex.sets}×{ex.reps}
@@ -941,7 +941,7 @@ export function TrainingGrid() {
                   {restExercises.length > 0 && (
                     <div className="px-8 pb-8">
                       <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                        <span className="w-5 h-5 rounded bg-[#8B5CF6]/15 flex items-center justify-center text-[#8B5CF6] text-[10px]">💪</span>
+                        <span className="w-5 h-5 rounded bg-[#8B5CF6]/15 flex items-center justify-center text-[#8B5CF6] text-xs">💪</span>
                         Sessione Forza & Prevenzione Infortuni
                       </h4>
                       <div className="grid gap-2">
@@ -949,7 +949,7 @@ export function TrainingGrid() {
                           <div key={i} className="flex items-center justify-between bg-[#1E1E1E] px-4 py-2.5 rounded-lg border border-[#2A2A2A]">
                             <div className="flex-1 min-w-0">
                               <span className="text-sm text-gray-200 font-medium">{ex.name}</span>
-                              {ex.note && <span className="text-[10px] text-gray-600 ml-2">{ex.note}</span>}
+                              {ex.note && <span className="text-xs text-gray-600 ml-2">{ex.note}</span>}
                             </div>
                             <span className="text-xs text-gray-500 font-mono ml-3 shrink-0">
                               {ex.sets}×{ex.reps}

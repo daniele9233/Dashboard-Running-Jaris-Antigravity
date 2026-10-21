@@ -6,6 +6,7 @@ import {
 import type { Run } from "../types/api";
 import { ChartExpandButton, ChartFullscreenModal } from "./statistics/ChartFullscreenModal";
 
+import { CHART_SERIES, chartGrid, chartXAxis, chartYAxis } from "./charts";
 interface MainChartProps {
   runs: Run[];
 }
@@ -73,13 +74,13 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   const activeCategories = payload.filter((e: any) => e.value > 0);
   const runCount = activeCategories.length;
   return (
-    <div className="bg-[#1E293B] border border-[#334155] p-3 rounded-lg shadow-xl text-xs min-w-[160px]">
-      <p className="text-[#C0FF00] font-bold mb-1 uppercase tracking-wider text-[11px]">{label}</p>
+    <div className="ea-tooltip text-xs">
+      <p className="text-ea-lime font-bold mb-1 uppercase tracking-wider text-xs">{label}</p>
       <p className="text-base font-black text-white mb-2">{total.toFixed(1)} km</p>
       {runCount > 0 && (
-        <p className="text-[10px] text-text-muted mb-2">{runCount} uscit{runCount === 1 ? "a" : "e"}</p>
+        <p className="text-xs text-text-muted mb-2">{runCount} uscit{runCount === 1 ? "a" : "e"}</p>
       )}
-      <div className="border-t border-white/10 pt-2 space-y-1">
+      <div className="border-t border-ea-hairline pt-2 space-y-1">
         {activeCategories.map((e: any, i: number) => (
           <div key={i} className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: e.color }} />
@@ -259,9 +260,9 @@ export function MainChart({ runs }: MainChartProps) {
           key={key}
           type="button"
           onClick={() => setPeriod(key)}
-          className={`text-[10px] font-bold px-2.5 py-1.5 rounded-md transition-all ${
+          className={`text-xs font-bold px-2.5 py-1.5 rounded-md transition-all ${
             period === key
-              ? "bg-[#C0FF00] text-black"
+              ? "bg-ea-lime text-black"
               : "text-text-muted hover:text-text-primary hover:bg-white/5"
           }`}
         >
@@ -275,25 +276,12 @@ export function MainChart({ runs }: MainChartProps) {
     <ResponsiveContainer width="100%" height="100%">
       <BarChart
         data={chartData}
-        margin={{ top: isExpanded ? 20 : 20, right: isExpanded ? 20 : 0, left: isExpanded ? -10 : -20, bottom: isExpanded ? 20 : 0 }}
+        margin={{ top: isExpanded ? 20 : 20, right: isExpanded ? 20 : 0, left: 0, bottom: isExpanded ? 20 : 0 }}
         barSize={isExpanded ? Math.max(10, barSize) : barSize}
       >
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(192,255,0,0.08)" />
-        <XAxis
-          dataKey="name"
-          axisLine={false}
-          tickLine={false}
-          tick={{ fill: "#64748B", fontSize: isExpanded ? 12 : 9 }}
-          dy={10}
-          interval={period === "TUTTO" && chartData.length > 24 ? Math.floor(chartData.length / 12) : 0}
-        />
-        <YAxis
-          axisLine={false}
-          tickLine={false}
-          tick={{ fill: "#64748B", fontSize: isExpanded ? 12 : 10 }}
-          dx={-10}
-          domain={[0, Math.ceil(maxKm * 1.15)]}
-        />
+        <CartesianGrid {...chartGrid} />
+        <XAxis {...chartXAxis} dataKey="name" dy={10} interval={period === "TUTTO" && chartData.length > 24 ? Math.floor(chartData.length / 12) : 0} />
+        <YAxis {...chartYAxis} dx={-10} domain={[0, Math.ceil(maxKm * 1.15)]} />
         <Tooltip
           cursor={{ fill: "rgba(192,255,0,0.08)" }}
           content={<CustomTooltip />}
@@ -306,25 +294,25 @@ export function MainChart({ runs }: MainChartProps) {
             label={{
               position: "insideLeft",
               value: `AVG ${avgKm} km`,
-              fill: "#D7FF76",
+              fill: CHART_SERIES.primary,
               fontSize: isExpanded ? 12 : 10,
               dy: -10,
             }}
           />
         )}
 
-        <Bar dataKey="easy"      stackId="a" fill="#14B8A6" fillOpacity={0.85} radius={[0, 0, 3, 3]} name="easy" />
-        <Bar dataKey="tempo"     stackId="a" fill="#3B82F6" name="tempo" />
-        <Bar dataKey="intervals" stackId="a" fill="#F59E0B" name="intervals" />
-        <Bar dataKey="long"      stackId="a" fill="#F43F5E" name="long" />
-        <Bar dataKey="race"      stackId="a" fill="#8B5CF6" radius={[3, 3, 0, 0]} name="race" />
+        <Bar dataKey="easy"      stackId="a" fill={CHART_SERIES.compare} fillOpacity={0.85} radius={[0, 0, 3, 3]} name="easy" />
+        <Bar dataKey="tempo"     stackId="a" fill={CHART_SERIES.compare} name="tempo" />
+        <Bar dataKey="intervals" stackId="a" fill={CHART_SERIES.load} name="intervals" />
+        <Bar dataKey="long"      stackId="a" fill={CHART_SERIES.risk} name="long" />
+        <Bar dataKey="race"      stackId="a" fill={CHART_SERIES.tertiary} radius={[3, 3, 0, 0]} name="race" />
       </BarChart>
     </ResponsiveContainer>
   );
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-6 flex flex-col h-full group"
+      className="relative overflow-hidden rounded-xl border border-ea-hairline bg-ea-surface-2 p-6 flex flex-col h-full group"
       style={{ borderLeft: "3px solid #C0FF00" }}
     >
       {/* ── Header ── */}
@@ -335,7 +323,7 @@ export function MainChart({ runs }: MainChartProps) {
             <span className="text-sm text-text-muted font-normal ml-2">{periodLabel}</span>
           </div>
           {periodKm > 0 && (
-            <div className="flex gap-4 mt-1 text-[10px] text-text-muted font-semibold tracking-wider">
+            <div className="flex gap-4 mt-1 text-xs text-text-muted font-semibold tracking-wider">
               <span>{totalRuns} uscite</span>
               <span className="text-text-secondary">·</span>
               <span>avg {avgKm} km/{period === "1S" ? "giorno" : period.includes("S") ? "sett." : "mese"}</span>
@@ -361,31 +349,29 @@ export function MainChart({ runs }: MainChartProps) {
         <div className="hidden">
           <div className="mb-4">
             <h3 className="text-lg font-bold text-text-primary uppercase tracking-widest">CORSE RECENTI</h3>
-            <p className="text-[10px] text-text-muted font-bold tracking-wider">Ultime 5 uscite</p>
+            <p className="text-xs text-text-muted font-bold tracking-wider">Ultime 5 uscite</p>
           </div>
           <div className="flex-1 overflow-y-auto max-h-[300px] space-y-3">
             {recentRuns.length > 0 ? (
               recentRuns.map((run, i) => (
-                <div key={i} className="rounded-xl backdrop-blur-2xl border border-white/[0.12] shadow-[0_8px_32px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] bg-gradient-to-br from-white/[0.06] to-black/50 p-3">
+                <div key={i} className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-3">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor:
-                      run.run_type?.toLowerCase().includes('race') || run.run_type?.toLowerCase().includes('gara') ? '#8B5CF6' :
-                      run.run_type?.toLowerCase().includes('long') || run.run_type?.toLowerCase().includes('fondo') ? '#F43F5E' :
-                      run.run_type?.toLowerCase().includes('interval') || run.run_type?.toLowerCase().includes('ripetute') ? '#F59E0B' :
-                      run.run_type?.toLowerCase().includes('tempo') || run.run_type?.toLowerCase().includes('soglia') ? '#3B82F6' :
-                      '#14B8A6'
+                      run.run_type?.toLowerCase().includes('race') || run.run_type?.toLowerCase().includes('gara') ? CHART_SERIES.tertiary :
+                      run.run_type?.toLowerCase().includes('long') || run.run_type?.toLowerCase().includes('fondo') ? CHART_SERIES.risk :
+                      run.run_type?.toLowerCase().includes('interval') || run.run_type?.toLowerCase().includes('ripetute') ? CHART_SERIES.load :
+                      run.run_type?.toLowerCase().includes('tempo') || run.run_type?.toLowerCase().includes('soglia') ? CHART_SERIES.compare : CHART_SERIES.compare
                     }} />
-                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color:
-                      run.run_type?.toLowerCase().includes('race') || run.run_type?.toLowerCase().includes('gara') ? '#8B5CF6' :
-                      run.run_type?.toLowerCase().includes('long') || run.run_type?.toLowerCase().includes('fondo') ? '#F43F5E' :
-                      run.run_type?.toLowerCase().includes('interval') || run.run_type?.toLowerCase().includes('ripetute') ? '#F59E0B' :
-                      run.run_type?.toLowerCase().includes('tempo') || run.run_type?.toLowerCase().includes('soglia') ? '#3B82F6' :
-                      '#14B8A6'
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color:
+                      run.run_type?.toLowerCase().includes('race') || run.run_type?.toLowerCase().includes('gara') ? CHART_SERIES.tertiary :
+                      run.run_type?.toLowerCase().includes('long') || run.run_type?.toLowerCase().includes('fondo') ? CHART_SERIES.risk :
+                      run.run_type?.toLowerCase().includes('interval') || run.run_type?.toLowerCase().includes('ripetute') ? CHART_SERIES.load :
+                      run.run_type?.toLowerCase().includes('tempo') || run.run_type?.toLowerCase().includes('soglia') ? CHART_SERIES.compare : CHART_SERIES.compare
                     }}>
                       {run.run_type || 'Corsa'}
                     </span>
                   </div>
-                  <div className="flex justify-between text-[10px] text-text-secondary">
+                  <div className="flex justify-between text-xs text-text-secondary">
                     <span>
                       {run.distance_km?.toFixed(1)} km
                     </span>
@@ -393,7 +379,7 @@ export function MainChart({ runs }: MainChartProps) {
                        {run.duration_minutes ? `${Math.floor(Math.round(run.duration_minutes) / 60)}:${String(Math.round(run.duration_minutes) % 60).padStart(2,'0')}` : '—'}
                      </span>
                   </div>
-                  <div className="text-[10px] text-text-muted mt-1">
+                  <div className="text-xs text-text-muted mt-1">
                     {new Date(run.date).toLocaleDateString('it', { day: '2-digit', month: 'short', year: '2-digit' })}
                   </div>
                 </div>
@@ -408,13 +394,13 @@ export function MainChart({ runs }: MainChartProps) {
       </div>
 
       {/* ── Legenda ── */}
-      <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-[#243018] text-[10px] text-text-muted font-semibold tracking-wider justify-center">
+      <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-[#243018] text-xs text-text-muted font-semibold tracking-wider justify-center">
         {[
-          { color: "#14B8A6", label: "EASY RUN" },
-          { color: "#3B82F6", label: "TEMPO" },
-          { color: "#F59E0B", label: "INTERVALS" },
-          { color: "#F43F5E", label: "LONG RUN" },
-          { color: "#8B5CF6", label: "RACE" },
+          { color: CHART_SERIES.compare, label: "EASY RUN" },
+          { color: CHART_SERIES.compare, label: "TEMPO" },
+          { color: CHART_SERIES.load, label: "INTERVALS" },
+          { color: CHART_SERIES.risk, label: "LONG RUN" },
+          { color: CHART_SERIES.tertiary, label: "RACE" },
         ].map(({ color, label }) => (
           <div key={label} className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
@@ -431,15 +417,15 @@ export function MainChart({ runs }: MainChartProps) {
         accent="#3B82F6"
         details={
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4 items-center">
-            <div className="flex flex-wrap gap-4 text-[10px] text-text-muted font-semibold tracking-wider">
+            <div className="flex flex-wrap gap-4 text-xs text-text-muted font-semibold tracking-wider">
               <span>{totalRuns} uscite</span>
               <span>avg {avgKm} km/{period === "1S" ? "giorno" : period.includes("S") ? "sett." : "mese"}</span>
               <span>max {maxWeekKm} km</span>
               <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#14B8A6]" />Easy</span>
               <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#3B82F6]" />Tempo</span>
-              <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#F59E0B]" />Intervals</span>
-              <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#F43F5E]" />Long</span>
-              <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#8B5CF6]" />Race</span>
+              <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-ea-amber" />Intervals</span>
+              <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-ea-rose" />Long</span>
+              <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-ea-violet" />Race</span>
             </div>
             {renderPeriodSelector()}
           </div>
