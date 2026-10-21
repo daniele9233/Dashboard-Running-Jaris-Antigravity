@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-10-21T14:46:27.667Z",
+  "generated_at": "2026-10-21T15:12:58.759Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,8 +14,8 @@
     ]
   },
   "counts": {
-    "files": 249,
-    "backend_routes": 68,
+    "files": 250,
+    "backend_routes": 69,
     "frontend_routes": 19,
     "api_clients": 79
   },
@@ -146,7 +146,7 @@
       "routes": [],
       "imports": [],
       "hash": "34bfe5c40a5796bdf42bb9377dd4081615ff3ecda480afcdce523483c0614b91",
-      "last_modified": "2026-09-16T15:57:56.323Z",
+      "last_modified": "2026-10-21T15:03:30.602Z",
       "size_bytes": 298
     },
     {
@@ -166,9 +166,9 @@
       "exports": [],
       "routes": [],
       "imports": [],
-      "hash": "8087c3d85c2b22db3b3bd28b0d161528bd854540bec5db04d3e52ac097f0ec28",
-      "last_modified": "2026-09-16T15:59:33.389Z",
-      "size_bytes": 3364
+      "hash": "fac10a5a150c6599837b48e82803f797ec61464a8d05aeeac03e2ff5f03237de",
+      "last_modified": "2026-10-21T15:09:19.438Z",
+      "size_bytes": 4131
     },
     {
       "path": "backend/analyze_all_months.py",
@@ -705,6 +705,7 @@
         "GET /api/garmin/status",
         "GET /api/heatmap",
         "GET /api/injury-risk",
+        "GET /api/interval-sessions",
         "GET /api/prediction-history",
         "GET /api/recovery-score",
         "GET /api/runner-dna",
@@ -773,9 +774,9 @@
         "typing",
         "urllib.parse"
       ],
-      "hash": "978f196cb5c1d3f25ce10b2bd9730f8319150ae1bc90756fbdc76cd4b13fb828",
-      "last_modified": "2026-09-29T04:49:14.256Z",
-      "size_bytes": 519517
+      "hash": "f386b37b9fcf2c0bf6f21d65965eccbc4ca1e8a6b648ef96d1016228b114516d",
+      "last_modified": "2026-10-21T15:12:58.759Z",
+      "size_bytes": 523355
     },
     {
       "path": "backend/test_fast_biomechanics.py",
@@ -814,6 +815,40 @@
       "hash": "5f83e35c770b700571e7cdbb8c4e9eb549330552c55bc7ab26bdecc98f261bdf",
       "last_modified": "2026-09-16T15:59:31.660Z",
       "size_bytes": 5931
+    },
+    {
+      "path": "backend/test_interval_sessions.py",
+      "kind": "backend-script",
+      "purpose": "Backend helper or diagnostic script test_interval_sessions.py.",
+      "touch_when": [
+        "activities",
+        "api",
+        "training"
+      ],
+      "exports": [
+        "_days_ago",
+        "_list",
+        "lap",
+        "reps_laps",
+        "run",
+        "test_a_steady_run_has_no_summary",
+        "test_list_asks_only_for_outdoor_runs_with_enough_laps",
+        "test_list_keeps_the_last_four_months_strongest_first",
+        "test_list_months_and_limit_are_clamped",
+        "test_official_interval_vdot_is_unchanged",
+        "test_steady_run_is_not_an_interval_session",
+        "test_summary_describes_the_session",
+        "test_the_fastest_rep_is_not_the_average",
+        "test_tight_groups_leave_the_warm_up_out_of_the_work",
+        "test_tight_vdot_reads_the_reps_not_the_warm_up"
+      ],
+      "routes": [],
+      "imports": [
+        "pathlib"
+      ],
+      "hash": "5897c366d5f1bc6fc86d0394ac8e55f13f6646181860ee49e31b66131991e0c3",
+      "last_modified": "2026-10-21T15:12:58.760Z",
+      "size_bytes": 6189
     },
     {
       "path": "backend/test_intervals.py",
@@ -1961,7 +1996,7 @@
         "./client"
       ],
       "hash": "d19fe9968a5a4967fb279d565a1d90f41bee32fdeee87a0a3f566a7b93819f24",
-      "last_modified": "2026-10-21T14:42:32.067Z",
+      "last_modified": "2026-10-21T15:12:58.732Z",
       "size_bytes": 26643
     },
     {
@@ -5840,8 +5875,8 @@
         "react"
       ],
       "hash": "4d84a857730c737a9bd1b5dd7f6b6a45566304f96de5964184e43c2ca81cbd7c",
-      "last_modified": "2026-10-21T14:43:06.754Z",
-      "size_bytes": 13995
+      "last_modified": "2026-10-21T15:12:58.733Z",
+      "size_bytes": 14294
     },
     {
       "path": "src/components/TrainingGrid.tsx",
@@ -5876,8 +5911,8 @@
         "react-i18next"
       ],
       "hash": "eb8f14723d3feda5dced2e7eed95c366ecbe350f4804d8016e293bdfc92dd2c5",
-      "last_modified": "2026-10-21T14:46:27.668Z",
-      "size_bytes": 51106
+      "last_modified": "2026-10-21T15:12:58.734Z",
+      "size_bytes": 52211
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -6307,8 +6342,8 @@
       "routes": [],
       "imports": [],
       "hash": "c3a1ce97b172f467ce1b8ad3cf78c7792c676f240a4d205e67c5a60fbaabc137",
-      "last_modified": "2026-09-29T04:50:34.092Z",
-      "size_bytes": 842
+      "last_modified": "2026-10-21T15:12:58.734Z",
+      "size_bytes": 870
     },
     {
       "path": "src/hooks/useApi.ts",
@@ -6597,7 +6632,7 @@
       "routes": [],
       "imports": [],
       "hash": "ded061d3ce4ca4c2648e3c1ffb8b8ca9968a8d08ff30b4b4fd39f1c1708d5f7f",
-      "last_modified": "2026-09-29T04:50:30.177Z",
+      "last_modified": "2026-10-21T15:12:58.734Z",
       "size_bytes": 17733
     },
     {
@@ -6958,8 +6993,8 @@
         "vitest"
       ],
       "hash": "d6e972f15c10ed3179edd46c6f5d4a6e73d88af09eb23bf812c72acbc3334ae3",
-      "last_modified": "2026-10-21T14:46:25.068Z",
-      "size_bytes": 7619
+      "last_modified": "2026-10-21T15:12:58.735Z",
+      "size_bytes": 7810
     },
     {
       "path": "src/utils/trainingGoal.ts",
@@ -6992,8 +7027,8 @@
         "../types/api"
       ],
       "hash": "9ef0b27aff5fa5c30683c44fbbc548e84c0fdf45eebd901f89ee854e4b65103c",
-      "last_modified": "2026-10-21T14:46:21.495Z",
-      "size_bytes": 9097
+      "last_modified": "2026-10-21T15:12:58.735Z",
+      "size_bytes": 9338
     },
     {
       "path": "src/utils/weather.ts",
@@ -7074,49 +7109,49 @@
       "path": "/api/admin/backfill-dynamics",
       "handler": "backfill_dynamics",
       "file": "backend/server.py",
-      "line": 9050
+      "line": 9141
     },
     {
       "method": "POST",
       "path": "/api/admin/reclassify-runs",
       "handler": "reclassify_runs",
       "file": "backend/server.py",
-      "line": 9104
+      "line": 9195
     },
     {
       "method": "POST",
       "path": "/api/ai/analyze-run",
       "handler": "analyze_run",
       "file": "backend/server.py",
-      "line": 7706
+      "line": 7797
     },
     {
       "method": "GET",
       "path": "/api/ai/dashboard-insight",
       "handler": "get_dashboard_insight",
       "file": "backend/server.py",
-      "line": 7814
+      "line": 7905
     },
     {
       "method": "GET",
       "path": "/api/analytics",
       "handler": "get_analytics",
       "file": "backend/server.py",
-      "line": 6363
+      "line": 6394
     },
     {
       "method": "GET",
       "path": "/api/analytics/pro",
       "handler": "get_pro_analytics",
       "file": "backend/server.py",
-      "line": 6188
+      "line": 6219
     },
     {
       "method": "GET",
       "path": "/api/badges",
       "handler": "get_badges",
       "file": "backend/server.py",
-      "line": 7404
+      "line": 7435
     },
     {
       "method": "GET",
@@ -7137,21 +7172,21 @@
       "path": "/api/best-efforts",
       "handler": "get_best_efforts",
       "file": "backend/server.py",
-      "line": 7572
+      "line": 7603
     },
     {
       "method": "GET",
       "path": "/api/conquests",
       "handler": "get_conquests",
       "file": "backend/server.py",
-      "line": 9951
+      "line": 10042
     },
     {
       "method": "PUT",
       "path": "/api/conquests",
       "handler": "set_conquests",
       "file": "backend/server.py",
-      "line": 9959
+      "line": 10050
     },
     {
       "method": "GET",
@@ -7172,35 +7207,35 @@
       "path": "/api/field-test",
       "handler": "post_field_test",
       "file": "backend/server.py",
-      "line": 6462
+      "line": 6493
     },
     {
       "method": "DELETE",
       "path": "/api/field-test/{test_id}",
       "handler": "delete_field_test",
       "file": "backend/server.py",
-      "line": 6513
+      "line": 6544
     },
     {
       "method": "GET",
       "path": "/api/field-test/divergence",
       "handler": "get_field_test_divergence",
       "file": "backend/server.py",
-      "line": 6682
+      "line": 6713
     },
     {
       "method": "GET",
       "path": "/api/field-test/latest",
       "handler": "get_field_test_latest",
       "file": "backend/server.py",
-      "line": 6493
+      "line": 6524
     },
     {
       "method": "GET",
       "path": "/api/field-test/list",
       "handler": "get_field_test_list",
       "file": "backend/server.py",
-      "line": 6504
+      "line": 6535
     },
     {
       "method": "GET",
@@ -7221,147 +7256,154 @@
       "path": "/api/garmin/auth-start",
       "handler": "garmin_auth_start",
       "file": "backend/server.py",
-      "line": 10182
+      "line": 10273
     },
     {
       "method": "GET",
       "path": "/api/garmin/csv-data",
       "handler": "get_garmin_csv_data",
       "file": "backend/server.py",
-      "line": 11380
+      "line": 11471
     },
     {
       "method": "DELETE",
       "path": "/api/garmin/csv-data/{doc_id}",
       "handler": "delete_garmin_csv_data",
       "file": "backend/server.py",
-      "line": 11399
+      "line": 11490
     },
     {
       "method": "POST",
       "path": "/api/garmin/csv-import",
       "handler": "garmin_csv_import",
       "file": "backend/server.py",
-      "line": 11198
+      "line": 11289
     },
     {
       "method": "POST",
       "path": "/api/garmin/csv-link",
       "handler": "garmin_csv_link",
       "file": "backend/server.py",
-      "line": 11371
+      "line": 11462
     },
     {
       "method": "POST",
       "path": "/api/garmin/exchange-ticket",
       "handler": "garmin_exchange_ticket",
       "file": "backend/server.py",
-      "line": 10205
+      "line": 10296
     },
     {
       "method": "GET",
       "path": "/api/garmin/gct-analysis",
       "handler": "get_gct_analysis",
       "file": "backend/server.py",
-      "line": 11422
+      "line": 11513
     },
     {
       "method": "POST",
       "path": "/api/garmin/login",
       "handler": "garmin_login_direct",
       "file": "backend/server.py",
-      "line": 10158
+      "line": 10249
     },
     {
       "method": "POST",
       "path": "/api/garmin/save-token",
       "handler": "garmin_save_token",
       "file": "backend/server.py",
-      "line": 10126
+      "line": 10217
     },
     {
       "method": "GET",
       "path": "/api/garmin/status",
       "handler": "garmin_status",
       "file": "backend/server.py",
-      "line": 10115
+      "line": 10206
     },
     {
       "method": "POST",
       "path": "/api/garmin/sync-all",
       "handler": "garmin_sync_all",
       "file": "backend/server.py",
-      "line": 10442
+      "line": 10533
     },
     {
       "method": "POST",
       "path": "/api/garmin/sync",
       "handler": "garmin_sync",
       "file": "backend/server.py",
-      "line": 10290
+      "line": 10381
     },
     {
       "method": "GET",
       "path": "/api/heatmap",
       "handler": "get_heatmap",
       "file": "backend/server.py",
-      "line": 7689
+      "line": 7780
     },
     {
       "method": "GET",
       "path": "/api/injury-risk",
       "handler": "get_injury_risk",
       "file": "backend/server.py",
-      "line": 7093
+      "line": 7124
+    },
+    {
+      "method": "GET",
+      "path": "/api/interval-sessions",
+      "handler": "get_interval_sessions",
+      "file": "backend/server.py",
+      "line": 7751
     },
     {
       "method": "POST",
       "path": "/api/jarvis/chat",
       "handler": "jarvis_chat",
       "file": "backend/server.py",
-      "line": 10500
+      "line": 10591
     },
     {
       "method": "GET",
       "path": "/api/prediction-history",
       "handler": "get_prediction_history",
       "file": "backend/server.py",
-      "line": 6430
+      "line": 6461
     },
     {
       "method": "POST",
       "path": "/api/recovery-checkin",
       "handler": "post_recovery_checkin",
       "file": "backend/server.py",
-      "line": 7139
+      "line": 7170
     },
     {
       "method": "GET",
       "path": "/api/recovery-score",
       "handler": "get_recovery_score",
       "file": "backend/server.py",
-      "line": 7076
+      "line": 7107
     },
     {
       "method": "GET",
       "path": "/api/runner-dna-legacy",
       "handler": "get_runner_dna_legacy",
       "file": "backend/server.py",
-      "line": 8661
+      "line": 8752
     },
     {
       "method": "GET",
       "path": "/api/runner-dna",
       "handler": "get_runner_dna",
       "file": "backend/server.py",
-      "line": 8334
+      "line": 8425
     },
     {
       "method": "DELETE",
       "path": "/api/runner-dna/cache",
       "handler": "clear_runner_dna_cache",
       "file": "backend/server.py",
-      "line": 9005
+      "line": 9096
     },
     {
       "method": "POST",
@@ -7431,35 +7473,35 @@
       "path": "/api/sub20/evaluate-session",
       "handler": "sub20_evaluate_session",
       "file": "backend/server.py",
-      "line": 9653
+      "line": 9744
     },
     {
       "method": "GET",
       "path": "/api/sub20/status",
       "handler": "get_sub20_status",
       "file": "backend/server.py",
-      "line": 9824
+      "line": 9915
     },
     {
       "method": "PUT",
       "path": "/api/sub20/status",
       "handler": "set_sub20_status",
       "file": "backend/server.py",
-      "line": 9846
+      "line": 9937
     },
     {
       "method": "GET",
       "path": "/api/supercompensation",
       "handler": "get_supercompensation",
       "file": "backend/server.py",
-      "line": 7151
+      "line": 7182
     },
     {
       "method": "GET",
       "path": "/api/test-ai",
       "handler": "test_ai_connection",
       "file": "backend/server.py",
-      "line": 9014
+      "line": 9105
     },
     {
       "method": "GET",
@@ -7508,42 +7550,42 @@
       "path": "/api/user/weekly-goal",
       "handler": "get_weekly_goal",
       "file": "backend/server.py",
-      "line": 9982
+      "line": 10073
     },
     {
       "method": "PUT",
       "path": "/api/user/weekly-goal",
       "handler": "set_weekly_goal",
       "file": "backend/server.py",
-      "line": 9990
+      "line": 10081
     },
     {
       "method": "GET",
       "path": "/api/vdot/paces",
       "handler": "get_vdot_paces",
       "file": "backend/server.py",
-      "line": 6831
+      "line": 6862
     },
     {
       "method": "POST",
       "path": "/api/weather/backfill",
       "handler": "backfill_run_weather",
       "file": "backend/server.py",
-      "line": 9463
+      "line": 9554
     },
     {
       "method": "GET",
       "path": "/api/weekly-history",
       "handler": "get_weekly_history",
       "file": "backend/server.py",
-      "line": 7466
+      "line": 7497
     },
     {
       "method": "GET",
       "path": "/api/weekly-report",
       "handler": "get_weekly_report",
       "file": "backend/server.py",
-      "line": 7441
+      "line": 7472
     }
   ],
   "frontend_routes": [

@@ -4195,7 +4195,25 @@ def _interval_vdot_from_laps(run: dict) -> Optional[float]:
     ~3:46/km al fresco → sconto 5,3% → ~3:58/km → VDOT ~49,8, in linea con il
     48,9 del suo 5 km e appena sopra, com'è giusto per una prova più recente.
     """
-    laps = run.get("laps") or []
+    groups = _interval_lap_groups(run.get("laps") or [])
+    if groups is None:
+        return None
+    return _interval_vdot_from_groups(run, *groups)
+
+
+def _interval_lap_groups(laps: list, tight: bool = False) -> Optional[tuple]:
+    """Giri di lavoro e di recupero di una seduta a ripetute, separati sul passo.
+
+    Ritorna (lavoro, recupero) come liste di (metri, secondi), oppure None se la
+    seduta non ha il contrasto di una seduta a ripetute.
+
+    Con `tight` il lavoro tiene solo i giri entro il 15% dal più veloce: un
+    riscaldamento corso a 5:30 con i recuperi camminati a 12:00 sta sotto il
+    taglio e verrebbe contato come ripetuta, abbassando il VDOT della seduta. Il
+    calcolo ufficiale non lo usa (prende il massimo fra più stime, quindi una
+    stima bassa non pesa); l'elenco delle sedute sì, perché lì ogni seduta si
+    legge da sola.
+    """
     valid = [
         (float(l.get("distance") or 0), float(l.get("moving_time") or 0))
         for l in laps
@@ -4212,6 +4230,8 @@ def _interval_vdot_from_laps(run: dict) -> Optional[float]:
     cut = fastest + (slowest - fastest) * 0.40
     work = [(d, t) for d, t in valid if t / (d / 1000.0) <= cut]
     rest = [(d, t) for d, t in valid if t / (d / 1000.0) > cut]
+    if tight:
+        work = [(d, t) for d, t in work if t / (d / 1000.0) <= fastest * 1.15]
     if len(work) < 3:
         return None
 
@@ -4219,6 +4239,17 @@ def _interval_vdot_from_laps(run: dict) -> Optional[float]:
     work_sec = sum(t for _, t in work)
     if work_km < 2.0 or work_sec <= 0:
         return None
+    return work, rest
+
+
+def _interval_vdot_from_groups(run: dict, work: list, rest: list) -> Optional[float]:
+    """Il VDOT di una seduta a ripetute, dai suoi giri di lavoro e di recupero.
+
+    Il conto è quello descritto in `_interval_vdot_from_laps`: passo al fresco,
+    sconto del recupero, lettura come ritmo gara 5K, inversione di Daniels.
+    """
+    work_km = sum(d for d, _ in work) / 1000.0
+    work_sec = sum(t for _, t in work)
     rep_pace = work_sec / work_km
 
     # Al fresco, con la stessa correzione ambientale usata ovunque.
@@ -7684,6 +7715,66 @@ async def get_best_efforts():
     order = [t[0] for t in targets]
     result.sort(key=lambda x: order.index(x["distance"]) if x["distance"] in order else 99)
     return {"efforts": [{k: v[k] for k in ("distance", "time", "pace", "date", "run_id")} for v in result]}
+
+
+def _interval_session_summary(run: dict) -> Optional[dict]:
+    """Una seduta a ripetute, letta dai giri: quante ripetute, a che passo, e il
+    VDOT che dimostra con lo stesso conto del resto dell'app."""
+    groups = _interval_lap_groups(run.get("laps") or [], tight=True)
+    if groups is None:
+        return None
+    work, rest = groups
+    vdot = _interval_vdot_from_groups(run, work, rest)
+    d = _run_date_obj(run)
+    if vdot is None or d is None:
+        return None
+
+    paces = [t / (dist / 1000.0) for dist, t in work]
+    fastest = min(range(len(work)), key=lambda i: paces[i])
+    work_m = sum(dist for dist, _ in work)
+    work_s = sum(t for _, t in work)
+    return {
+        "run_id": str(run.get("_id") or ""),
+        "date": d.isoformat(),
+        "name": run.get("name"),
+        "n_reps": len(work),
+        "avg_rep_m": round(work_m / len(work)),
+        "work_pace_sec": round(work_s / (work_m / 1000.0), 1),
+        "fastest_rep_m": round(work[fastest][0]),
+        "fastest_pace_sec": round(paces[fastest], 1),
+        "rest_avg_sec": round(sum(t for _, t in rest) / len(rest)) if rest else None,
+        "temp_c": _weather_value(run, "temperature", "temp_c"),
+        "vdot": round(vdot, 1),
+    }
+
+
+@app.get("/api/interval-sessions")
+async def get_interval_sessions(months: int = 4, limit: int = 12):
+    """Le sedute a ripetute degli ultimi `months` mesi, dalla più forte.
+
+    Servono a scegliere da dove far partire un piano: ogni seduta dice che
+    ripetute ha fatto, la più veloce, e il VDOT che dimostra — letto dai giri
+    dell'orologio, non dagli split al km che mescolano prova e recupero.
+    """
+    athlete_id = await _get_athlete_id()
+    months = max(1, min(12, months))
+    limit = max(1, min(50, limit))
+    cutoff = dt.date.today() - dt.timedelta(days=round(months * 30.4))
+
+    q = valid_outdoor_runs_query(athlete_id)
+    q["laps.3"] = {"$exists": True}   # almeno quattro giri: 3 prove + 1 recupero
+    runs = await db.runs.find(q, {"streams": 0, "polyline": 0}).to_list(length=None)
+
+    sessions = []
+    for r in runs:
+        d = _run_date_obj(r)
+        if d is None or d < cutoff:
+            continue
+        s = _interval_session_summary(r)
+        if s:
+            sessions.append(s)
+    sessions.sort(key=lambda s: s["vdot"], reverse=True)
+    return {"months": months, "sessions": sessions[:limit]}
 
 
 @app.get("/api/heatmap")
