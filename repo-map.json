@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-10-21T14:19:11.627Z",
+  "generated_at": "2026-10-21T14:31:54.651Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 251,
+    "files": 246,
     "backend_routes": 68,
     "frontend_routes": 19,
     "api_clients": 78
@@ -3149,7 +3149,9 @@
       ],
       "routes": [],
       "imports": [
-        "../../data/mezzaOttobrePlan",
+        "../../api",
+        "../../data/kikkoSub20Plan",
+        "../../hooks/useApi",
         "../../types/api",
         "../celebrations/gsapSetup",
         "../statistics/chartTheme",
@@ -3161,9 +3163,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "35ec4db33eaadcd87d02ac1ec4ef4df396f5d17e4cb30fe6935cb2030979f825",
-      "last_modified": "2026-09-18T11:30:38.289Z",
-      "size_bytes": 45419
+      "hash": "ec29479527ce682316b1ea4c12250c1eadc7036f2f0899f61c65daa78148328a",
+      "last_modified": "2026-10-21T14:31:53.854Z",
+      "size_bytes": 45855
     },
     {
       "path": "src/components/gamification/evolutionEngine.test.ts",
@@ -3419,9 +3421,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "6a62eae2fc2067564d59934cd687c45e60246a526dff14d03faf22ecc0957e4b",
-      "last_modified": "2026-09-18T11:30:38.290Z",
-      "size_bytes": 24525
+      "hash": "c87429e700e1575ab7d3500b9eb57428a04129cb2bbfafcb980545fdffd67e5c",
+      "last_modified": "2026-10-21T14:31:53.855Z",
+      "size_bytes": 24577
     },
     {
       "path": "src/components/gamification/goalConeEngine.test.ts",
@@ -3445,9 +3447,9 @@
         "./physioEngine",
         "vitest"
       ],
-      "hash": "5dfb8750f8b79c2f6ea9947773ba29ba5993aa64e5995d699286d680cb0dfc30",
-      "last_modified": "2026-09-17T09:14:04.988Z",
-      "size_bytes": 6804
+      "hash": "f6b36680811cd0a581c69b1adb133b4478a8b47708d2e842589c3ffe609549df",
+      "last_modified": "2026-10-21T14:31:53.856Z",
+      "size_bytes": 6588
     },
     {
       "path": "src/components/gamification/goalConeEngine.ts",
@@ -3465,8 +3467,7 @@
         "ConeGoal",
         "coneGoals",
         "ConePoint",
-        "GoalCone",
-        "PlanGoalInput"
+        "GoalCone"
       ],
       "routes": [],
       "imports": [
@@ -3474,9 +3475,9 @@
         "./gamiCore",
         "./physioEngine"
       ],
-      "hash": "6e3350eed833295419f43e7080555a62f49b984ea754e7013a75e2a2d36d2fdf",
-      "last_modified": "2026-09-17T09:14:31.718Z",
-      "size_bytes": 8148
+      "hash": "9b2184c9edfd9dfa505bd9922ea45bbfe32502ba5aba06444acd339dee040be7",
+      "last_modified": "2026-10-21T14:31:53.856Z",
+      "size_bytes": 8039
     },
     {
       "path": "src/components/gamification/italyRegions.ts",
@@ -3948,11 +3949,11 @@
       ],
       "routes": [],
       "imports": [
-        "../../data/mezzaOttobrePlan"
+        "../../data/kikkoSub20Plan"
       ],
-      "hash": "83ee386c52a660e39c533edd4e6fb9cb8ccb259ab0d16c0fb831258aaac11d89",
-      "last_modified": "2026-09-18T12:35:33.339Z",
-      "size_bytes": 3174
+      "hash": "45912830e06e3f17b8ebc922db26916fd10062622be9b6c9f0697029268a002f",
+      "last_modified": "2026-10-21T14:31:53.857Z",
+      "size_bytes": 3112
     },
     {
       "path": "src/components/hero/HeroGlyphs.tsx",
@@ -5801,17 +5802,16 @@
       "exports": [
         "AdherenceBanner",
         "AdherenceStrip",
-        "SessionVerdict",
-        "VERDICT_STYLE"
+        "SessionVerdict"
       ],
       "routes": [],
       "imports": [
         "../utils/trainingAdherence",
         "lucide-react"
       ],
-      "hash": "6a67fd0bbb7b80c69d87b6f7dd1520d4c12bb2e6c2ef19f3b256a779bcd6f49e",
-      "last_modified": "2026-09-18T11:30:38.285Z",
-      "size_bytes": 6734
+      "hash": "879d017fa2a045b5b067342b9fbfba5e63599be61bfccda09046236a76113bd3",
+      "last_modified": "2026-10-21T14:31:53.852Z",
+      "size_bytes": 6727
     },
     {
       "path": "src/components/TrainingGrid.tsx",
@@ -5820,7 +5820,9 @@
       "touch_when": [
         "activities",
         "ai",
+        "garmin",
         "layout",
+        "strava",
         "training",
         "types"
       ],
@@ -5830,58 +5832,20 @@
       "routes": [],
       "imports": [
         "../api",
-        "../data/mezzaOttobrePlan",
+        "../data/kikkoEvidence",
+        "../data/kikkoSub20Plan",
         "../hooks/apiCacheKeys",
         "../hooks/useApi",
         "../types/api",
         "../utils/trainingAdherence",
         "./TrainingAdherence",
-        "./TrainingPlanPanels",
         "lucide-react",
         "react",
         "react-i18next"
       ],
-      "hash": "bd3745884d32bbc59b21469e697d56f1663fb0bd7458aae657a051196480cec9",
-      "last_modified": "2026-10-04T14:56:07.808Z",
-      "size_bytes": 23576
-    },
-    {
-      "path": "src/components/TrainingPlanPanels.tsx",
-      "kind": "frontend-component",
-      "purpose": "React component TrainingPlanPanels.",
-      "touch_when": [
-        "ai",
-        "garmin",
-        "layout",
-        "training",
-        "types"
-      ],
-      "exports": [
-        "AfterPanel",
-        "ChangesPanel",
-        "ManualStatus",
-        "NextSession",
-        "PlanBibs",
-        "PlanDayBody",
-        "PlanLegend",
-        "PlanWeeks",
-        "RacePanel",
-        "RoutineCard",
-        "RulesPanel",
-        "StrengthPanel",
-        "ZonesPanel"
-      ],
-      "routes": [],
-      "imports": [
-        "../data/mezzaOttobrePlan",
-        "../utils/trainingAdherence",
-        "./TrainingAdherence",
-        "lucide-react",
-        "react"
-      ],
-      "hash": "2b6a3d142f0d6b47ec3ec933af52e8c4b22d2cc5f08e8a67ab50fcd3dd9db2ac",
-      "last_modified": "2026-09-20T12:02:35.819Z",
-      "size_bytes": 20472
+      "hash": "be7f1247803928f02b594bc3f6bd6468302d7773f14711e132551a22bcc3c93c",
+      "last_modified": "2026-10-21T14:31:53.853Z",
+      "size_bytes": 59932
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -5902,7 +5866,6 @@
       "routes": [],
       "imports": [
         "../api",
-        "../data/mezzaOttobrePlan",
         "../hooks/apiCacheKeys",
         "../hooks/useApi",
         "../types/api",
@@ -5910,9 +5873,9 @@
         "react",
         "recharts"
       ],
-      "hash": "9b643df65e5a1d8301b3a7237588f74a743c4bf51115ad3409c24d2d0898a9d6",
-      "last_modified": "2026-09-18T11:30:38.286Z",
-      "size_bytes": 10590
+      "hash": "b6ebc91fabd894c2292255e6426a027cadb510059bad8d1aee6cfaed98ee111c",
+      "last_modified": "2026-10-21T14:31:53.853Z",
+      "size_bytes": 10516
     },
     {
       "path": "src/components/TrainingView.tsx",
@@ -6261,78 +6224,6 @@
       "size_bytes": 51013
     },
     {
-      "path": "src/data/mezzaOttobrePlan.test.ts",
-      "kind": "frontend-source",
-      "purpose": "frontend-source mezzaOttobrePlan.test.ts.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "training"
-      ],
-      "exports": [],
-      "routes": [],
-      "imports": [
-        "../utils/trainingAdherence",
-        "./mezzaOttobrePlan",
-        "vitest"
-      ],
-      "hash": "d9c987819e01c222430693fc6373cf2234e3bf8822b7227af84342a6b868b960",
-      "last_modified": "2026-10-04T14:54:17.046Z",
-      "size_bytes": 6013
-    },
-    {
-      "path": "src/data/mezzaOttobrePlan.ts",
-      "kind": "frontend-source",
-      "purpose": "frontend-source mezzaOttobrePlan.ts.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "garmin",
-        "training",
-        "types"
-      ],
-      "exports": [
-        "AFTER_RACE",
-        "BIKE_ZONES",
-        "Exercise",
-        "nextPlanDay",
-        "PLAN_BIBS",
-        "PLAN_CHANGES",
-        "PLAN_DAY_BY_DATE",
-        "PLAN_DAYS",
-        "PLAN_GOALS",
-        "PLAN_KINDS",
-        "PLAN_LEGEND",
-        "PLAN_META",
-        "PLAN_RULES",
-        "PLAN_WEEKS",
-        "planDateLabel",
-        "PlanDay",
-        "PlanKind",
-        "planRunSessions",
-        "PlanWeek",
-        "planWeekOf",
-        "RACE_FUEL",
-        "RACE_HM",
-        "Routine",
-        "ROUTINE_GEAR",
-        "ROUTINE_RULES",
-        "routineDays",
-        "RoutineId",
-        "ROUTINES",
-        "RUN_ZONES",
-        "ZONE_NOTES",
-        "ZoneRow"
-      ],
-      "routes": [],
-      "imports": [
-        "../types/api"
-      ],
-      "hash": "a29ba640ddb97fcd21476df44a008a7df0420899acfa9654141b99935c4bbfd6",
-      "last_modified": "2026-10-04T14:53:26.438Z",
-      "size_bytes": 23987
-    },
-    {
       "path": "src/data/sub20Plan.ts",
       "kind": "frontend-source",
       "purpose": "frontend-source sub20Plan.ts.",
@@ -6553,9 +6444,9 @@
       "exports": [],
       "routes": [],
       "imports": [],
-      "hash": "d32755395a6f7e88be1735d7f589b06f8157f3e7298e117a25eb676e72dff32e",
-      "last_modified": "2026-09-18T15:52:18.361Z",
-      "size_bytes": 8255
+      "hash": "b45530af121e34f7747c232257e009fd9faa105172b81d1e7d9f927a1501f627",
+      "last_modified": "2026-10-21T14:31:54.652Z",
+      "size_bytes": 8187
     },
     {
       "path": "src/lib/utils.ts",
@@ -6936,63 +6827,6 @@
       "hash": "28367f5a2b350e3d5f1b515f67100e3f0338da26e4c13977606aab01d019705e",
       "last_modified": "2026-07-26T11:00:48.279Z",
       "size_bytes": 29833
-    },
-    {
-      "path": "src/utils/taperForecast.test.ts",
-      "kind": "frontend-utility",
-      "purpose": "Shared utility module exporting taperForecast.test.",
-      "touch_when": [
-        "ai",
-        "training",
-        "types"
-      ],
-      "exports": [],
-      "routes": [],
-      "imports": [
-        "../data/mezzaOttobrePlan",
-        "../types/api",
-        "./taperForecast",
-        "vitest"
-      ],
-      "hash": "1ffd96b2962c2f7b4423f0c89e82a338fb00f49fd90d9117bd17db51a9741292",
-      "last_modified": "2026-10-04T14:54:35.487Z",
-      "size_bytes": 5013
-    },
-    {
-      "path": "src/utils/taperForecast.ts",
-      "kind": "frontend-utility",
-      "purpose": "Shared utility module exporting actualDaily, addDays, ALPHA_ATL, ALPHA_CTL.",
-      "touch_when": [
-        "ai",
-        "dashboard",
-        "training",
-        "types"
-      ],
-      "exports": [
-        "actualDaily",
-        "addDays",
-        "ALPHA_ATL",
-        "ALPHA_CTL",
-        "formOf",
-        "LoadPoint",
-        "PLAN_ANCHOR",
-        "plannedCurve",
-        "plannedTrimp",
-        "RACE_EVE_ISO",
-        "RACE_ISO",
-        "TAPER_START_ISO",
-        "TaperPhase",
-        "taperReport",
-        "TaperReport"
-      ],
-      "routes": [],
-      "imports": [
-        "../data/mezzaOttobrePlan",
-        "../types/api"
-      ],
-      "hash": "32ae2925ec2f16ec6e5c1a2fde7fd74e1250248c5a05e7e04455247e66c8e22a",
-      "last_modified": "2026-10-04T14:53:42.036Z",
-      "size_bytes": 11714
     },
     {
       "path": "src/utils/telemetry.ts",

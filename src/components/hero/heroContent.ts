@@ -3,7 +3,7 @@
  * are matched by letter, so a word without an "O" simply loses its object.
  */
 
-import { PLAN_BIBS } from "../../data/mezzaOttobrePlan";
+import { KIKKO_SUB20_META } from "../../data/kikkoSub20Plan";
 
 export type GlyphKind = "orb" | "watch" | "track";
 
@@ -15,13 +15,10 @@ export interface HeroWord {
   spec: string;
 }
 
-/**
- * Straight from the training plan, so the hero never promises a stale time.
- * The half is a pace goal: `time` is the pace per km, not a finish time.
- */
+/** Straight from the training plan, so the hero never promises a stale time. */
 export const HERO_GOAL = {
-  race: "21K",
-  time: PLAN_BIBS[0].value,
+  race: KIKKO_SUB20_META.goalRace,
+  time: KIKKO_SUB20_META.goalTime,
 };
 
 /** The line as it should be read (screen readers get exactly this). */
@@ -36,7 +33,7 @@ export const HERO_QUOTE = [
  * text set small between them, in reading order.
  */
 export const HERO_WORDS: readonly [HeroWord, HeroWord, HeroWord] = [
-  { word: "VICINO", glyphs: { O: "watch" }, spec: `OBIETTIVO · ${HERO_GOAL.race} A ${HERO_GOAL.time}/KM` },
+  { word: "VICINO", glyphs: { O: "watch" }, spec: `OBIETTIVO · ${HERO_GOAL.race} IN ${HERO_GOAL.time}` },
   { word: "LONTANO", glyphs: { O: "track" }, spec: "KM 0 · PARTENZA · PISTA 400 M" },
   { word: "AVANTI", glyphs: { I: "orb" }, spec: "CADENZA 180 SPM · FC 168 BPM" },
 ];
@@ -52,7 +49,7 @@ export const HERO_PHRASES = {
 export const HERO_ROUTE = {
   start: "Km 0",
   here: "Sei qui",
-  goal: `${HERO_GOAL.time}/km`,
+  goal: HERO_GOAL.time,
   /** Where the marker sits between start and goal, 0–1. */
   progress: 0.64,
 };
@@ -78,7 +75,7 @@ export type MarqueeStyle = "solid" | "serif" | "outline" | "mono";
 export const HERO_MARQUEE: ReadonlyArray<{ text: string; style: MarqueeStyle }> = [
   { text: "Metic Lab", style: "solid" },
   { text: "un chilometro alla volta", style: "serif" },
-  { text: `Obiettivo ${HERO_GOAL.race} · ${HERO_GOAL.time}/km`, style: "mono" },
+  { text: `Obiettivo ${HERO_GOAL.race} · ${HERO_GOAL.time}`, style: "mono" },
   { text: "Passo · Cuore · Testa", style: "outline" },
   { text: "Km 0 → ∞", style: "solid" },
   { text: "sempre avanti", style: "serif" },
