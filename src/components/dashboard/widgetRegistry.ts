@@ -4,7 +4,6 @@ export interface WidgetMeta {
 }
 
 export const WIDGET_REGISTRY: WidgetMeta[] = [
-  { key: "taper",           label: "Freschezza e taper" },
   { key: "status-form",     label: "Status di Forma" },
   { key: "vo2max",          label: "VO2 Max / VDOT" },
   { key: "previsione-gara", label: "Previsione Gara" },
@@ -18,7 +17,6 @@ export const WIDGET_REGISTRY: WidgetMeta[] = [
   { key: "hr-zones",        label: "Zone Cardiache" },
   { key: "fitness-chart",   label: "Condizione Fisica" },
   { key: "training-paces",  label: "Training Paces" },
-  { key: "field-test",      label: "Field Test (VDOT Pace-Only)" },
   { key: "session-logs",    label: "Session Logs" },
   { key: "weather-normalizer", label: "Impatto Meteo" },
 ];

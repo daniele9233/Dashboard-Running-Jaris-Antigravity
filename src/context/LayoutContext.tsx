@@ -43,7 +43,7 @@ const DEBOUNCE_MS = 500;
  * DEFAULT_LAYOUTS mirror original static CSS-grid dashboard (pre-interactive).
  * rowHeight=60px. lg=12 cols, md=6, sm=1.
  *
- * Original layout recap (sotto "taper", in cima a tutta larghezza):
+ * Original layout recap:
  *   Row 1-2: status-form (6×2 hero) | vo2max / fatigue (3×2) | previsione / soglia (3×2)
  *   Row 3:   deriva (3×420px) | weekly-km (5×420px) | last-run-map (4×420px)
  *   Row 4:   [next-optimal + hr-zones stack] (3) | fitness-chart (9)
@@ -51,7 +51,6 @@ const DEBOUNCE_MS = 500;
  */
 export const DEFAULT_LAYOUTS: Layouts = {
   lg: [
-    { i: "taper",           x: 0, y:  0, w: 12, h: 6, minW: 6, minH: 6 },
     { i: "status-form",     x: 0, y:  6, w: 6, h: 7, minW: 4, minH: 5 },
     { i: "vo2max",          x: 6, y:  6, w: 3, h: 3, minW: 2, minH: 3 },
     { i: "previsione-gara", x: 9, y:  6, w: 3, h: 4, minW: 2, minH: 4 },
@@ -65,11 +64,9 @@ export const DEFAULT_LAYOUTS: Layouts = {
     { i: "hr-zones",        x: 0, y: 24, w: 3, h: 3, minW: 2, minH: 3 },
     { i: "fitness-chart",   x: 3, y: 20, w: 5, h: 7, minW: 4, minH: 5 },
     { i: "training-paces",  x: 8, y: 20, w: 4, h: 7, minW: 3, minH: 5 },
-    { i: "field-test",      x: 0, y: 27, w: 4, h: 6, minW: 3, minH: 5 },
     { i: "session-logs",    x: 0, y: 33, w: 12, h: 6, minW: 6, minH: 4 },
   ],
   md: [
-    { i: "taper",           x: 0, y:  0, w: 6, h: 7 },
     { i: "status-form",     x: 0, y:  7, w: 6, h: 7 },
     { i: "vo2max",          x: 0, y: 14, w: 3, h: 3 },
     { i: "previsione-gara", x: 3, y: 14, w: 3, h: 4 },
@@ -83,11 +80,9 @@ export const DEFAULT_LAYOUTS: Layouts = {
     { i: "hr-zones",        x: 3, y: 35, w: 3, h: 4 },
     { i: "fitness-chart",   x: 0, y: 39, w: 4, h: 7 },
     { i: "training-paces",  x: 4, y: 39, w: 2, h: 7 },
-    { i: "field-test",      x: 0, y: 46, w: 3, h: 6 },
     { i: "session-logs",    x: 0, y: 52, w: 6, h: 6 },
   ],
   sm: [
-    { i: "taper",           x: 0, y:  0, w: 1, h: 9 },
     { i: "status-form",     x: 0, y:  9, w: 1, h: 7 },
     { i: "vo2max",          x: 0, y: 16, w: 1, h: 3 },
     { i: "previsione-gara", x: 0, y: 19, w: 1, h: 4 },
@@ -101,7 +96,6 @@ export const DEFAULT_LAYOUTS: Layouts = {
     { i: "hr-zones",        x: 0, y: 53, w: 1, h: 4 },
     { i: "fitness-chart",   x: 0, y: 57, w: 1, h: 7 },
     { i: "training-paces",  x: 0, y: 64, w: 1, h: 6 },
-    { i: "field-test",      x: 0, y: 70, w: 1, h: 6 },
     { i: "session-logs",    x: 0, y: 76, w: 1, h: 6 },
   ],
 };

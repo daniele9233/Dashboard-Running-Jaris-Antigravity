@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-10-04T14:56:07.808Z",
+  "generated_at": "2026-10-21T14:19:11.627Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 254,
+    "files": 251,
     "backend_routes": 68,
     "frontend_routes": 19,
     "api_clients": 78
@@ -2812,59 +2812,9 @@
       ],
       "routes": [],
       "imports": [],
-      "hash": "022ff7abc36bc10d46a3944427546b9db06b1463af3bdfa3d3f1ccbdd052052c",
-      "last_modified": "2026-09-18T13:19:17.585Z",
-      "size_bytes": 1119
-    },
-    {
-      "path": "src/components/dashboard/widgets/FieldTestRecalibrationBanner.tsx",
-      "kind": "frontend-component",
-      "purpose": "React component FieldTestRecalibrationBanner.",
-      "touch_when": [
-        "ai",
-        "dashboard",
-        "layout",
-        "training",
-        "types"
-      ],
-      "exports": [
-        "FieldTestRecalibrationBanner"
-      ],
-      "routes": [],
-      "imports": [
-        "../../../api",
-        "../../../types/api",
-        "lucide-react",
-        "react"
-      ],
-      "hash": "8d0efa4c2c6cd6fef2771ba1659f8f9a80d46789d16b57170f3487ffca895b92",
-      "last_modified": "2026-09-18T11:30:38.287Z",
-      "size_bytes": 5015
-    },
-    {
-      "path": "src/components/dashboard/widgets/FieldTestWidget.tsx",
-      "kind": "frontend-component",
-      "purpose": "React component FieldTestWidget.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "dashboard",
-        "layout",
-        "types"
-      ],
-      "exports": [
-        "FieldTestWidget"
-      ],
-      "routes": [],
-      "imports": [
-        "../../../api",
-        "../../../types/api",
-        "lucide-react",
-        "react"
-      ],
-      "hash": "8aa20b3485e4c66844eb2d79f5a4d10890695ad18385694675e858889c9dfe93",
-      "last_modified": "2026-09-18T11:30:38.288Z",
-      "size_bytes": 10321
+      "hash": "cc2cec5341c93151f443de03992c05fc797f2f9ea992b1d46df1a538aee85525",
+      "last_modified": "2026-10-21T14:19:05.264Z",
+      "size_bytes": 990
     },
     {
       "path": "src/components/dashboard/widgets/FitnessChart.tsx",
@@ -2960,36 +2910,6 @@
       "size_bytes": 7705
     },
     {
-      "path": "src/components/dashboard/widgets/TaperWidget.tsx",
-      "kind": "frontend-component",
-      "purpose": "React component TaperWidget.",
-      "touch_when": [
-        "ai",
-        "dashboard",
-        "layout",
-        "statistics",
-        "training",
-        "types"
-      ],
-      "exports": [
-        "TaperWidget"
-      ],
-      "routes": [],
-      "imports": [
-        "../../../data/mezzaOttobrePlan",
-        "../../../types/api",
-        "../../../utils/taperForecast",
-        "../../statistics/chartTheme",
-        "./InfoTooltip",
-        "lucide-react",
-        "react",
-        "recharts"
-      ],
-      "hash": "4dc3d19c25763d3596ac042e09f9a94256fff5a55cf54f3a3e1d15b02d5ebd3a",
-      "last_modified": "2026-10-04T14:53:51.596Z",
-      "size_bytes": 9978
-    },
-    {
       "path": "src/components/dashboard/widgets/WeatherNormalizerWidget.tsx",
       "kind": "frontend-component",
       "purpose": "React component WeatherNormalizerWidget.",
@@ -3078,13 +2998,10 @@
         "../utils/paceFormat",
         "../utils/racePredictions",
         "./dashboard/widgetRegistry",
-        "./dashboard/widgets/FieldTestRecalibrationBanner",
-        "./dashboard/widgets/FieldTestWidget",
         "./dashboard/widgets/FitnessChart",
         "./dashboard/widgets/HRZones",
         "./dashboard/widgets/InfoTooltip",
         "./dashboard/widgets/NextOptimalSessionWidget",
-        "./dashboard/widgets/TaperWidget",
         "./dashboard/widgets/WeatherNormalizerWidget",
         "./dashboard/widgets/WeeklyKmChart",
         "./DetrainingWidget",
@@ -3099,9 +3016,9 @@
         "react-router-dom",
         "recharts"
       ],
-      "hash": "87b208b11ea79aa1f28c983c13a6ecf8cadbbb8187d7709bda599d25e1debe85",
-      "last_modified": "2026-09-29T04:56:28.703Z",
-      "size_bytes": 63174
+      "hash": "6363c87f35e788f0ff5978270a92e024af2961fe16e604cb0c0355507f415e8d",
+      "last_modified": "2026-10-21T14:19:03.843Z",
+      "size_bytes": 62114
     },
     {
       "path": "src/components/DetrainingWidget.tsx",
@@ -6137,9 +6054,9 @@
         "../api",
         "react"
       ],
-      "hash": "354effd501c19b72211c87ba09a28ee0b2fd38de56fb5a22dda5d468dc6f205e",
-      "last_modified": "2026-09-18T13:19:17.585Z",
-      "size_bytes": 11224
+      "hash": "6d9d8a6ef82a93be3866db3eb0fc5d1cacd265ae682b1fe287912e89f1265cd1",
+      "last_modified": "2026-10-21T14:19:11.628Z",
+      "size_bytes": 10808
     },
     {
       "path": "src/context/ThemeContext.tsx",
