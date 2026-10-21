@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\repo-map.json": {
-    "mtime": 1792593218.4742062,
-    "ast_hash": "5759561ff5e82994d4495a8f946df2cb",
+    "mtime": 1792594254.612891,
+    "ast_hash": "ea55a5fd768d0810a02ee4dcefac8a55",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\skills-lock.json": {
@@ -250,8 +250,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\api\\index.ts": {
-    "mtime": 1790657432.9724188,
-    "ast_hash": "12c6192d9ae88e65b1d6ec0a0cfac280",
+    "mtime": 1792593752.0665615,
+    "ast_hash": "ed8162e2c75ed5ca98bb5964a384a23a",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\ActivitiesView.tsx": {
@@ -690,8 +690,8 @@
     "semantic_hash": "9b8439940dffb3411a018fbe81d62be9"
   },
   "D:\\webapp-antiG\\repo-map.md": {
-    "mtime": 1792593218.4742062,
-    "ast_hash": "7dd023465135cb6f4c45a7867019c8d4",
+    "mtime": 1792594254.613891,
+    "ast_hash": "821ea7a87c3efe5b2ff489ebf77dabd2",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\REPORT-TECNICO.md": {
@@ -2365,8 +2365,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\TrainingGrid.tsx": {
-    "mtime": 1792593113.8534317,
-    "ast_hash": "34352874b80ebd3ad4959df405f5c9b5",
+    "mtime": 1792593987.6677618,
+    "ast_hash": "def3316672eac861026598071c4b2818",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\TrainingSidebar.tsx": {
@@ -2600,8 +2600,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\.impeccable\\hook.cache.json": {
-    "mtime": 1792593195.6038709,
-    "ast_hash": "7ffc15720c616f643c2992b163ed0b00",
+    "mtime": 1792594183.800925,
+    "ast_hash": "5e6fad089ba4d7b8b6530a6ad5ea7c31",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\.agents\\skills\\impeccable\\agents\\openai.yaml": {
@@ -2757,6 +2757,21 @@
   "D:\\webapp-antiG\\src\\utils\\detrainingModel.test.ts": {
     "mtime": 1790661823.18655,
     "ast_hash": "d08d153286dcb7677ae9223be80ed0d3",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\src\\components\\TrainingGoalBox.tsx": {
+    "mtime": 1792593786.7541132,
+    "ast_hash": "24ad5fc7ac5598c77c212c7501c40168",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\src\\utils\\trainingGoal.test.ts": {
+    "mtime": 1792593985.0681078,
+    "ast_hash": "b0e7b8ef7a9127e3f1a94a09980e696f",
+    "semantic_hash": ""
+  },
+  "D:\\webapp-antiG\\src\\utils\\trainingGoal.ts": {
+    "mtime": 1792593981.495326,
+    "ast_hash": "b926b628e57c5cd2d2eac5f3e7869f63",
     "semantic_hash": ""
   }
 }

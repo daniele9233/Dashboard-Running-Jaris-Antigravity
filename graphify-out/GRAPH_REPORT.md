@@ -1,16 +1,16 @@
 # Graph Report - webapp-antiG  (2026-10-21)
 
 ## Corpus Check
-- 504 files · ~874,484 words
+- 507 files · ~877,641 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 10173 nodes · 14712 edges · 701 communities (642 shown, 59 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 173 edges (avg confidence: 0.79)
+- 10210 nodes · 14816 edges · 701 communities (642 shown, 59 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 174 edges (avg confidence: 0.79)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `2ffb9963`
+- Built from commit: `bebaefc2`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -703,7 +703,7 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `float` - 82 edges
-2. `Run` - 79 edges
+2. `Run` - 81 edges
 3. `int` - 65 edges
 4. `str` - 59 edges
 5. `_get_athlete_id()` - 45 edges
@@ -745,20 +745,20 @@
 ## Communities (701 total, 59 thin omitted)
 
 ### Community 0 - "Community 0"
-Cohesion: 0.03
-Nodes (56): api, ApiError, BASE_URL, BadgeUnlock, GarminCsvData, GarminCsvImportResult, GarminSyncResult, getBestEfforts() (+48 more)
+Cohesion: 0.02
+Nodes (85): BadgeUnlock, GarminCsvData, GarminCsvImportResult, GarminSyncResult, getAnalytics(), getBestEfforts(), getBikeSessions(), getCurrentWeek() (+77 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.09
 Nodes (69): C, $(), ae(), at(), be(), bt(), ce(), ct() (+61 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.09
-Nodes (36): BestEffort, AnyRecord, asRecord(), bestEffortTime(), biomechanicVerdict(), buildBiomechanicMetric(), buildDistanceTalents(), buildEvolution() (+28 more)
+Cohesion: 0.06
+Nodes (47): RunnerDnaView(), STAT_ABBR, useRunnerDnaUiModel(), BIOMECH_SHORT_LABELS, DISTANCE_LABELS, DISTANCE_ORDER, formatDelta(), formatItalianDecimal() (+39 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.12
-Nodes (21): getRun(), getRunIntervals(), getRunSplits(), IntervalSegment, RunIntervals, ActivitiesView(), ViewModeButton(), formatPace() (+13 more)
+Cohesion: 0.08
+Nodes (27): getRun(), getRunIntervals(), getRunSplits(), importGarminCsv(), IntervalSegment, RunIntervals, ActivitiesView(), ActivitiesViewProps (+19 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.13
@@ -781,12 +781,12 @@ Cohesion: 0.02
 Nodes (133): ACTIONS, addManualContextText(), ADOPTABLE_SESSION_PHASES, annotLastPinClick, annotState, apply(), applyGlobalBarLabelState(), applyPlaceholderSizingStyles() (+125 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.10
-Nodes (30): ConquestsResponse, getConquests(), putConquest(), buildRoute(), City, computeGamiStats(), CumRoute, dayNum() (+22 more)
+Cohesion: 0.14
+Nodes (20): buildRoute(), City, computeGamiStats(), CumRoute, dayNum(), GamiStats, greatCircle(), haversine() (+12 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.16
-Nodes (5): ErrorBoundary, Props, State, _WidgetBoundaryImpl, reportError()
+Cohesion: 0.09
+Nodes (37): Basis, dec(), fmtDay(), GoalChoice, localIso(), MONO, pad(), perfLabel() (+29 more)
 
 ### Community 11 - "Community 11"
 Cohesion: 0.07
@@ -801,20 +801,20 @@ Cohesion: 0.08
 Nodes (33): Critical Invariants (security + cadence + data integrity), Data Sources (Strava + Garmin), METIC LAB AI Context, Runtime Architecture (Vite React SPA + FastAPI monolith), CHANGELOG-AI (LLM agent memory log), AI Context Pack Architecture, Versioned Git Pre-Commit Hook, Strava Multi-Athlete Local Support (+25 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.06
-Nodes (47): KIKKO_SUB135_LEGEND, KIKKO_SUB135_PLAN, KIKKO_SUB135_TARGETS, kikkoSub135ThresholdPace(), longWithRace(), ritmoGara(), WEEKS, Bases (+39 more)
+Cohesion: 0.04
+Nodes (72): KIKKO_SUB135_DELOAD_WEEKS, KIKKO_SUB135_LEGEND, KIKKO_SUB135_META, KIKKO_SUB135_PLAN, KIKKO_SUB135_RACE_PACE, KIKKO_SUB135_SESSIONS, KIKKO_SUB135_TARGETS, KIKKO_SUB135_WEEK_VDOT (+64 more)
 
 ### Community 15 - "Community 15"
 Cohesion: 0.07
 Nodes (57): _analytics_date(), _analytics_run_diagnostics(), analytics_run_projection(), _avg(), _bucket_key(), _build_best_efforts_progression_chart(), _build_biomechanics_charts(), _build_effort_matrix_chart() (+49 more)
 
 ### Community 16 - "Community 16"
-Cohesion: 0.03
-Nodes (44): disconnectStrava(), exchangeStravaCode(), getHeatmap(), getStravaStatus(), getUserLayout(), putUserLayout(), setActiveStravaAthlete(), StravaStatus (+36 more)
+Cohesion: 0.04
+Nodes (41): exchangeStravaCode(), getUserLayout(), putUserLayout(), ErrorBoundary, Props, State, WidgetBoundary(), _WidgetBoundaryImpl (+33 more)
 
 ### Community 17 - "Community 17"
 Cohesion: 0.04
-Nodes (38): worldStats, adaptationData, AnalyticsV3(), cardStyle(), efficiencyData, GroundContactStability(), metricVerdict(), MONTHS (+30 more)
+Nodes (36): adaptationData, AnalyticsV3(), cardStyle(), efficiencyData, GroundContactStability(), metricVerdict(), MONTHS, RadarAxis (+28 more)
 
 ### Community 18 - "Community 18"
 Cohesion: 0.08
@@ -826,7 +826,7 @@ Nodes (42): _enrich_run_from_garmin_csv(), _extract_fit_dynamics(), _garmin_biom
 
 ### Community 20 - "Community 20"
 Cohesion: 0.05
-Nodes (38): getGctAnalysis(), getProAnalytics(), getSupercompensation(), linkGarminCsv(), AnaerobicThreshold(), calcTPace(), CustomTooltip(), fmtPace() (+30 more)
+Nodes (37): getGctAnalysis(), getProAnalytics(), getSupercompensation(), linkGarminCsv(), AnaerobicThreshold(), calcTPace(), CustomTooltip(), fmtPace() (+29 more)
 
 ### Community 21 - "Community 21"
 Cohesion: 0.08
@@ -858,7 +858,7 @@ Nodes (9): Glass Design Tokens (ink palette, accents, zone colors, glass variabl
 
 ### Community 28 - "Community 28"
 Cohesion: 0.04
-Nodes (49): heatTable(), a, agosto, all, autumn, b, blocks, cap (+41 more)
+Nodes (54): heatBandForDate(), heatBandForIndex(), heatTable(), kikkoGoalOdds(), normalCdf(), a, agosto, all (+46 more)
 
 ### Community 29 - "Community 29"
 Cohesion: 0.06
@@ -885,12 +885,12 @@ Cohesion: 0.14
 Nodes (13): EditModal(), ALL_DISTANCES, DISTANCES, Field, FIELD_LABEL, fmtDistance(), fmtPace(), fmtTime() (+5 more)
 
 ### Community 35 - "Community 35"
-Cohesion: 0.05
-Nodes (44): getAnalytics(), getBikeSessions(), getDashboard(), getDashboardInsight(), getStravaAuthUrl(), DashboardView(), ResponsiveGrid, timeUntil() (+36 more)
+Cohesion: 0.12
+Nodes (17): fmtPbTime(), formatDuration(), hmsToSecs(), parsePaceToSecs(), secsToPaceStr(), BENEFIT, buildRacePredictions(), ClassifyResult (+9 more)
 
 ### Community 36 - "Community 36"
-Cohesion: 0.07
-Nodes (19): KIKKO_SUB20_PLAN, KIKKO_SUB20_TARGETS, AthleteEvolutionFramework(), ChartCursor(), clock(), CursorInfo, ICONS, LevelCost() (+11 more)
+Cohesion: 0.08
+Nodes (18): KIKKO_SUB20_TARGETS, AthleteEvolutionFramework(), ChartCursor(), clock(), CursorInfo, ICONS, LevelCost(), ProjectionChart() (+10 more)
 
 ### Community 37 - "Community 37"
 Cohesion: 0.08
@@ -901,16 +901,16 @@ Cohesion: 0.11
 Nodes (24): clearRunnerDnaCache(), jarvisChat(), syncGarminAll(), syncStrava(), COLOR_LIME, COLOR_TEAL, JarvisOrb(), JarvisOrbProps (+16 more)
 
 ### Community 39 - "Community 39"
-Cohesion: 0.12
-Nodes (20): EMPTY, GOAL_DEFS, GoalDef, HR_EDGES, markRecoveries(), MilestoneCost, PACE_EDGES, ProjPoint (+12 more)
+Cohesion: 0.11
+Nodes (26): computeTotalXp(), computeXpPace(), dayIndex(), EMPTY, GOAL_DEFS, GoalDef, HR_EDGES, markRecoveries() (+18 more)
 
 ### Community 40 - "Community 40"
 Cohesion: 0.07
 Nodes (44): agentHasWorkInFlight(), agentStatusText(), attachSteerFocusGuard(), barPaletteForTheme(), brandMarkSvg(), buildParamsPanel(), buildSteerProcessingDots(), buildSteerQueueHint() (+36 more)
 
 ### Community 42 - "Community 42"
-Cohesion: 0.09
-Nodes (19): KIKKO_SUB135_DELOAD_WEEKS, KIKKO_SUB135_META, KIKKO_SUB135_RACE_PACE, KIKKO_SUB135_SESSIONS, KIKKO_SUB135_WEEK_VDOT, KIKKO_SUB135_WEEKLY_KM, b, biggest (+11 more)
+Cohesion: 0.14
+Nodes (10): DesignSystemGenerator, Find matching reasoning rule for a category., Apply reasoning rules to search results., Select best matching result based on priority keywords., Extract results list from search result dict., Generate complete design system recommendation.          variance/motion/densi, Generates design system recommendations from aggregated searches., Load reasoning rules from CSV. (+2 more)
 
 ### Community 43 - "Community 43"
 Cohesion: 0.08
@@ -937,12 +937,12 @@ Cohesion: 0.08
 Nodes (17): ADAPTATION_META, AdaptationMeta, BiologyFutureV2(), buildStimulusFlow(), clamp(), DetrainingPredictor(), estimateEasyPaceFromVdot(), formatSec() (+9 more)
 
 ### Community 49 - "Community 49"
-Cohesion: 0.03
-Nodes (46): AdaptationPanelProps, CATEGORIES, CategoryConfig, Period, PERIODS, RunCategory, formatDate(), formatDuration() (+38 more)
+Cohesion: 0.05
+Nodes (33): AthletePotentialVectorProps, buildKmEntry(), CaricoFormaV2(), CaricoFormaV2Props, CAT_DEFS, CHART_LINES, FF_RANGE_DAYS, FFRange (+25 more)
 
 ### Community 50 - "Community 50"
-Cohesion: 0.16
-Nodes (18): kikkoSub135ActualWeeklyKm(), kikkoSub135HeatInfo(), heatBandForDate(), heatBandForIndex(), kikkoGoalOdds(), kikkoHeatInfo(), kikkoLookup(), kikkoSub20ActualWeeklyKm() (+10 more)
+Cohesion: 0.18
+Nodes (13): ConquestsResponse, getConquests(), putConquest(), equatorJourney(), EquatorMode(), GamificationV1(), ItaliaMode(), line() (+5 more)
 
 ### Community 51 - "Community 51"
 Cohesion: 0.09
@@ -985,16 +985,16 @@ Cohesion: 0.16
 Nodes (17): 3D Content (Three.js / React Three Fiber), Display Captions, FFmpeg Operations, Google Fonts, HtmlInCanvas (HTML in canvas, WebGL), Import SRT Captions, Local Fonts, Lottie Animations (+9 more)
 
 ### Community 61 - "Community 61"
-Cohesion: 0.07
-Nodes (27): 14.1 TrainingView (orchestratore), 14.2 SESSION_COLORS (condiviso), 14.3 TrainingSidebar, 14.6 AdaptPlanModal — algoritmi `AdaptAdaptation`, 14.7 EvaluateTestModal — ricalibrazione VDOT, 14.8 API endpoints utilizzati, 5 modelli (descrizione UI), API (+19 more)
+Cohesion: 0.04
+Nodes (48): 14.1 TrainingView (orchestratore), 14.2 SESSION_COLORS (condiviso), 14.3 TrainingSidebar, 14.4 TrainingGrid — main calendar, 14.5 GeneratePlanModal — flusso a 4 fasi, 14.6 AdaptPlanModal — algoritmi `AdaptAdaptation`, 14.7 EvaluateTestModal — ricalibrazione VDOT, 14.8 API endpoints utilizzati (+40 more)
 
 ### Community 62 - "Community 62"
 Cohesion: 0.04
 Nodes (45): Arrays and Collections, Best practices, clamp(min, max, value?), Clamping and Ranges, code:javascript (// With value: returns the result), code:javascript (gsap.utils.shuffle([1, 2, 3, 4]); // e.g. [3, 1, 4, 2]), code:javascript (// Scale: middle elements 0.5, outer edges 3 (amount 2.5 dis), code:javascript (const distributor = gsap.utils.distribute({) (+37 more)
 
 ### Community 63 - "Community 63"
-Cohesion: 0.18
-Nodes (12): RunnerDnaView(), STAT_ABBR, useRunnerDnaUiModel(), BIOMECH_SHORT_LABELS, DISTANCE_LABELS, DISTANCE_ORDER, formatDelta(), formatItalianDecimal() (+4 more)
+Cohesion: 0.17
+Nodes (12): 11.1 `src/utils/paceFormat.ts` (nuovo), 11.2 `src/utils/racePredictions.ts` (nuovo), 11.3 Drift cardiaco unificato (3a copia rimossa), 11. God Component — DashboardView.tsx (estrazione math), code:ts (parsePaceToSecs(pace)    // "5:42" → 342), code:ts (// LOCAL — first/second half HR, no median filter), code:ts (import { computeDrift as computeDriftCanonical } from "../ut), code:block234 (GET /api/race-predictions) (+4 more)
 
 ### Community 64 - "Community 64"
 Cohesion: 0.12
@@ -1002,15 +1002,15 @@ Nodes (16): compilerOptions, allowImportingTsExtensions, allowJs, experimentalDe
 
 ### Community 65 - "Community 65"
 Cohesion: 0.07
-Nodes (38): readTratti(), EquatorMode(), ItaliaMode(), line(), ConeChart(), Crosshair(), EtaTile(), GoalCone() (+30 more)
+Nodes (33): readTratti(), ConeChart(), Crosshair(), EtaTile(), Headline(), MESI, pct(), Props (+25 more)
 
 ### Community 66 - "Community 66"
 Cohesion: 0.04
 Nodes (44): code:block1 (Professional logo design for [brand/industry]:), code:block10 (Healthcare medical logo, clean professional design, cross or), code:block11 (Restaurant logo, warm inviting colors, appetizing feel, vint), code:block12 (Fashion brand logo, elegant sophisticated wordmark, luxury a), code:block13 (Eco-friendly sustainable brand logo, organic natural element), code:block14 (vector-style, scalable at any size, clear silhouette,), code:block15 (works on light and dark backgrounds, single color version po), code:block16 (professional quality, print-ready, high resolution,) (+36 more)
 
 ### Community 67 - "Community 67"
-Cohesion: 0.06
-Nodes (54): adaptationCeiling(), etaUnderPlan(), planToDose(), WeeklyPlan, caffeineDose(), CLASS_LABEL, conditionFactors(), Conditions (+46 more)
+Cohesion: 0.07
+Nodes (39): WeeklyPlan, caffeineDose(), CLASS_LABEL, conditionFactors(), Conditions, currentPlan(), defaultSetup(), Effort (+31 more)
 
 ### Community 68 - "Community 68"
 Cohesion: 0.05
@@ -1133,8 +1133,8 @@ Cohesion: 0.13
 Nodes (15): ChartEvent, dateOf(), EventId, fmtDay(), fmtMonth(), GoalTrajectory(), GoalTrajectoryProps, MONTHS (+7 more)
 
 ### Community 98 - "Community 98"
-Cohesion: 0.12
-Nodes (11): ZoneId, ZONES, SYSTEM_ORDER, SystemLevels, SYSTEMS, zeroLevels, BiologyFutureV3(), box (+3 more)
+Cohesion: 0.08
+Nodes (29): ZoneId, ZONES, adaptationCeiling(), etaUnderPlan(), humanDays(), planToDose(), SYSTEM_ORDER, SystemLevels (+21 more)
 
 ### Community 99 - "Community 99"
 Cohesion: 0.12
@@ -1149,16 +1149,16 @@ Cohesion: 0.05
 Nodes (37): Accessibility, Base System, Best Practices, Clean & Modern, code:css (/* Headings - Display font for impact */), code:html (<!-- Google Fonts (recommended) -->), code:css (/* Mobile (< 768px) */), code:css (/* Heading spacing */) (+29 more)
 
 ### Community 102 - "Community 102"
-Cohesion: 0.12
-Nodes (18): buildWorld(), passports(), rangeKm(), arc, cold, full, indoor, long (+10 more)
+Cohesion: 0.10
+Nodes (21): buildWorld(), longRunFor(), passports(), rangeKm(), arc, cold, full, indoor (+13 more)
 
 ### Community 103 - "Community 103"
 Cohesion: 0.05
 Nodes (36): 1. Visual Communication First, 2. Minimal Text Integration, 3. Expert Craftsmanship, 4. Systematic Patterns, Analog Meditation, Approach, Canvas Boundaries, Canvas Design System (+28 more)
 
 ### Community 104 - "Community 104"
-Cohesion: 0.20
-Nodes (17): bestSustainedPaceSec(), buildXpLegend(), clamp(), computeLevelSystem(), computeTotalXp(), computeXpPace(), dayIndex(), levelFromXp() (+9 more)
+Cohesion: 0.24
+Nodes (12): bestSustainedPaceSec(), buildXpLegend(), clamp(), computeLevelSystem(), levelFromXp(), levelTitle(), recentSessions(), RunXp (+4 more)
 
 ### Community 105 - "Community 105"
 Cohesion: 0.25
@@ -1382,7 +1382,7 @@ Nodes (29): 1. Attività — parziali su tutte le ripetute + PBP, 2. Dashboard �
 
 ### Community 174 - "Community 174"
 Cohesion: 0.14
-Nodes (12): AF, AN, AS, CONTINENTS, COUNTRIES, COUNTRY_BY_ISO, EU, NA (+4 more)
+Nodes (12): AF, AN, AS, CONTINENT_ORDER, CONTINENTS, COUNTRY_BY_ISO, EU, NA (+4 more)
 
 ### Community 175 - "Community 175"
 Cohesion: 0.22
@@ -1401,8 +1401,8 @@ Cohesion: 0.25
 Nodes (7): Adaptation Strategies, Assess Adaptation Challenge, Implement & Verify, Orientation & foldables, Phone → Tablet (iPad / large screens), Platform → platform (iOS ↔ Android), Web → native (porting a website or web app)
 
 ### Community 179 - "Community 179"
-Cohesion: 0.17
-Nodes (12): 14.4 TrainingGrid — main calendar, code:ts (TrainingPlanResponse { weeks: TrainingWeek[] }), code:ts (currentDate: Date;), code:block88 (sessionMap[session.date] = session  // chiave "YYYY-MM-DD"), code:block89 (session === null → null), code:block90 (next/prev incrementa secondo view:), Hook API, Navigazione date (+4 more)
+Cohesion: 0.29
+Nodes (6): EnterDisc, Props, ArrowGlyph(), Magnetic(), Props, SPRING
 
 ### Community 180 - "Community 180"
 Cohesion: 0.29
@@ -1465,12 +1465,12 @@ Cohesion: 0.25
 Nodes (8): get_current_user_id(), get_user_scope_query(), migrate_assign_default_user(), str, Auth scaffold (round 8 — #1 multi-tenant prep).  STATUS: scaffold, NON attivo. S, Query Mongo scoping per user. Usata in tutti gli endpoint.     Single-tenant: ri, Migration one-shot: assegna user_id="legacy" a tutti i documenti esistenti     n, Estrae user_id dal JWT Authorization header. Se AUTH_ENABLED=false →     ritorna
 
 ### Community 198 - "Community 198"
-Cohesion: 0.31
-Nodes (6): calcTPace(), ChartTooltip(), vdotColor(), vdotLabel(), VO2MaxChart(), VO2MaxChartProps
+Cohesion: 0.06
+Nodes (22): AdaptationPanelProps, CATEGORIES, CategoryConfig, Period, PERIODS, RunCategory, formatDate(), formatDuration() (+14 more)
 
 ### Community 199 - "Community 199"
-Cohesion: 0.22
-Nodes (9): 14.5 GeneratePlanModal — flusso a 4 fasi, code:ts (phase: 'input' | 'calibration' | 'strategy' | 'done'), code:ts ({), code:block93 (1. Validazione targetTime), code:block94 (feasibility.difficulty:), `feasColor` / `selectedColor`, Flusso `handleAnalyze`, `GenerateResult` schema (+1 more)
+Cohesion: 0.29
+Nodes (3): api, ApiError, BASE_URL
 
 ### Community 200 - "Community 200"
 Cohesion: 0.39
@@ -1533,12 +1533,12 @@ Cohesion: 0.06
 Nodes (30): 10. FINAL PRE-FLIGHT CHECK, 1. ACTIVE BASELINE CONFIGURATION, 2. DEFAULT ARCHITECTURE & CONVENTIONS, 3. DESIGN ENGINEERING DIRECTIVES (Bias Correction), 4. CREATIVE PROACTIVITY (Anti-Slop Implementation), 5. PERFORMANCE GUARDRAILS, 6. TECHNICAL REFERENCE (Dial Definitions), 7. AI TELLS (Forbidden Patterns) (+22 more)
 
 ### Community 237 - "Community 237"
-Cohesion: 0.08
-Nodes (35): adaptTrainingPlan(), evaluateTest(), generateTrainingPlan(), getTrainingPlan(), putSub20Goal(), putSub20StartDate(), putSub20Status(), putSub20Vdot() (+27 more)
+Cohesion: 0.07
+Nodes (40): adaptTrainingPlan(), evaluateTest(), generateTrainingPlan(), getTrainingPlan(), putSub20Goal(), putSub20Plan(), putSub20StartDate(), putSub20Status() (+32 more)
 
 ### Community 238 - "Community 238"
-Cohesion: 0.06
-Nodes (31): 10. Empty-state audit + guards, 11.1 `src/utils/paceFormat.ts` (nuovo), 11.2 `src/utils/racePredictions.ts` (nuovo), 11.3 Drift cardiaco unificato (3a copia rimossa), 11. God Component — DashboardView.tsx (estrazione math), 8. Cache layer globale per `useApi` — N fetch duplicate ELIMINATE, 9. Dedup nav TopBar/Sidebar — single source of truth, Cache keys centralizzate (+23 more)
+Cohesion: 0.11
+Nodes (19): 10. Empty-state audit + guards, 8. Cache layer globale per `useApi` — N fetch duplicate ELIMINATE, 9. Dedup nav TopBar/Sidebar — single source of truth, Cache keys centralizzate, CHANGELOG FIX — 2026-04-28 (round 2 — issue architetturali), code:ts (// Cache & dedupe in-flight), code:ts (export const API_CACHE = {), code:block230 (- N || 1                                  (guard su denomina) (+11 more)
 
 ### Community 239 - "Community 239"
 Cohesion: 0.07
@@ -1553,8 +1553,8 @@ Cohesion: 0.11
 Nodes (24): BM25, detect_domain(), _domain_keywords(), _get_bm25(), _load_csv(), _load_product_keywords(), _normalize(), Apply synonym substitution before tokenizing. (+16 more)
 
 ### Community 242 - "Community 242"
-Cohesion: 0.09
-Nodes (34): bool, int, str, ansi_ljust(), _detect_page_type(), format_ascii_box(), format_markdown(), format_master_md() (+26 more)
+Cohesion: 0.13
+Nodes (29): bool, int, str, ansi_ljust(), _detect_page_type(), format_ascii_box(), format_markdown(), format_master_md() (+21 more)
 
 ### Community 243 - "Community 243"
 Cohesion: 0.07
@@ -1765,12 +1765,12 @@ Cohesion: 0.10
 Nodes (19): 1. Define the Atmosphere, 2. Map the Color Palette, 3. Establish Typography Rules, 4. Define the Hero Section, 5. Describe Component Stylings, 6. Define Layout Principles, 7. Define Responsive Rules, 8. Encode Motion Philosophy (+11 more)
 
 ### Community 297 - "Community 297"
-Cohesion: 0.08
-Nodes (10): DesignSystemGenerator, Select best matching result based on priority keywords., Extract results list from search result dict., Generates design system recommendations from aggregated searches., Load reasoning rules from CSV., Known query -> expected top-domain sanity checks (not exact-row pinning,     si, TestDomainDetection, TestReasoningMatch (+2 more)
+Cohesion: 0.10
+Nodes (5): Known query -> expected top-domain sanity checks (not exact-row pinning,     si, TestDomainDetection, TestPersistence, TestSearchDomains, TestTokenizer
 
 ### Community 298 - "Community 298"
-Cohesion: 0.10
-Nodes (14): codesOf(), CountryCard(), Empire(), Flag(), fmt(), matchBy(), Props, STATUS_LABEL (+6 more)
+Cohesion: 0.11
+Nodes (13): codesOf(), CountryCard(), Empire(), Flag(), fmt(), matchBy(), Props, STATUS_LABEL (+5 more)
 
 ### Community 299 - "Community 299"
 Cohesion: 0.10
@@ -2033,12 +2033,12 @@ Cohesion: 0.14
 Nodes (14): 2. THE COMBINATORIAL VARIATION ENGINE, Background Character, Background Mode (per-section), Composition Anchor (per-section), CTA Variation, Hero Architecture, Hero Scale (per-page), Motion-Implied Language (+6 more)
 
 ### Community 374 - "Community 374"
-Cohesion: 0.11
-Nodes (18): 10.1 LastRunMap, 10.2 MapFallback, Bounds + padding, code:ts (interface LastRunMapProps { run: Run | null }), code:block46 (priority 1: run.polyline (encoded Google polyline format)), code:block47 (lngs/lats = coords.map(c => c[0|1])), code:ts ({), code:ts (interface MapFallbackProps { run: Run | null }) (+10 more)
+Cohesion: 0.14
+Nodes (14): 10.1 LastRunMap, Bounds + padding, code:ts (interface LastRunMapProps { run: Run | null }), code:block46 (priority 1: run.polyline (encoded Google polyline format)), code:block47 (lngs/lats = coords.map(c => c[0|1])), code:ts ({), Dipendenze, Layers Mapbox (+6 more)
 
 ### Community 375 - "Community 375"
-Cohesion: 0.10
-Nodes (19): #12 Componenti V2/V3/V4/V5 — DEFERRED, #13 DRIFT_START_KM = '8' — DEFERRED, #14 DashboardView 1764 righe — DEFERRED, #15 server.py 7527 righe — DEFERRED, #16 Sync queue background — DEFERRED, #17 WebSocket / SSE live update — DEFERRED, #18 Dependency drift — INFORMATIVO, #1 Auth + sessione utente — DEFERRED (+11 more)
+Cohesion: 0.14
+Nodes (14): #12 Componenti V2/V3/V4/V5 — DEFERRED, #13 DRIFT_START_KM = '8' — DEFERRED, #14 DashboardView 1764 righe — DEFERRED, #15 server.py 7527 righe — DEFERRED, #16 Sync queue background — DEFERRED, #17 WebSocket / SSE live update — DEFERRED, #18 Dependency drift — INFORMATIVO, #1 Auth + sessione utente — DEFERRED (+6 more)
 
 ### Community 376 - "Community 376"
 Cohesion: 0.14
@@ -2490,7 +2490,7 @@ Nodes (7): computedHash, skillPath, source, sourceType, skills, imagegen-fronten
 
 ### Community 494 - "Community 494"
 Cohesion: 0.13
-Nodes (22): BiomeId, CONTINENT_ORDER, ContinentId, Country, baseCost(), BIOME_COST, ContinentState, CountryState (+14 more)
+Nodes (22): BiomeId, ContinentId, COUNTRIES, Country, baseCost(), BIOME_COST, ContinentState, CountryState (+14 more)
 
 ### Community 495 - "Community 495"
 Cohesion: 0.25
@@ -2710,7 +2710,7 @@ Nodes (4): code:block1 (npx remotion render), code:block2 (npx remotion still), 
 
 ### Community 552 - "Community 552"
 Cohesion: 0.04
-Nodes (49): getCurrentWeek(), getRuns(), getSub20Status(), getWeeklyGoal(), importGarminCsv(), putWeeklyGoal(), Sub20StatusResponse, WeeklyGoalResponse (+41 more)
+Nodes (45): disconnectStrava(), getHeatmap(), getStravaStatus(), getWeeklyGoal(), putWeeklyGoal(), setActiveStravaAthlete(), StravaStatus, updateProfile() (+37 more)
 
 ### Community 553 - "Community 553"
 Cohesion: 0.40
@@ -3134,15 +3134,15 @@ Nodes (3): code:javascript (// tailwind.config.js), code:html (<!-- Class-based 
 
 ### Community 701 - "Community 701"
 Cohesion: 0.13
-Nodes (37): dayToIso(), emptyZoneMinutes(), ZoneMinutes, trajectory(), buildDayLoads(), buildForecast(), buildGoals(), buildImpacts() (+29 more)
+Nodes (38): clamp(), DaySession, dayToIso(), ZoneMinutes, trajectory(), buildDayLoads(), buildForecast(), buildGoals() (+30 more)
 
 ### Community 702 - "Community 702"
 Cohesion: 0.04
-Nodes (54): a, armato, b, base, better, c(), caff, caldo (+46 more)
+Nodes (52): a, armato, b, base, better, caff, caldo, collina (+44 more)
 
 ### Community 703 - "Community 703"
-Cohesion: 0.09
-Nodes (40): apparentTempC(), bestSustainedPaceSec(), clamp(), cleanRuns(), coolPaceSec(), dayIndex(), DaySession, daySessions() (+32 more)
+Cohesion: 0.10
+Nodes (38): apparentTempC(), bestSustainedPaceSec(), cleanRuns(), coolPaceSec(), dayIndex(), daySessions(), distanceIn(), emptyZoneMinutes() (+30 more)
 
 ### Community 704 - "Community 704"
 Cohesion: 0.07
@@ -3173,8 +3173,8 @@ Cohesion: 0.12
 Nodes (16): 10. Movimento a riposo e cursore, 11. La lente (X-ray), 12. Uscita: scroll, click, tastiera, 13. Movimento ridotto e accessibilità, 14. Performance, 15. Ricostruzione passo passo, 16. Checklist di verifica, 17. Personalizzare (+8 more)
 
 ### Community 713 - "Community 713"
-Cohesion: 0.15
-Nodes (13): EnterDisc, Props, HERO_BRAND, HERO_NAV, ArrowGlyph(), Monogram(), formatElapsed(), HeroNav() (+5 more)
+Cohesion: 0.29
+Nodes (7): HERO_BRAND, HERO_NAV, Monogram(), formatElapsed(), HeroNav(), pad(), Props
 
 ### Community 714 - "Community 714"
 Cohesion: 0.13
@@ -3189,8 +3189,8 @@ Cohesion: 0.17
 Nodes (7): AuthContext, AuthContextValue, AuthUser, DEFAULT_USER, identifyUser(), initTelemetry(), TelemetryContext
 
 ### Community 717 - "Community 717"
-Cohesion: 0.25
-Nodes (8): #14 DashboardView — WeeklyKmChart extracted, #15 server.py — routers/profile.py + routers/runs.py, #1 Auth scaffold, #3 Math heavy → backend, CHANGELOG FIX — 2026-04-30 (round 8 — P0 advancements), code:block280 (npx tsc --noEmit                         → 0 errori), Files nuovi/modifiche, Verifica integrità (round 8)
+Cohesion: 0.11
+Nodes (17): 10.2 MapFallback, #14 DashboardView — WeeklyKmChart extracted, #15 server.py — routers/profile.py + routers/runs.py, #1 Auth scaffold, #3 Math heavy → backend, Aggiornamento 2026-05-04 — Strava multi-atleta + VDOT history-aware, CHANGELOG FIX — 2026-04-30 (round 8 — P0 advancements), CHECKLIST COMPLETA DEI MODULI (+9 more)
 
 ### Community 718 - "Community 718"
 Cohesion: 0.26
@@ -3249,7 +3249,7 @@ Cohesion: 0.25
 Nodes (13): niceTicks(), PACE_BINS, paceColor(), pathOf(), useWidth(), BankTankChart(), PriceCurve(), TankBar() (+5 more)
 
 ## Knowledge Gaps
-- **4426 isolated node(s):** `version`, `generated_at`, `name`, `stack`, `files` (+4421 more)
+- **4439 isolated node(s):** `version`, `generated_at`, `name`, `stack`, `files` (+4434 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **59 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -3257,16 +3257,16 @@ Nodes (13): niceTicks(), PACE_BINS, paceColor(), pathOf(), useWidth(), BankTankC
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `x()` connect `Community 1` to `Community 49`?**
-  _High betweenness centrality (0.030) - this node is a cross-community bridge._
+  _High betweenness centrality (0.028) - this node is a cross-community bridge._
 - **Why does `C` connect `Community 1` to `Community 8`?**
-  _High betweenness centrality (0.029) - this node is a cross-community bridge._
-- **Why does `Run` connect `Community 49` to `Community 0`, `Community 258`, `Community 3`, `Community 9`, `Community 12`, `Community 16`, `Community 17`, `Community 20`, `Community 24`, `Community 35`, `Community 36`, `Community 39`, `Community 552`, `Community 298`, `Community 48`, `Community 54`, `Community 701`, `Community 702`, `Community 703`, `Community 705`, `Community 65`, `Community 67`, `Community 198`, `Community 78`, `Community 725`, `Community 86`, `Community 89`, `Community 98`, `Community 227`, `Community 102`, `Community 109`, `Community 110`, `Community 494`?**
-  _High betweenness centrality (0.024) - this node is a cross-community bridge._
+  _High betweenness centrality (0.027) - this node is a cross-community bridge._
+- **Why does `FitnessChart()` connect `Community 1` to `Community 0`, `Community 49`?**
+  _High betweenness centrality (0.021) - this node is a cross-community bridge._
 - **What connects `version`, `generated_at`, `name` to the rest of the system?**
-  _4884 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _4897 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.02735042735042735 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.02412698412698413 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
   _Cohesion score 0.08985507246376812 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.0859465737514518 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05961426066627703 - nodes in this community are weakly interconnected._
