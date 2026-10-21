@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-10-21T15:12:58.759Z",
+  "generated_at": "2026-10-21T15:13:00.975Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -17,7 +17,7 @@
     "files": 250,
     "backend_routes": 69,
     "frontend_routes": 19,
-    "api_clients": 79
+    "api_clients": 80
   },
   "files": [
     {
@@ -1891,6 +1891,7 @@
         "getGctAnalysis",
         "getHeatmap",
         "getInjuryRisk",
+        "getIntervalSessions",
         "getPredictionHistory",
         "getProAnalytics",
         "getProfile",
@@ -1912,8 +1913,7 @@
         "getVdotPaces",
         "getWeeklyGoal",
         "getWeeklyHistory",
-        "getWeeklyReport",
-        "GridLayoutItem"
+        "getWeeklyReport"
       ],
       "routes": [
         "DELETE /api/field-test/${id}",
@@ -1939,6 +1939,7 @@
         "GET /api/garmin/status",
         "GET /api/heatmap",
         "GET /api/injury-risk",
+        "GET /api/interval-sessions?months=${months}",
         "GET /api/prediction-history",
         "GET /api/profile",
         "GET /api/recovery-score",
@@ -1995,9 +1996,9 @@
         "../types/jarvis",
         "./client"
       ],
-      "hash": "d19fe9968a5a4967fb279d565a1d90f41bee32fdeee87a0a3f566a7b93819f24",
-      "last_modified": "2026-10-21T15:12:58.732Z",
-      "size_bytes": 26643
+      "hash": "5b2d8f141df6f7bf49f99a97c56797b5bda3cb2d3f334fb6a8dc49d2fc3cc9d1",
+      "last_modified": "2026-10-21T15:13:00.974Z",
+      "size_bytes": 26894
     },
     {
       "path": "src/App.tsx",
@@ -5874,9 +5875,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "4d84a857730c737a9bd1b5dd7f6b6a45566304f96de5964184e43c2ca81cbd7c",
-      "last_modified": "2026-10-21T15:12:58.733Z",
-      "size_bytes": 14294
+      "hash": "300c0e25a5cd1749603a5cd028546cef0e0446d73aa8a255f128501f22dc612c",
+      "last_modified": "2026-10-21T15:13:00.974Z",
+      "size_bytes": 18288
     },
     {
       "path": "src/components/TrainingGrid.tsx",
@@ -5910,9 +5911,9 @@
         "react",
         "react-i18next"
       ],
-      "hash": "eb8f14723d3feda5dced2e7eed95c366ecbe350f4804d8016e293bdfc92dd2c5",
-      "last_modified": "2026-10-21T15:12:58.734Z",
-      "size_bytes": 52211
+      "hash": "7ac841654c86bfd3e3413d43eb65835f2e33b1132a1e2929cd8155d541647178",
+      "last_modified": "2026-10-21T15:13:00.974Z",
+      "size_bytes": 52347
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -6341,9 +6342,9 @@
       ],
       "routes": [],
       "imports": [],
-      "hash": "c3a1ce97b172f467ce1b8ad3cf78c7792c676f240a4d205e67c5a60fbaabc137",
-      "last_modified": "2026-10-21T15:12:58.734Z",
-      "size_bytes": 870
+      "hash": "94906ee09b8447c4ec7d4de9bb0132c555bf900b484598c2d2eb9dc29bafa500",
+      "last_modified": "2026-10-21T15:13:00.975Z",
+      "size_bytes": 913
     },
     {
       "path": "src/hooks/useApi.ts",
@@ -6602,6 +6603,8 @@
         "HeatmapPoint",
         "HeatmapResponse",
         "InjuryRiskResponse",
+        "IntervalSession",
+        "IntervalSessionsResponse",
         "Lap",
         "PB",
         "PlanFeedback",
@@ -6631,9 +6634,9 @@
       ],
       "routes": [],
       "imports": [],
-      "hash": "ded061d3ce4ca4c2648e3c1ffb8b8ca9968a8d08ff30b4b4fd39f1c1708d5f7f",
-      "last_modified": "2026-10-21T15:12:58.734Z",
-      "size_bytes": 17733
+      "hash": "386f58bbec1469c24775633ea905c20ef712823cb772d0b4ca83e2e2fbdd9cae",
+      "last_modified": "2026-10-21T15:13:00.975Z",
+      "size_bytes": 18600
     },
     {
       "path": "src/types/jarvis.ts",
@@ -6992,14 +6995,14 @@
         "./trainingGoal",
         "vitest"
       ],
-      "hash": "d6e972f15c10ed3179edd46c6f5d4a6e73d88af09eb23bf812c72acbc3334ae3",
-      "last_modified": "2026-10-21T15:12:58.735Z",
-      "size_bytes": 7810
+      "hash": "4adc6c7623a74d4d0e46c7bb3e65300a84376e0d95396a1f129e51e3b2b15eca",
+      "last_modified": "2026-10-21T15:13:00.976Z",
+      "size_bytes": 12047
     },
     {
       "path": "src/utils/trainingGoal.ts",
       "kind": "frontend-utility",
-      "purpose": "Shared utility module exporting buildGoalPlan, fmtClock, GOAL_DISTANCE_KM, GOAL_PRESETS.",
+      "purpose": "Shared utility module exporting buildGoalPlan, equivalentSec, fmtClock, GOAL_DISTANCE_KM.",
       "touch_when": [
         "activities",
         "ai",
@@ -7008,16 +7011,23 @@
       ],
       "exports": [
         "buildGoalPlan",
+        "equivalentSec",
         "fmtClock",
         "GOAL_DISTANCE_KM",
-        "GOAL_PRESETS",
+        "GOAL_KM_RANGE",
+        "GOAL_PACE_RANGE_SEC",
+        "goalFromPace",
         "GoalPlan",
+        "GoalTarget",
         "MIN_PLAN_WEEKS",
         "nextMonday",
         "parseClock",
-        "parseFiveKGoal",
+        "parseDistanceKm",
+        "parsePace",
         "Performance",
         "performancesFrom",
+        "PLAN_SPECIFIC_UP_TO_KM",
+        "RepsDetail",
         "vdotMatchesGoal"
       ],
       "routes": [],
@@ -7026,9 +7036,9 @@
         "../data/kikkoSub20Plan",
         "../types/api"
       ],
-      "hash": "9ef0b27aff5fa5c30683c44fbbc548e84c0fdf45eebd901f89ee854e4b65103c",
-      "last_modified": "2026-10-21T15:12:58.735Z",
-      "size_bytes": 9338
+      "hash": "fad817e4afab965b30be1da3cd8883563332c3b481fa40998019d5afa1d34830",
+      "last_modified": "2026-10-21T15:13:00.976Z",
+      "size_bytes": 13691
     },
     {
       "path": "src/utils/weather.ts",
@@ -7883,6 +7893,12 @@
       "name": "getInjuryRisk",
       "method": "GET",
       "path": "/api/injury-risk",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "getIntervalSessions",
+      "method": "GET",
+      "path": "/api/interval-sessions?months=${months}",
       "file": "src/api/index.ts"
     },
     {

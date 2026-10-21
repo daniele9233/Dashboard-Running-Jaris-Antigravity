@@ -13,6 +13,7 @@ import type {
   AnalyticsResponse,
   VdotPacesResponse,
   BestEffortsResponse,
+  IntervalSessionsResponse,
   HeatmapResponse,
   AdaptResponse,
   ProAnalyticsResponse,
@@ -374,6 +375,10 @@ export const getWeeklyHistory = () => api.get<unknown>('/api/weekly-history');
 
 // ─── BEST EFFORTS ────────────────────────────────────────────────────────────
 export const getBestEfforts = () => api.get<BestEffortsResponse>('/api/best-efforts');
+
+/** Le sedute a ripetute degli ultimi mesi, dalla più forte (giri dell'orologio). */
+export const getIntervalSessions = (months = 4) =>
+  api.get<IntervalSessionsResponse>(`/api/interval-sessions?months=${months}`);
 
 // ─── HEATMAP ─────────────────────────────────────────────────────────────────
 export const getHeatmap = () => api.get<HeatmapResponse>('/api/heatmap');

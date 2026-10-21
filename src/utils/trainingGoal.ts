@@ -1,4 +1,4 @@
-import type { BestEffort, Run } from "../types/api";
+import type { BestEffort, IntervalSession, Run } from "../types/api";
 import {
   KIKKO_SUB20_PLAN, KIKKO_VDOT_MAX_GAIN, addDays, basesFor, kikkoPlausibleGain,
   kikkoSub20NormalizeStart, kikkoVdotForFiveK, type KikkoVdotChoice,
@@ -10,8 +10,15 @@ import { predictSec, runVdot, vdotFrom } from "../components/gamification/gamiCo
  * ────────────────────────────────────────────────────────────────────────────
  * Il piano non si inventa: è quello di kikkoSub20, scritto a mano, con i ritmi
  * che seguono il VDOT settimana per settimana. Quello che si sceglie qui è
- * DA DOVE si parte (un VDOT) e DOVE si vuole arrivare (un tempo sui 5 km); da
- * questi due numeri discendono il VDOT di arrivo, la durata e le date.
+ * DA DOVE si parte (un VDOT, da una prestazione vera) e DOVE si vuole arrivare:
+ * una distanza e un passo medio al km, scritti dall'atleta. Da questi due
+ * numeri discendono il VDOT di arrivo, la durata e le date.
+ *
+ * La distanza è libera, ma il piano costruisce il MOTORE — il VDOT — e le sue
+ * sedute sono quelle di un piano sui 5 km. Un obiettivo su un'altra distanza si
+ * traduce nel motore che richiede (il VDOT è lo stesso a qualunque distanza) e
+ * sul server si salva come il 5 km equivalente. Oltre i 10 km il piano alza il
+ * motore ma non prepara la tenuta specifica: la pagina lo dice.
  *
  * La durata non è una leva: è quanto serve. Un punto di VDOT si compra in circa
  * otto settimane a questo livello (Milanović 2015, Bacon 2013), quindi un
@@ -19,19 +26,14 @@ import { predictSec, runVdot, vdotFrom } from "../components/gamification/gamiCo
  * Se nemmeno il blocco pieno basta, il piano lo dice invece di far finta.
  */
 
-/** La distanza non si sceglie: il piano è sui 5 km. */
+/** La distanza su cui il piano è scritto, e a cui si salva l'obiettivo. */
 export const GOAL_DISTANCE_KM = 5;
+
+/** Oltre questa distanza il piano costruisce il motore ma non la tenuta. */
+export const PLAN_SPECIFIC_UP_TO_KM = 10;
 
 /** Sotto questa durata non è più un blocco, è una settimana di richiamo. */
 export const MIN_PLAN_WEEKS = 8;
-
-/** Gli obiettivi pronti; il resto si scrive a mano. */
-export const GOAL_PRESETS: { sec: number; label: string }[] = [
-  { sec: 20 * 60, label: "20:00" },
-  { sec: 19 * 60 + 40, label: "19:40" },
-  { sec: 19 * 60 + 30, label: "19:30" },
-  { sec: 19 * 60, label: "19:00" },
-];
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -46,18 +48,58 @@ export function parseClock(text: string): number | null {
   return h * 3600 + min * 60 + s;
 }
 
-/** Un tempo obiettivo sui 5 km: fra 13:00 e 45:00, il resto non è un 5 km vero. */
-export function parseFiveKGoal(text: string): number | null {
-  const sec = parseClock(text);
-  return sec != null && sec >= 13 * 60 && sec <= 45 * 60 ? sec : null;
-}
-
 /** "19:47" o "1:34:12". */
 export function fmtClock(sec: number): string {
   const t = Math.round(sec);
   const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
   const pad = (n: number) => String(n).padStart(2, "0");
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
+/** Le distanze di un obiettivo: dai 3 km alla maratona, sotto la formula non vale. */
+export const GOAL_KM_RANGE = { min: 3, max: 42.2 } as const;
+/** I passi di un obiettivo: da 2:30 a 10:00 al km. */
+export const GOAL_PACE_RANGE_SEC = { min: 150, max: 600 } as const;
+
+/** "5", "10", "21,1", "21.0975" → km. Null se non è una distanza da obiettivo. */
+export function parseDistanceKm(text: string): number | null {
+  const m = text.trim().replace(",", ".").match(/^\d{1,2}(?:\.\d{1,4})?$/);
+  if (!m) return null;
+  const km = Number(m[0]);
+  return km >= GOAL_KM_RANGE.min && km <= GOAL_KM_RANGE.max ? km : null;
+}
+
+/** "4:00", "3:56" → secondi al km. Null se non è un passo da obiettivo. */
+export function parsePace(text: string): number | null {
+  const m = text.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m || Number(m[2]) > 59) return null;
+  const sec = Number(m[1]) * 60 + Number(m[2]);
+  return sec >= GOAL_PACE_RANGE_SEC.min && sec <= GOAL_PACE_RANGE_SEC.max ? sec : null;
+}
+
+/** Il tempo che lo stesso motore produce su un'altra distanza (Daniels, al fresco). */
+export function equivalentSec(fromM: number, fromSec: number, toM: number): number {
+  return predictSec(toM, vdotFrom(fromM, fromSec));
+}
+
+/** L'obiettivo come lo scrive l'atleta: una distanza e un passo medio al km. */
+export interface GoalTarget {
+  distKm: number;
+  /** Secondi al km. */
+  paceSec: number;
+  /** Tempo sulla distanza: distanza × passo. */
+  timeSec: number;
+  /** Il 5 km a cui quello stesso motore corrisponde: è quello che il piano salva. */
+  fiveKSec: number;
+}
+
+/** L'obiettivo da una distanza e un passo; null se uno dei due è fuori scala. */
+export function goalFromPace(distKm: number, paceSec: number): GoalTarget | null {
+  if (distKm < GOAL_KM_RANGE.min || distKm > GOAL_KM_RANGE.max) return null;
+  if (paceSec < GOAL_PACE_RANGE_SEC.min || paceSec > GOAL_PACE_RANGE_SEC.max) return null;
+  const timeSec = Math.round(distKm * paceSec);
+  const fiveKSec = Math.round(equivalentSec(distKm * 1000, timeSec, GOAL_DISTANCE_KM * 1000));
+  return { distKm, paceSec, timeSec, fiveKSec };
 }
 
 /** Il lunedì da cui si parte: oggi se è lunedì, altrimenti il prossimo. */
@@ -100,10 +142,13 @@ export interface GoalPlan {
  * plausibile, fra MIN_PLAN_WEEKS e la durata piena del piano. Il VDOT di arrivo
  * non supera la partenza di più di due punti: è il tetto che il server applica
  * e che un blocco può produrre davvero.
+ *
+ * `fiveKSec` è il tempo sui 5 km: per un obiettivo su un'altra distanza è il 5 km
+ * equivalente (`GoalTarget.fiveKSec`), cioè lo stesso motore.
  */
-export function buildGoalPlan(baseVdot: number, goalSec: number, todayIso: string): GoalPlan {
+export function buildGoalPlan(baseVdot: number, fiveKSec: number, todayIso: string): GoalPlan {
   const base = round1(baseVdot);
-  const goalVdot = kikkoVdotForFiveK(goalSec);
+  const goalVdot = kikkoVdotForFiveK(fiveKSec);
   const gain = Math.max(0, round1(goalVdot - base));
   const maxWeeks = KIKKO_SUB20_PLAN.weeks.length;
 
@@ -131,7 +176,7 @@ export function buildGoalPlan(baseVdot: number, goalSec: number, todayIso: strin
     vdot: { start: base, target },
     realistic,
     clipped: goalVdot - base > KIKKO_VDOT_MAX_GAIN + 0.05,
-    reachSec: realistic ? goalSec : basesFor(base + capGain).race * GOAL_DISTANCE_KM,
+    reachSec: realistic ? fiveKSec : basesFor(base + capGain).race * GOAL_DISTANCE_KM,
   };
 }
 
@@ -151,11 +196,27 @@ export function vdotMatchesGoal(v: KikkoVdotChoice, goalSec: number): boolean {
 
 // ── Le prestazioni da cui partire ────────────────────────────────────────────
 
+/** Le ripetute di una seduta: quante, a che passo, e la più veloce. */
+export interface RepsDetail {
+  n: number;
+  /** Lunghezza media di una ripetuta, metri. */
+  avgM: number;
+  /** Passo medio sul lavoro, secondi/km. */
+  workPaceSec: number;
+  /** La ripetuta più veloce: passo (secondi/km) e lunghezza (metri). */
+  fastestPaceSec: number;
+  fastestM: number;
+  /** Recupero medio in secondi, se c'è. */
+  restSec: number | null;
+  tempC: number | null;
+}
+
 export interface Performance {
   id: string;
-  kind: "pb" | "run";
-  /** "5 km", "Mezza Maratona" per i record; il nome della corsa per le corse. */
+  kind: "pb" | "reps" | "run";
+  /** "5 km", "Mezza Maratona" per i record; il nome della seduta o della corsa per il resto. */
   label: string;
+  /** Per le ripetute, i chilometri di lavoro. */
   distKm: number;
   timeSec: number;
   /** YYYY-MM-DD. */
@@ -164,6 +225,7 @@ export interface Performance {
   vdot: number;
   /** Dislivello positivo della corsa, in metri: serve a scegliere una prova piatta. */
   elevationM?: number;
+  reps?: RepsDetail;
 }
 
 /** Un VDOT qualsiasi, riportato sulla scala dei ritmi del piano via il 5 km equivalente. */
@@ -195,33 +257,69 @@ function pbPerformance(e: BestEffort): Performance | null {
 }
 
 /**
- * Le prestazioni fra cui scegliere: i record personali e le corse migliori
- * dell'ultimo anno.
+ * Una seduta a ripetute come punto di partenza.
+ *
+ * Il VDOT è quello del server — lo stesso conto del VDOT ufficiale dell'app, dai
+ * giri dell'orologio, con il passo riportato al fresco e lo sconto del recupero —
+ * e qui si porta solo sulla scala dei ritmi del piano. Non si rifà il calcolo.
+ */
+function repsPerformance(s: IntervalSession): Performance {
+  const distKm = (s.n_reps * s.avg_rep_m) / 1000;
+  return {
+    id: `reps-${s.run_id}`,
+    kind: "reps",
+    label: s.name?.trim() || `${s.n_reps}×${s.avg_rep_m} m`,
+    distKm,
+    timeSec: Math.round(distKm * s.work_pace_sec),
+    date: s.date,
+    vdot: planScaleVdot(s.vdot),
+    reps: {
+      n: s.n_reps,
+      avgM: s.avg_rep_m,
+      workPaceSec: s.work_pace_sec,
+      fastestPaceSec: s.fastest_pace_sec,
+      fastestM: s.fastest_rep_m,
+      restSec: s.rest_avg_sec,
+      tempC: s.temp_c,
+    },
+  };
+}
+
+/**
+ * Le prestazioni fra cui scegliere: i record personali, le sedute a ripetute
+ * degli ultimi mesi (dalla più forte) e le corse migliori dell'ultimo anno.
  *
  * Solo corse da 5 km in su, per lo stesso motivo del resto dell'app: sotto, la
  * componente anaerobica gonfia il VDOT. Il VDOT di una corsa è quello al fresco
  * (corretto per il caldo, non per la pendenza: chi sceglie vede il dislivello
- * accanto e può preferire una corsa piatta).
+ * accanto e può preferire una corsa piatta). Una seduta a ripetute sta nel suo
+ * gruppo e non fra le corse: sul passo medio di tutta l'uscita varrebbe meno di
+ * un lento.
  */
 export function performancesFrom(
   efforts: BestEffort[],
   runs: Run[],
+  intervals: IntervalSession[],
   todayIso: string,
-  maxRuns = 8,
-): { pbs: Performance[]; runs: Performance[] } {
+  { maxRuns = 8, maxReps = 6 }: { maxRuns?: number; maxReps?: number } = {},
+): { pbs: Performance[]; reps: Performance[]; runs: Performance[] } {
   const pbs = efforts
     .map(pbPerformance)
     .filter((p): p is Performance => p != null)
     .sort((a, b) => a.distKm - b.distKm);
 
-  const pbRuns = new Set(efforts.map((e) => e.run_id));
+  const reps = intervals
+    .map(repsPerformance)
+    .sort((a, b) => b.vdot - a.vdot);
+
+  const skip = new Set([...efforts.map((e) => e.run_id), ...intervals.map((s) => s.run_id)]);
   const since = addDays(todayIso, -365);
 
   const fromRuns: Performance[] = [];
   for (const r of runs) {
     const date = (r.date ?? "").slice(0, 10);
     if (date < since || date > todayIso) continue;
-    if (!r.distance_km || r.distance_km < 5 || pbRuns.has(r.id)) continue;
+    if (!r.distance_km || r.distance_km < 5 || skip.has(r.id)) continue;
     const v = runVdot(r);
     if (v == null || !Number.isFinite(v)) continue;
     fromRuns.push({
@@ -237,5 +335,5 @@ export function performancesFrom(
   }
   fromRuns.sort((a, b) => b.vdot - a.vdot);
 
-  return { pbs, runs: fromRuns.slice(0, maxRuns) };
+  return { pbs, reps: reps.slice(0, maxReps), runs: fromRuns.slice(0, maxRuns) };
 }

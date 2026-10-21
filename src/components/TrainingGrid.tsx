@@ -22,7 +22,7 @@ import {
   kikkoVdotGainTable, kikkoVdotForFiveK, kikkoPlausibleGain, secToPace,
   type KikkoVdotChoice,
 } from "../data/kikkoSub20Plan";
-import { GOAL_DISTANCE_KM, vdotMatchesGoal, type GoalPlan } from "../utils/trainingGoal";
+import { GOAL_DISTANCE_KM, vdotMatchesGoal, type GoalPlan, type GoalTarget } from "../utils/trainingGoal";
 
 /** Il piano e' uno solo, e la sua distanza non si sceglie: 5 km. */
 const PLAN_ID = "sub20";
@@ -614,7 +614,9 @@ export function TrainingGrid() {
    * una finestra nuova con il VDOT vecchio — e se fallisce resta lo stato
    * ottimistico, che al prossimo caricamento torna a quello del server.
    */
-  const generatePlan = useCallback(async (plan: GoalPlan, newGoalSec: number) => {
+  const generatePlan = useCallback(async (plan: GoalPlan, goal: GoalTarget) => {
+    // il piano è sui 5 km: sul server va il 5 km a cui l'obiettivo corrisponde
+    const newGoalSec = goal.fiveKSec;
     const win: Window = { start: plan.startIso, race: plan.raceMondayIso };
     setSub20Win(win);
     setGoals((prev) => ({ ...prev, [PLAN_ID]: newGoalSec }));

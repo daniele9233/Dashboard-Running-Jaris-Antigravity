@@ -17,6 +17,7 @@ export const API_CACHE = {
   ANALYTICS: 'analytics',
   VDOT_PACES: 'vdot-paces',
   BEST_EFFORTS: 'best-efforts',
+  INTERVAL_SESSIONS: 'interval-sessions',
   HEATMAP: 'heatmap',
   TRAINING_PLAN: 'training-plan',
   TRAINING_CURRENT_WEEK: 'training-current-week',

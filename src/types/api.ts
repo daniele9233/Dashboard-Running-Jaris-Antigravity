@@ -373,6 +373,33 @@ export interface BestEffortsResponse {
   efforts: BestEffort[];
 }
 
+// ─── SEDUTE A RIPETUTE (dai giri dell'orologio) ──────────────────────────────
+
+export interface IntervalSession {
+  run_id: string;
+  /** YYYY-MM-DD */
+  date: string;
+  name: string | null;
+  n_reps: number;
+  /** Lunghezza media di una ripetuta, in metri. */
+  avg_rep_m: number;
+  /** Passo medio sul lavoro, secondi/km. */
+  work_pace_sec: number;
+  /** La ripetuta più veloce: distanza (m) e passo (secondi/km). */
+  fastest_rep_m: number;
+  fastest_pace_sec: number;
+  /** Recupero medio in secondi, se c'è. */
+  rest_avg_sec: number | null;
+  temp_c: number | null;
+  /** Il VDOT che la seduta dimostra, con lo stesso conto del resto dell'app. */
+  vdot: number;
+}
+
+export interface IntervalSessionsResponse {
+  months: number;
+  sessions: IntervalSession[];
+}
+
 // ─── HEATMAP ─────────────────────────────────────────────────────────────────
 
 export interface HeatmapPoint {

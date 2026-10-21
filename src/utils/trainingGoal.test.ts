@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import type { BestEffort, Run } from "../types/api";
+import type { BestEffort, IntervalSession, Run } from "../types/api";
 import { KIKKO_SUB20_PLAN, basesFor, kikkoWindow } from "../data/kikkoSub20Plan";
 import {
-  GOAL_PRESETS, MIN_PLAN_WEEKS, buildGoalPlan, fmtClock, nextMonday, parseClock, parseFiveKGoal,
-  performancesFrom, vdotMatchesGoal,
+  GOAL_DISTANCE_KM, MIN_PLAN_WEEKS, buildGoalPlan, equivalentSec, fmtClock, goalFromPace, nextMonday,
+  parseClock, parseDistanceKm, parsePace, performancesFrom, vdotMatchesGoal,
 } from "./trainingGoal";
 
 // mercoledì 21 ottobre 2026
@@ -22,21 +22,77 @@ describe("i tempi scritti a mano", () => {
     expect(parseClock("abc")).toBeNull();
   });
 
-  it("un obiettivo sui 5 km sta fra 13:00 e 45:00", () => {
-    expect(parseFiveKGoal("19:45")).toBe(1185);
-    expect(parseFiveKGoal("12:30")).toBeNull();
-    expect(parseFiveKGoal("1:00:00")).toBeNull();
-  });
-
   it("scrive i tempi come li si legge", () => {
     expect(fmtClock(1200)).toBe("20:00");
     expect(fmtClock(5675)).toBe("1:34:35");
   });
 
-  it("i tempi pronti sono tutti validi e in ordine dal più lento", () => {
-    const secs = GOAL_PRESETS.map((p) => p.sec);
-    expect(secs.every((s) => parseFiveKGoal(fmtClock(s)) === s)).toBe(true);
-    expect([...secs].sort((a, b) => b - a)).toEqual(secs);
+});
+
+describe("l'obiettivo scritto a mano: distanza e passo medio", () => {
+  it("legge la distanza con virgola o punto", () => {
+    expect(parseDistanceKm("5")).toBe(5);
+    expect(parseDistanceKm("21,1")).toBe(21.1);
+    expect(parseDistanceKm(" 21.0975 ")).toBe(21.0975);
+  });
+
+  it("rifiuta le distanze fuori scala o che non sono numeri", () => {
+    expect(parseDistanceKm("")).toBeNull();
+    expect(parseDistanceKm("2")).toBeNull();      // sotto i 3 km la formula non vale
+    expect(parseDistanceKm("50")).toBeNull();     // oltre la maratona
+    expect(parseDistanceKm("5 km")).toBeNull();
+    expect(parseDistanceKm("-5")).toBeNull();
+  });
+
+  it("legge il passo al km come m:ss", () => {
+    expect(parsePace("4:00")).toBe(240);
+    expect(parsePace(" 3:56 ")).toBe(236);
+  });
+
+  it("rifiuta i passi fuori scala o scritti male", () => {
+    expect(parsePace("")).toBeNull();
+    expect(parsePace("4")).toBeNull();
+    expect(parsePace("4:75")).toBeNull();
+    expect(parsePace("2:00")).toBeNull();         // più veloce di un record del mondo
+    expect(parsePace("12:00")).toBeNull();
+  });
+
+  it("il tempo è distanza × passo", () => {
+    const g = goalFromPace(5, 240)!;
+    expect(g.timeSec).toBe(1200);
+    expect(g.distKm).toBe(5);
+    expect(g.paceSec).toBe(240);
+    expect(fmtClock(g.timeSec)).toBe("20:00");
+  });
+
+  it("sui 5 km il motore equivalente è il tempo stesso", () => {
+    expect(goalFromPace(5, 236)!.fiveKSec).toBe(1180);
+  });
+
+  it("su un'altra distanza si traduce nel 5 km equivalente", () => {
+    // mezza a 4:45/km = 1:40:13 → un motore da ~45 → un 5 km di ~21:30
+    const half = goalFromPace(21.0975, 285)!;
+    expect(half.timeSec).toBe(6013);
+    expect(half.fiveKSec).toBeGreaterThan(20 * 60 + 40);
+    expect(half.fiveKSec).toBeLessThan(22 * 60);
+    // e a ritroso torna alla mezza
+    expect(equivalentSec(GOAL_DISTANCE_KM * 1000, half.fiveKSec, 21097.5)).toBeCloseTo(half.timeSec, -1);
+  });
+
+  it("un passo più veloce sulla stessa distanza chiede un motore più grande", () => {
+    expect(goalFromPace(10, 240)!.fiveKSec).toBeLessThan(goalFromPace(10, 255)!.fiveKSec);
+  });
+
+  it("fuori scala non c'è obiettivo", () => {
+    expect(goalFromPace(2, 240)).toBeNull();
+    expect(goalFromPace(5, 100)).toBeNull();
+    expect(goalFromPace(60, 300)).toBeNull();
+  });
+
+  it("un obiettivo su un'altra distanza dà un piano coerente col suo 5 km equivalente", () => {
+    const half = goalFromPace(21.0975, 285)!;
+    const p = buildGoalPlan(45, half.fiveKSec, TODAY);
+    expect(vdotMatchesGoal(p.vdot, half.fiveKSec)).toBe(true);
   });
 });
 
@@ -141,23 +197,28 @@ const effort = (distance: string, time: string, over: Partial<BestEffort> = {}):
   distance, time, pace: "", date: "2026-09-05", run_id: `e-${distance}`, ...over,
 });
 
+const session = (over: Partial<IntervalSession> = {}): IntervalSession => ({
+  run_id: "s1", date: "2026-09-16", name: "5x1000", n_reps: 5, avg_rep_m: 1000, work_pace_sec: 238,
+  fastest_rep_m: 1000, fastest_pace_sec: 235, rest_avg_sec: 150, temp_c: 17.1, vdot: 48.0, ...over,
+});
+
 describe("le prestazioni da cui partire", () => {
   it("i record: solo dai 5 km alla mezza, in ordine di distanza", () => {
     const { pbs } = performancesFrom(
       [effort("Mezza Maratona", "1:36:00"), effort("400m", "1:10"), effort("5 km", "20:07"), effort("10 km", "42:30")],
-      [], TODAY,
+      [], [], TODAY,
     );
     expect(pbs.map((p) => p.label)).toEqual(["5 km", "10 km", "Mezza Maratona"]);
   });
 
   it("il VDOT di un 5 km a 20:07 sta intorno a 49,5 sulla scala del piano", () => {
-    const { pbs } = performancesFrom([effort("5 km", "20:07")], [], TODAY);
+    const { pbs } = performancesFrom([effort("5 km", "20:07")], [], [], TODAY);
     expect(pbs[0].vdot).toBeGreaterThan(49.2);
     expect(pbs[0].vdot).toBeLessThan(49.9);
   });
 
   it("un tempo da GPS impazzito non è una prestazione", () => {
-    const { pbs } = performancesFrom([effort("5 km", "10:00")], [], TODAY);
+    const { pbs } = performancesFrom([effort("5 km", "10:00")], [], [], TODAY);
     expect(pbs).toHaveLength(0);
   });
 
@@ -169,7 +230,7 @@ describe("le prestazioni da cui partire", () => {
       run({ id: "tapis", is_treadmill: true }),
       run({ id: "vecchia", date: "2025-06-01" }),
       run({ id: "futura", date: "2026-12-01" }),
-    ], TODAY);
+    ], [], TODAY);
     expect(runs.map((r) => r.id)).toEqual(["run-b", "run-a"]);
     expect(runs[0].vdot).toBeGreaterThan(runs[1].vdot);
   });
@@ -178,14 +239,50 @@ describe("le prestazioni da cui partire", () => {
     const { pbs, runs } = performancesFrom(
       [effort("5 km", "20:00", { run_id: "b" })],
       [run({ id: "b" }), run({ id: "a", duration_minutes: 21, avg_pace: "4:12" })],
-      TODAY,
+      [], TODAY,
     );
     expect(pbs).toHaveLength(1);
     expect(runs.map((r) => r.id)).toEqual(["run-a"]);
   });
 
+  it("le ripetute: dalla seduta più forte, con la ripetuta più veloce", () => {
+    const { reps } = performancesFrom([], [], [
+      session({ run_id: "a", vdot: 48.0 }),
+      session({ run_id: "b", vdot: 50.1, fastest_pace_sec: 230 }),
+    ], TODAY);
+    expect(reps.map((r) => r.id)).toEqual(["reps-b", "reps-a"]);
+    expect(reps[0].kind).toBe("reps");
+    expect(reps[0].reps).toMatchObject({ n: 5, avgM: 1000, fastestPaceSec: 230, fastestM: 1000, restSec: 150 });
+    expect(reps[0].distKm).toBe(5);
+    expect(reps[0].timeSec).toBe(1190);   // 5 km di lavoro a 3:58
+  });
+
+  it("il VDOT delle ripetute è quello del server, portato sulla scala del piano", () => {
+    const { reps } = performancesFrom([], [], [session({ vdot: 49.5 })], TODAY);
+    expect(reps[0].vdot).toBeGreaterThan(49.2);
+    expect(reps[0].vdot).toBeLessThan(49.9);
+  });
+
+  it("una seduta a ripetute non compare anche fra le corse", () => {
+    const { reps, runs } = performancesFrom(
+      [], [run({ id: "x", duration_minutes: 22, avg_pace: "4:24" }), run({ id: "y", duration_minutes: 21, avg_pace: "4:12" })],
+      [session({ run_id: "x" })], TODAY,
+    );
+    expect(reps.map((r) => r.id)).toEqual(["reps-x"]);
+    expect(runs.map((r) => r.id)).toEqual(["run-y"]);
+  });
+
+  it("senza ripetute il gruppo è vuoto", () => {
+    expect(performancesFrom([], [], [], TODAY).reps).toEqual([]);
+  });
+
+  it("dà al più il numero di ripetute chiesto", () => {
+    const many = Array.from({ length: 10 }, (_, i) => session({ run_id: `s${i}`, vdot: 45 + i * 0.1 }));
+    expect(performancesFrom([], [], many, TODAY, { maxReps: 4 }).reps).toHaveLength(4);
+  });
+
   it("dà al più il numero di corse chiesto", () => {
     const many = Array.from({ length: 12 }, (_, i) => run({ id: `x${i}`, duration_minutes: 20 + i * 0.1 }));
-    expect(performancesFrom([], many, TODAY, 5).runs).toHaveLength(5);
+    expect(performancesFrom([], many, [], TODAY, { maxRuns: 5 }).runs).toHaveLength(5);
   });
 });
