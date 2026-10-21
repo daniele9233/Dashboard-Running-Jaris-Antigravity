@@ -20,8 +20,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\repo-map.json": {
-    "mtime": 1792592955.6663425,
-    "ast_hash": "130dafa6e5028aea907a77116b26b962",
+    "mtime": 1792593218.4742062,
+    "ast_hash": "5759561ff5e82994d4495a8f946df2cb",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\skills-lock.json": {
@@ -690,8 +690,8 @@
     "semantic_hash": "9b8439940dffb3411a018fbe81d62be9"
   },
   "D:\\webapp-antiG\\repo-map.md": {
-    "mtime": 1792592955.6663425,
-    "ast_hash": "03968100d17b657c56ee29e14538e0a0",
+    "mtime": 1792593218.4742062,
+    "ast_hash": "7dd023465135cb6f4c45a7867019c8d4",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\REPORT-TECNICO.md": {
@@ -1035,8 +1035,8 @@
     "semantic_hash": "89c77e0fb1f07da348ac65ce1241ef77"
   },
   "D:\\webapp-antiG\\src\\components\\gamification\\AthleteEvolutionFramework.tsx": {
-    "mtime": 1789731038.2893436,
-    "ast_hash": "261a2fddba9a8cd1371b0dd76fbb98d3",
+    "mtime": 1792593113.8544333,
+    "ast_hash": "aad635c975c6b08ca841e6b48d2e8671",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\gamification\\evolutionEngine.ts": {
@@ -2280,8 +2280,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\TrainingAdherence.tsx": {
-    "mtime": 1789731038.2853434,
-    "ast_hash": "8314a23077bd5f3a2dbf6bd2a5bdfeea",
+    "mtime": 1792593113.8524315,
+    "ast_hash": "a6cdb8d268bab7021a48b2b1f6f3fba8",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\utils\\trainingAdherence.test.ts": {
@@ -2365,13 +2365,13 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\TrainingGrid.tsx": {
-    "mtime": 1791125767.8080258,
-    "ast_hash": "dd0a9752f796f2b061c7cad6c4200770",
+    "mtime": 1792593113.8534317,
+    "ast_hash": "34352874b80ebd3ad4959df405f5c9b5",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\TrainingSidebar.tsx": {
-    "mtime": 1789731038.2863436,
-    "ast_hash": "f3180b0d064278c24afc668288963a4e",
+    "mtime": 1792593113.8534317,
+    "ast_hash": "2beda6b7f81a1e9e7c498b10979f3ac3",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\data\\kikkoSub135Plan.test.ts": {
@@ -2430,8 +2430,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\hero\\heroContent.ts": {
-    "mtime": 1789734933.3393815,
-    "ast_hash": "849747db638de1ff32b30e7e0b1324b7",
+    "mtime": 1792593113.8574345,
+    "ast_hash": "33e1cf23c91ea199c1316960745a052a",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\hero\\HeroGlyphs.tsx": {
@@ -2505,18 +2505,18 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\gamification\\GoalCone.tsx": {
-    "mtime": 1789731038.2903435,
-    "ast_hash": "888102867328d5b75ff1973f700fa43d",
+    "mtime": 1792593113.8554327,
+    "ast_hash": "3a0990065f483a3e71ce2a91af68f62a",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\gamification\\goalConeEngine.test.ts": {
-    "mtime": 1789636444.9880767,
-    "ast_hash": "dab92e89babd4c8cae1262e3c3a02b4f",
+    "mtime": 1792593113.8564334,
+    "ast_hash": "5a10b8b1c839ecb2fc17c7da5f68cd40",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\gamification\\goalConeEngine.ts": {
-    "mtime": 1789636471.7175057,
-    "ast_hash": "fe85bb9b2e84a9c4fe2fc53ff772cfb9",
+    "mtime": 1792593113.8564334,
+    "ast_hash": "d2d286b5e9eb4ddd2e3eeba01378b326",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\gamification\\WorldConquest.tsx": {
@@ -2542,21 +2542,6 @@
   "D:\\webapp-antiG\\src\\components\\statistics\\FastBiomechanics.tsx": {
     "mtime": 1789731038.2953436,
     "ast_hash": "e74bd1a10bb3829f4ac486ba09aef725",
-    "semantic_hash": ""
-  },
-  "D:\\webapp-antiG\\src\\components\\TrainingPlanPanels.tsx": {
-    "mtime": 1789905755.818664,
-    "ast_hash": "d715ed74337d7868ebc8cd9e6949441d",
-    "semantic_hash": ""
-  },
-  "D:\\webapp-antiG\\src\\data\\mezzaOttobrePlan.test.ts": {
-    "mtime": 1791125657.0458574,
-    "ast_hash": "6bb14615874f395ba3c8447883328f32",
-    "semantic_hash": ""
-  },
-  "D:\\webapp-antiG\\src\\data\\mezzaOttobrePlan.ts": {
-    "mtime": 1791125606.437854,
-    "ast_hash": "fb0d1ead76a7fd467893f84eb1ff1151",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\celebrations\\badgeProgress.ts": {
@@ -2615,8 +2600,8 @@
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\.impeccable\\hook.cache.json": {
-    "mtime": 1792592488.9486494,
-    "ast_hash": "9f0326601ab99a228ab0b83f7b9b53df",
+    "mtime": 1792593195.6038709,
+    "ast_hash": "7ffc15720c616f643c2992b163ed0b00",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\.agents\\skills\\impeccable\\agents\\openai.yaml": {
@@ -2707,16 +2692,6 @@
   "D:\\webapp-antiG\\.agents\\skills\\impeccable\\reference\\degraded\\manual-edit-applier.md": {
     "mtime": 1789677795.749367,
     "ast_hash": "1652cf7a403f11f4d57382e5ccec6999",
-    "semantic_hash": ""
-  },
-  "D:\\webapp-antiG\\src\\utils\\taperForecast.test.ts": {
-    "mtime": 1791125675.4874375,
-    "ast_hash": "d5005bd142d868e05469fc431e988ae1",
-    "semantic_hash": ""
-  },
-  "D:\\webapp-antiG\\src\\utils\\taperForecast.ts": {
-    "mtime": 1791125622.0357058,
-    "ast_hash": "f42f300c5a7ff4cc15c2b534bf072e50",
     "semantic_hash": ""
   },
   "D:\\webapp-antiG\\src\\components\\ScrollRow.tsx": {
