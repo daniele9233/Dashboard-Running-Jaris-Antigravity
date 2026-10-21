@@ -527,6 +527,21 @@ export const putSub20Vdot = (plan: string, start: number | null, target?: number
     vdots: { [plan]: start == null ? null : { start, target } },
   });
 
+/**
+ * Un piano generato: finestra, tempo obiettivo e VDOT in UNA richiesta, così il
+ * server non vede mai una finestra nuova con il VDOT vecchio.
+ */
+export const putSub20Plan = (
+  plan: string,
+  p: { startDate: string; raceDate: string; goalSec: number; vdot: { start: number; target: number } },
+) =>
+  api.put<Sub20StatusResponse>('/api/sub20/status', {
+    start_date: p.startDate,
+    race_date: p.raceDate,
+    goals: { [plan]: p.goalSec },
+    vdots: { [plan]: p.vdot },
+  });
+
 // ─── CONQUISTA D'ITALIA (gamification) ───────────────────────────────────────
 export interface ConquestsResponse {
   conquered: string[];

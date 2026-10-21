@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-10-21T14:31:54.651Z",
+  "generated_at": "2026-10-21T14:46:27.667Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,10 +14,10 @@
     ]
   },
   "counts": {
-    "files": 246,
+    "files": 249,
     "backend_routes": 68,
     "frontend_routes": 19,
-    "api_clients": 78
+    "api_clients": 79
   },
   "files": [
     {
@@ -1960,9 +1960,9 @@
         "../types/jarvis",
         "./client"
       ],
-      "hash": "50e5d3f31111fa3c81ddce164c31c42bc9012bd2f23a302d30850711621259d2",
-      "last_modified": "2026-09-29T04:50:32.972Z",
-      "size_bytes": 26138
+      "hash": "d19fe9968a5a4967fb279d565a1d90f41bee32fdeee87a0a3f566a7b93819f24",
+      "last_modified": "2026-10-21T14:42:32.067Z",
+      "size_bytes": 26643
     },
     {
       "path": "src/App.tsx",
@@ -5814,6 +5814,36 @@
       "size_bytes": 6727
     },
     {
+      "path": "src/components/TrainingGoalBox.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component TrainingGoalBox.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "layout",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "TrainingGoalBox"
+      ],
+      "routes": [],
+      "imports": [
+        "../api",
+        "../data/kikkoSub20Plan",
+        "../hooks/apiCacheKeys",
+        "../hooks/useApi",
+        "../types/api",
+        "../utils/trainingGoal",
+        "./gamification/useAthleteVdot",
+        "lucide-react",
+        "react"
+      ],
+      "hash": "4d84a857730c737a9bd1b5dd7f6b6a45566304f96de5964184e43c2ca81cbd7c",
+      "last_modified": "2026-10-21T14:43:06.754Z",
+      "size_bytes": 13995
+    },
+    {
       "path": "src/components/TrainingGrid.tsx",
       "kind": "frontend-component",
       "purpose": "React component TrainingGrid.",
@@ -5838,14 +5868,16 @@
         "../hooks/useApi",
         "../types/api",
         "../utils/trainingAdherence",
+        "../utils/trainingGoal",
         "./TrainingAdherence",
+        "./TrainingGoalBox",
         "lucide-react",
         "react",
         "react-i18next"
       ],
-      "hash": "be7f1247803928f02b594bc3f6bd6468302d7773f14711e132551a22bcc3c93c",
-      "last_modified": "2026-10-21T14:31:53.853Z",
-      "size_bytes": 59932
+      "hash": "eb8f14723d3feda5dced2e7eed95c366ecbe350f4804d8016e293bdfc92dd2c5",
+      "last_modified": "2026-10-21T14:46:27.668Z",
+      "size_bytes": 51106
     },
     {
       "path": "src/components/TrainingSidebar.tsx",
@@ -6908,6 +6940,62 @@
       "size_bytes": 16469
     },
     {
+      "path": "src/utils/trainingGoal.test.ts",
+      "kind": "frontend-utility",
+      "purpose": "Shared utility module exporting trainingGoal.test.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "training",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "../data/kikkoSub20Plan",
+        "../types/api",
+        "./trainingGoal",
+        "vitest"
+      ],
+      "hash": "d6e972f15c10ed3179edd46c6f5d4a6e73d88af09eb23bf812c72acbc3334ae3",
+      "last_modified": "2026-10-21T14:46:25.068Z",
+      "size_bytes": 7619
+    },
+    {
+      "path": "src/utils/trainingGoal.ts",
+      "kind": "frontend-utility",
+      "purpose": "Shared utility module exporting buildGoalPlan, fmtClock, GOAL_DISTANCE_KM, GOAL_PRESETS.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "buildGoalPlan",
+        "fmtClock",
+        "GOAL_DISTANCE_KM",
+        "GOAL_PRESETS",
+        "GoalPlan",
+        "MIN_PLAN_WEEKS",
+        "nextMonday",
+        "parseClock",
+        "parseFiveKGoal",
+        "Performance",
+        "performancesFrom",
+        "vdotMatchesGoal"
+      ],
+      "routes": [],
+      "imports": [
+        "../components/gamification/gamiCore",
+        "../data/kikkoSub20Plan",
+        "../types/api"
+      ],
+      "hash": "9ef0b27aff5fa5c30683c44fbbc548e84c0fdf45eebd901f89ee854e4b65103c",
+      "last_modified": "2026-10-21T14:46:21.495Z",
+      "size_bytes": 9097
+    },
+    {
       "path": "src/utils/weather.ts",
       "kind": "frontend-utility",
       "purpose": "Shared utility module exporting computeDewpoint, computeEnvironmentalPenalty, fetchWeatherBatch, fetchWeatherForRun.",
@@ -7943,6 +8031,12 @@
     },
     {
       "name": "putSub20Goal",
+      "method": "PUT",
+      "path": "/api/sub20/status",
+      "file": "src/api/index.ts"
+    },
+    {
+      "name": "putSub20Plan",
       "method": "PUT",
       "path": "/api/sub20/status",
       "file": "src/api/index.ts"
