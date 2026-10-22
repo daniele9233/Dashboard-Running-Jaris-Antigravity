@@ -4,12 +4,12 @@ import { gsap } from "../celebrations/gsapSetup";
 import { useApi } from "../../hooks/useApi";
 import { getBestEfforts, getProfile, getRuns } from "../../api";
 import { API_CACHE } from "../../hooks/apiCacheKeys";
-import type { BestEffort, Profile, RunsResponse } from "../../types/api";
+import type { BestEffort, Profile, Run, RunsResponse } from "../../types/api";
 import { fmtClock } from "../gamification/gamiCore";
 import { usePhysio, fmtDate } from "../gamification/usePhysio";
 import { climateAt, humanDays } from "../gamification/physioEngine";
 import {
-  caffeineDose, currentPlan, deadlineInDays, defaultSetup, planGoal, provenBest,
+  atDayTemperature, caffeineDose, currentPlan, deadlineInDays, defaultSetup, planGoal, provenBest,
   type Factor, type RaceSetup,
 } from "./raceLabEngine";
 import { CAFFEINE_MAX_TABS, CAFFEINE_TAB_MG, DEFAULT_SHOE_ID, SHOES, TAPERS, shoeById, type TaperKind } from "./shoeLab";
@@ -219,7 +219,7 @@ function SetupControls({ setup, onChange }: { setup: RaceSetup; onChange: (s: Ra
 }
 
 // ══ L'OBIETTIVO ═══════════════════════════════════════════════════
-function GoalSection({ physio, bodyKg }: { physio: ReturnType<typeof usePhysio>; bodyKg: number }) {
+function GoalSection({ physio, bodyKg, runs }: { physio: ReturnType<typeof usePhysio>; bodyKg: number; runs: Run[] }) {
   const [distId, setDistId] = useState<string>("5k");
   const [timeStr, setTimeStr] = useState("19:50");
   const [deadline, setDeadline] = useState("");
@@ -265,7 +265,15 @@ function GoalSection({ physio, bodyKg }: { physio: ReturnType<typeof usePhysio>;
   const pctNow = result ? Math.round(result.probabilityNow * 100) : 0;
   const deltaPct = pct - pctNow;
   const probCol = pct >= 80 ? "#22C55E" : pct >= 50 ? "#FBBF24" : "#F43F5E";
-  const alreadyThere = result != null && targetSec != null && result.todaySec <= targetSec;
+  // "il tempo ce l'hai già" vale solo se nel giorno medio è più probabile di no
+  const alreadyThere = result != null && targetSec != null && result.todayProbability >= 0.5;
+
+  // il miglior tempo reale, alla temperatura del modello di oggi (non quella di quel giorno)
+  const provenRun = proven?.runId ? runs.find((r) => r.id === proven.runId) : undefined;
+  const provenTempC = provenRun?.temperature ?? null;
+  const provenSec = proven && result
+    ? atDayTemperature(proven.sec, provenTempC, result.curve[0]?.tempC ?? 12, dist.m / 1000)
+    : null;
 
   return (
     <Card className="rl-rise overflow-hidden">
@@ -313,11 +321,11 @@ function GoalSection({ physio, bodyKg }: { physio: ReturnType<typeof usePhysio>;
                     </p>
                     <p className="mt-2 text-[12.5px] text-gray-400 leading-relaxed">
                       {result.etaSafe ? (
-                        <>Quella è la data in cui la previsione tocca il tempo: ci vai sopra una volta su due.
+                        <>Quella è la data in cui ci arrivi una volta su due, in un giorno medio.
                           Perché diventi probabile (4 volte su 5) serve arrivare al{" "}
                           <b className="text-white">{fmtDate(result.etaSafe.iso)}</b> — {humanDays(result.etaSafe.days)}.</>
                       ) : (
-                        <>È la data in cui la previsione tocca il tempo: una volta su due va, una no. Con questo
+                        <>È la data in cui ci arrivi una volta su due, in un giorno medio. Con questo
                           carico non arriva mai a essere una cosa su cui contare.</>
                       )}
                     </p>
@@ -331,17 +339,21 @@ function GoalSection({ physio, bodyKg }: { physio: ReturnType<typeof usePhysio>;
                     <b className="text-white">Oggi, in queste condizioni:</b>{" "}
                     <b className="tabular-nums" style={{ fontFamily: MONO, color: LIT }}>{fmtClock(result.todaySec)}</b>
                   </div>
-                  {proven && (
+                  {proven && provenSec != null && (
                     <div>
                       <b className="text-white">Il tuo miglior {dist.label} reale:</b>{" "}
                       <b className="tabular-nums" style={{ fontFamily: MONO, color: LIT }}>{fmtClock(proven.sec)}</b>{" "}
-                      ({fmtDate(proven.iso)}) —{" "}
-                      {targetSec < proven.sec ? (
+                      ({fmtDate(proven.iso)}{provenTempC != null ? `, ${Math.round(provenTempC)}°C` : ""})
+                      {Math.abs(provenSec - proven.sec) >= 3 && (
+                        <>, che a {Math.round(result.curve[0]?.tempC ?? 12)}°C vale{" "}
+                          <b className="tabular-nums" style={{ fontFamily: MONO, color: LIT }}>{fmtClock(provenSec)}</b></>
+                      )} —{" "}
+                      {targetSec < provenSec ? (
                         <>
                           <b className="tabular-nums" style={{ fontFamily: MONO }}>{fmtClock(targetSec)}</b> è{" "}
                           <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>
-                            {(((proven.sec - targetSec) / proven.sec) * 100).toFixed(1).replace(".", ",")}%
-                          </b>{" "}più veloce ({fmtClock(proven.sec - targetSec)} in meno).
+                            {(((provenSec - targetSec) / provenSec) * 100).toFixed(1).replace(".", ",")}%
+                          </b>{" "}più veloce ({fmtClock(provenSec - targetSec)} in meno).
                         </>
                       ) : (
                         <>l'obiettivo non è più veloce di quello che hai già corso.</>
@@ -391,6 +403,8 @@ function GoalSection({ physio, bodyKg }: { physio: ReturnType<typeof usePhysio>;
                     <>La data di riferimento è quella in cui ci arriverebbe il carico di adesso: è ferma mentre muovi i cursori, così il numero si muove. </>
                   )}
                   Include la variabilità del giorno di gara: a forma identica due gare non danno lo stesso tempo.
+                  Il tempo del modello parte dai tuoi migliori risultati recenti, quindi nel giorno medio corri
+                  circa l'1% più lento: è già dentro la percentuale, e ogni aiuto che aggiungi ne allarga l'incertezza.
                 </p>
               </div>
             </div>
@@ -624,7 +638,7 @@ export function RaceLabView() {
           </p>
         </div>
 
-        <GoalSection physio={physio} bodyKg={bodyKg} />
+        <GoalSection physio={physio} bodyKg={bodyKg} runs={runs} />
 
       </div>
     </main>

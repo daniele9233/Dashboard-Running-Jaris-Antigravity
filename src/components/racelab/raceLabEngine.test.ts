@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
-  REFERENCE, caffeineDose, conditionFactors, currentPlan, deadlineInDays, defaultSetup, fastEfforts, planGoal, provenBest, raceFactor,
+  REFERENCE, TYPICAL_DAY_SHORTFALL_PCT, atDayTemperature, caffeineDose, conditionFactors, currentPlan, deadlineInDays,
+  defaultSetup, fastEfforts, planGoal, provenBest, raceFactor,
   solvePlan, successProbability, whatIf, type Conditions, type Effort,
 } from "./raceLabEngine";
 import {
@@ -372,7 +373,10 @@ describe("quando arrivo all'obiettivo, e cosa devo fare", () => {
   });
 
   it("la probabilità è una probabilità, non una promessa", () => {
-    expect(successProbability(1200, 1200, 90)).toBeCloseTo(0.5, 1);
+    // il modello dà un giorno buono, non il medio: dove la previsione tocca il
+    // tempo la probabilità è sotto il 50%, e il 50% sta un po' più in là
+    expect(successProbability(1200, 1200, 90)).toBeLessThan(0.45);
+    expect(successProbability(1200 / (1 + TYPICAL_DAY_SHORTFALL_PCT / 100), 1200, 90)).toBeCloseTo(0.5, 6);
     expect(successProbability(1150, 1200, 90)).toBeGreaterThan(0.7);
     expect(successProbability(1300, 1200, 90)).toBeLessThan(0.2);
     for (const v of [0, 1, 100, 5000]) {
@@ -380,6 +384,35 @@ describe("quando arrivo all'obiettivo, e cosa devo fare", () => {
       expect(p).toBeGreaterThanOrEqual(0);
       expect(p).toBeLessThanOrEqual(1);
     }
+  });
+
+  /**
+   * La segnalazione: 5 km in 19:50 con un VDOT 49 (previsione ~20:15) dava il 14%,
+   * e barbabietola + caffeina + "in gara, non da solo" lo portavano al 63%. Un
+   * livello preso dai migliori risultati recenti non è il giorno medio, e ogni
+   * aiuto è una media con una risposta individuale larga.
+   */
+  it("un obiettivo 25 secondi sotto la previsione non è una scommessa da 14%", () => {
+    const base = successProbability(1215, 1190, 0);
+    expect(base).toBeLessThan(0.1);
+    // tutti gli aiuti insieme: ~2,7% sul tempo, ~1,2% di incertezza sull'effetto
+    const armato = successProbability(1215 * 0.9729, 1190, 0, 1.23);
+    expect(armato).toBeGreaterThan(0.3);
+    expect(armato).toBeLessThan(0.55);
+    expect(armato).toBeGreaterThan(base);
+  });
+
+  it("l'incertezza degli aiuti allarga la probabilità, non la sposta a senso unico", () => {
+    // sopra il 50% l'incertezza in più la abbassa, sotto la alza: è una larghezza
+    expect(successProbability(1100, 1200, 30, 1.5)).toBeLessThan(successProbability(1100, 1200, 30));
+    expect(successProbability(1300, 1200, 30, 1.5)).toBeGreaterThan(successProbability(1300, 1200, 30));
+  });
+
+  it("riportare un tempo reale alla temperatura di un altro giorno toglie il caldo", () => {
+    const sec = 21 * 60 + 4;
+    expect(atDayTemperature(sec, 23, 16, 5)).toBeLessThan(sec);        // corso al caldo, vale di più al fresco
+    expect(atDayTemperature(sec, 12, 12, 5)).toBeCloseTo(sec, 6);
+    expect(atDayTemperature(sec, null, 16, 5)).toBe(sec);              // senza temperatura non si inventa
   });
 
   it("più lontana è la previsione, meno è certa", () => {
@@ -416,7 +449,8 @@ describe("quando arrivo all'obiettivo, e cosa devo fare", () => {
     });
     if (r.etaPlan && r.etaSafe) {
       expect(r.etaSafe.days).toBeGreaterThan(r.etaPlan.days);
-      expect(r.probability).toBeGreaterThanOrEqual(0.79);
+      // alla data di riferimento il piano pesante ha più che la probabilità "possibile"
+      expect(r.probability).toBeGreaterThan(0.5);
     }
   });
 
@@ -615,7 +649,7 @@ describe("la traiettoria guarda la gara", () => {
       { distance: "Mezza Maratona", time: "1:58:10", date: "2026-10-18" },
       { distance: "4 km", time: "16:09", date: "2025-08-25" },
     ];
-    expect(provenBest(efforts, 5000)).toEqual({ sec: 21 * 60 + 4, iso: "2026-06-17" });
+    expect(provenBest(efforts, 5000)).toEqual({ sec: 21 * 60 + 4, iso: "2026-06-17", runId: null });
     expect(provenBest(efforts, 10000)?.sec).toBe(43 * 60 + 25);
     expect(provenBest(efforts, 21097)?.sec).toBe(3600 + 58 * 60 + 10);   // h:mm:ss
     expect(provenBest(efforts, 42195)).toBeNull();                       // mai corsa

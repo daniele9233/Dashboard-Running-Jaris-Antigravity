@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-10-22T05:41:29.362Z",
+  "generated_at": "2026-10-22T06:28:58.900Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -5668,9 +5668,9 @@
         "./shoeLab",
         "vitest"
       ],
-      "hash": "9bba78c090d2bdd53548ef408f159fc5d700e027703e4536d2fb5312c994f4ff",
-      "last_modified": "2026-10-22T05:41:19.085Z",
-      "size_bytes": 31084
+      "hash": "59f643e9fc9d24cf95de31441f1fe0f2ca6b2e128b9071945c4a0603957ee39d",
+      "last_modified": "2026-10-22T06:28:04.844Z",
+      "size_bytes": 33074
     },
     {
       "path": "src/components/racelab/raceLabEngine.ts",
@@ -5686,6 +5686,7 @@
       ],
       "exports": [
         "annotationOf",
+        "atDayTemperature",
         "caffeineDose",
         "CLASS_LABEL",
         "conditionFactors",
@@ -5713,6 +5714,7 @@
         "REFERENCE",
         "solvePlan",
         "successProbability",
+        "TYPICAL_DAY_SHORTFALL_PCT",
         "whatIf",
         "WhatIf"
       ],
@@ -5723,9 +5725,9 @@
         "../gamification/physioEngine",
         "./shoeLab"
       ],
-      "hash": "a0969f54992ac26111a05eb96f54bf948c79543a901e46e31337228f03a21c32",
-      "last_modified": "2026-10-22T05:41:14.792Z",
-      "size_bytes": 39805
+      "hash": "9d1a07d4320df579d59e256b6412d77e42b9755ce6438ad954398c741421b85a",
+      "last_modified": "2026-10-22T06:27:09.008Z",
+      "size_bytes": 42913
     },
     {
       "path": "src/components/racelab/RaceLabView.tsx",
@@ -5760,9 +5762,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "bb97f84c04524c5dcad4951deab8c6ddcbba491c6ac4202d9709ccd928676895",
-      "last_modified": "2026-10-22T05:41:29.362Z",
-      "size_bytes": 35305
+      "hash": "384a1cbcf9af15e3b363d1c4a6239c55da5ba64f1a903cfa4dcf22c28c11381b",
+      "last_modified": "2026-10-22T06:28:58.901Z",
+      "size_bytes": 36434
     },
     {
       "path": "src/components/racelab/shoeLab.ts",

@@ -350,13 +350,13 @@ export function raceFactor(
 /** Come {@link walkPlan}, ma il tempo che passa a `visit` è già quello di gara. */
 function walkRace(
   model: PhysioModel, dose: SystemLevels, distM: number, setup: RaceSetup, vdot: number, days: number,
-  visit: (i: number, raceSec: number, tempC: number) => boolean | void,
+  visit: (i: number, raceSec: number, tempC: number, uncertaintyPct: number) => boolean | void,
   ceiling?: number,
 ): void {
   const distKm = distM / 1000;
   walkPlan(model, dose, distM, days, (i, sec, dayTemp) => {
-    const { factor } = raceFactor(setup, distKm, dayTemp, sec / distKm, vdot);
-    return visit(i, sec * factor, setup.tempC ?? dayTemp);
+    const { factor, uncertaintyPct } = raceFactor(setup, distKm, dayTemp, sec / distKm, vdot);
+    return visit(i, sec * factor, setup.tempC ?? dayTemp, uncertaintyPct);
   }, ceiling);
 }
 
@@ -409,6 +409,8 @@ export interface GoalPlanResult {
   atTarget: { sec: number; tempC: number } | null;
   /** Che tempo faresti OGGI in quelle condizioni: il controllo di realtà. */
   todaySec: number;
+  /** La probabilità di farcela oggi, nel giorno medio: è lei che dice se "il tempo ce l'hai già". */
+  todayProbability: number;
   /** Da dove vengono i secondi che le condizioni scelte regalano o tolgono. */
   factors: Factor[];
   /** Probabilità di farcela alla data di riferimento. */
@@ -463,10 +465,43 @@ function normalCdf(z: number): number {
 /** Deviazione standard di una previsione a `days` giorni, in % del tempo: giornata + modello. */
 export const predictionSdPct = (days: number) => Math.sqrt(RACE_DAY_SD_PCT ** 2 + modelSdPct(days) ** 2);
 
-export function successProbability(predictedSec: number, targetSec: number, horizonDays: number): number {
-  const sd = (predictedSec * predictionSdPct(horizonDays)) / 100;
-  if (sd <= 0) return predictedSec <= targetSec ? 1 : 0;
-  return clamp(normalCdf((targetSec - predictedSec) / sd), 0, 1);
+/**
+ * Il tempo che il modello dà è un giorno buono, non un giorno medio.
+ *
+ * Il livello (VDOT) su cui poggia tutto viene dai MIGLIORI risultati recenti:
+ * nel backend è il massimo fra la media pesata delle sei uscite migliori, il
+ * secondo massimo recente e la media delle due migliori degli ultimi due mesi
+ * (`_recent_anchor` e il pavimento sulla prestazione, in server.py). Una stima
+ * presa dall'alto di una distribuzione non è la mediana di quella distribuzione:
+ * con una giornata che varia dell'1,5% e il secondo migliore di quattro-sei
+ * prove, la stima sta circa mezza-una deviazione sopra il giorno medio. Prendere
+ * quel numero come il 50% di probabilità, come faceva la prima versione, regala
+ * alla coda buona una probabilità che non ha: è il motivo per cui 19:50 con un
+ * VDOT 49 usciva al 14% e, aggiungendo gli aiuti, al 63%.
+ *
+ * Qui si resta bassi: 1%, cioè meno di una deviazione. Non cambia i tempi
+ * mostrati (restano quelli del modello, coerenti col resto dell'app): sposta
+ * dove sta il 50%.
+ */
+export const TYPICAL_DAY_SHORTFALL_PCT = 1.0;
+
+/**
+ * Probabilità di correre sotto il tempo obiettivo.
+ *
+ * `extraSdPct` è l'incertezza delle voci del giorno di gara (nitrati, caffeina,
+ * scarpe…): `raceFactor` la calcolava da sempre, ma la probabilità la ignorava,
+ * quindi ogni aiuto spostava il centro senza allargare niente. Ogni aiuto è una
+ * media di studi con una risposta individuale larga: aggiunge una media e anche
+ * un'incertezza.
+ */
+export function successProbability(
+  predictedSec: number, targetSec: number, horizonDays: number, extraSdPct = 0,
+): number {
+  const typicalSec = predictedSec * (1 + TYPICAL_DAY_SHORTFALL_PCT / 100);
+  const sdPct = Math.sqrt(predictionSdPct(horizonDays) ** 2 + extraSdPct ** 2);
+  const sd = (predictedSec * sdPct) / 100;
+  if (sd <= 0) return typicalSec <= targetSec ? 1 : 0;
+  return clamp(normalCdf((targetSec - typicalSec) / sd), 0, 1);
 }
 
 /**
@@ -486,8 +521,8 @@ export function etaAtConfidence(
   confidence: number, setup: RaceSetup, vdot: number, days = 540, ceiling?: number,
 ): { days: number; iso: string; tempC: number } | null {
   let hit: { days: number; iso: string; tempC: number } | null = null;
-  walkRace(model, dose, distM, setup, vdot, days, (i, sec, temp) => {
-    if (successProbability(sec, targetSec, i) >= confidence) {
+  walkRace(model, dose, distM, setup, vdot, days, (i, sec, temp, unc) => {
+    if (successProbability(sec, targetSec, i, unc) >= confidence) {
       hit = { days: i, iso: dayToIso(model.today + i), tempC: Math.round(temp) };
       return true;
     }
@@ -495,14 +530,14 @@ export function etaAtConfidence(
   return hit;
 }
 
-/** Il primo giorno in cui il piano, in quelle condizioni, tocca il tempo. */
+/** Il primo giorno in cui il piano, in quelle condizioni, arriva al 50%: ci vai sotto una volta su due. */
 export function raceEta(
   model: PhysioModel, dose: SystemLevels, distM: number, targetSec: number,
   setup: RaceSetup, vdot: number, days = 540, ceiling?: number,
 ): { days: number; iso: string; tempC: number } | null {
   let hit: { days: number; iso: string; tempC: number } | null = null;
-  walkRace(model, dose, distM, setup, vdot, days, (i, sec, temp) => {
-    if (sec <= targetSec) {
+  walkRace(model, dose, distM, setup, vdot, days, (i, sec, temp, unc) => {
+    if (successProbability(sec, targetSec, i, unc) >= 0.5) {
       hit = { days: i, iso: dayToIso(model.today + i), tempC: Math.round(temp) };
       return true;
     }
@@ -564,7 +599,7 @@ export function solvePlan(
         const dose = planToDose(plan, easyPaceSec);
         if (deadlineDays != null) {
           const at = raceTimeAtDay(model, dose, distM, deadlineDays, setup, vdot);
-          if (successProbability(at.sec, targetSec, deadlineDays) < minProbability) continue;
+          if (successProbability(at.sec, targetSec, deadlineDays, at.uncertaintyPct) < minProbability) continue;
         } else if (!etaAtConfidence(model, dose, distM, targetSec, minProbability, setup, vdot)) {
           // senza scadenza basta che il piano ci arrivi con quella confidenza,
           // prima o poi: chiederlo alla data di crossing sarebbe impossibile
@@ -594,17 +629,17 @@ function goalCurve(
   targetSec: number, setup: RaceSetup, vdot: number, days: number,
   ceilNow: number, ceilPlan: number, keyDays: number[] = [],
 ): GoalCurvePoint[] {
-  const plan = new Map<number, { sec: number; tempC: number }>();
-  const now = new Map<number, number>();
+  const plan = new Map<number, { sec: number; tempC: number; unc: number }>();
+  const now = new Map<number, { sec: number; unc: number }>();
   const step = days <= 120 ? 1 : days <= 240 ? 2 : days <= 400 ? 7 : 14;
   const keys = new Set(keyDays.filter((d) => d > 0 && d <= days));
   const keep = (i: number) => i % step === 0 || i === days || keys.has(i);
 
-  walkRace(model, doseNow, distM, setup, vdot, days, (i, sec) => {
-    if (keep(i)) now.set(i, sec);
+  walkRace(model, doseNow, distM, setup, vdot, days, (i, sec, _temp, unc) => {
+    if (keep(i)) now.set(i, { sec, unc });
   }, ceilNow);
-  walkRace(model, dosePlan, distM, setup, vdot, days, (i, sec, temp) => {
-    if (keep(i)) plan.set(i, { sec, tempC: temp });
+  walkRace(model, dosePlan, distM, setup, vdot, days, (i, sec, temp, unc) => {
+    if (keep(i)) plan.set(i, { sec, tempC: temp, unc });
   }, ceilPlan);
 
   const out: GoalCurvePoint[] = [];
@@ -615,20 +650,20 @@ function goalCurve(
   out.push({
     day: 0, iso: dayToIso(model.today), planSec: Math.round(today.sec), nowSec: Math.round(today.sec),
     loSec: Math.round(today.sec - sd0), hiSec: Math.round(today.sec + sd0),
-    planProb: successProbability(today.sec, targetSec, 0),
-    nowProb: successProbability(today.sec, targetSec, 0),
+    planProb: successProbability(today.sec, targetSec, 0, today.uncertaintyPct),
+    nowProb: successProbability(today.sec, targetSec, 0, today.uncertaintyPct),
     tempC: Math.round(today.tempC),
   });
 
   for (const [i, p] of [...plan.entries()].sort((a, b) => a[0] - b[0])) {
     const sd = (p.sec * predictionSdPct(i)) / 100;
-    const nowSec = now.get(i) ?? p.sec;
+    const n = now.get(i) ?? p;
     out.push({
       day: i, iso: dayToIso(model.today + i),
-      planSec: Math.round(p.sec), nowSec: Math.round(nowSec),
+      planSec: Math.round(p.sec), nowSec: Math.round(n.sec),
       loSec: Math.round(p.sec - sd), hiSec: Math.round(p.sec + sd),
-      planProb: successProbability(p.sec, targetSec, i),
-      nowProb: successProbability(nowSec, targetSec, i),
+      planProb: successProbability(p.sec, targetSec, i, p.unc),
+      nowProb: successProbability(n.sec, targetSec, i, n.unc),
       tempC: Math.round(p.tempC),
     });
   }
@@ -649,6 +684,7 @@ function goalLevers(
   model: PhysioModel, distM: number, targetSec: number, easyPaceSec: number,
   plan: WeeklyPlan, setup: RaceSetup, vdot: number, horizonDays: number,
   baseSec: number, baseLateSec: number, baseSafeDays: number | null, coolShoeId: string | null,
+  baseUncPct: number,
 ): Lever[] {
   const out: Lever[] = [];
   const add = (
@@ -670,8 +706,8 @@ function goalLevers(
       id, label, detail, kind, gainSec, gainSecLate,
       daysEarlier: safe && baseSafeDays != null ? baseSafeDays - safe.days : null,
       probPoints: Math.round(
-        (successProbability(at.sec, targetSec, horizonDays)
-          - successProbability(baseSec, targetSec, horizonDays)) * 100,
+        (successProbability(at.sec, targetSec, horizonDays, at.uncertaintyPct)
+          - successProbability(baseSec, targetSec, horizonDays, baseUncPct)) * 100,
       ),
     });
   };
@@ -750,17 +786,34 @@ const clockSec = (t: string): number | null => {
  * entra in nessun calcolo.
  */
 export function provenBest(
-  efforts: { distance: string; time: string; date: string }[] | null | undefined, distM: number,
-): { sec: number; iso: string } | null {
+  efforts: { distance: string; time: string; date: string; run_id?: string }[] | null | undefined, distM: number,
+): { sec: number; iso: string; runId: string | null } | null {
   const labels = EFFORT_LABELS[distM];
   if (!labels) return null;
-  let best: { sec: number; iso: string } | null = null;
+  let best: { sec: number; iso: string; runId: string | null } | null = null;
   for (const e of efforts ?? []) {
     if (!labels.includes(e.distance.trim().toLowerCase())) continue;
     const sec = clockSec(e.time);
-    if (sec != null && (!best || sec < best.sec)) best = { sec, iso: e.date };
+    if (sec != null && (!best || sec < best.sec)) best = { sec, iso: e.date, runId: e.run_id ?? null };
   }
   return best;
+}
+
+/**
+ * Quel tempo reale riportato alla temperatura di un altro giorno.
+ *
+ * Il 21:04 corso a 23 °C non è lo stesso 21:04 corso a 16 °C: il modello toglie e
+ * rimette il caldo con `heatSlowdownFrac`, e il confronto con la previsione deve
+ * usare la stessa moneta. Senza questo l'obiettivo sembrava il 5,9% più veloce
+ * del reale quando, alla stessa temperatura, ne era il 3% circa.
+ */
+export function atDayTemperature(
+  sec: number, effortTempC: number | null | undefined, dayTempC: number, distKm: number,
+): number {
+  if (effortTempC == null || !Number.isFinite(effortTempC)) return sec;
+  const effort = heatSlowdownFrac(effortTempC, null, distKm);
+  const day = heatSlowdownFrac(dayTempC, null, distKm);
+  return (sec / (1 + effort)) * (1 + day);
 }
 
 export function planGoal(
@@ -810,8 +863,8 @@ export function planGoal(
 
   const at = raceTimeAtDay(model, dosePlan, distM, horizonDays, setup, vdot, ceilPlan);
   const atNow = raceTimeAtDay(model, doseNow, distM, horizonDays, setup, vdot, ceilNow);
-  const probability = successProbability(at.sec, targetSec, horizonDays);
-  const probabilityNow = successProbability(atNow.sec, targetSec, horizonDays);
+  const probability = successProbability(at.sec, targetSec, horizonDays, at.uncertaintyPct);
+  const probabilityNow = successProbability(atNow.sec, targetSec, horizonDays, atNow.uncertaintyPct);
   const todayRace = raceTimeAtDay(model, dosePlan, distM, 0, setup, vdot, ceilPlan);
   const atLate = raceTimeAtDay(
     model, dosePlan, distM, Math.min(540, horizonDays + 180), setup, vdot, ceilPlan);
@@ -833,6 +886,7 @@ export function planGoal(
     etaNow, etaPlan, etaSafe,
     atTarget: opt.deadlineDays != null ? { sec: at.sec, tempC: at.tempC } : null,
     todaySec: todayRace.sec,
+    todayProbability: successProbability(todayRace.sec, targetSec, 0, todayRace.uncertaintyPct),
     factors: todayRace.factors,
     probability,
     probabilityNow,
@@ -847,7 +901,7 @@ export function planGoal(
       model, doseNow, dosePlan, distM, targetSec, setup, vdot, curveDays, ceilNow, ceilPlan, keyDays),
     levers: goalLevers(
       model, distM, targetSec, opt.easyPaceSec, opt.plan, setup, vdot, horizonDays,
-      at.sec, atLate.sec, etaSafe?.days ?? null, opt.fastestShoeId ?? null,
+      at.sec, atLate.sec, etaSafe?.days ?? null, opt.fastestShoeId ?? null, at.uncertaintyPct,
     ),
   };
 }
