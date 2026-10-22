@@ -156,9 +156,6 @@
   "src/components/statistics/EnvironmentalNormalizerView.tsx": {
     "hex": 21
   },
-  "src/components/statistics/PaceCalculator.tsx": {
-    "hex": 6
-  },
   "src/components/statistics/StatisticsView.tsx": {
     "hex": 8
   },

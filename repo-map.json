@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-10-22T04:51:37.328Z",
+  "generated_at": "2026-10-22T05:09:47.034Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 287,
+    "files": 286,
     "backend_routes": 69,
     "frontend_routes": 19,
     "api_clients": 80
@@ -1212,9 +1212,9 @@
       "exports": [],
       "routes": [],
       "imports": [],
-      "hash": "ec260ec6d080ab152a13c1bb062f134071c1bdfc46320abd41cd0d315b0e00cd",
-      "last_modified": "2026-10-22T04:51:37.328Z",
-      "size_bytes": 9988
+      "hash": "00da80fdd637bde612555760d2392776d3c3c36a65eef38154f611d3ecfd90bd",
+      "last_modified": "2026-10-22T05:09:14.658Z",
+      "size_bytes": 10090
     },
     {
       "path": "docs/design-system/05-VERIFICATION.md",
@@ -2294,9 +2294,9 @@
       "exports": [],
       "routes": [],
       "imports": [],
-      "hash": "f4a984ef7366d2999ac83d52dd98632582652325721286aa32f1c4deca8e131a",
-      "last_modified": "2026-10-22T04:51:05.213Z",
-      "size_bytes": 3979
+      "hash": "e3ca0b440512749eec45a3ffda2bbf20853f44dd80c26e00c91a393075365ee8",
+      "last_modified": "2026-10-22T05:09:47.034Z",
+      "size_bytes": 3909
     },
     {
       "path": "scripts/design-check.ts",
@@ -6445,30 +6445,6 @@
       "size_bytes": 30749
     },
     {
-      "path": "src/components/statistics/PaceCalculator.tsx",
-      "kind": "frontend-statistics-component",
-      "purpose": "React component PaceCalculator.",
-      "touch_when": [
-        "ai",
-        "layout",
-        "statistics",
-        "types"
-      ],
-      "exports": [
-        "PaceCalculator"
-      ],
-      "routes": [],
-      "imports": [
-        "../charts",
-        "lucide-react",
-        "react",
-        "react-i18next"
-      ],
-      "hash": "5682b64025b1ad83dab1a1e92a47cb30501e5dda8e474c2fa00bd58f151a4a0e",
-      "last_modified": "2026-10-21T18:38:47.041Z",
-      "size_bytes": 20608
-    },
-    {
       "path": "src/components/statistics/StatisticsView.tsx",
       "kind": "frontend-statistics-component",
       "purpose": "React component StatisticsView.",
@@ -6507,15 +6483,14 @@
         "./CaricoFormaV2",
         "./ChartFullscreenModal",
         "./EnvironmentalNormalizerView",
-        "./PaceCalculator",
         "lucide-react",
         "react",
         "react-i18next",
         "recharts"
       ],
-      "hash": "adc6c68c3c320169f6ea5f4c06d6f9ff74e1df8e7833269f9833692f87accbc8",
-      "last_modified": "2026-10-22T04:49:45.584Z",
-      "size_bytes": 54791
+      "hash": "06b9274dbb65463487dbf04001576d8669a81ff25a5cef1fa6757e637a20853d",
+      "last_modified": "2026-10-22T05:09:06.432Z",
+      "size_bytes": 54381
     },
     {
       "path": "src/components/SupercompensationChart.tsx",

@@ -8,7 +8,6 @@ import { BiologyFutureV2 } from './BiologyFutureV2';
 import { BiologyFutureV3 } from './BiologyFutureV3';
 import { BiologyFutureLab } from './BiologyFutureLab';
 import { EnvironmentalNormalizerView } from './EnvironmentalNormalizerView';
-import { PaceCalculator } from './PaceCalculator';
 import { AnalyticsV4CadenceSpeedMatrix } from "./AnalyticsV4";
 import { CaricoFormaV2 } from './CaricoFormaV2';
 import { ChartExpandButton } from "./ChartFullscreenModal";
@@ -32,7 +31,7 @@ import type {
   AdaptationKey,
   AdaptationType,
 } from '../../types/api';
-import { Activity, Zap, BarChart3, Dna, FlaskConical, LineChart as LineChartIcon, Star, Briefcase, Info, Radar, CloudSun, Calculator, Microscope } from "lucide-react";
+import { Activity, Zap, BarChart3, Dna, FlaskConical, LineChart as LineChartIcon, Star, Briefcase, Info, Radar, CloudSun, Microscope } from "lucide-react";
 import { Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ComposedChart, Line, ReferenceLine, Label } from "recharts";
 
 import { CHART_SERIES, CHART_SURFACE, ChartCard, ChartHeader, ChartPlot, ChartTip, chartGrid, chartMargin, chartXAxis, chartYAxis } from "../charts";
@@ -693,7 +692,6 @@ export function StatisticsView() {
     { id: 'environment', label: t('statsTabs.climatePace'),           icon: CloudSun },
     { id: 'biologyv2',   label: t('statsTabs.detraining'),            icon: Dna },
     { id: 'biology-v3',  label: t('statsTabs.biologyV2'),             icon: Microscope },
-    { id: 'pace-calc',   label: 'Calcolatore',                       icon: Calculator },
   ];
 
 
@@ -1066,13 +1064,6 @@ export function StatisticsView() {
         {activeTab === 'biology-v3' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
             <BiologyFutureV3 runs={runs} profile={profileData ?? null} />
-          </div>
-        )}
-
-        {/* ═══ CALCOLATORE PASSO ═══ */}
-        {activeTab === 'pace-calc' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <PaceCalculator vdot={vdot} />
           </div>
         )}
       </div>
