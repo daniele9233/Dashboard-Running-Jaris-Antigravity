@@ -26,6 +26,7 @@ const BadgesView     = lazy(() => import("./components/BadgesView").then((m) => 
 const GamificationV1 = lazy(() => import("./components/gamification/GamificationV1").then((m) => ({ default: m.GamificationV1 })));
 const RaceLabView = lazy(() => import("./components/racelab/RaceLabView").then((m) => ({ default: m.RaceLabView })));
 const PaceLabView = lazy(() => import("./components/pacelab/PaceLabView").then((m) => ({ default: m.PaceLabView })));
+const ShinRehabView = lazy(() => import("./components/rehab/ShinRehabView").then((m) => ({ default: m.ShinRehabView })));
 import { useParams } from "react-router-dom";
 import { exchangeStravaCode, syncStrava, getProfile } from "./api";
 import { invalidateCache, useApi } from "./hooks/useApi";
@@ -86,7 +87,8 @@ function AppContent() {
     { path: "/gamification-v1", label: "GAMI V1" },
     { path: "/race-lab",    label: "BANCO DI PROVA" },
     { path: "/pace-lab",    label: "PACE LAB" },
-    { path: "/profile",     label: t("nav.profile")    },
+    { path: "/shin-splints", label: "SHIN SPLINTS" },
+    { path: "/profile",    label: t("nav.profile")    },
   ];
 
   // Handle Strava OAuth callback: exchange code and sync
@@ -204,6 +206,7 @@ function AppContent() {
                 <Route path="/gamification-v3"  element={<Navigate to="/gamification-v1" replace />} />
                 <Route path="/race-lab"         element={<RaceLabView />} />
                 <Route path="/pace-lab"         element={<PaceLabView />} />
+                <Route path="/shin-splints"     element={<ShinRehabView />} />
                 <Route path="/statistics"       element={<StatisticsView />} />
                 <Route path="/profile"          element={<ProfileView />} />
                 <Route path="/recovery"         element={<ComingSoonView label="Recovery" />} />

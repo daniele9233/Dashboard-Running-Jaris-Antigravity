@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-10-22T06:28:58.900Z",
+  "generated_at": "2026-10-22T07:03:44.272Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,9 +14,9 @@
     ]
   },
   "counts": {
-    "files": 286,
+    "files": 292,
     "backend_routes": 69,
-    "frontend_routes": 19,
+    "frontend_routes": 20,
     "api_clients": 80
   },
   "files": [
@@ -2649,6 +2649,7 @@
         "/runner-dna",
         "/runner-dna-v1",
         "/runner-dna-v2",
+        "/shin-splints",
         "/statistics",
         "/training"
       ],
@@ -2667,9 +2668,9 @@
         "react-i18next",
         "react-router-dom"
       ],
-      "hash": "8985eaa49d00cfa81a66e9abb1db310b66f74c749104594eff463a6cab41292f",
-      "last_modified": "2026-09-29T04:50:40.891Z",
-      "size_bytes": 11583
+      "hash": "c0ff0e7707a025bb1cf0197868cb5be4479c3e42536a1bbbab46c32aedf53e0d",
+      "last_modified": "2026-10-22T06:59:00.950Z",
+      "size_bytes": 11840
     },
     {
       "path": "src/components/ActivitiesView.tsx",
@@ -5885,6 +5886,101 @@
       "size_bytes": 5971
     },
     {
+      "path": "src/components/rehab/shinRehabState.test.ts",
+      "kind": "frontend-component",
+      "purpose": "React component shinRehabState.test.",
+      "touch_when": [
+        "activities",
+        "ai"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "./shinRehabState",
+        "vitest"
+      ],
+      "hash": "17e8229de2e96516e68e2dad59da01d4ff2977f6efe8f2e840a762bd50fd8b51",
+      "last_modified": "2026-10-22T06:59:25.722Z",
+      "size_bytes": 2325
+    },
+    {
+      "path": "src/components/rehab/shinRehabState.ts",
+      "kind": "frontend-component",
+      "purpose": "React component shinRehabState.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "types"
+      ],
+      "exports": [
+        "defaultState",
+        "doneToday",
+        "localIso",
+        "parseState",
+        "ShinRehabState",
+        "STORAGE_KEY"
+      ],
+      "routes": [],
+      "imports": [
+        "../../data/shinRehab"
+      ],
+      "hash": "c1c30b4efcdd815a5d3a31a25c639ac625b17fa1f2338841d0c8d125f7d3f5b5",
+      "last_modified": "2026-10-22T06:57:44.112Z",
+      "size_bytes": 2970
+    },
+    {
+      "path": "src/components/rehab/ShinRehabView.tsx",
+      "kind": "frontend-view",
+      "purpose": "Page/view component for ShinRehab.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "cadence",
+        "layout",
+        "statistics",
+        "types"
+      ],
+      "exports": [
+        "ShinRehabView"
+      ],
+      "routes": [],
+      "imports": [
+        "../../data/shinRehab",
+        "../charts",
+        "./shinRehabState",
+        "./useShinRehab",
+        "clsx",
+        "lucide-react",
+        "react",
+        "recharts"
+      ],
+      "hash": "3c86fe802733dc2d14f61a2d662bebc816c96e250176b8809a686ebcec06edeb",
+      "last_modified": "2026-10-22T07:03:44.272Z",
+      "size_bytes": 24863
+    },
+    {
+      "path": "src/components/rehab/useShinRehab.ts",
+      "kind": "frontend-component",
+      "purpose": "React component useShinRehab.",
+      "touch_when": [
+        "activities",
+        "ai",
+        "types"
+      ],
+      "exports": [
+        "useShinRehab"
+      ],
+      "routes": [],
+      "imports": [
+        "../../data/shinRehab",
+        "./shinRehabState",
+        "react"
+      ],
+      "hash": "6d1b37a0a4c0366791a34c397fdc6bbcd4439806924b30484f7983b2d9ad6f8f",
+      "last_modified": "2026-10-22T06:57:48.501Z",
+      "size_bytes": 1852
+    },
+    {
       "path": "src/components/RoutesView.tsx",
       "kind": "frontend-view",
       "purpose": "Page/view component for Routes.",
@@ -7014,6 +7110,69 @@
       "hash": "9569d78d594fe5870b13d37fa5f179be5b0af2eded7738dffbba9fbae931ac85",
       "last_modified": "2026-09-18T11:30:38.297Z",
       "size_bytes": 51013
+    },
+    {
+      "path": "src/data/shinRehab.test.ts",
+      "kind": "frontend-source",
+      "purpose": "frontend-source shinRehab.test.ts.",
+      "touch_when": [
+        "ai",
+        "training",
+        "types"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "./shinRehab",
+        "vitest"
+      ],
+      "hash": "6ee91809573ffa6ac9fe9de376c1c52783657e7258b040acaf26e48ad780dd28",
+      "last_modified": "2026-10-22T06:59:19.124Z",
+      "size_bytes": 4873
+    },
+    {
+      "path": "src/data/shinRehab.ts",
+      "kind": "frontend-source",
+      "purpose": "frontend-source shinRehab.ts.",
+      "touch_when": [
+        "ai",
+        "cadence",
+        "garmin",
+        "training",
+        "types"
+      ],
+      "exports": [
+        "Cause",
+        "CAUSES",
+        "Equipment",
+        "EQUIPMENT",
+        "Exercise",
+        "EXERCISES",
+        "exercisesFor",
+        "Gate",
+        "PAIN_BANDS",
+        "painBand",
+        "PainBand",
+        "PainEntry",
+        "painPeak",
+        "painTrend",
+        "PainTrend",
+        "Phase",
+        "phaseById",
+        "PhaseId",
+        "PHASES",
+        "RED_FLAGS",
+        "RedFlag",
+        "RETURN_RULES",
+        "RETURN_TO_RUN",
+        "ReturnStep",
+        "upsertPain"
+      ],
+      "routes": [],
+      "imports": [],
+      "hash": "3f4cff23e43bdf9adff693d2523c5116aeb76da57a5a239b8341428a70c0f93a",
+      "last_modified": "2026-10-22T06:57:32.490Z",
+      "size_bytes": 25567
     },
     {
       "path": "src/data/sub20Plan.ts",
@@ -8361,115 +8520,121 @@
       "path": "*",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 212
+      "line": 215
     },
     {
       "path": "/",
       "element": "DashboardView",
       "file": "src/App.tsx",
-      "line": 194
+      "line": 196
     },
     {
       "path": "/activities",
       "element": "ActivitiesView",
       "file": "src/App.tsx",
-      "line": 195
+      "line": 197
     },
     {
       "path": "/activities/:runId",
       "element": "RoutesViewWrapper",
       "file": "src/App.tsx",
-      "line": 196
+      "line": 198
     },
     {
       "path": "/badges",
       "element": "BadgesView",
       "file": "src/App.tsx",
-      "line": 202
+      "line": 204
     },
     {
       "path": "/biometrics",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 210
+      "line": 213
     },
     {
       "path": "/gamification-v1",
       "element": "GamificationV1",
       "file": "src/App.tsx",
-      "line": 203
+      "line": 205
     },
     {
       "path": "/gamification-v3",
       "element": "Navigate",
       "file": "src/App.tsx",
-      "line": 204
+      "line": 206
     },
     {
       "path": "/insights",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 211
+      "line": 214
     },
     {
       "path": "/pace-lab",
       "element": "PaceLabView",
       "file": "src/App.tsx",
-      "line": 206
+      "line": 208
     },
     {
       "path": "/profile",
       "element": "ProfileView",
       "file": "src/App.tsx",
-      "line": 208
+      "line": 211
     },
     {
       "path": "/race-lab",
       "element": "RaceLabView",
       "file": "src/App.tsx",
-      "line": 205
+      "line": 207
     },
     {
       "path": "/ranking",
       "element": "RankingView",
       "file": "src/App.tsx",
-      "line": 201
+      "line": 203
     },
     {
       "path": "/recovery",
       "element": "ComingSoonView",
       "file": "src/App.tsx",
-      "line": 209
+      "line": 212
     },
     {
       "path": "/runner-dna",
       "element": "RunnerDnaView",
       "file": "src/App.tsx",
-      "line": 198
+      "line": 200
     },
     {
       "path": "/runner-dna-v1",
       "element": "Navigate",
       "file": "src/App.tsx",
-      "line": 199
+      "line": 201
     },
     {
       "path": "/runner-dna-v2",
       "element": "Navigate",
       "file": "src/App.tsx",
-      "line": 200
+      "line": 202
+    },
+    {
+      "path": "/shin-splints",
+      "element": "ShinRehabView",
+      "file": "src/App.tsx",
+      "line": 209
     },
     {
       "path": "/statistics",
       "element": "StatisticsView",
       "file": "src/App.tsx",
-      "line": 207
+      "line": 210
     },
     {
       "path": "/training",
       "element": "TrainingView",
       "file": "src/App.tsx",
-      "line": 197
+      "line": 199
     }
   ],
   "api_clients": [
