@@ -9,7 +9,7 @@ import { fmtClock } from "../gamification/gamiCore";
 import { usePhysio, fmtDate } from "../gamification/usePhysio";
 import { climateAt, humanDays } from "../gamification/physioEngine";
 import {
-  caffeineDose, currentPlan, defaultSetup, planGoal,
+  caffeineDose, currentPlan, deadlineInDays, defaultSetup, planGoal,
   type Factor, type RaceSetup,
 } from "./raceLabEngine";
 import { CAFFEINE_MAX_TABS, CAFFEINE_TAB_MG, DEFAULT_SHOE_ID, SHOES, TAPERS, shoeById, type TaperKind } from "./shoeLab";
@@ -238,12 +238,9 @@ function GoalSection({ physio, bodyKg }: { physio: ReturnType<typeof usePhysio>;
   const targetSec = parseClock(timeStr);
   const easyPace = physio.thresholdPaceSec > 0 ? physio.thresholdPaceSec * 1.22 : 340;
 
-  const deadlineDays = useMemo(() => {
-    if (!deadline) return null;
-    const d = Math.floor(new Date(deadline + "T00:00:00Z").getTime() / 86400000);
-    const diff = d - physio.model.today;
-    return diff > 0 ? diff : null;
-  }, [deadline, physio.model.today]);
+  const deadlineDays = useMemo(
+    () => deadlineInDays(deadline, physio.model.today),
+    [deadline, physio.model.today]);
 
   const result = useMemo(() => {
     if (!physio.ok || !targetSec) return null;
@@ -341,7 +338,7 @@ function GoalSection({ physio, bodyKg }: { physio: ReturnType<typeof usePhysio>;
 
               <div className="rounded-xl border border-white/8 bg-black/30 p-4 flex flex-col justify-center">
                 <div className="text-xs font-black tracking-[0.22em] uppercase text-gray-500 mb-2">
-                  Probabilità {deadlineDays ? "il giorno della gara" : `al ${fmtDate(result.horizon.iso)}`}
+                  Probabilità {deadlineDays != null ? "il giorno della gara" : `al ${fmtDate(result.horizon.iso)}`}
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-5xl font-black tabular-nums leading-none" style={{ fontFamily: MONO, color: probCol }}>{pct}</span>
@@ -369,7 +366,7 @@ function GoalSection({ physio, bodyKg }: { physio: ReturnType<typeof usePhysio>;
                     : result.gapSec > 0
                       ? <>Al piano simulato ti mancherebbero <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>{fmtClock(result.gapSec)}</b>. </>
                       : <>Col piano simulato avresti <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>{fmtClock(-result.gapSec)}</b> di margine. </>}
-                  {result.horizon.source === "carico-attuale" && !deadlineDays && (
+                  {result.horizon.source === "carico-attuale" && deadlineDays == null && (
                     <>La data di riferimento è quella in cui ci arriverebbe il carico di adesso: è ferma mentre muovi i cursori, così il numero si muove. </>
                   )}
                   Include la variabilità del giorno di gara: a forma identica due gare non danno lo stesso tempo.
@@ -446,7 +443,7 @@ function GoalSection({ physio, bodyKg }: { physio: ReturnType<typeof usePhysio>;
                     </p>
                     <p className="mt-2 text-xs text-gray-500 leading-relaxed">
                       È il carico più leggero che porta all'obiettivo con almeno l'80% di probabilità
-                      {deadlineDays ? " entro la data scelta" : ""}, in quelle condizioni di gara.
+                      {deadlineDays != null ? " entro la data scelta" : ""}, in quelle condizioni di gara.
                     </p>
                     <button type="button" onClick={() => {
                       setKm(result.suggested!.km);
@@ -459,7 +456,7 @@ function GoalSection({ physio, bodyKg }: { physio: ReturnType<typeof usePhysio>;
                   </>
                 ) : (
                   <p className="text-[12.5px] text-gray-400 leading-relaxed">
-                    Nessun carico ragionevole ci arriva{deadlineDays ? " entro quella data" : ""}. Serve più tempo,
+                    Nessun carico ragionevole ci arriva{deadlineDays != null ? " entro quella data" : ""}. Serve più tempo,
                     una giornata migliore, o un obiettivo intermedio.
                   </p>
                 )}

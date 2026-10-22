@@ -713,6 +713,21 @@ function goalLevers(
   return out.sort((a, b) => b.gainSec - a.gainSec);
 }
 
+/**
+ * Quanti giorni mancano alla gara scelta, o null se non c'è una data valida.
+ *
+ * Oggi è una data valida: gara oggi vale 0 giorni. Prima il confine era `> 0`,
+ * quindi scegliere la data di oggi equivaleva a non sceglierne nessuna: la pagina
+ * leggeva la probabilità a una data lontana (quella in cui il carico attuale
+ * toccherebbe il tempo) e dava il 74% oggi contro il 27% di domani.
+ */
+export function deadlineInDays(deadlineIso: string, todayIdx: number): number | null {
+  if (!deadlineIso) return null;
+  const day = Math.floor(new Date(deadlineIso + "T00:00:00Z").getTime() / 86400000);
+  const diff = day - todayIdx;
+  return diff >= 0 ? diff : null;
+}
+
 export function planGoal(
   model: PhysioModel, distM: number, targetSec: number,
   opt: {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  REFERENCE, caffeineDose, conditionFactors, currentPlan, defaultSetup, fastEfforts, planGoal, raceFactor,
+  REFERENCE, caffeineDose, conditionFactors, currentPlan, deadlineInDays, defaultSetup, fastEfforts, planGoal, raceFactor,
   solvePlan, successProbability, whatIf, type Conditions, type Effort,
 } from "./raceLabEngine";
 import {
@@ -586,6 +586,25 @@ describe("la traiettoria guarda la gara", () => {
     const r = goal(30);
     expect(r.curve[0].loSec).toBeLessThan(r.curve[0].planSec);
     expect(r.curve[0].hiSec).toBeGreaterThan(r.curve[0].planSec);
+  });
+
+  it("gara oggi è una gara, non l'assenza di una data", () => {
+    // il bug: la data di oggi (0 giorni) era scartata come "nessuna data", e la
+    // probabilità si leggeva a una data lontana: 74% oggi contro 27% domani
+    const idx = physio.model.today;
+    const iso = (n: number) => new Date((idx + n) * 86400000).toISOString().slice(0, 10);
+    expect(deadlineInDays(iso(0), idx)).toBe(0);
+    expect(deadlineInDays(iso(1), idx)).toBe(1);
+    expect(deadlineInDays(iso(-1), idx)).toBeNull();       // il passato non è una gara
+    expect(deadlineInDays("", idx)).toBeNull();
+
+    const oggi = goal(deadlineInDays(iso(0), idx));
+    const domani = goal(deadlineInDays(iso(1), idx));
+    expect(oggi.horizon.source).toBe("gara");
+    expect(oggi.horizon.days).toBe(0);
+    expect(oggi.probability).toBeCloseTo(oggi.curve[0].planProb, 6);
+    // un giorno di distanza non può spostare la probabilità di decine di punti
+    expect(Math.abs(oggi.probability - domani.probability)).toBeLessThan(0.1);
   });
 
   it("la caffeina sposta tutta la curva, non solo il giorno della gara", () => {
