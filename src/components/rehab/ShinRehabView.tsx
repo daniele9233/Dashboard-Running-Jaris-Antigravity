@@ -13,6 +13,7 @@ import {
   exercisesFor, painBand, painPeak, painTrend, phaseById,
   type Equipment, type Exercise, type PainEntry, type PainTrend, type PhaseId,
 } from "../../data/shinRehab";
+import { ExerciseFigure } from "./ExerciseFigure";
 import { doneToday, localIso } from "./shinRehabState";
 import { useShinRehab } from "./useShinRehab";
 
@@ -192,6 +193,7 @@ function ExerciseCard({ ex, done, onToggle }: { ex: Exercise; done: boolean; onT
         </div>
         <CheckBox checked={done} onChange={onToggle} label={`Fatto oggi: ${ex.name}`} className="-my-1.5" />
       </div>
+      <ExerciseFigure exerciseId={ex.id} name={ex.name} />
       <div className="flex flex-wrap gap-1.5">
         {ex.equipment.map((q) => (
           <Tag key={q}>{EQUIPMENT.find((e) => e.id === q)?.label}</Tag>

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-10-22T07:03:44.272Z",
+  "generated_at": "2026-10-22T08:07:09.218Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 292,
+    "files": 295,
     "backend_routes": 69,
     "frontend_routes": 20,
     "api_clients": 80
@@ -5886,6 +5886,83 @@
       "size_bytes": 5971
     },
     {
+      "path": "src/components/rehab/ExerciseFigure.tsx",
+      "kind": "frontend-component",
+      "purpose": "React component ExerciseFigure.",
+      "touch_when": [
+        "ai",
+        "layout",
+        "strava",
+        "types"
+      ],
+      "exports": [
+        "ExerciseFigure"
+      ],
+      "routes": [],
+      "imports": [
+        "./figures",
+        "clsx",
+        "react"
+      ],
+      "hash": "20e8bc5a748b324051b0adc6eabe9092811e14c0877243a63e5d5389ffea34b4",
+      "last_modified": "2026-10-22T08:06:49.230Z",
+      "size_bytes": 4433
+    },
+    {
+      "path": "src/components/rehab/figures.test.ts",
+      "kind": "frontend-component",
+      "purpose": "React component figures.test.",
+      "touch_when": [
+        "ai"
+      ],
+      "exports": [],
+      "routes": [],
+      "imports": [
+        "../../data/shinRehab",
+        "./figures",
+        "vitest"
+      ],
+      "hash": "c83527f8acacf661ca1fefa2eeb5b1da753075fe9ebca5a80082de5d43204f69",
+      "last_modified": "2026-10-22T08:07:09.219Z",
+      "size_bytes": 3240
+    },
+    {
+      "path": "src/components/rehab/figures.ts",
+      "kind": "frontend-component",
+      "purpose": "React component figures.",
+      "touch_when": [
+        "ai",
+        "types"
+      ],
+      "exports": [
+        "along",
+        "Built",
+        "Chain",
+        "EXERCISE_FIGURES",
+        "Frame",
+        "FRAME_H",
+        "FRAME_W",
+        "framePoints",
+        "front",
+        "GROUND",
+        "Highlight",
+        "Joints",
+        "LegSpec",
+        "P",
+        "person",
+        "PersonSpec",
+        "Prop",
+        "Tone",
+        "vec",
+        "zoomFrame"
+      ],
+      "routes": [],
+      "imports": [],
+      "hash": "4279f9078f53215a628a5861ba67c6fa48532d02c04458b8d46ad1f6e3978395",
+      "last_modified": "2026-10-22T08:06:57.839Z",
+      "size_bytes": 25578
+    },
+    {
       "path": "src/components/rehab/shinRehabState.test.ts",
       "kind": "frontend-component",
       "purpose": "React component shinRehabState.test.",
@@ -5947,6 +6024,7 @@
       "imports": [
         "../../data/shinRehab",
         "../charts",
+        "./ExerciseFigure",
         "./shinRehabState",
         "./useShinRehab",
         "clsx",
@@ -5954,9 +6032,9 @@
         "react",
         "recharts"
       ],
-      "hash": "3c86fe802733dc2d14f61a2d662bebc816c96e250176b8809a686ebcec06edeb",
-      "last_modified": "2026-10-22T07:03:44.272Z",
-      "size_bytes": 24863
+      "hash": "88608aa090d3bc594ef99f9ed2f902226f894ff69fb4c4439fe7b888d7bc2f16",
+      "last_modified": "2026-10-22T07:57:59.836Z",
+      "size_bytes": 24973
     },
     {
       "path": "src/components/rehab/useShinRehab.ts",
