@@ -1,18 +1,13 @@
 /**
  * ANALYTICS PRO V3 — Biomechanics & Telemetry Dashboard
- * Ground Contact Stability · Radar · Efficiency Correlation · Long-Term Adaptation
+ * Ground Contact Stability · Radar · Efficiency Correlation
  */
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import {
-  XAxis, YAxis, Tooltip, ResponsiveContainer,
-  LineChart, Line, CartesianGrid, ReferenceLine,
-  AreaChart, Area,
-} from 'recharts';
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, ReferenceLine } from "recharts";
 import { Activity, Zap, RefreshCcw, Info, Check, AlertTriangle } from 'lucide-react';
 import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
 import type { GarminCsvLinkResult, ProAnalyticsChart } from '../../types/api';
-import { FastBiomechanics } from './FastBiomechanics';
 
 import { CHART_SERIES, CHART_SURFACE, CHART_TEXT, ChartTooltip, chartGrid, chartMargin, chartXAxis, chartYAxis } from "../charts";
 // ─── Constants — alias sul tema condiviso (chartTheme.ts) ───────────────────
@@ -716,7 +711,6 @@ export function AnalyticsV3({
 }) {
   const [athleticExpanded, setAthleticExpanded] = useState(false);
   const [efficiencyExpanded, setEfficiencyExpanded] = useState(false);
-  const [adaptationExpanded, setAdaptationExpanded] = useState(false);
   const radarAxesReal: RadarAxis[] = (data.athletic_profile?.series_card ?? []).map((d) => ({
     label: String(d.axis ?? ''),
     value: Number(d.value ?? 0),
@@ -731,25 +725,10 @@ export function AnalyticsV3({
     speed: Number(d.efficiency ?? 0),
     cardiac: Number(d.hr ?? 0) / 200,
   })).filter((d) => d.speed || d.cardiac);
-  const adaptationSeries = (data.adaptation?.series_card ?? []).map((d) => ({
-    month: String(d.date ?? ''),
-    adaptation: Math.max(0, Math.min(100, 100 - Number(d.gct ?? 280) / 4)),
-    stress: Number(d.km ?? 0),
-  }));
-  const adaptationDetail = (data.adaptation?.series_detail?.length ? data.adaptation.series_detail : data.adaptation?.series_card ?? []).map((d) => ({
-    month: String(d.date ?? ''),
-    adaptation: Math.max(0, Math.min(100, 100 - Number(d.gct ?? 280) / 4)),
-    stress: Number(d.km ?? 0),
-  }));
   const noData = <div className="h-full min-h-[180px] flex items-center justify-center text-gray-600 text-xs font-black uppercase tracking-widest">Dati reali insufficienti</div>;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-
-      {/* ══════════════════════════════════════════════════
-          IL GESTO A RITMO GARA — corse veloci e ripetute
-      ══════════════════════════════════════════════════ */}
-      <FastBiomechanics chart={data.fast_biomechanics} />
 
       {/* ══════════════════════════════════════════════════
           GROUND CONTACT STABILITY
@@ -871,104 +850,6 @@ export function AnalyticsV3({
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════════════
-          LONG-TERM TRAINING ADAPTATION
-      ══════════════════════════════════════════════════ */}
-      <div
-        className={`rounded-2xl p-5 group ${GLASS}`}
-        style={cardStyle(NEON)}
-      >
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <Activity className="w-5 h-5" style={{ color: NEON }} />
-            <div>
-              <h3 className="ea-title" style={{ color: CHART_TEXT.primary }}>
-                Long-Term Training Adaptation
-              </h3>
-              <p className="text-xs font-black tracking-widest mt-0.5" style={{ color: DIM }}>
-                SUPERCOMPENSATION CYCLE — STRESS VS ADAPTATION CURVE
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-5">
-            <span className="flex items-center gap-1.5 text-xs font-black" style={{ color: MUTED }}>
-              <span className="w-3 h-3 rounded-full inline-block" style={{ background: `${NEON}80` }} />
-              ADAPTATION
-            </span>
-            <span className="flex items-center gap-1.5 text-xs font-black" style={{ color: MUTED }}>
-              <span className="w-3 h-3 rounded-full inline-block" style={{ background: `${ORANGE}80` }} />
-              RACE DATA
-            </span>
-            <ChartExpandButton onClick={() => { onRequestChartDetail?.('adaptation'); setAdaptationExpanded(true); }} />
-          </div>
-        </div>
-
-        {adaptationSeries.length ? <ResponsiveContainer width="100%" height={220}>
-          <AreaChart data={adaptationSeries} margin={chartMargin}>
-            <defs>
-              <linearGradient id="adaptGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor={NEON}   stopOpacity={0.18} />
-                <stop offset="95%" stopColor={NEON}   stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="stressGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor={ORANGE} stopOpacity={0.18} />
-                <stop offset="95%" stopColor={ORANGE} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid {...chartGrid} />
-            <XAxis {...chartXAxis} dataKey="month" />
-            <YAxis {...chartYAxis} />
-            <Tooltip content={<DarkTooltip />} />
-            {/* Race Date marker */}
-            <ReferenceLine
-              x="Jul"
-              stroke={ORANGE}
-              strokeDasharray="6 3"
-              strokeWidth={1.5}
-              label={{ value: 'RACE DATE', position: 'top', fill: ORANGE, fontSize: 12, fontWeight: 900 }}
-            />
-            <Area
-              type="monotone"
-              dataKey="stress"
-              name="Stress"
-              stroke={ORANGE}
-              strokeWidth={2}
-              fill="url(#stressGrad)"
-              dot={false}
-            />
-            <Area
-              type="monotone"
-              dataKey="adaptation"
-              name="Adaptation"
-              stroke={NEON}
-              strokeWidth={2.5}
-              fill="url(#adaptGrad)"
-              dot={false}
-            />
-          </AreaChart>
-        </ResponsiveContainer> : noData}
-
-        {/* Bottom annotation */}
-        <div
-          className="mt-5 flex items-center justify-between pt-5 border-t"
-          style={{ borderColor: BORDER }}
-        >
-          <p className="text-xs font-black tracking-widest" style={{ color: DIM }}>
-            BANISTER-COGGAN SUPERCOMPENSATION MODEL
-          </p>
-          <div className="flex items-center gap-6">
-            <div>
-              <p className="text-xs font-black tracking-widest" style={{ color: DIM }}>PEAK ADAPTATION</p>
-              <p className="text-sm font-black" style={{ color: NEON }}>JUNE — JULY WINDOW</p>
-            </div>
-            <div>
-              <p className="text-xs font-black tracking-widest" style={{ color: DIM }}>READINESS INDEX</p>
-              <p className="text-sm font-black" style={{ color: CHART_TEXT.primary }}>87.4 / 100</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <ChartFullscreenModal
         open={athleticExpanded}
         onClose={() => setAthleticExpanded(false)}
@@ -1022,53 +903,6 @@ export function AnalyticsV3({
             <Line type="monotone" dataKey="speed" name="Speed Output" stroke={NEON} strokeWidth={3} strokeDasharray="6 3" dot={{ r: 4, fill: NEON, stroke: BG, strokeWidth: 2 }} activeDot={{ r: 6 }} />
             <Line type="monotone" dataKey="cardiac" name="Cardiac Stress" stroke={ORANGE} strokeWidth={3} strokeDasharray="4 2" dot={{ r: 4, fill: ORANGE, stroke: BG, strokeWidth: 2 }} activeDot={{ r: 6 }} />
           </LineChart>
-        </ResponsiveContainer> : noData}
-      </ChartFullscreenModal>
-
-      <ChartFullscreenModal
-        open={adaptationExpanded}
-        onClose={() => setAdaptationExpanded(false)}
-        title="Long-Term Training Adaptation"
-        subtitle="Supercompensation cycle - stress vs adaptation curve"
-        accent={NEON}
-        details={
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs font-black tracking-widest" style={{ color: DIM }}>
-              BANISTER-COGGAN SUPERCOMPENSATION MODEL
-            </p>
-            <div className="grid grid-cols-2 gap-3 sm:w-[420px]">
-              <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-3">
-                <p className="text-xs font-black tracking-widest" style={{ color: DIM }}>PEAK ADAPTATION</p>
-                <p className="mt-1 text-sm font-black" style={{ color: NEON }}>JUNE - JULY WINDOW</p>
-              </div>
-              <div className="rounded-xl border border-ea-hairline bg-ea-surface-2 p-3">
-                <p className="text-xs font-black tracking-widest" style={{ color: DIM }}>READINESS INDEX</p>
-                <p className="mt-1 text-sm font-black text-white">87.4 / 100</p>
-              </div>
-            </div>
-          </div>
-        }
-      >
-        {adaptationDetail.length ? <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={adaptationDetail} margin={chartMargin}>
-            <defs>
-              <linearGradient id="adaptGradModal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={NEON} stopOpacity={0.18} />
-                <stop offset="95%" stopColor={NEON} stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="stressGradModal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={ORANGE} stopOpacity={0.18} />
-                <stop offset="95%" stopColor={ORANGE} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid {...chartGrid} />
-            <XAxis {...chartXAxis} dataKey="month" />
-            <YAxis {...chartYAxis} />
-            <Tooltip content={<DarkTooltip />} />
-            <ReferenceLine x="Jul" stroke={ORANGE} strokeDasharray="6 3" strokeWidth={1.5} label={{ value: 'RACE DATE', position: 'top', fill: ORANGE, fontSize: 12, fontWeight: 900 }} />
-            <Area type="monotone" dataKey="stress" name="Stress" stroke={ORANGE} strokeWidth={2.5} fill="url(#stressGradModal)" dot={false} />
-            <Area type="monotone" dataKey="adaptation" name="Adaptation" stroke={NEON} strokeWidth={3} fill="url(#adaptGradModal)" dot={false} />
-          </AreaChart>
         </ResponsiveContainer> : noData}
       </ChartFullscreenModal>
 

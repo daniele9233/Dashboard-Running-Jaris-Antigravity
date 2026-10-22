@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-10-22T04:35:35.128Z",
+  "generated_at": "2026-10-22T04:51:37.328Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -14,7 +14,7 @@
     ]
   },
   "counts": {
-    "files": 291,
+    "files": 287,
     "backend_routes": 69,
     "frontend_routes": 19,
     "api_clients": 80
@@ -1212,9 +1212,9 @@
       "exports": [],
       "routes": [],
       "imports": [],
-      "hash": "086a6982e585412be682285059ac7308b95d5e66656b833a9b53af07593d5bf0",
-      "last_modified": "2026-10-22T04:34:23.466Z",
-      "size_bytes": 9360
+      "hash": "ec260ec6d080ab152a13c1bb062f134071c1bdfc46320abd41cd0d315b0e00cd",
+      "last_modified": "2026-10-22T04:51:37.328Z",
+      "size_bytes": 9988
     },
     {
       "path": "docs/design-system/05-VERIFICATION.md",
@@ -2294,9 +2294,9 @@
       "exports": [],
       "routes": [],
       "imports": [],
-      "hash": "677ad48da869eabe40b8a916c98cd0360e5036eedca51c384f026a6394c875f5",
-      "last_modified": "2026-10-22T04:35:35.128Z",
-      "size_bytes": 4289
+      "hash": "f4a984ef7366d2999ac83d52dd98632582652325721286aa32f1c4deca8e131a",
+      "last_modified": "2026-10-22T04:51:05.213Z",
+      "size_bytes": 3979
     },
     {
       "path": "scripts/design-check.ts",
@@ -6142,15 +6142,14 @@
         "../../types/api",
         "../charts",
         "./ChartFullscreenModal",
-        "./FastBiomechanics",
         "lucide-react",
         "motion/react",
         "react",
         "recharts"
       ],
-      "hash": "fe940f73418ee2ab0a76a0ec81a130ad62293b606e7cb8f2a8f2b06fc3512e02",
-      "last_modified": "2026-10-21T18:38:47.037Z",
-      "size_bytes": 50738
+      "hash": "f780df289ebb1d1d030d94c84fe56aa84a5f348bfa3492c0b5649c24c643a52f",
+      "last_modified": "2026-10-22T04:49:35.379Z",
+      "size_bytes": 42295
     },
     {
       "path": "src/components/statistics/AnalyticsV4.tsx",
@@ -6446,34 +6445,6 @@
       "size_bytes": 30749
     },
     {
-      "path": "src/components/statistics/FastBiomechanics.tsx",
-      "kind": "frontend-statistics-component",
-      "purpose": "React component FastBiomechanics.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "cadence",
-        "garmin",
-        "layout",
-        "statistics",
-        "training",
-        "types"
-      ],
-      "exports": [
-        "FastBiomechanics"
-      ],
-      "routes": [],
-      "imports": [
-        "../../types/api",
-        "../charts",
-        "lucide-react",
-        "react"
-      ],
-      "hash": "d72eece3bba4ccccb3fa940517af0b0414234a41a6774973ba04b48fe5716084",
-      "last_modified": "2026-10-21T18:38:47.041Z",
-      "size_bytes": 15067
-    },
-    {
       "path": "src/components/statistics/PaceCalculator.tsx",
       "kind": "frontend-statistics-component",
       "purpose": "React component PaceCalculator.",
@@ -6496,66 +6467,6 @@
       "hash": "5682b64025b1ad83dab1a1e92a47cb30501e5dda8e474c2fa00bd58f151a4a0e",
       "last_modified": "2026-10-21T18:38:47.041Z",
       "size_bytes": 20608
-    },
-    {
-      "path": "src/components/statistics/PotentialProgressV3.tsx",
-      "kind": "frontend-statistics-component",
-      "purpose": "React component PotentialProgressV3.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "garmin",
-        "layout",
-        "statistics",
-        "types"
-      ],
-      "exports": [
-        "PotentialProgressV3"
-      ],
-      "routes": [],
-      "imports": [
-        "../../types/api",
-        "../charts",
-        "../gamification/gamiCore",
-        "../gamification/physioEngine",
-        "../gamification/usePhysio",
-        "lucide-react",
-        "react",
-        "recharts"
-      ],
-      "hash": "927e5c30fcd2ece4d75e3c1b582af10d1fd701a77387d0aff183920638a537bc",
-      "last_modified": "2026-10-21T18:38:47.042Z",
-      "size_bytes": 27210
-    },
-    {
-      "path": "src/components/statistics/PotenzialProgressiV2.tsx",
-      "kind": "frontend-statistics-component",
-      "purpose": "React component PotenzialProgressiV2.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "dashboard",
-        "garmin",
-        "layout",
-        "profile",
-        "statistics",
-        "types"
-      ],
-      "exports": [
-        "PotenzialProgressiV2",
-        "PotenzialProgressiV2Props"
-      ],
-      "routes": [],
-      "imports": [
-        "../../types/api",
-        "../charts",
-        "lucide-react",
-        "react",
-        "recharts"
-      ],
-      "hash": "a4b49b7aa9b55fb2daf7a531c165e8be23746d10a5d040916811cf1a9792c2e0",
-      "last_modified": "2026-10-21T18:38:47.042Z",
-      "size_bytes": 52546
     },
     {
       "path": "src/components/statistics/StatisticsView.tsx",
@@ -6597,44 +6508,14 @@
         "./ChartFullscreenModal",
         "./EnvironmentalNormalizerView",
         "./PaceCalculator",
-        "./PotentialProgressV3",
-        "./StatsDrift",
         "lucide-react",
         "react",
         "react-i18next",
         "recharts"
       ],
-      "hash": "214e6d8abe12b00db9b6152b2c992976fe0d3b29bf1a4da8311a4f78f05f6cb4",
-      "last_modified": "2026-10-22T04:33:22.432Z",
-      "size_bytes": 67251
-    },
-    {
-      "path": "src/components/statistics/StatsDrift.tsx",
-      "kind": "frontend-statistics-component",
-      "purpose": "React component StatsDrift.",
-      "touch_when": [
-        "activities",
-        "ai",
-        "layout",
-        "statistics",
-        "strava",
-        "types"
-      ],
-      "exports": [
-        "StatsDrift"
-      ],
-      "routes": [],
-      "imports": [
-        "../../types/api",
-        "../../utils/cardiacDrift",
-        "../charts",
-        "./ChartFullscreenModal",
-        "react",
-        "recharts"
-      ],
-      "hash": "cf260de8cbe1d80c701f2513411c4d4cef48183f6f6b05760cb190a81e383717",
-      "last_modified": "2026-10-21T18:38:47.043Z",
-      "size_bytes": 17650
+      "hash": "adc6c68c3c320169f6ea5f4c06d6f9ff74e1df8e7833269f9833692f87accbc8",
+      "last_modified": "2026-10-22T04:49:45.584Z",
+      "size_bytes": 54791
     },
     {
       "path": "src/components/SupercompensationChart.tsx",
@@ -7390,9 +7271,9 @@
       ],
       "routes": [],
       "imports": [],
-      "hash": "ab71095dd9c53efa565ba4d9cc607bc7da7e078f5a8140360720aec99b108c89",
-      "last_modified": "2026-09-18T11:30:38.298Z",
-      "size_bytes": 28380
+      "hash": "4e88adbf33c28a87789d1a7129188e5cc7adc23da718bd444d038d8206c39523",
+      "last_modified": "2026-10-22T04:49:57.001Z",
+      "size_bytes": 27432
     },
     {
       "path": "src/index.css",

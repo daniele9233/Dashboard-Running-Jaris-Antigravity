@@ -1,19 +1,17 @@
 import React, { useState, useRef } from 'react';
 import type { LucideIcon } from "lucide-react";
 import { useTranslation } from 'react-i18next';
-import { StatsDrift } from './StatsDrift';
 import { ScrollRow } from '../ScrollRow';
 import { AnalyticsV2 } from './AnalyticsV2';
 import { AnalyticsV3 } from './AnalyticsV3';
 import { BiologyFutureV2 } from './BiologyFutureV2';
-import { PotentialProgressV3 } from './PotentialProgressV3';
 import { BiologyFutureV3 } from './BiologyFutureV3';
 import { BiologyFutureLab } from './BiologyFutureLab';
 import { EnvironmentalNormalizerView } from './EnvironmentalNormalizerView';
 import { PaceCalculator } from './PaceCalculator';
 import { AnalyticsV4CadenceSpeedMatrix } from "./AnalyticsV4";
 import { CaricoFormaV2 } from './CaricoFormaV2';
-import { ChartExpandButton, ChartFullscreenModal } from './ChartFullscreenModal';
+import { ChartExpandButton } from "./ChartFullscreenModal";
 import { useApi } from '../../hooks/useApi';
 import { API_CACHE } from '../../hooks/apiCacheKeys';
 import { getAnalytics, getVdotPaces, getRuns, getGctAnalysis, getDashboard, getProAnalytics, linkGarminCsv, getSupercompensation, getProfile, type GctAnalysisResponse } from '../../api';
@@ -34,8 +32,8 @@ import type {
   AdaptationKey,
   AdaptationType,
 } from '../../types/api';
-import { Activity, Zap, TrendingUp, BarChart3, Dna, FlaskConical, Timer, LineChart as LineChartIcon, Star, Briefcase, Info, Radar, CloudSun, Calculator, Sparkles, Microscope } from "lucide-react";
-import { Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ComposedChart, Line, LineChart, ReferenceLine, Label, Legend } from "recharts";
+import { Activity, Zap, BarChart3, Dna, FlaskConical, LineChart as LineChartIcon, Star, Briefcase, Info, Radar, CloudSun, Calculator, Microscope } from "lucide-react";
+import { Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ComposedChart, Line, ReferenceLine, Label } from "recharts";
 
 import { CHART_SERIES, CHART_SURFACE, ChartCard, ChartHeader, ChartPlot, ChartTip, chartGrid, chartMargin, chartXAxis, chartYAxis } from "../charts";
 
@@ -541,7 +539,6 @@ function buildClientAnalyticsFallbacks(runs: Run[]) {
 export function StatisticsView() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('analytics-cf-v2');
-  const [expandedChart, setExpandedChart] = useState<null | 'paces' | 'cadence' | 'gctMonthly'>(null);
   const [proSections, setProSections] = useState<ProAnalyticsResponse['sections']>({});
   const [proError, setProError] = useState<string | null>(null);
   const detailRequestsRef = useRef<Set<string>>(new Set());
@@ -691,7 +688,6 @@ export function StatisticsView() {
   const tabs = [
     { id: 'analytics-cf-v2', label: t('statsTabs.loadForm'),          icon: BarChart3  },
     { id: 'analyticsv2',    label: t('statsTabs.potentialProgress'),  icon: Radar },
-    { id: 'potential-v3',   label: t('statsTabs.potentialV2'),        icon: Sparkles },
     { id: 'analyticsv3', label: t('statsTabs.biomechanics'),          icon: Activity },
     { id: 'biology',     label: t('statsTabs.biologyFuture'),         icon: FlaskConical },
     { id: 'environment', label: t('statsTabs.climatePace'),           icon: CloudSun },
@@ -700,107 +696,12 @@ export function StatisticsView() {
     { id: 'pace-calc',   label: 'Calcolatore',                       icon: Calculator },
   ];
 
-  const noData = (message = t('statsTabs.insufficientData')) => (
-    <div className="h-full min-h-[180px] flex items-center justify-center text-gray-600 text-sm font-bold uppercase tracking-widest text-center px-6">
-      {message}
-    </div>
-  );
 
-  const renderPacesTrendChart = (fullscreen = false) => {
-    const chart = biomechCharts.paces ?? potentialCharts.trend_passo;
-    const source = fullscreen ? chart?.series_detail : chart?.series_card;
-    const data = (source ?? [])
-      .filter((d) => d.pace)
-      .map((d) => ({ date: String(d.date), pace: Number(d.pace) / 60, paceSec: Number(d.pace), runs: d.runs }));
-    if (!data.length) return noData(chart?.quality?.message ?? 'Passo non disponibile per le corse outdoor GPS');
-    return (
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data}>
-          <CartesianGrid {...chartGrid} />
-          <XAxis {...chartXAxis} dataKey="date" />
-          <YAxis {...chartYAxis} hide width={0} domain={['dataMin - 0.15', 'dataMax + 0.15']} reversed />
-          <ChartTip formatter={(value: any) => {
-              const sec = Math.round(Number(value) * 60);
-              return [`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} /km`, 'Passo medio'];
-            }} />
-          <Line type="monotone" dataKey="pace" stroke={PRO_ACCENT} strokeWidth={2} dot={{ r: 4, fill: PRO_ACCENT }} />
-        </LineChart>
-      </ResponsiveContainer>
-    );
-  };
 
-  const renderCadenceMonthlyChart = (fullscreen = false) => {
-    const chart = biomechCharts.cadence_monthly;
-    const source = fullscreen ? chart?.series_detail : chart?.series_card;
-    const data = (source ?? [])
-      .filter((d) => d.cadence)
-      .map((d) => ({ date: String(d.date), cadence: Number(d.cadence), runs: d.runs }));
-    if (!data.length) return noData(chart?.quality?.message ?? 'Cadenza reale non disponibile');
-    return (
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data}>
-          <CartesianGrid {...chartGrid} />
-          <XAxis {...chartXAxis} dataKey="date" />
-          <YAxis {...chartYAxis} domain={['dataMin - 5', 'dataMax + 5']} />
-          <ChartTip formatter={(v: any) => [`${Number(v).toFixed(0)} spm`, 'Cadenza']} />
-          <ReferenceLine y={180} stroke={CHART_SURFACE.borderStrong} strokeDasharray="5 5" />
-          <Line type="monotone" dataKey="cadence" stroke={PRO_ACCENT} strokeWidth={2} dot={{ r: 5, fill: PRO_ACCENT }} />
-        </LineChart>
-      </ResponsiveContainer>
-    );
-  };
 
-  const formatGctMonth = (value: string) => {
-    const [y, m] = value.split('-');
-    const months = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
-    return `${months[parseInt(m) - 1]} '${y.slice(2)}`;
-  };
 
-  const formatGctZone = (value: string) => {
-    const labels: Record<string, string> = {
-      pace_530: '>= 5:30/km',
-      pace_500: '5:00-5:29/km',
-      pace_445: '< 4:45/km',
-    };
-    return labels[value] || value;
-  };
 
-  const renderGctMonthlyChart = (fullscreen = false) => {
-    const chart = biomechCharts.gct_monthly;
-    const source = fullscreen ? chart?.series_detail : chart?.series_card;
-    const data = (source?.length ? source : (gctData?.monthly ?? []).map((d) => ({ ...d, date: d.month }))) ?? [];
-    if (!data.length) return noData(chart?.quality?.message ?? 'Importa CSV Garmin e collega la telemetria');
-    return (
-    <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={data}>
-        <CartesianGrid {...chartGrid} />
-        <XAxis {...chartXAxis} dataKey="date" interval="preserveStartEnd" minTickGap={22} tickFormatter={formatGctMonth} />
-        <YAxis {...chartYAxis} domain={['dataMin - 10', 'dataMax + 10']} tickFormatter={(v) => `${v}ms`} />
-        <ChartTip formatter={(value: any, name: string) => {
-            if (value === null || value === undefined) return ['N/D', ''];
-            return [`${value} ms`, formatGctZone(name)];
-          }} />
-        <Legend
-          formatter={formatGctZone}
-          wrapperStyle={{ fontSize: '11px', fontWeight: 700 }}
-        />
-        <Line type="monotone" dataKey="pace_530" stroke={PRO_BLUE} strokeWidth={2} dot={{ r: 4, fill: PRO_BLUE }} connectNulls />
-        <Line type="monotone" dataKey="pace_500" stroke={PRO_PURPLE} strokeWidth={2} dot={{ r: 4, fill: PRO_PURPLE }} connectNulls />
-        <Line type="monotone" dataKey="pace_445" stroke={PRO_ACCENT} strokeWidth={2} dot={{ r: 4, fill: PRO_ACCENT }} connectNulls />
-      </LineChart>
-    </ResponsiveContainer>
-  );
-  };
 
-  const openBiomechModal = (modal: 'paces' | 'cadence' | 'gctMonthly') => {
-    const chartByModal = {
-      paces: 'paces',
-      cadence: 'cadence_monthly',
-      gctMonthly: 'gct_monthly',
-    } as const;
-    requestProChartDetail('biomechanics', chartByModal[modal]);
-    setExpandedChart(modal);
-  };
 
   return (
     <div className="flex-1 overflow-y-auto bg-ea-ink text-white p-4 md:p-6 lg:p-10">
@@ -905,83 +806,7 @@ export function StatisticsView() {
               void fetchProSection('biomechanics');
               return result as GarminCsvLinkResult;
             }} />
-            <SectionLabel>BIOMECCANICA — PACES · CADENZA · DERIVA · GCT</SectionLabel>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card accent={PRO_ACCENT} variant="pro" className="group">
-                <CardHeader
-                  icon={TrendingUp}
-                  iconColor={PRO_ACCENT}
-                  title="Andamento Paces"
-                  variant="pro"
-                  onExpand={() => openBiomechModal('paces')}
-                  subtitle="Easy · Tempo · Rapido — trend storico"
-                  tooltip={{
-                    title: 'ANDAMENTO PACES',
-                    lines: [
-                      'Easy: passo delle corse lente. Deve scendere nel tempo.',
-                      'Tempo: passo soglia lattato. Indica progressi fitness.',
-                      'Fast: passo delle ripetute veloci.',
-                      'Scala Y invertita: valore più basso = passo più veloce.',
-                    ],
-                  }}
-                />
-                <div className="h-64 w-full">
-                  {renderPacesTrendChart()}
-                </div>
-              </Card>
-
-              <Card accent={PRO_ACCENT} variant="pro" className="group">
-                <CardHeader
-                  icon={Timer}
-                  iconColor={PRO_ACCENT}
-                  title="Cadenza Mensile"
-                  variant="pro"
-                  onExpand={() => openBiomechModal('cadence')}
-                  subtitle="Passi/minuto a ritmo — giri delle ripetute e km sotto 4:45"
-                  tooltip={{
-                    title: 'CADENZA A RITMO (SPM)',
-                    lines: [
-                      'Cadenza = passi al minuto, letta solo quando vai forte.',
-                      'Ripetute: la cadenza dentro ogni giro di lavoro, dagli streams.',
-                      'Corse continue: i chilometri sotto 4:45/km.',
-                      'A ritmo gara: 180-190 spm è la finestra buona.',
-                      'Linea tratteggiata = 180 spm.',
-                    ],
-                  }}
-                />
-                <div className="h-64 w-full">
-                  {renderCadenceMonthlyChart()}
-                </div>
-              </Card>
-            </div>
-
-            <StatsDrift runs={statsRuns} />
-
-            {gctData && gctData.monthly.length > 0 && (
-              <Card accent={PRO_ACCENT} variant="pro" className="group">
-                <CardHeader
-                  icon={Zap}
-                  iconColor={PRO_ACCENT}
-                  title="Tempo Contatto Suolo (GCT)"
-                  variant="pro"
-                  onExpand={() => openBiomechModal('gctMonthly')}
-                  subtitle={`Media mensile per fascia di pace · ${gctData.summary.total_runs} corse${gctData.summary.avg_gct ? ` · GCT medio: ${gctData.summary.avg_gct} ms` : ''}`}
-                  tooltip={{
-                    title: 'GROUND CONTACT TIME',
-                    lines: [
-                      'Tempo in cui il piede resta a contatto col suolo per passo.',
-                      'Elite: < 200 ms.',
-                      'GCT ridotto = corsa più elastica e reattiva.',
-                      'Analizzato per fascia di passo.',
-                    ],
-                  }}
-                />
-                <div className="h-72 w-full">
-                  {renderGctMonthlyChart()}
-                </div>
-              </Card>
-            )}
+            <SectionLabel>BIOMECCANICA — GCT · CADENZA</SectionLabel>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
               <AnalyticsV2
@@ -1236,15 +1061,6 @@ export function StatisticsView() {
         )}
 
         {/* ════════════════════════════════════════════════════
-            POTENZIALE & PROGRESSI V2 — sezione nuova, motore physio
-        ════════════════════════════════════════════════════ */}
-        {activeTab === 'potential-v3' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <PotentialProgressV3 runs={runs} />
-          </div>
-        )}
-
-        {/* ════════════════════════════════════════════════════
             BIOLOGIA & FUTURO V2 — sezione nuova
         ════════════════════════════════════════════════════ */}
         {activeTab === 'biology-v3' && (
@@ -1259,85 +1075,6 @@ export function StatisticsView() {
             <PaceCalculator vdot={vdot} />
           </div>
         )}
-
-        <ChartFullscreenModal
-          open={expandedChart === 'paces'}
-          onClose={() => setExpandedChart(null)}
-          title="Andamento Paces"
-          subtitle="Easy · Tempo · Rapido — trend storico"
-          accent={PRO_ACCENT}
-          details={
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="rounded-xl border border-ea-hairline bg-white/[0.02] p-3">
-                <p className="text-xs text-gray-500 font-black tracking-widest uppercase">Easy</p>
-                <p className="text-sm text-gray-300 font-bold mt-1">Passo lento, scala Y invertita</p>
-              </div>
-              <div className="rounded-xl border border-ea-hairline bg-white/[0.02] p-3">
-                <p className="text-xs text-gray-500 font-black tracking-widest uppercase">Tempo</p>
-                <p className="text-sm text-gray-300 font-bold mt-1">Indicatore soglia lattato</p>
-              </div>
-              <div className="rounded-xl border border-ea-hairline bg-white/[0.02] p-3">
-                <p className="text-xs text-gray-500 font-black tracking-widest uppercase">Fast</p>
-                <p className="text-sm text-gray-300 font-bold mt-1">Ripetute e lavoro veloce</p>
-              </div>
-            </div>
-          }
-        >
-          {renderPacesTrendChart(true)}
-        </ChartFullscreenModal>
-
-        <ChartFullscreenModal
-          open={expandedChart === 'cadence'}
-          onClose={() => setExpandedChart(null)}
-          title="Cadenza Mensile"
-          subtitle="Passi/minuto — media mensile"
-          accent={PRO_ACCENT}
-          details={
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="rounded-xl border border-ea-hairline bg-white/[0.02] p-3">
-                <p className="text-xs text-gray-500 font-black tracking-widest uppercase">Target</p>
-                <p className="text-xl text-white font-black mt-1">170-185 <span className="text-xs text-gray-500">spm</span></p>
-              </div>
-              <div className="rounded-xl border border-ea-hairline bg-white/[0.02] p-3">
-                <p className="text-xs text-gray-500 font-black tracking-widest uppercase">Reference</p>
-                <p className="text-xl text-white font-black mt-1">180 <span className="text-xs text-gray-500">spm</span></p>
-              </div>
-              <div className="rounded-xl border border-ea-hairline bg-white/[0.02] p-3">
-                <p className="text-xs text-gray-500 font-black tracking-widest uppercase">Focus</p>
-                <p className="text-sm text-gray-300 font-bold mt-1">Stabilita e riduzione over-striding</p>
-              </div>
-            </div>
-          }
-        >
-          {renderCadenceMonthlyChart(true)}
-        </ChartFullscreenModal>
-
-        <ChartFullscreenModal
-          open={expandedChart === 'gctMonthly'}
-          onClose={() => setExpandedChart(null)}
-          title="Tempo Contatto Suolo (GCT)"
-          subtitle={gctData ? `Media mensile per fascia di pace · ${gctData.summary.total_runs} corse${gctData.summary.avg_gct ? ` · GCT medio: ${gctData.summary.avg_gct} ms` : ''}` : 'Media mensile per fascia di pace'}
-          accent={PRO_ACCENT}
-          details={
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="rounded-xl border border-ea-hairline bg-white/[0.02] p-3">
-                <p className="text-xs text-gray-500 font-black tracking-widest uppercase">Lento</p>
-                <p className="text-sm text-gray-300 font-bold mt-1">&gt;= 5:30/km</p>
-              </div>
-              <div className="rounded-xl border border-ea-hairline bg-white/[0.02] p-3">
-                <p className="text-xs text-gray-500 font-black tracking-widest uppercase">Medio</p>
-                <p className="text-sm text-gray-300 font-bold mt-1">5:00-5:29/km</p>
-              </div>
-              <div className="rounded-xl border border-ea-hairline bg-white/[0.02] p-3">
-                <p className="text-xs text-gray-500 font-black tracking-widest uppercase">Veloce</p>
-                <p className="text-sm text-gray-300 font-bold mt-1">&lt; 4:45/km</p>
-              </div>
-            </div>
-          }
-        >
-          {renderGctMonthlyChart(true)}
-        </ChartFullscreenModal>
-
       </div>
     </div>
   );

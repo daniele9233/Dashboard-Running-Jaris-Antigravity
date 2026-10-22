@@ -156,24 +156,11 @@
   "src/components/statistics/EnvironmentalNormalizerView.tsx": {
     "hex": 21
   },
-  "src/components/statistics/FastBiomechanics.tsx": {
-    "hex": 4
-  },
   "src/components/statistics/PaceCalculator.tsx": {
     "hex": 6
   },
-  "src/components/statistics/PotentialProgressV3.tsx": {
-    "hex": 2
-  },
-  "src/components/statistics/PotenzialProgressiV2.tsx": {
-    "hex": 9,
-    "tiny-text": 2
-  },
   "src/components/statistics/StatisticsView.tsx": {
     "hex": 8
-  },
-  "src/components/statistics/StatsDrift.tsx": {
-    "hex": 15
   },
   "src/components/SupercompensationChart.tsx": {
     "hex": 13
