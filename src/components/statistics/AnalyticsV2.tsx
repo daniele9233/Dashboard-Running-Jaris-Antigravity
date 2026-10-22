@@ -5,7 +5,7 @@
 import React, { useState, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, ComposedChart, Line, LineChart, Cell, ReferenceLine, ReferenceArea, ScatterChart, Scatter, ZAxis } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, ComposedChart, Line, Cell, ReferenceLine, ReferenceArea, ScatterChart, Scatter, ZAxis } from "recharts";
 import type { GctAnalysisResponse } from '../../api';
 import type { Run, FitnessFreshnessPoint, ProAnalyticsChart } from '../../types/api';
 import {
@@ -1809,95 +1809,6 @@ export function AnalyticsV2({
       </V2Card>
       )}
 
-       {false && showCore && (
-       <V2Card>
-         <V2Header
-           icon={Zap}
-           title={t('statsCards.racePredictions')}
-           subtitle={t('statsCards.racePredictionsSub')}
-           onExpand={() => openExpandedChart('threshold_progression', setAtExpanded)}
-           tooltip={{
-             title: 'PREVISIONI GARA',
-             lines: [
-               'Stima dei tempi di gara basata sull\'indice VDOT.',
-               'VDOT: indice Jack Daniels che stima VO₂max dal ritmo di gara.',
-               'Ogni mese: miglior stima VDOT tra le corse qualificanti.',
-               'Forward-fill: i mesi senza dati mantengono l\'ultimo valore valido.',
-               'Ultimo mese forzato al valore VDOT calcolato dal profilo atleta.',
-             ],
-           }}
-         />
-         <ChartPlot size="standard">
-           <ResponsiveContainer width="100%" height="100%">
-             <LineChart data={vdotChartData} margin={chartMargin}>
-               <CartesianGrid {...chartGrid} />
-               <XAxis {...chartXAxis} dataKey="name" />
-               <YAxis {...chartYAxis} domain={['dataMin - 2', 'dataMax + 2']} tickFormatter={(v) => v.toFixed(0)} />
-               <Tooltip
-                 content={({ active, payload }) => {
-                   if (!active || !payload?.length) return null;
-                   const d = payload[0]?.payload;
-                   if (!d) return null;
-                   return (
-                     <div className="ea-tooltip">
-                       <p className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: NEON }}>{d.name}</p>
-                       <div className="flex items-center gap-2 text-xs mb-0.5">
-                         <span className="text-ea-text-axis">VDOT:</span>
-                         <span className="text-white font-bold">{d.vdot}</span>
-                       </div>
-                       {d.vdot && (
-                         <div className="flex items-center gap-2 text-xs">
-                           <span className="text-ea-text-axis">Passo soglia:</span>
-                           <span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span>
-                         </div>
-                       )}
-                       {d.vdot && (
-                         <div className="flex items-center gap-2 text-xs">
-                           <span className="text-ea-text-axis">Soglia teorica:</span>
-                           <span className="font-bold" style={{ color: NEON }}>{calcTPaceV2(d.vdot)} /km</span>
-                         </div>
-                       )}
-                     </div>
-                   );
-                 }}
-               />
-               <Line type="monotone" dataKey="vdot" name="VDOT"
-                 stroke={NEON} strokeWidth={3}
-                 dot={{ r: 4, fill: NEON, strokeWidth: 0 }}
-                 activeDot={{ r: 6, fill: NEON, stroke: '#000', strokeWidth: 2 }} />
-             </LineChart>
-           </ResponsiveContainer>
-         </ChartPlot>
-         {/* KPI strip */}
-         <div className="flex gap-4 mt-5">
-           {(() => {
-             const currentVdot = vdot ?? (vdotChartData.length > 0 ? vdotChartData[vdotChartData.length - 1]?.vdot : null);
-             const olderVdot = vdotChartData.length >= 4 ? vdotChartData[vdotChartData.length - 4]?.vdot : null;
-             const recentVdot = vdotChartData.length >= 1 ? vdotChartData[vdotChartData.length - 1]?.vdot : null;
-             const trend3m = (recentVdot != null && olderVdot != null) ? (recentVdot - olderVdot) : null;
-              const tPace = getThresholdDisplay(currentVdot);
-             return (
-               <>
-                 <div className="flex-1 rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
-                   <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">VDOT Attuale</div>
-                   <div className="text-xl font-mono font-black" style={{ color: NEON }}>{currentVdot ?? '—'}</div>
-                 </div>
-                 <div className="flex-1 rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
-                   <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Trend 3M</div>
-                   <div className="text-xl font-mono font-black" style={{ color: trend3m == null ? '#555' : trend3m >= 0 ? NEON : CHART_SERIES.risk }}>
-                     {trend3m == null ? '—' : `${trend3m >= 0 ? '+' : ''}${trend3m.toFixed(1)}`}
-                   </div>
-                 </div>
-                 <div className="flex-1 rounded-xl border border-ea-hairline bg-ea-surface-2 p-4">
-                    <div className="text-ea-text-axis text-xs uppercase tracking-widest font-black mb-1">Passo soglia (Daniels)</div>
-                   <div className="text-xl font-mono font-black text-white">{tPace ?? '—'} {tPace ? '/km' : ''}</div>
-                 </div>
-               </>
-             );
-           })()}
-         </div>
-       </V2Card>
-       )}
       </div>
       )}
 

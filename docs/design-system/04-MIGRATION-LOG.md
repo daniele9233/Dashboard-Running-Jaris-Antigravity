@@ -64,15 +64,17 @@ Trovati con `responsive_probe` (overflow, clipping da `overflow:hidden`, tick fu
 | `negative-margin` | — | 0 | 0 (regola estesa ai ternari) |
 
 Come: il codemod mappa ora anche i valori alternativi dei ternari, le varianti di giallo/azzurro/lime e i neutri inline; la regola dei 12 px è stata estesa ad `AdaptationPanel`, `TrainingGoalBox`, `TrainingAdherence`, `FirstRunOnboarding`, `ErrorBoundary`; il tooltip del radar di `RankingView` è passato a `ChartTip`.
-**Cosa resta e perché non è stato toccato:** `RoutesView`, `LastRunMap`, `LiveTelemetry3DMap` (mappe/3D, fuori ambito), `StatsProgress`/`StatsCalc` (codice morto: decisione dell'utente), `ProfileView`/`ActivitiesView`/`Sidebar`/`JarvisOverlay` (non sono grafici: vetro e micro-testo di quelle viste richiedono una decisione di design a parte), i colori dei livelli di `RankingView` (categorie: oro/rosa/azzurro) e le scale interne di colore di `RunnerDnaView`.
+**Cosa resta e perché non è stato toccato:** `RoutesView`, `LastRunMap`, `LiveTelemetry3DMap` (mappe/3D, fuori ambito), `ProfileView`/`ActivitiesView`/`Sidebar`/`JarvisOverlay` (non sono grafici: vetro e micro-testo di quelle viste richiedono una decisione di design a parte), i colori dei livelli di `RankingView` (categorie: oro/rosa/azzurro) e le scale interne di colore di `RunnerDnaView`.
 
-## Decisioni aperte per l'utente
+## Decisioni chiuse dopo la prima consegna
 
-1. **Palette dei tipi di seduta**: oggi quattro (TrainingGrid, TrainingSidebar, heatmap del Profilo, Carico km). `CHART_WORKOUT` è pronta; unificarle cambia la barra di `TrainingGrid` (vincolo: chiedere).
-2. **Codice morto**: `StatsProgress.tsx`, `StatsCalc.tsx` (5 grafici mai renderizzati) e 13 blocchi `{false && …}` (12 in `StatisticsView`, 1 in `AnalyticsV2`) che generano anche 20 errori ESLint preesistenti. Eliminarli è un intervento separato.
-3. **Dove tenere la skill** `.claude/skills/elite-analytics-charts/SKILL.md`: `.claude/` è in `.gitignore`. Per versionarla va spostata (p.es. `.agents/skills/`, già tracciata).
-4. All'apertura `Clima & Ritmo` e il dashboard inviano `POST …/weather` per ogni corsa: con il backend locale scrivono sul Mongo di produzione.
-5. Commit/push: **non eseguiti** (richiesta esplicita). Servono `npm run context:update` (repo-map) prima del commit; il post-commit rigenera `graphify-out/`, già modificato dall'hook post-checkout.
+- **Codice morto eliminato** (decisione dell'utente): `StatsProgress.tsx` e `StatsCalc.tsx` (5 grafici mai renderizzati, nessun import) e i 5 blocchi `{false && …}` di primo livello che ne contenevano 13 (4 in `StatisticsView`, 1 in `AnalyticsV2`, ≈ 50 kB di sorgente). Eliminati con l'AST di TypeScript, non a mano; poi tolti a cascata gli import, le costanti, gli hook e i tipi rimasti senza utilizzatori (`useLoadFormLayout`, `LOAD_FORM_DEFAULT_LAYOUTS`, `mergeLocalLayouts`…, tutti usati solo da quel codice). Esito: ESLint `src` da 20 errori / 224 avvisi (su `main`) a **2 errori** (entrambi preesistenti e non correlati: `ProfileView`, `AnalyticsV4`) / 176 avvisi; nessun nuovo avviso.
+- **Skill versionata** (decisione dell'utente): la skill sta ora in `.agents/skills/elite-analytics-charts/SKILL.md`, cartella tracciata come le altre. Claude Code la legge da `.claude/skills/` (cartella ignorata da git): su un nuovo clone va ricreato il collegamento, come per le altre skill (`.claude/skills/elite-analytics-charts` → `.agents/skills/elite-analytics-charts`, p.es. `New-Item -ItemType Junction` su Windows).
+
+## Decisioni ancora aperte per l'utente
+
+1. **Palette dei tipi di seduta** (e barra colorata di `TrainingGrid`): oggi quattro palette (TrainingGrid, TrainingSidebar, heatmap del Profilo, Carico km). `CHART_WORKOUT` è pronta; unificarle cambia la barra di `TrainingGrid` (vincolo: chiedere).
+2. All'apertura `Clima & Ritmo` e il dashboard inviano `POST …/weather` per ogni corsa: con il backend locale scrivono sul Mongo di produzione.
 
 ## Debito residuo (misurato da `npm run design:check -- --report`)
 

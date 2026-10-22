@@ -10,7 +10,7 @@ Tutti i numeri sono misurati; ciò che non è stato verificato è dichiarato.
 | `npm run test` | 422/422 | **454/454** (+32: `theme.test.ts` 14, `charts.test.tsx` 18) — rieseguito dopo le ultime modifiche |
 | `npm run build` | ok 16.9 s | ok 10.2 s |
 | `npm run design:check` | — | nessuna nuova violazione (baseline: 60 file con debito; `hex` 776→590, `tiny-text` 384→115) |
-| ESLint `src` | 244 problemi (20 errori) | 20 errori (gli stessi), nessun errore nuovo; i warning nuovi per variabili inutilizzate sono stati rimossi; restano solo segnalazioni di numero di riga cambiato (`exhaustive-deps`, preesistenti) |
+| ESLint `src` | 244 problemi (20 errori) | **178 problemi, 2 errori** (preesistenti: `ProfileView`, `AnalyticsV4`): i 18 errori `no-constant-binary-expression` spariscono con il codice morto; nessun nuovo avviso |
 | Test backend (`pytest`) | 3 falliti preesistenti | non rieseguito (nessun file backend toccato) |
 
 Bundle (gzip, ultima build): `StatisticsView` 354.45 → 323.82 kB (86.22 → 83.59), `DashboardView` 94.59 → 93.30, `RankingView`, `TrainingView`, `PaceLabView` −0.2…−0.4 kB; `index.css` 186.02 → 195.24 kB (30.26 → 32.16 gzip: token e classi `ea-*`); `vendor-charts`, `index`, `App` invariati.
@@ -73,9 +73,9 @@ Metodo: `main` e il branch compilati con `vite build` e serviti con `vite previe
 | 05 responsive | ✅ per le 12 viste × 360/390/768: 0 overflow, 0 clipping, 0 tick tagliati (sonda automatica + screenshot); 🟡 non verificate le altre rotte (race-lab, pace-lab, gamification, runner-dna, profile, activities, badges) e il tocco reale su dispositivo |
 | 06 accessibilità | 🟡 contrasti, 12 px, daltonismo (test), focus, tastiera sul grafico guida, `aria`/riassunto sul kit; **non** eseguito un audit con screen reader né axe |
 | 07 performance | ✅ nessuna regressione misurata su build di produzione (tabella sopra); 🟡 costo GPU del blur non misurabile in headless |
-| 08 build e test | ✅ tsc pulito · 454/454 · build ok (10.3 s) · ESLint: 20 errori preesistenti invariati, nessun nuovo errore o warning di variabili inutilizzate |
+| 08 build e test | ✅ tsc pulito · 454/454 · build ok (10.3 s) · ESLint: 20 → 2 errori (codice morto rimosso), nessun nuovo avviso |
 | 09 confronti prima/dopo | ✅ 114+114 catture (cartella ignorata da git); riesaminate a vista le principali |
-| 10 manutenibilità | ✅ nuovo grafico = kit + preset + `design:check` + skill locale |
+| 10 manutenibilità | ✅ nuovo grafico = kit + preset + `design:check` + skill versionata in `.agents/skills/` |
 
 ## Non verificato
 

@@ -170,22 +170,10 @@
     "tiny-text": 2
   },
   "src/components/statistics/StatisticsView.tsx": {
-    "hex": 18
-  },
-  "src/components/statistics/StatsCalc.tsx": {
-    "hex": 52,
-    "tiny-text": 3,
-    "glass": 9,
-    "local-tooltip-style": 1
+    "hex": 8
   },
   "src/components/statistics/StatsDrift.tsx": {
     "hex": 15
-  },
-  "src/components/statistics/StatsProgress.tsx": {
-    "hex": 60,
-    "tiny-text": 9,
-    "glass": 6,
-    "local-tooltip-style": 4
   },
   "src/components/SupercompensationChart.tsx": {
     "hex": 13

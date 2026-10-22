@@ -13,6 +13,8 @@ Refactoring di coerenza visiva dei grafici e delle viste analitiche. Branch: `de
 | [`04-MIGRATION-LOG.md`](./04-MIGRATION-LOG.md) | rotte migrate, eccezioni, decisioni aperte, debito residuo |
 | [`05-VERIFICATION.md`](./05-VERIFICATION.md) | build, test, controlli statici, prima/dopo misurato, responsive, quality gate con esito |
 
+Skill per Claude: `.agents/skills/elite-analytics-charts/` (tracciata; collegamento locale in `.claude/skills/`, vedi `04`).
+
 Codice: `src/design/` (token e classi CSS) · `src/components/charts/` (tema, componenti, test) · `scripts/design-codemod.py`, `scripts/prune-imports.py`, `scripts/design-check.ts` (+ `npm run design:check`).
 
 ## Screenshot
