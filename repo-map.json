@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-10-22T05:21:10.335Z",
+  "generated_at": "2026-10-22T05:41:29.362Z",
   "project": {
     "name": "webapp-antiG",
     "stack": [
@@ -5668,9 +5668,9 @@
         "./shoeLab",
         "vitest"
       ],
-      "hash": "9becc435ac5ae9f9ea30fd60121fd611ee0572cee7cef5ce4b6374b0d880fdce",
-      "last_modified": "2026-10-22T05:21:10.336Z",
-      "size_bytes": 30158
+      "hash": "9bba78c090d2bdd53548ef408f159fc5d700e027703e4536d2fb5312c994f4ff",
+      "last_modified": "2026-10-22T05:41:19.085Z",
+      "size_bytes": 31084
     },
     {
       "path": "src/components/racelab/raceLabEngine.ts",
@@ -5680,6 +5680,7 @@
         "activities",
         "ai",
         "cadence",
+        "strava",
         "training",
         "types"
       ],
@@ -5704,6 +5705,7 @@
         "Lever",
         "planGoal",
         "predictionSdPct",
+        "provenBest",
         "raceEta",
         "raceFactor",
         "RaceSetup",
@@ -5721,9 +5723,9 @@
         "../gamification/physioEngine",
         "./shoeLab"
       ],
-      "hash": "4c2242c331a5b743ed746641d5939b240618bd81fc8edb0d74cac4fedfdab57a",
-      "last_modified": "2026-10-22T05:20:57.079Z",
-      "size_bytes": 38435
+      "hash": "a0969f54992ac26111a05eb96f54bf948c79543a901e46e31337228f03a21c32",
+      "last_modified": "2026-10-22T05:41:14.792Z",
+      "size_bytes": 39805
     },
     {
       "path": "src/components/racelab/RaceLabView.tsx",
@@ -5758,9 +5760,9 @@
         "lucide-react",
         "react"
       ],
-      "hash": "5a6ac8e7577dfd23c46e9e236e00c8181c30d6e515e909f61daf53ba3e67b4b3",
-      "last_modified": "2026-10-22T05:21:03.368Z",
-      "size_bytes": 33903
+      "hash": "bb97f84c04524c5dcad4951deab8c6ddcbba491c6ac4202d9709ccd928676895",
+      "last_modified": "2026-10-22T05:41:29.362Z",
+      "size_bytes": 35305
     },
     {
       "path": "src/components/racelab/shoeLab.ts",

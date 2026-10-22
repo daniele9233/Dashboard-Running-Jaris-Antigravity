@@ -728,6 +728,41 @@ export function deadlineInDays(deadlineIso: string, todayIdx: number): number | 
   return diff >= 0 ? diff : null;
 }
 
+/** Come le chiamano i migliori tempi reali (Strava), per distanza in metri. */
+const EFFORT_LABELS: Record<number, string[]> = {
+  5000: ["5 km", "5k"],
+  10000: ["10 km", "10k"],
+  21097: ["mezza maratona", "half marathon", "21 km", "21k"],
+  42195: ["maratona", "marathon", "42 km", "42k"],
+};
+
+const clockSec = (t: string): number | null => {
+  const p = t.trim().split(":").map(Number);
+  if (!p.length || p.length > 3 || p.some((n) => !Number.isFinite(n))) return null;
+  const sec = p.reduce((s, n) => s * 60 + n, 0);
+  return sec > 0 ? sec : null;
+};
+
+/**
+ * Il miglior tempo REALE su quella distanza: quello corso davvero, non quello che
+ * il modello prevede. È il controllo di realtà accanto a una previsione: dice di
+ * quanto l'obiettivo supera quello che hai già dimostrato. Solo lettura, non
+ * entra in nessun calcolo.
+ */
+export function provenBest(
+  efforts: { distance: string; time: string; date: string }[] | null | undefined, distM: number,
+): { sec: number; iso: string } | null {
+  const labels = EFFORT_LABELS[distM];
+  if (!labels) return null;
+  let best: { sec: number; iso: string } | null = null;
+  for (const e of efforts ?? []) {
+    if (!labels.includes(e.distance.trim().toLowerCase())) continue;
+    const sec = clockSec(e.time);
+    if (sec != null && (!best || sec < best.sec)) best = { sec, iso: e.date };
+  }
+  return best;
+}
+
 export function planGoal(
   model: PhysioModel, distM: number, targetSec: number,
   opt: {

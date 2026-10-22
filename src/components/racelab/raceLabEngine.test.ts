@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  REFERENCE, caffeineDose, conditionFactors, currentPlan, deadlineInDays, defaultSetup, fastEfforts, planGoal, raceFactor,
+  REFERENCE, caffeineDose, conditionFactors, currentPlan, deadlineInDays, defaultSetup, fastEfforts, planGoal, provenBest, raceFactor,
   solvePlan, successProbability, whatIf, type Conditions, type Effort,
 } from "./raceLabEngine";
 import {
@@ -605,6 +605,22 @@ describe("la traiettoria guarda la gara", () => {
     expect(oggi.probability).toBeCloseTo(oggi.curve[0].planProb, 6);
     // un giorno di distanza non può spostare la probabilità di decine di punti
     expect(Math.abs(oggi.probability - domani.probability)).toBeLessThan(0.1);
+  });
+
+  it("il miglior tempo reale è quello corso, sulla distanza giusta", () => {
+    const efforts = [
+      { distance: "5 km", time: "21:04", date: "2026-06-17" },
+      { distance: "5 km", time: "21:40", date: "2026-03-02" },
+      { distance: "10 km", time: "43:25", date: "2026-09-24" },
+      { distance: "Mezza Maratona", time: "1:58:10", date: "2026-10-18" },
+      { distance: "4 km", time: "16:09", date: "2025-08-25" },
+    ];
+    expect(provenBest(efforts, 5000)).toEqual({ sec: 21 * 60 + 4, iso: "2026-06-17" });
+    expect(provenBest(efforts, 10000)?.sec).toBe(43 * 60 + 25);
+    expect(provenBest(efforts, 21097)?.sec).toBe(3600 + 58 * 60 + 10);   // h:mm:ss
+    expect(provenBest(efforts, 42195)).toBeNull();                       // mai corsa
+    expect(provenBest(undefined, 5000)).toBeNull();
+    expect(provenBest([{ distance: "5 km", time: "boh", date: "2026-01-01" }], 5000)).toBeNull();
   });
 
   it("la caffeina sposta tutta la curva, non solo il giorno della gara", () => {

@@ -2,14 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Target, FlaskConical, Users, Beaker, Pill } from "lucide-react";
 import { gsap } from "../celebrations/gsapSetup";
 import { useApi } from "../../hooks/useApi";
-import { getProfile, getRuns } from "../../api";
+import { getBestEfforts, getProfile, getRuns } from "../../api";
 import { API_CACHE } from "../../hooks/apiCacheKeys";
-import type { Profile, RunsResponse } from "../../types/api";
+import type { BestEffort, Profile, RunsResponse } from "../../types/api";
 import { fmtClock } from "../gamification/gamiCore";
 import { usePhysio, fmtDate } from "../gamification/usePhysio";
 import { climateAt, humanDays } from "../gamification/physioEngine";
 import {
-  caffeineDose, currentPlan, deadlineInDays, defaultSetup, planGoal,
+  caffeineDose, currentPlan, deadlineInDays, defaultSetup, planGoal, provenBest,
   type Factor, type RaceSetup,
 } from "./raceLabEngine";
 import { CAFFEINE_MAX_TABS, CAFFEINE_TAB_MG, DEFAULT_SHOE_ID, SHOES, TAPERS, shoeById, type TaperKind } from "./shoeLab";
@@ -242,6 +242,10 @@ function GoalSection({ physio, bodyKg }: { physio: ReturnType<typeof usePhysio>;
     () => deadlineInDays(deadline, physio.model.today),
     [deadline, physio.model.today]);
 
+  // il controllo di realtà: il miglior tempo corso davvero, accanto alla previsione
+  const { data: effortsData } = useApi<{ efforts: BestEffort[] }>(getBestEfforts, { cacheKey: API_CACHE.BEST_EFFORTS });
+  const proven = useMemo(() => provenBest(effortsData?.efforts, dist.m), [effortsData, dist.m]);
+
   const result = useMemo(() => {
     if (!physio.ok || !targetSec) return null;
     const now = currentPlan(
@@ -327,6 +331,23 @@ function GoalSection({ physio, bodyKg }: { physio: ReturnType<typeof usePhysio>;
                     <b className="text-white">Oggi, in queste condizioni:</b>{" "}
                     <b className="tabular-nums" style={{ fontFamily: MONO, color: LIT }}>{fmtClock(result.todaySec)}</b>
                   </div>
+                  {proven && (
+                    <div>
+                      <b className="text-white">Il tuo miglior {dist.label} reale:</b>{" "}
+                      <b className="tabular-nums" style={{ fontFamily: MONO, color: LIT }}>{fmtClock(proven.sec)}</b>{" "}
+                      ({fmtDate(proven.iso)}) —{" "}
+                      {targetSec < proven.sec ? (
+                        <>
+                          <b className="tabular-nums" style={{ fontFamily: MONO }}>{fmtClock(targetSec)}</b> è{" "}
+                          <b className="text-white tabular-nums" style={{ fontFamily: MONO }}>
+                            {(((proven.sec - targetSec) / proven.sec) * 100).toFixed(1).replace(".", ",")}%
+                          </b>{" "}più veloce ({fmtClock(proven.sec - targetSec)} in meno).
+                        </>
+                      ) : (
+                        <>l'obiettivo non è più veloce di quello che hai già corso.</>
+                      )}
+                    </div>
+                  )}
                   <div>
                     Al carico che tieni adesso ({Math.round(physio.weeklyKm)} km a settimana):{" "}
                     {result.etaNow
